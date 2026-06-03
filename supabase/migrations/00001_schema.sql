@@ -1,10 +1,9 @@
--- Enable extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable extensions (pgcrypto provides gen_random_uuid)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Institutions
 CREATE TABLE institutions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   settings JSONB DEFAULT '{}',
@@ -15,7 +14,7 @@ CREATE TABLE institutions (
 
 -- Tenants (programs or individual accounts)
 CREATE TABLE tenants (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
@@ -28,7 +27,7 @@ CREATE TABLE tenants (
 
 -- Profiles (linked to auth.users)
 CREATE TABLE profiles (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   role TEXT NOT NULL CHECK (role IN ('resident', 'supervisor', 'director', 'institution_admin', 'admin')),
@@ -40,7 +39,7 @@ CREATE TABLE profiles (
 
 -- Case templates
 CREATE TABLE case_templates (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   specialty TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -52,7 +51,7 @@ CREATE TABLE case_templates (
 
 -- Case entries
 CREATE TABLE case_entries (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   template_id UUID NOT NULL REFERENCES case_templates(id) ON DELETE RESTRICT,
@@ -72,7 +71,7 @@ CREATE INDEX idx_case_entries_field_values ON case_entries USING GIN (field_valu
 
 -- Case attachments
 CREATE TABLE case_attachments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   entry_id UUID NOT NULL REFERENCES case_entries(id) ON DELETE CASCADE,
   file_path TEXT NOT NULL,
   file_type TEXT NOT NULL,
@@ -81,7 +80,7 @@ CREATE TABLE case_attachments (
 
 -- Approval requests
 CREATE TABLE approval_requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   entry_id UUID NOT NULL REFERENCES case_entries(id) ON DELETE CASCADE,
   supervisor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
@@ -92,7 +91,7 @@ CREATE TABLE approval_requests (
 
 -- Audit logs
 CREATE TABLE audit_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   action TEXT NOT NULL,
@@ -108,7 +107,7 @@ CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 
 -- Program goals
 CREATE TABLE program_goals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   director_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -122,7 +121,7 @@ CREATE TABLE program_goals (
 
 -- Goal progress (computed)
 CREATE TABLE goal_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   goal_id UUID NOT NULL REFERENCES program_goals(id) ON DELETE CASCADE UNIQUE,
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   current_count INTEGER DEFAULT 0,
@@ -131,7 +130,7 @@ CREATE TABLE goal_progress (
 
 -- Subscription plans
 CREATE TABLE subscription_plans (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   price_monthly NUMERIC(10,2) NOT NULL,
@@ -143,7 +142,7 @@ CREATE TABLE subscription_plans (
 
 -- Subscriptions
 CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   plan_id UUID NOT NULL REFERENCES subscription_plans(id),
   status TEXT NOT NULL CHECK (status IN ('active', 'canceled', 'past_due', 'unpaid', 'trialing')) DEFAULT 'active',
@@ -156,7 +155,7 @@ CREATE TABLE subscriptions (
 
 -- Payments
 CREATE TABLE payments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   amount NUMERIC(10,2) NOT NULL,
   currency TEXT DEFAULT 'usd',
@@ -167,7 +166,7 @@ CREATE TABLE payments (
 
 -- One-time purchases
 CREATE TABLE one_time_purchases (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   purchase_type TEXT NOT NULL,
   amount NUMERIC(10,2) NOT NULL,
@@ -179,7 +178,7 @@ CREATE TABLE one_time_purchases (
 
 -- AI config
 CREATE TABLE ai_config (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE UNIQUE,
   provider TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'azure', 'openrouter', 'custom')),
   model TEXT NOT NULL,
@@ -192,7 +191,7 @@ CREATE TABLE ai_config (
 
 -- Resident AI toggle
 CREATE TABLE resident_ai_toggle (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   enabled BOOLEAN DEFAULT FALSE,
@@ -203,7 +202,7 @@ CREATE TABLE resident_ai_toggle (
 
 -- AI query logs
 CREATE TABLE ai_query_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   resident_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   query TEXT NOT NULL,
@@ -214,7 +213,7 @@ CREATE TABLE ai_query_logs (
 
 -- Payment gateway config
 CREATE TABLE payment_gateway_config (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE UNIQUE,
   provider TEXT NOT NULL CHECK (provider IN ('stripe', 'paddle', 'lemonsqueezy', 'custom')),
   publishable_key TEXT NOT NULL,
