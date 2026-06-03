@@ -1,0 +1,14 @@
+project_id = "elogbook"
+
+[db]
+port = 54322
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "elogbook://auth/callback"]
+
+[functions]
+[functions.generate-pdf]
+[functions.ai-insights]
+[functions.payment-webhook]
+[functions.create-checkout]
