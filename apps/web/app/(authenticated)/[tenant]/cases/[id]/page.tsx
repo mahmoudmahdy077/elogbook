@@ -1,179 +1,133 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { notFound, redirect } from 'next/navigation';
 import { Card, CardBody, CardHeader, Chip, Button } from '@heroui/react';
+import { notFound } from 'next/navigation';
 
-const statusColorMap: Record<string, 'warning' | 'primary' | 'success' | 'danger'> = {
-  draft: 'warning',
-  pending: 'primary',
-  approved: 'success',
-  rejected: 'danger',
-};
-
-export default async function CaseDetailPage({
-  params,
-}: {
-  params: { tenant: string; id: string };
-}) {
+export default async function CaseDetailPage({ params }: { params: { tenant: string; id: string } }) {
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) notFound();
 
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, full_name, tenants!inner(slug, tenant_type)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) redirect('/login');
-
-  const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
-
-  const { data: entry, error } = await supabase
+  const { data: entry } = await supabase
     .from('case_entries')
     .select(`
-      id, case_date, patient_mrn, patient_dob, field_values, status, created_at, updated_at,
-      case_templates!inner(name, specialty, fields),
-      profiles!case_entries_resident_id_fkey(full_name)
+      *,
+      case_templates(name, specialty, fields),
+      profiles!case_entries_resident_id_fkey(full_name),
+      tenants(tenant_type)
     `)
     .eq('id', params.id)
     .single();
 
-  if (error || !entry) {
-    notFound();
-  }
-
-  const template = entry.case_templates as unknown as {
-    name: string;
-    specialty: string;
-    fields: { key?: string; name?: string; label: string; type: string; options?: string[] }[];
-  };
-  const resident = entry.profiles as unknown as { full_name: string };
-
-  const getFieldKey = (f: { key?: string; name?: string }) => f.key || f.name || '';
-  const templateFields = template.fields || [];
-
-  const fieldValues = entry.field_values as Record<string, unknown>;
+  if (!entry) notFound();
 
   const { data: approvals } = await supabase
     .from('approval_requests')
-    .select('id, status, comment, requested_at, resolved_at, profiles(full_name)')
-    .eq('entry_id', entry.id)
+    .select('*, profiles(full_name)')
+    .eq('entry_id', params.id)
     .order('requested_at', { ascending: false });
 
-  const showSubmitButton = entry.status === 'draft';
+  const statusColor = (s: string) => {
+    switch (s) {
+      case 'draft': return 'warning' as const;
+      case 'pending': return 'primary' as const;
+      case 'approved': return 'success' as const;
+      case 'rejected': return 'danger' as const;
+      default: return 'default' as const;
+    }
+  };
+
+  const approvalStatusColor = (s: string) => {
+    switch (s) {
+      case 'approved': return 'success' as const;
+      case 'rejected': return 'danger' as const;
+      default: return 'primary' as const;
+    }
+  };
 
   return (
-    <div>
-      <Card className="mb-6">
-        <CardHeader className="flex justify-between items-start">
+    <div className="max-w-2xl mx-auto space-y-6">
+      <Card>
+        <CardHeader className="flex justify-between">
           <div>
             <h1 className="text-xl font-bold">
-              {template.specialty} - {template.name}
+              {entry.case_templates?.specialty} — {entry.case_templates?.name}
             </h1>
-            <p className="text-sm text-default-500">by {resident.full_name}</p>
+            <p className="text-sm text-default-500">Logged by {entry.profiles?.full_name}</p>
           </div>
-          <Chip color={statusColorMap[entry.status] || 'default'} variant="flat">
-            {entry.status}
-          </Chip>
+          <Chip color={statusColor(entry.status)} variant="flat">{entry.status}</Chip>
         </CardHeader>
-        <CardBody className="gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-default-500">Case Date</p>
-              <p className="font-medium">{entry.case_date}</p>
+              <label className="text-sm text-default-500">Patient MRN</label>
+              <p>{entry.patient_mrn}</p>
             </div>
             <div>
-              <p className="text-sm text-default-500">Patient MRN</p>
-              <p className="font-medium">{entry.patient_mrn}</p>
+              <label className="text-sm text-default-500">Patient DOB</label>
+              <p>{entry.patient_dob}</p>
             </div>
             <div>
-              <p className="text-sm text-default-500">Patient DOB</p>
-              <p className="font-medium">{entry.patient_dob}</p>
+              <label className="text-sm text-default-500">Case Date</label>
+              <p>{entry.case_date}</p>
             </div>
           </div>
 
-          {templateFields.length > 0 && (
-            <div className="border-t pt-4 mt-2">
-              <h3 className="font-semibold mb-3">Case Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {templateFields.map((field) => {
-                  const key = getFieldKey(field);
-                  const value = fieldValues[key];
-                  const displayValue =
-                    value === null || value === undefined
-                      ? '—'
-                      : typeof value === 'boolean'
-                        ? value ? 'Yes' : 'No'
-                        : String(value);
+          <div>
+            <label className="text-sm text-default-500 block mb-2">Case Details</label>
+            {Array.isArray(entry.case_templates?.fields) &&
+              (entry.case_templates.fields as Record<string, unknown>[]).map((f) => (
+                <div key={f.key as string} className="flex justify-between py-1 border-b border-divider">
+                  <span className="text-sm">{f.label as string}</span>
+                  <span className="text-sm font-medium">
+                    {String(
+                      (entry.field_values as Record<string, unknown>)[f.key as string] ?? '—'
+                    )}
+                  </span>
+                </div>
+              ))}
+          </div>
 
-                  return (
-                    <div key={key}>
-                      <p className="text-sm text-default-500">{field.label}</p>
-                      <p className="font-medium">{displayValue}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          {entry.status === 'draft' && (
+            <form action={`/${params.tenant}/cases/${params.id}/submit`} method="POST">
+              <Button type="submit" color="primary">
+                Submit for Approval
+              </Button>
+            </form>
           )}
         </CardBody>
       </Card>
 
-      {showSubmitButton && (
-        <div className="mb-6">
-          <form action={`/${params.tenant}/cases/${params.id}/submit`} method="POST">
-            <Button type="submit" color="primary">
-              Submit for Approval
-            </Button>
-          </form>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Approval History</h2>
-        </CardHeader>
-        <CardBody>
-          {!approvals || approvals.length === 0 ? (
-            <p className="text-default-500 text-sm">No approval requests yet.</p>
-          ) : (
+      {approvals && approvals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Approval History</h2>
+          </CardHeader>
+          <CardBody>
             <div className="space-y-3">
-              {(approvals as any[]).map((approval) => (
-                <div key={approval.id} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">
-                      {approval.profiles?.full_name || 'Unknown'}
+              {approvals.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex justify-between items-center border-b border-divider pb-2"
+                >
+                  <div>
+                    <p className="font-medium">{a.profiles?.full_name}</p>
+                    <p className="text-sm text-default-500">
+                      {a.comment || 'No comment'}
                     </p>
-                    <Chip
-                      color={
-                        approval.status === 'approved'
-                          ? 'success'
-                          : approval.status === 'rejected'
-                            ? 'danger'
-                            : 'warning'
-                      }
-                      variant="flat"
-                      size="sm"
-                    >
-                      {approval.status}
-                    </Chip>
                   </div>
-                  {approval.comment && (
-                    <p className="text-sm text-default-600 mt-1">{approval.comment}</p>
-                  )}
-                  <p className="text-xs text-default-400 mt-1">
-                    Requested: {new Date(approval.requested_at).toLocaleDateString()}
-                    {approval.resolved_at &&
-                      ` · Resolved: ${new Date(approval.resolved_at).toLocaleDateString()}`}
-                  </p>
+                  <Chip
+                    color={approvalStatusColor(a.status)}
+                    size="sm"
+                    variant="flat"
+                  >
+                    {a.status}
+                  </Chip>
                 </div>
               ))}
             </div>
-          )}
-        </CardBody>
-      </Card>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
