@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "E-Logbook",
+    "slug": "elogbook",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "elogbook",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router"]
+  }
+}
