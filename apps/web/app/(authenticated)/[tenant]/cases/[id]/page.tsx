@@ -1,7 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import { Card, CardBody, CardHeader, Chip, Button } from '@heroui/react';
-import Link from 'next/link';
 
 const statusColorMap: Record<string, 'warning' | 'primary' | 'success' | 'danger'> = {
   draft: 'warning',

@@ -139,7 +139,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
             label="Case Template"
             placeholder="Select a template"
             selectedKeys={selectedKeysSet(selectedTemplateId)}
-            onSelectionChange={(keys) => {
+            onSelectionChange={(keys: Selection) => {
               const key = Array.from(keys)[0] as string;
               setSelectedTemplateId(key || '');
               setFieldValues({});
@@ -190,7 +190,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         key={key}
                         label={label}
                         value={(fieldValues[key] as string) || ''}
-                        onValueChange={(v) => handleFieldChange(key, v)}
+                        onValueChange={(v: string) => handleFieldChange(key, v)}
                         className="mb-3"
                       />
                     );
@@ -200,7 +200,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         key={key}
                         label={label}
                         selectedKeys={selectedKeysSet((fieldValues[key] as string) || '')}
-                        onSelectionChange={(keys) => {
+                        onSelectionChange={(keys: Selection) => {
                           const val = Array.from(keys)[0] as string;
                           handleFieldChange(key, val || '');
                         }}
@@ -218,7 +218,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         label={label}
                         type="number"
                         value={(fieldValues[key] as string) || ''}
-                        onValueChange={(v) => handleFieldChange(key, v)}
+                        onValueChange={(v: string) => handleFieldChange(key, v)}
                         className="mb-3"
                       />
                     );
@@ -229,7 +229,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         label={label}
                         type="date"
                         value={(fieldValues[key] as string) || ''}
-                        onValueChange={(v) => handleFieldChange(key, v)}
+                        onValueChange={(v: string) => handleFieldChange(key, v)}
                         className="mb-3"
                       />
                     );
@@ -252,7 +252,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         key={key}
                         label={label}
                         value={(fieldValues[key] as string) || ''}
-                        onValueChange={(v) => handleFieldChange(key, v)}
+                        onValueChange={(v: string) => handleFieldChange(key, v)}
                         className="mb-3"
                       />
                     );
