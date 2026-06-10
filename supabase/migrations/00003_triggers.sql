@@ -10,12 +10,24 @@ CREATE OR REPLACE FUNCTION audit_case_entry()
 RETURNS TRIGGER AS $$
 DECLARE
   v_user_id UUID;
-  v_tenant_id UUID;
-  v_changes JSONB;
+  v_user_agent TEXT;
+  v_session_id TEXT;
+  v_row JSONB;
+  v_deleted_row JSONB;
 BEGIN
   v_user_id := auth.uid();
+  v_user_agent := current_setting('request.headers', true)::JSONB ->> 'user-agent';
+  v_session_id := COALESCE(
+    current_setting('request.headers', true)::JSONB ->> 'x-session-id',
+    auth.jwt() ->> 'session_id'
+  );
 
   IF TG_OP = 'INSERT' THEN
+    v_row := row_to_json(NEW)::JSONB;
+    IF (NEW.is_deidentified) THEN
+      v_row := v_row - 'patient_mrn' - 'patient_dob';
+    END IF;
+
     INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes, ip_address)
     VALUES (
       NEW.tenant_id,
@@ -23,7 +35,11 @@ BEGIN
       'INSERT',
       'case_entries',
       NEW.id,
-      jsonb_build_object('new', row_to_json(NEW)::JSONB),
+      jsonb_build_object(
+        'new', v_row,
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
+      ),
       current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
     );
     RETURN NEW;
@@ -37,8 +53,6 @@ BEGIN
       'case_entries',
       NEW.id,
       jsonb_build_object(
-        'old', row_to_json(OLD)::JSONB - 'updated_at' - 'created_at',
-        'new', row_to_json(NEW)::JSONB - 'updated_at' - 'created_at',
         'changed_fields', (
           SELECT jsonb_object_agg(key, jsonb_build_object('old', OLD_val, 'new', NEW_val))
           FROM (
@@ -48,13 +62,21 @@ BEGIN
             FROM jsonb_object_keys(row_to_json(OLD)::JSONB || row_to_json(NEW)::JSONB) AS t(key)
           ) sub
           WHERE OLD_val IS DISTINCT FROM NEW_val
-        )
+            AND key NOT IN ('created_at', 'updated_at')
+        ),
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
       ),
       current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
     );
     RETURN NEW;
 
   ELSIF TG_OP = 'DELETE' THEN
+    v_deleted_row := row_to_json(OLD)::JSONB;
+    IF (OLD.is_deidentified) THEN
+      v_deleted_row := v_deleted_row - 'patient_mrn' - 'patient_dob';
+    END IF;
+
     INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes, ip_address)
     VALUES (
       OLD.tenant_id,
@@ -62,7 +84,11 @@ BEGIN
       'DELETE',
       'case_entries',
       OLD.id,
-      jsonb_build_object('deleted', row_to_json(OLD)::JSONB),
+      jsonb_build_object(
+        'deleted', v_deleted_row,
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
+      ),
       current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
     );
     RETURN OLD;
@@ -216,3 +242,88 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+-- ============================================================================
+-- 5. write_once_submitted_check: blocks residents from modifying submitted entries
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION write_once_submitted_check()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_role TEXT;
+BEGIN
+  v_role := get_user_role();
+  IF v_role = 'resident' AND OLD.status != 'draft' THEN
+    RAISE EXCEPTION 'Cannot modify case entry once submitted (status: %)', OLD.status
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_write_once_submitted_check
+  BEFORE UPDATE ON case_entries
+  FOR EACH ROW EXECUTE FUNCTION write_once_submitted_check();
+
+-- ============================================================================
+-- 6. audit_accreditation_framework: logs framework name, version, type
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION audit_accreditation_framework()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_user_id UUID;
+  v_user_agent TEXT;
+  v_session_id TEXT;
+BEGIN
+  v_user_id := auth.uid();
+  v_user_agent := current_setting('request.headers', true)::JSONB ->> 'user-agent';
+  v_session_id := COALESCE(
+    current_setting('request.headers', true)::JSONB ->> 'x-session-id',
+    auth.jwt() ->> 'session_id'
+  );
+
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes, ip_address)
+    VALUES (
+      NEW.tenant_id,
+      v_user_id,
+      'INSERT',
+      'accreditation_frameworks',
+      NEW.id,
+      jsonb_build_object(
+        'name', NEW.name,
+        'version', NEW.version,
+        'framework_type', NEW.framework_type,
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
+      ),
+      current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
+    );
+    RETURN NEW;
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes, ip_address)
+    VALUES (
+      NEW.tenant_id,
+      v_user_id,
+      'UPDATE',
+      'accreditation_frameworks',
+      NEW.id,
+      jsonb_build_object(
+        'name', NEW.name,
+        'version', NEW.version,
+        'framework_type', NEW.framework_type,
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
+      ),
+      current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
+    );
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_audit_accreditation_framework
+  AFTER INSERT OR UPDATE ON accreditation_frameworks
+  FOR EACH ROW EXECUTE FUNCTION audit_accreditation_framework();
