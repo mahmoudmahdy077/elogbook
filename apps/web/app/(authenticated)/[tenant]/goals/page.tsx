@@ -67,7 +67,7 @@ export default async function GoalsPage() {
             else if (isOverdue) color = 'danger';
 
             return (
-              <Card key={goal.id} className="glass-panel">
+              <Card key={goal.id} className="panel">
                 <Card.Header>
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">{goal.title}</h3>

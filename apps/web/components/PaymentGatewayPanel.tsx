@@ -4,15 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
-  Input,
+  TextField,
   Select,
-  SelectItem,
+  ListBox,
+  ListBoxItem,
   Switch,
   Card,
-  CardBody,
-  CardHeader,
 } from '@heroui/react';
-import type { Selection } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
 interface GatewayConfig {
@@ -120,10 +118,10 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
 
   return (
     <Card>
-      <CardHeader>
+      <Card.Header>
         <h2 className="text-lg font-semibold">Payment Gateway Configuration</h2>
-      </CardHeader>
-      <CardBody className="gap-4">
+      </Card.Header>
+      <Card.Content className="gap-4">
         {error && (
           <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
         )}
@@ -133,45 +131,49 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
 
         <Select
           label="Provider"
-          selectedKeys={new Set([provider])}
-          onSelectionChange={(keys: Selection) => {
-            const value = Array.from(keys)[0] as string;
+          selectedKey={provider}
+          onSelectionChange={(value) => {
             if (value) setProvider(value);
           }}
         >
-          {PROVIDERS.map((p) => (
-            <SelectItem key={p.key}>{p.label}</SelectItem>
-          ))}
+          <Select.Trigger aria-label="Select payment provider"><Select.Value /></Select.Trigger>
+          <Select.Popover>
+            <ListBox aria-label="Select payment provider">
+              {PROVIDERS.map((p) => (
+                <ListBoxItem id={p.key}>{p.label}</ListBoxItem>
+              ))}
+            </ListBox>
+          </Select.Popover>
         </Select>
 
-        <Input
+        <TextField
           label="Publishable Key"
           value={publishableKey}
-          onValueChange={setPublishableKey}
+          onChange={setPublishableKey}
           isRequired={!config}
         />
 
-        <Input
+        <TextField
           label="Secret Key"
           type="password"
           value={secretKey}
-          onValueChange={setSecretKey}
+          onChange={setSecretKey}
           placeholder={config ? 'Leave blank to keep existing' : 'Enter secret key'}
         />
 
-        <Input
+        <TextField
           label="Webhook Secret"
           type="password"
           value={webhookSecret}
-          onValueChange={setWebhookSecret}
+          onChange={setWebhookSecret}
           placeholder={config ? 'Leave blank to keep existing' : 'Enter webhook secret'}
         />
 
         {provider === 'custom' && (
-          <Input
+          <TextField
             label="Custom Endpoint URL"
             value={endpointUrl}
-            onValueChange={setEndpointUrl}
+            onChange={setEndpointUrl}
             placeholder="https://api.example.com/payments"
           />
         )}
@@ -185,7 +187,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         <Button color="primary" onPress={handleSave} isLoading={loading}>
           Save Configuration
         </Button>
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

@@ -52,7 +52,7 @@ export default async function AuditPage({ params }: { params: Promise<{ tenant: 
       {(!logs || logs.length === 0) ? (
         <p className="text-default-500">No audit entries found.</p>
       ) : (
-        <div className="glass-panel p-4">
+        <div className="panel p-4">
         <Table aria-label="Audit logs table">
           <Table.Header>
             <Table.Column>Date</Table.Column>

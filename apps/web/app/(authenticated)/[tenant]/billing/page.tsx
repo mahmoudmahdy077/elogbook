@@ -53,7 +53,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       <h1 className="text-2xl font-bold">Billing & Subscription</h1>
 
       {subscription && (
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header>
             <h2 className="text-lg font-semibold">Current Plan</h2>
           </Card.Header>
@@ -88,7 +88,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         currentPlanId={subscription?.plan_id ?? null}
       />
 
-      <Card className="glass-panel">
+      <Card className="panel">
         <Card.Header>
           <h2 className="text-lg font-semibold">AI Report Credits</h2>
         </Card.Header>

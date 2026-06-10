@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { Button, Textarea } from '@heroui/react';
+import { Button, TextArea } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -50,10 +50,10 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
 
   return (
     <div className="space-y-3">
-      <Textarea
+      <TextArea
         label="Comment (optional)"
         value={comment}
-        onValueChange={setComment}
+        onChange={setComment}
         placeholder="Add feedback..."
         minRows={2}
       />

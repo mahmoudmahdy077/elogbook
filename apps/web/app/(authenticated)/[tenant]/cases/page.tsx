@@ -65,7 +65,7 @@ export default async function CasesPage({ params }: { params: Promise<{ tenant: 
           <p className="text-sm mt-1">Click &quot;Log New Case&quot; to get started.</p>
         </div>
       ) : (
-        <div className="glass-panel p-4">
+        <div className="panel p-4">
         <Table aria-label="Case entries table">
           <Table.Header>
             <Table.Column>Date</Table.Column>

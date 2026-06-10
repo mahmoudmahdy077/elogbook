@@ -86,7 +86,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
   if (loading) {
     return (
-      <div className="glass-panel p-8 text-center">
+      <div className="panel p-8 text-center">
         <p className="text-neutral-light/50">Loading...</p>
       </div>
     );
@@ -94,7 +94,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
   if (error) {
     return (
-      <div className="glass-panel p-8 text-center">
+      <div className="panel p-8 text-center">
         <p className="text-danger">{error}</p>
       </div>
     );
@@ -109,13 +109,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
         >
           Pending Approvals
         </h2>
-        <span className="badge-pending px-3 py-1 text-xs font-semibold rounded-full animate-pulse">
+        <span className="badge-pending px-3 py-1 text-xs font-semibold rounded-full">
           {pendingCount}
         </span>
       </div>
 
       {entries.length === 0 ? (
-        <div className="glass-panel p-8 text-center">
+        <div className="panel p-8 text-center">
           <p className="text-sm text-neutral-light/50">No pending approvals</p>
         </div>
       ) : (
@@ -136,12 +136,11 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                   animate="center"
                   exit="exit"
                   transition={{
-                    duration: 0.25,
-                    delay: index * 0.08,
+                    duration: 0.2,
                     ease: 'easeOut',
                   }}
                 >
-                  <div className="glass-panel p-5 space-y-4">
+                  <div className="panel p-5 space-y-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1.5 min-w-0">
                         <p className="text-sm font-semibold truncate">

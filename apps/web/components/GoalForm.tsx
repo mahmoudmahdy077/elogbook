@@ -4,16 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
-  Input,
-  Textarea,
+  TextField,
+  TextArea,
   Select,
-  SelectItem,
-  useDisclosure,
+  ListBox,
+  ListBoxItem,
+  useOverlayState,
 } from '@heroui/react';
 import { programGoalSchema } from '@elogbook/shared';
 import { createClient } from '@/lib/supabase/client';
@@ -26,7 +23,7 @@ interface GoalFormProps {
 
 export default function GoalForm({ tenantId, directorId, residents }: GoalFormProps) {
   const router = useRouter();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const overlay = useOverlayState({ defaultOpen: false });
 
   const [residentId, setResidentId] = useState('');
   const [title, setTitle] = useState('');
@@ -105,79 +102,77 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     setLoading(false);
     resetForm();
     router.refresh();
-    onClose();
+    overlay.close();
   }
 
   return (
     <>
-      <Button onPress={onOpen} color="primary">New Goal</Button>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>Create Goal</ModalHeader>
-              <ModalBody>
-                {error && (
-                  <div className="text-danger text-sm bg-danger-50 p-2 rounded">{error}</div>
-                )}
-                <Select
-                  label="Resident"
-                  selectedKeys={residentId ? [residentId] : []}
-                  onSelectionChange={(keys) => {
-                    const selected = Array.from(keys)[0];
-                    if (selected) setResidentId(selected as string);
-                  }}
-                  isRequired
-                >
-                  {residents.map((r) => (
-                    <SelectItem key={r.id}>{r.full_name}</SelectItem>
-                  ))}
-                </Select>
-                <Input
-                  label="Title"
-                  value={title}
-                  onValueChange={setTitle}
-                  isRequired
-                />
-                <Input
-                  label="Target Count"
-                  type="number"
-                  value={targetCount}
-                  onValueChange={setTargetCount}
-                  isRequired
-                />
-                <Input
-                  label="Specialty"
-                  value={specialty}
-                  onValueChange={setSpecialty}
-                />
-                <Input
-                  label="Deadline"
-                  type="date"
-                  value={deadline}
-                  onValueChange={setDeadline}
-                  isRequired
-                />
-                <Textarea
-                  label="Description"
-                  value={description}
-                  onValueChange={setDescription}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancel</Button>
-                <Button
-                  color="primary"
-                  onPress={() => handleSubmit(onClose)}
-                  isLoading={loading}
-                >
-                  Create
-                </Button>
-              </ModalFooter>
-            </>
+      <Button onPress={overlay.open} color="primary">New Goal</Button>
+      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
+        <Modal.Header>Create Goal</Modal.Header>
+        <Modal.Body>
+          {error && (
+            <div className="text-danger text-sm bg-danger-50 p-2 rounded">{error}</div>
           )}
-        </ModalContent>
-      </Modal>
+          <Select
+            label="Resident"
+            selectedKey={residentId || null}
+            onSelectionChange={(key) => {
+              if (key) setResidentId(key);
+            }}
+            isRequired
+          >
+            <Select.Trigger aria-label="Select resident"><Select.Value /></Select.Trigger>
+            <Select.Popover>
+              <ListBox aria-label="Select resident">
+                {residents.map((r) => (
+                  <ListBoxItem id={r.id}>{r.full_name}</ListBoxItem>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+          <TextField
+            label="Title"
+            value={title}
+            onChange={setTitle}
+            isRequired
+          />
+          <TextField
+            label="Target Count"
+            type="number"
+            value={targetCount}
+            onChange={setTargetCount}
+            isRequired
+          />
+          <TextField
+            label="Specialty"
+            value={specialty}
+            onChange={setSpecialty}
+          />
+          <TextField
+            label="Deadline"
+            type="date"
+            value={deadline}
+            onChange={setDeadline}
+            isRequired
+          />
+          <TextArea
+            label="Description"
+            value={description}
+            onChange={setDescription}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="light" onPress={overlay.close}>Cancel</Button>
+          <Button
+            color="primary"
+            onPress={() => handleSubmit(overlay.close)}
+            isLoading={loading}
+          >
+            Create
+          </Button>
+        </Modal.Footer>
+      </Modal.Root>
     </>
   );
 }

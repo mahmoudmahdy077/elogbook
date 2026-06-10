@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import {
   Card,
-  CardHeader,
-  CardBody,
-  Textarea,
+  TextArea,
   Button,
   Spinner,
 } from '@heroui/react';
@@ -53,19 +51,19 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
 
   return (
     <Card className="mt-6">
-      <CardHeader>
+      <Card.Header>
         <h2 className="text-lg font-semibold">AI Case Insights</h2>
-      </CardHeader>
-      <CardBody className="gap-4">
+      </Card.Header>
+      <Card.Content className="gap-4">
         {error && (
           <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
         )}
 
-        <Textarea
+        <TextArea
           label="Ask a question about your cases (optional)"
           placeholder="e.g. What patterns do you see in my surgical cases? Leave blank for a general analysis."
           value={query}
-          onValueChange={setQuery}
+          onChange={setQuery}
           minRows={2}
         />
 
@@ -89,7 +87,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
             {response}
           </div>
         )}
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

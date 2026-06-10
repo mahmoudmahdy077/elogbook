@@ -26,8 +26,18 @@
   --font-sans: var(--font-body);
   --font-mono: var(--font-mono);
   --color-backdrop: var(--color-backdrop);
+  --color-backdrop-light: var(--color-backdrop-light);
   --color-primary: var(--color-primary);
+  --color-primary-glow: var(--color-primary-glow);
   --color-secondary: var(--color-secondary);
+  --color-secondary-glow: var(--color-secondary-glow);
+  --color-neutral-dark: var(--color-neutral-dark);
+  --color-neutral-light: var(--color-neutral-light);
+  --color-border: var(--color-border);
+  --color-border-glow: var(--color-border-glow);
+  --color-amber-glow: var(--color-amber-glow);
+  --color-emerald-glow: var(--color-emerald-glow);
+  --color-crimson-glow: var(--color-crimson-glow);
 }
 
 body {
@@ -43,12 +53,24 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+/* Default surface: opaque panel for cards, lists, containers */
+.panel {
+  background: var(--color-neutral-dark);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.panel:focus-within {
+  border-color: var(--color-border-glow);
+  box-shadow: 0 0 0 1px var(--color-primary-glow);
+}
+
+/* Elevated surface: glassmorphism reserved for overlays, modals, wizards */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.6);
+  background: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 24px rgba(6, 8, 20, 0.4);
   border-radius: 0.75rem;
 }
 
@@ -58,41 +80,37 @@ h1, h2, h3, h4, h5, h6 {
 
 .glass-panel:focus-within {
   border-color: var(--color-border-glow);
-  box-shadow: 0 0 0 1px var(--color-primary-glow), 0 4px 24px rgba(6, 8, 20, 0.4);
+  box-shadow: 0 0 0 1px var(--color-primary-glow);
 }
 
 .badge-draft {
-  background: rgba(226, 232, 240, 0.1);
-  border: 1px solid rgba(226, 232, 240, 0.2);
-  color: #E2E8F0;
+  background: color-mix(in srgb, var(--color-neutral-light) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-neutral-light) 20%, transparent);
+  color: var(--color-neutral-light);
 }
 
 .badge-pending {
-  background: rgba(217, 119, 6, 0.15);
+  background: color-mix(in srgb, var(--color-amber-glow) 38%, transparent);
   border: 1px solid var(--color-amber-glow);
   color: #F59E0B;
-  box-shadow: 0 0 8px var(--color-amber-glow);
+  box-shadow: 0 0 6px var(--color-amber-glow);
 }
 
 .badge-approved {
-  background: rgba(5, 150, 105, 0.15);
+  background: color-mix(in srgb, var(--color-emerald-glow) 38%, transparent);
   border: 1px solid var(--color-emerald-glow);
   color: #10B981;
-  box-shadow: 0 0 8px var(--color-emerald-glow);
+  box-shadow: 0 0 6px var(--color-emerald-glow);
 }
 
 .badge-rejected {
-  background: rgba(220, 38, 38, 0.15);
+  background: color-mix(in srgb, var(--color-crimson-glow) 38%, transparent);
   border: 1px solid var(--color-crimson-glow);
   color: #EF4444;
-  box-shadow: 0 0 8px var(--color-crimson-glow);
+  box-shadow: 0 0 6px var(--color-crimson-glow);
 }
 
 .clinical-data {
   font-family: var(--font-mono);
   letter-spacing: 0.025em;
-}
-
-.kpi-ring {
-  filter: drop-shadow(0 0 6px var(--color-primary-glow));
 }

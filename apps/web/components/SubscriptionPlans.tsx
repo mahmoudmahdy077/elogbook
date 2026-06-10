@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardHeader, CardBody, CardFooter, Button } from '@heroui/react';
+import { Card, Button } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
 interface SubscriptionPlan {
@@ -65,9 +65,9 @@ export default function SubscriptionPlans({
   if (!plans || plans.length === 0) {
     return (
       <Card>
-        <CardBody>
+        <Card.Content>
           <p className="text-default-500">No plans available.</p>
-        </CardBody>
+        </Card.Content>
       </Card>
     );
   }
@@ -116,7 +116,7 @@ export default function SubscriptionPlans({
               key={plan.id}
               className={isCurrent ? 'ring-2 ring-primary border-primary' : ''}
             >
-              <CardHeader>
+              <Card.Header>
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">{plan.name}</h3>
@@ -131,8 +131,8 @@ export default function SubscriptionPlans({
                     <span className="text-sm font-normal text-default-500">/mo</span>
                   </p>
                 </div>
-              </CardHeader>
-              <CardBody>
+              </Card.Header>
+              <Card.Content>
                 <ul className="space-y-2">
                   {features.map((f) => (
                     <li
@@ -148,8 +148,8 @@ export default function SubscriptionPlans({
                     </li>
                   ))}
                 </ul>
-              </CardBody>
-              <CardFooter>
+              </Card.Content>
+              <Card.Footer>
                 <Button
                   color="primary"
                   className="w-full"
@@ -159,7 +159,7 @@ export default function SubscriptionPlans({
                 >
                   {isCurrent ? 'Current Plan' : 'Subscribe'}
                 </Button>
-              </CardFooter>
+              </Card.Footer>
             </Card>
           );
         })}

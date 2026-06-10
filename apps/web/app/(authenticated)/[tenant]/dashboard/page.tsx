@@ -61,15 +61,15 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header className="font-heading">Draft Cases</Card.Header>
           <Card.Content><p className="text-3xl font-bold clinical-data">{draftCount ?? 0}</p></Card.Content>
         </Card>
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header className="font-heading">Pending Review</Card.Header>
           <Card.Content><p className="text-3xl font-bold clinical-data">{pendingCount ?? 0}</p></Card.Content>
         </Card>
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header className="font-heading">Approved Cases</Card.Header>
           <Card.Content><p className="text-3xl font-bold clinical-data">{approvedCount ?? 0}</p></Card.Content>
         </Card>

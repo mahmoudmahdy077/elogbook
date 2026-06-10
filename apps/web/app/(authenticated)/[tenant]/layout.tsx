@@ -49,10 +49,10 @@ export default async function TenantLayout({
   const visibleLinks = NAV_LINKS.filter((link) => link.roles.includes(userRole));
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside className="w-56 glass-panel flex-shrink-0 p-4 flex flex-col">
+    <div className="min-h-screen bg-backdrop flex">
+      <aside className="w-56 panel flex-shrink-0 p-4 flex flex-col max-md:hidden">
         <div className="mb-6">
-          <Link href={`/${tenantSlug}/dashboard`} className="font-bold text-xl">
+          <Link href={`/${tenantSlug}/dashboard`} className="font-bold text-xl font-heading">
             E-Logbook
           </Link>
         </div>
@@ -61,19 +61,32 @@ export default async function TenantLayout({
             <Link
               key={link.href}
               href={`/${tenantSlug}${link.href}`}
-              className="block px-3 py-2 rounded-lg text-sm hover:bg-default-100 transition-colors font-heading"
+              className="block px-3 py-2 rounded-lg text-sm hover:bg-default-100 transition-colors"
             >
               {link.label}
             </Link>
           ))}
         </nav>
-        <form action="/auth/signout" method="post" className="mt-auto pt-4 border-t border-divider">
+        <form action="/auth/signout" method="post" className="mt-auto pt-4 border-t border-border">
           <button type="submit" className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors">
             Sign Out
           </button>
         </form>
       </aside>
-      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      <div className="md:hidden fixed bottom-0 left-0 right-0 panel rounded-none border-t z-40">
+        <nav className="flex justify-around py-2 px-1">
+          {visibleLinks.slice(0, 5).map((link) => (
+            <Link
+              key={link.href}
+              href={`/${tenantSlug}${link.href}`}
+              className="flex flex-col items-center gap-0.5 px-1 py-1 text-xs text-neutral-light/60"
+            >
+              <span>{link.label}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+      <main id="main-content" className="flex-1 p-6 overflow-auto pb-16 md:pb-6">{children}</main>
     </div>
   );
 }

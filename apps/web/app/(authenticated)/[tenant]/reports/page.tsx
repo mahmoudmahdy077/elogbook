@@ -86,25 +86,25 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Content className="text-center">
             <p className="text-sm text-default-500">Total Cases</p>
             <p className="text-3xl font-bold clinical-data">{totalCount ?? 0}</p>
           </Card.Content>
         </Card>
-        <Card className="glass-panel border-t-3 border-t-success">
+        <Card className="panel border-t-3 border-t-success">
           <Card.Content className="text-center">
             <p className="text-sm text-success">Approved</p>
             <p className="text-3xl font-bold text-success clinical-data">{approvedCount ?? 0}</p>
           </Card.Content>
         </Card>
-        <Card className="glass-panel border-t-3 border-t-primary">
+        <Card className="panel border-t-3 border-t-primary">
           <Card.Content className="text-center">
             <p className="text-sm text-primary">Pending</p>
             <p className="text-3xl font-bold text-primary clinical-data">{pendingCount ?? 0}</p>
           </Card.Content>
         </Card>
-        <Card className="glass-panel border-t-3 border-t-warning">
+        <Card className="panel border-t-3 border-t-warning">
           <Card.Content className="text-center">
             <p className="text-sm text-warning">Drafts</p>
             <p className="text-3xl font-bold text-warning clinical-data">{draftCount ?? 0}</p>
@@ -113,7 +113,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header>
             <h2 className="text-lg font-semibold">Cases by Specialty</h2>
           </Card.Header>
@@ -143,7 +143,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
           </Card.Content>
         </Card>
 
-        <Card className="glass-panel">
+        <Card className="panel">
           <Card.Header>
             <h2 className="text-lg font-semibold">Status Distribution</h2>
           </Card.Header>

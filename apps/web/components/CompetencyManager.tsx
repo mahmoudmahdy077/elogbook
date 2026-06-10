@@ -208,7 +208,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="glass-panel p-6 space-y-4">
+            <div className="panel p-6 space-y-4">
               <h3 className="text-base font-semibold">Create Accreditation Framework</h3>
 
               <TextField
@@ -276,11 +276,11 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
       </AnimatePresence>
 
       {loading ? (
-        <div className="glass-panel p-8 text-center">
+        <div className="panel p-8 text-center">
           <p className="text-default-500">Loading frameworks...</p>
         </div>
       ) : frameworks.length === 0 ? (
-        <div className="glass-panel p-8 text-center">
+        <div className="panel p-8 text-center">
           <p className="text-default-500">No accreditation frameworks yet.</p>
           <p className="text-sm text-default-400 mt-1">
             Create a framework to begin mapping competencies.
@@ -293,7 +293,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
             const milestoneCount = framework.milestones?.length ?? 0;
 
             return (
-              <div key={framework.id} className="glass-panel p-4">
+              <div key={framework.id} className="panel p-4">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"

@@ -10,24 +10,24 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@elogbook/shared": "*",
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "@heroui/react": "^2.5.0",
-    "@supabase/ssr": "^0.4.0",
+    "@elogbook/shared": "workspace:*",
+    "@heroui/react": "^3.1.0",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.43.0",
-    "zod": "^3.23.0",
-    "date-fns": "^3.6.0",
-    "framer-motion": "^11.0.0"
+    "date-fns": "^4.4.0",
+    "framer-motion": "^12.40.0",
+    "next": "^16.2.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "typescript": "^5.4.0",
-    "tailwindcss": "^3.4.0",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
     "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
   }
 }

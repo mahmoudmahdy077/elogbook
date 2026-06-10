@@ -4,15 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
-  Input,
+  TextField,
   Select,
-  SelectItem,
+  ListBox,
+  ListBoxItem,
   Switch,
   Card,
-  CardBody,
-  CardHeader,
 } from '@heroui/react';
-import type { Selection } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
 interface AIConfigData {
@@ -126,10 +124,10 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
 
   return (
     <Card>
-      <CardHeader>
+      <Card.Header>
         <h2 className="text-lg font-semibold">AI Configuration</h2>
-      </CardHeader>
-      <CardBody className="gap-4">
+      </Card.Header>
+      <Card.Content className="gap-4">
         {error && (
           <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
         )}
@@ -139,38 +137,42 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
 
         <Select
           label="Provider"
-          selectedKeys={new Set([provider])}
-          onSelectionChange={(keys: Selection) => {
-            const value = Array.from(keys)[0] as string;
+          selectedKey={provider}
+          onSelectionChange={(value) => {
             if (value) setProvider(value);
           }}
         >
-          {PROVIDERS.map((p) => (
-            <SelectItem key={p.key}>{p.label}</SelectItem>
-          ))}
+          <Select.Trigger aria-label="Select AI provider"><Select.Value /></Select.Trigger>
+          <Select.Popover>
+            <ListBox aria-label="Select AI provider">
+              {PROVIDERS.map((p) => (
+                <ListBoxItem id={p.key}>{p.label}</ListBoxItem>
+              ))}
+            </ListBox>
+          </Select.Popover>
         </Select>
 
-        <Input
+        <TextField
           label="Model"
           value={model}
-          onValueChange={setModel}
+          onChange={setModel}
           isRequired
           placeholder={DEFAULT_MODELS[provider] ?? 'Enter model name'}
         />
 
-        <Input
+        <TextField
           label="API Key"
           type="password"
           value={apiKey}
-          onValueChange={setApiKey}
+          onChange={setApiKey}
           placeholder={config ? 'Leave blank to keep existing' : 'Enter API key'}
         />
 
         {provider === 'custom' && (
-          <Input
+          <TextField
             label="Endpoint URL"
             value={endpointUrl}
-            onValueChange={setEndpointUrl}
+            onChange={setEndpointUrl}
             placeholder="https://api.example.com/v1"
           />
         )}
@@ -184,7 +186,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         <Button color="primary" onPress={handleSave} isLoading={loading}>
           Save Configuration
         </Button>
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

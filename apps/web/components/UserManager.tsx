@@ -4,24 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
-  Input,
+  TextField,
   Select,
-  SelectItem,
+  ListBox,
+  ListBoxItem,
   Chip,
   Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
+  useOverlayState,
 } from '@heroui/react';
-import type { Selection } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Profile {
@@ -57,7 +48,7 @@ const ROLE_COLORS: Record<string, 'primary' | 'secondary' | 'warning' | 'danger'
 
 export default function UserManager({ tenantId, users, currentUserRole }: UserManagerProps) {
   const router = useRouter();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const overlay = useOverlayState({ defaultOpen: false });
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
@@ -108,7 +99,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     setSuccess(`Invitation sent to ${inviteEmail}`);
     resetForm();
     router.refresh();
-    onClose();
+    overlay.close();
   }
 
   async function handleRoleChange(userId: string, newRole: string) {
@@ -137,7 +128,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Users</h2>
-        <Button onPress={onOpen} color="primary">
+        <Button onPress={overlay.open} color="primary">
           Invite User
         </Button>
       </div>
@@ -146,100 +137,102 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
         <p className="text-default-500">No users found.</p>
       ) : (
         <Table aria-label="Users table">
-          <TableHeader>
-            <TableColumn>Name</TableColumn>
-            <TableColumn>Role</TableColumn>
-            <TableColumn>Specialty</TableColumn>
-          </TableHeader>
-          <TableBody>
+          <Table.Header>
+            <Table.Column>Name</Table.Column>
+            <Table.Column>Role</Table.Column>
+            <Table.Column>Specialty</Table.Column>
+          </Table.Header>
+          <Table.Body>
             {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>{u.full_name}</TableCell>
-                <TableCell>
+              <Table.Row key={u.id}>
+                <Table.Cell>{u.full_name}</Table.Cell>
+                <Table.Cell>
                   {['institution_admin', 'admin'].includes(currentUserRole) ? (
                     <Select
                       aria-label="Role"
                       size="sm"
-                      selectedKeys={new Set([u.role])}
-                      onSelectionChange={(keys: Selection) => {
-                        const value = Array.from(keys)[0] as string;
+                      selectedKey={u.role}
+                      onSelectionChange={(value) => {
                         if (value && value !== u.role) {
                           handleRoleChange(u.id, value);
                         }
                       }}
                     >
-                      {ROLE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.key}>{opt.label}</SelectItem>
-                      ))}
+                       <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
+                      <Select.Popover>
+                        <ListBox aria-label="Select role">
+                          {ROLE_OPTIONS.map((opt) => (
+                            <ListBoxItem id={opt.key}>{opt.label}</ListBoxItem>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
                     </Select>
                   ) : (
                     <Chip variant="flat" size="sm" color={ROLE_COLORS[u.role] || 'default'}>
                       {u.role}
                     </Chip>
                   )}
-                </TableCell>
-                <TableCell>{u.specialty || '-'}</TableCell>
-              </TableRow>
+                </Table.Cell>
+                <Table.Cell>{u.specialty || '-'}</Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
         </Table>
       )}
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>Invite User</ModalHeader>
-              <ModalBody className="gap-4">
-                <Input
-                  label="Email"
-                  type="email"
-                  value={inviteEmail}
-                  onValueChange={setInviteEmail}
-                  isRequired
-                  placeholder="user@example.com"
-                />
-                <Input
-                  label="Full Name"
-                  value={inviteName}
-                  onValueChange={setInviteName}
-                  isRequired
-                />
-                <Select
-                  label="Role"
-                  selectedKeys={new Set([inviteRole])}
-                  onSelectionChange={(keys: Selection) => {
-                    const value = Array.from(keys)[0] as string;
-                    if (value) setInviteRole(value);
-                  }}
-                >
-                  {ROLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
-                  ))}
-                </Select>
-                <Input
-                  label="Specialty"
-                  value={inviteSpecialty}
-                  onValueChange={setInviteSpecialty}
-                  placeholder="e.g. Cardiology"
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  color="primary"
-                  onPress={() => handleInvite(onClose)}
-                  isLoading={loading}
-                >
-                  Send Invite
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
+        <Modal.Header>Invite User</Modal.Header>
+        <Modal.Body className="gap-4">
+          <TextField
+            label="Email"
+            type="email"
+            value={inviteEmail}
+            onChange={setInviteEmail}
+            isRequired
+            placeholder="user@example.com"
+          />
+          <TextField
+            label="Full Name"
+            value={inviteName}
+            onChange={setInviteName}
+            isRequired
+          />
+          <Select
+            label="Role"
+            selectedKey={inviteRole}
+            onSelectionChange={(value) => {
+              if (value) setInviteRole(value);
+            }}
+          >
+            <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
+            <Select.Popover>
+              <ListBox aria-label="Select role">
+                {ROLE_OPTIONS.map((opt) => (
+                  <ListBoxItem id={opt.key}>{opt.label}</ListBoxItem>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+          <TextField
+            label="Specialty"
+            value={inviteSpecialty}
+            onChange={setInviteSpecialty}
+            placeholder="e.g. Cardiology"
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="light" onPress={overlay.close}>
+            Cancel
+          </Button>
+          <Button
+            color="primary"
+            onPress={() => handleInvite(overlay.close)}
+            isLoading={loading}
+          >
+            Send Invite
+          </Button>
+        </Modal.Footer>
+      </Modal.Root>
     </div>
   );
 }

@@ -4,21 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
-  Input,
-  Textarea,
+  TextField,
+  TextArea,
   Chip,
   Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
+  useOverlayState,
 } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -49,7 +40,7 @@ interface TemplateEditorProps {
 
 export default function TemplateEditor({ tenantId, templates }: TemplateEditorProps) {
   const router = useRouter();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const overlay = useOverlayState({ defaultOpen: false });
 
   const [name, setName] = useState('');
   const [specialty, setSpecialty] = useState('');
@@ -66,7 +57,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
     setError('');
   }
 
-  async function handleCreate(onClose: () => void) {
+  async function handleCreate(closeModal: () => void) {
     setError('');
 
     if (!name.trim() || !specialty.trim() || !fieldsJson.trim()) {
@@ -108,7 +99,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
     setLoading(false);
     resetForm();
     router.refresh();
-    onClose();
+    overlay.close();
   }
 
   async function handleDelete(id: string) {
@@ -131,7 +122,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Existing Templates</h2>
-        <Button onPress={onOpen} color="primary">
+        <Button onPress={overlay.open} color="primary">
           New Template
         </Button>
       </div>
@@ -140,25 +131,25 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
         <p className="text-default-500">No templates created yet.</p>
       ) : (
         <Table aria-label="Case templates table">
-          <TableHeader>
-            <TableColumn>Name</TableColumn>
-            <TableColumn>Specialty</TableColumn>
-            <TableColumn>Fields</TableColumn>
-            <TableColumn>Required</TableColumn>
-            <TableColumn>Actions</TableColumn>
-          </TableHeader>
-          <TableBody>
+          <Table.Header>
+            <Table.Column>Name</Table.Column>
+            <Table.Column>Specialty</Table.Column>
+            <Table.Column>Fields</Table.Column>
+            <Table.Column>Required</Table.Column>
+            <Table.Column>Actions</Table.Column>
+          </Table.Header>
+          <Table.Body>
             {templates.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>{t.name}</TableCell>
-                <TableCell>
+              <Table.Row key={t.id}>
+                <Table.Cell>{t.name}</Table.Cell>
+                <Table.Cell>
                   <Chip variant="flat" size="sm" color="primary">
                     {t.specialty}
                   </Chip>
-                </TableCell>
-                <TableCell>{t.fields?.length ?? 0}</TableCell>
-                <TableCell>{t.required_fields?.length ?? 0}</TableCell>
-                <TableCell>
+                </Table.Cell>
+                <Table.Cell>{t.fields?.length ?? 0}</Table.Cell>
+                <Table.Cell>{t.required_fields?.length ?? 0}</Table.Cell>
+                <Table.Cell>
                   <Button
                     size="sm"
                     color="danger"
@@ -167,64 +158,58 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                   >
                     Delete
                   </Button>
-                </TableCell>
-              </TableRow>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
         </Table>
       )}
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>Create Case Template</ModalHeader>
-              <ModalBody className="gap-4">
-                <Input
-                  label="Template Name"
-                  value={name}
-                  onValueChange={setName}
-                  isRequired
-                  placeholder="e.g. General Surgery Log"
-                />
-                <Input
-                  label="Specialty"
-                  value={specialty}
-                  onValueChange={setSpecialty}
-                  isRequired
-                  placeholder="e.g. Surgery"
-                />
-                <Textarea
-                  label="Fields JSON"
-                  value={fieldsJson}
-                  onValueChange={setFieldsJson}
-                  isRequired
-                  minRows={6}
-                  placeholder={`[\n  {"label": "Diagnosis", "type": "text"},\n  {"label": "Procedure", "type": "textarea"},\n  {"label": "Complexity", "type": "select", "options": ["Low", "Medium", "High"]}\n]`}
-                />
-                <Input
-                  label="Required Fields (comma-separated)"
-                  value={requiredFieldsInput}
-                  onValueChange={setRequiredFieldsInput}
-                  placeholder="Diagnosis, Procedure"
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  color="primary"
-                  onPress={() => handleCreate(onClose)}
-                  isLoading={loading}
-                >
-                  Create Template
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen} size="2xl">
+        <Modal.Header>Create Case Template</Modal.Header>
+        <Modal.Body className="gap-4">
+          <TextField
+            label="Template Name"
+            value={name}
+            onChange={setName}
+            isRequired
+            placeholder="e.g. General Surgery Log"
+          />
+          <TextField
+            label="Specialty"
+            value={specialty}
+            onChange={setSpecialty}
+            isRequired
+            placeholder="e.g. Surgery"
+          />
+          <TextArea
+            label="Fields JSON"
+            value={fieldsJson}
+            onChange={setFieldsJson}
+            isRequired
+            minRows={6}
+            placeholder={`[\n  {"label": "Diagnosis", "type": "text"},\n  {"label": "Procedure", "type": "textarea"},\n  {"label": "Complexity", "type": "select", "options": ["Low", "Medium", "High"]}\n]`}
+          />
+          <TextField
+            label="Required Fields (comma-separated)"
+            value={requiredFieldsInput}
+            onChange={setRequiredFieldsInput}
+            placeholder="Diagnosis, Procedure"
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="light" onPress={overlay.close}>
+            Cancel
+          </Button>
+          <Button
+            color="primary"
+            onPress={() => handleCreate(overlay.close)}
+            isLoading={loading}
+          >
+            Create Template
+          </Button>
+        </Modal.Footer>
+      </Modal.Root>
     </div>
   );
 }
