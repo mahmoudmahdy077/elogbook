@@ -1,8 +1,9 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, CardBody, CardHeader, Chip, Button } from '@heroui/react';
+import { Card, Chip, Button } from '@heroui/react';
 import { notFound } from 'next/navigation';
 
-export default async function CaseDetailPage({ params }: { params: { tenant: string; id: string } }) {
+export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
+  const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) notFound();
@@ -15,7 +16,7 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
       profiles!case_entries_resident_id_fkey(full_name),
       tenants(tenant_type)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (!entry) notFound();
@@ -23,7 +24,7 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
   const { data: approvals } = await supabase
     .from('approval_requests')
     .select('*, profiles(full_name)')
-    .eq('entry_id', params.id)
+    .eq('entry_id', id)
     .order('requested_at', { ascending: false });
 
   const statusColor = (s: string) => {
@@ -47,7 +48,7 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <Card>
-        <CardHeader className="flex justify-between">
+        <Card.Header className="flex justify-between">
           <div>
             <h1 className="text-xl font-bold">
               {entry.case_templates?.specialty} — {entry.case_templates?.name}
@@ -55,8 +56,8 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
             <p className="text-sm text-default-500">Logged by {entry.profiles?.full_name}</p>
           </div>
           <Chip color={statusColor(entry.status)} variant="flat">{entry.status}</Chip>
-        </CardHeader>
-        <CardBody className="space-y-4">
+        </Card.Header>
+        <Card.Content className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-default-500">Patient MRN</label>
@@ -88,21 +89,21 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
           </div>
 
           {entry.status === 'draft' && (
-            <form action={`/${params.tenant}/cases/${params.id}/submit`} method="POST">
+            <form action={`/${tenantSlug}/cases/${id}/submit`} method="POST">
               <Button type="submit" color="primary">
                 Submit for Approval
               </Button>
             </form>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
 
       {approvals && approvals.length > 0 && (
         <Card>
-          <CardHeader>
+          <Card.Header>
             <h2 className="text-lg font-semibold">Approval History</h2>
-          </CardHeader>
-          <CardBody>
+          </Card.Header>
+          <Card.Content>
             <div className="space-y-3">
               {approvals.map((a) => (
                 <div
@@ -125,7 +126,7 @@ export default async function CaseDetailPage({ params }: { params: { tenant: str
                 </div>
               ))}
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
       )}
     </div>

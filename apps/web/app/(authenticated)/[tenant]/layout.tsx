@@ -24,8 +24,9 @@ export default async function TenantLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { tenant: string };
+  params: Promise<{ tenant: string }>;
 }) {
+  const { tenant: paramTenant } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -40,32 +41,37 @@ export default async function TenantLayout({
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== paramTenant) redirect('/login');
 
   const userRole = profile.role as string;
-  const tenantSlug = params.tenant;
+  const tenantSlug = paramTenant;
 
   const visibleLinks = NAV_LINKS.filter((link) => link.roles.includes(userRole));
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="w-56 border-r border-divider flex-shrink-0 p-4">
+      <aside className="w-56 glass-panel flex-shrink-0 p-4 flex flex-col">
         <div className="mb-6">
           <Link href={`/${tenantSlug}/dashboard`} className="font-bold text-xl">
             E-Logbook
           </Link>
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1 flex-1">
           {visibleLinks.map((link) => (
             <Link
               key={link.href}
               href={`/${tenantSlug}${link.href}`}
-              className="block px-3 py-2 rounded-lg text-sm hover:bg-default-100 transition-colors"
+              className="block px-3 py-2 rounded-lg text-sm hover:bg-default-100 transition-colors font-heading"
             >
               {link.label}
             </Link>
           ))}
         </nav>
+        <form action="/auth/signout" method="post" className="mt-auto pt-4 border-t border-divider">
+          <button type="submit" className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors">
+            Sign Out
+          </button>
+        </form>
       </aside>
       <main className="flex-1 p-6 overflow-auto">{children}</main>
     </div>

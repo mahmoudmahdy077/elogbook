@@ -1,10 +1,11 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, CardBody, CardHeader, Button } from '@heroui/react';
+import { Card, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
 
-export default async function DashboardPage({ params }: { params: { tenant: string } }) {
+export default async function DashboardPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -19,7 +20,7 @@ export default async function DashboardPage({ params }: { params: { tenant: stri
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const { count: draftCount } = await supabase
     .from('case_entries')
@@ -52,23 +53,25 @@ export default async function DashboardPage({ params }: { params: { tenant: stri
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Button as={Link} href={`/${params.tenant}/cases/new`} color="primary">
-          Log New Case
-        </Button>
+          <Link href={`/${tenantSlug}/cases/new`}>
+            <Button color="primary">
+              Log New Case
+            </Button>
+          </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>Draft Cases</CardHeader>
-          <CardBody><p className="text-3xl font-bold">{draftCount ?? 0}</p></CardBody>
+        <Card className="glass-panel">
+          <Card.Header className="font-heading">Draft Cases</Card.Header>
+          <Card.Content><p className="text-3xl font-bold clinical-data">{draftCount ?? 0}</p></Card.Content>
         </Card>
-        <Card>
-          <CardHeader>Pending Review</CardHeader>
-          <CardBody><p className="text-3xl font-bold">{pendingCount ?? 0}</p></CardBody>
+        <Card className="glass-panel">
+          <Card.Header className="font-heading">Pending Review</Card.Header>
+          <Card.Content><p className="text-3xl font-bold clinical-data">{pendingCount ?? 0}</p></Card.Content>
         </Card>
-        <Card>
-          <CardHeader>Approved Cases</CardHeader>
-          <CardBody><p className="text-3xl font-bold">{approvedCount ?? 0}</p></CardBody>
+        <Card className="glass-panel">
+          <Card.Header className="font-heading">Approved Cases</Card.Header>
+          <Card.Content><p className="text-3xl font-bold clinical-data">{approvedCount ?? 0}</p></Card.Content>
         </Card>
       </div>
 

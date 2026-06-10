@@ -1,15 +1,9 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from '@heroui/react';
+import { Table } from '@heroui/react';
 import { redirect } from 'next/navigation';
 
-export default async function AuditPage({ params }: { params: { tenant: string } }) {
+export default async function AuditPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,10 +18,10 @@ export default async function AuditPage({ params }: { params: { tenant: string }
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   if (!['director', 'institution_admin', 'admin'].includes(profile.role)) {
-    redirect(`/${params.tenant}/dashboard`);
+    redirect(`/${tenantSlug}/dashboard`);
   }
 
   const { data: logs, error } = await supabase
@@ -58,30 +52,32 @@ export default async function AuditPage({ params }: { params: { tenant: string }
       {(!logs || logs.length === 0) ? (
         <p className="text-default-500">No audit entries found.</p>
       ) : (
+        <div className="glass-panel p-4">
         <Table aria-label="Audit logs table">
-          <TableHeader>
-            <TableColumn>Date</TableColumn>
-            <TableColumn>Action</TableColumn>
-            <TableColumn>Resource</TableColumn>
-            <TableColumn>User</TableColumn>
-            <TableColumn>IP</TableColumn>
-          </TableHeader>
-          <TableBody>
+          <Table.Header>
+            <Table.Column>Date</Table.Column>
+            <Table.Column>Action</Table.Column>
+            <Table.Column>Resource</Table.Column>
+            <Table.Column>User</Table.Column>
+            <Table.Column>IP</Table.Column>
+          </Table.Header>
+          <Table.Body>
             {logs.map((log: any) => (
-              <TableRow key={log.id}>
-                <TableCell>
+              <Table.Row key={log.id}>
+                <Table.Cell className="clinical-data">
                   {new Date(log.created_at).toLocaleString()}
-                </TableCell>
-                <TableCell>{log.action}</TableCell>
-                <TableCell>
+                </Table.Cell>
+                <Table.Cell>{log.action}</Table.Cell>
+                <Table.Cell className="clinical-data">
                   {log.resource_type} / {formatUUID(log.resource_id)}
-                </TableCell>
-                <TableCell>{formatUUID(log.user_id)}</TableCell>
-                <TableCell>{log.ip_address || '—'}</TableCell>
-              </TableRow>
+                </Table.Cell>
+                <Table.Cell className="clinical-data">{formatUUID(log.user_id)}</Table.Cell>
+                <Table.Cell>{log.ip_address || '—'}</Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
         </Table>
+        </div>
       )}
     </div>
   );

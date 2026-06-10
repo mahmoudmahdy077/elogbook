@@ -1,9 +1,10 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, CardBody, CardHeader, Chip } from '@heroui/react';
+import { Card, Chip } from '@heroui/react';
 import { redirect } from 'next/navigation';
 import SubscriptionPlans from '@/components/SubscriptionPlans';
 
-export default async function BillingPage({ params }: { params: { tenant: string } }) {
+export default async function BillingPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -18,7 +19,7 @@ export default async function BillingPage({ params }: { params: { tenant: string
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const { data: plans } = await supabase
     .from('subscription_plans')
@@ -52,11 +53,11 @@ export default async function BillingPage({ params }: { params: { tenant: string
       <h1 className="text-2xl font-bold">Billing & Subscription</h1>
 
       {subscription && (
-        <Card>
-          <CardHeader>
+        <Card className="glass-panel">
+          <Card.Header>
             <h2 className="text-lg font-semibold">Current Plan</h2>
-          </CardHeader>
-          <CardBody>
+          </Card.Header>
+          <Card.Content>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xl font-bold">
@@ -69,13 +70,13 @@ export default async function BillingPage({ params }: { params: { tenant: string
               <div className="text-right">
                 <Chip color="success" variant="flat" size="sm">Active</Chip>
                 {subscription.current_period_end && (
-                  <p className="text-sm text-default-500 mt-1">
+                  <p className="text-sm text-default-500 mt-1 clinical-data">
                     Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
                   </p>
                 )}
               </div>
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
       )}
 
@@ -87,11 +88,11 @@ export default async function BillingPage({ params }: { params: { tenant: string
         currentPlanId={subscription?.plan_id ?? null}
       />
 
-      <Card>
-        <CardHeader>
+      <Card className="glass-panel">
+        <Card.Header>
           <h2 className="text-lg font-semibold">AI Report Credits</h2>
-        </CardHeader>
-        <CardBody>
+        </Card.Header>
+        <Card.Content>
           <p className="text-sm text-default-500 mb-4">
             Generate comprehensive AI analysis reports for your cases. One-time purchase of $4.99 per report.
           </p>
@@ -104,7 +105,7 @@ export default async function BillingPage({ params }: { params: { tenant: string
                 <div key={p.id} className="flex items-center justify-between border-b border-divider pb-2">
                   <div>
                     <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
-                    <p className="text-xs text-default-400">
+                    <p className="text-xs text-default-400 clinical-data">
                       {new Date(p.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -119,7 +120,7 @@ export default async function BillingPage({ params }: { params: { tenant: string
               ))}
             </div>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

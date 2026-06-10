@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, CardBody, CardHeader, Progress } from '@heroui/react';
+import { Card, ProgressBar } from '@heroui/react';
 import GoalForm from '@/components/GoalForm';
 
 export default async function GoalsPage() {
@@ -67,8 +67,8 @@ export default async function GoalsPage() {
             else if (isOverdue) color = 'danger';
 
             return (
-              <Card key={goal.id}>
-                <CardHeader>
+              <Card key={goal.id} className="glass-panel">
+                <Card.Header>
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">{goal.title}</h3>
                     {isDirector && (
@@ -77,21 +77,20 @@ export default async function GoalsPage() {
                       </p>
                     )}
                   </div>
-                </CardHeader>
-                <CardBody>
+                </Card.Header>
+                <Card.Content>
                   <div className="flex flex-col gap-2">
                     {goal.specialty && (
                       <p className="text-sm text-default-500">Specialty: {goal.specialty}</p>
                     )}
-                    <p className="text-sm text-default-500">
+                    <p className="text-sm text-default-500 clinical-data">
                       Deadline: {new Date(goal.deadline).toLocaleDateString()}
                     </p>
-                    <Progress
-                      value={percentage}
-                      color={color}
-                      label={`${current} / ${target}`}
-                      showValueLabel
-                    />
+                    <div className="flex items-center gap-2 clinical-data">
+                      <ProgressBar value={percentage} color={color} className="flex-1">
+                        <ProgressBar.Output>{current} / {target}</ProgressBar.Output>
+                      </ProgressBar>
+                    </div>
                     {isComplete && (
                       <p className="text-success text-sm font-medium">Goal completed!</p>
                     )}
@@ -102,7 +101,7 @@ export default async function GoalsPage() {
                       <p className="text-sm text-default-400 mt-1">{goal.description}</p>
                     )}
                   </div>
-                </CardBody>
+                </Card.Content>
               </Card>
             );
           })}

@@ -1,9 +1,10 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, CardBody, CardHeader, Button } from '@heroui/react';
+import { Card, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-export default async function ReportsPage({ params }: { params: { tenant: string } }) {
+export default async function ReportsPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -18,7 +19,7 @@ export default async function ReportsPage({ params }: { params: { tenant: string
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const { count: totalCount } = await supabase
     .from('case_entries')
@@ -77,48 +78,46 @@ export default async function ReportsPage({ params }: { params: { tenant: string
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-        <Button
-          as={Link}
-          href={`/api/${params.tenant}/export-pdf`}
-          color="primary"
-        >
-          Export PDF
-        </Button>
+        <a href={`/api/${tenantSlug}/export-pdf`}>
+          <Button color="primary">
+            Export PDF
+          </Button>
+        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardBody className="text-center">
+        <Card className="glass-panel">
+          <Card.Content className="text-center">
             <p className="text-sm text-default-500">Total Cases</p>
-            <p className="text-3xl font-bold">{totalCount ?? 0}</p>
-          </CardBody>
+            <p className="text-3xl font-bold clinical-data">{totalCount ?? 0}</p>
+          </Card.Content>
         </Card>
-        <Card className="border-t-3 border-t-success">
-          <CardBody className="text-center">
+        <Card className="glass-panel border-t-3 border-t-success">
+          <Card.Content className="text-center">
             <p className="text-sm text-success">Approved</p>
-            <p className="text-3xl font-bold text-success">{approvedCount ?? 0}</p>
-          </CardBody>
+            <p className="text-3xl font-bold text-success clinical-data">{approvedCount ?? 0}</p>
+          </Card.Content>
         </Card>
-        <Card className="border-t-3 border-t-primary">
-          <CardBody className="text-center">
+        <Card className="glass-panel border-t-3 border-t-primary">
+          <Card.Content className="text-center">
             <p className="text-sm text-primary">Pending</p>
-            <p className="text-3xl font-bold text-primary">{pendingCount ?? 0}</p>
-          </CardBody>
+            <p className="text-3xl font-bold text-primary clinical-data">{pendingCount ?? 0}</p>
+          </Card.Content>
         </Card>
-        <Card className="border-t-3 border-t-warning">
-          <CardBody className="text-center">
+        <Card className="glass-panel border-t-3 border-t-warning">
+          <Card.Content className="text-center">
             <p className="text-sm text-warning">Drafts</p>
-            <p className="text-3xl font-bold text-warning">{draftCount ?? 0}</p>
-          </CardBody>
+            <p className="text-3xl font-bold text-warning clinical-data">{draftCount ?? 0}</p>
+          </Card.Content>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
+        <Card className="glass-panel">
+          <Card.Header>
             <h2 className="text-lg font-semibold">Cases by Specialty</h2>
-          </CardHeader>
-          <CardBody>
+          </Card.Header>
+          <Card.Content>
             {Object.keys(specialtyCounts).length === 0 ? (
               <p className="text-default-500 text-sm">No cases logged yet.</p>
             ) : (
@@ -141,14 +140,14 @@ export default async function ReportsPage({ params }: { params: { tenant: string
                   ))}
               </div>
             )}
-          </CardBody>
+          </Card.Content>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="glass-panel">
+          <Card.Header>
             <h2 className="text-lg font-semibold">Status Distribution</h2>
-          </CardHeader>
-          <CardBody>
+          </Card.Header>
+          <Card.Content>
             <div className="flex items-center justify-center gap-6 py-4">
               {Object.entries(statusCounts).map(([status, count]) => (
                 <div key={status} className="flex flex-col items-center gap-1">
@@ -160,7 +159,7 @@ export default async function ReportsPage({ params }: { params: { tenant: string
                 </div>
               ))}
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
       </div>
     </div>

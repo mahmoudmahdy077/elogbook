@@ -1,11 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import {
   Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Chip,
   Button,
 } from '@heroui/react';
@@ -19,7 +14,8 @@ const statusColorMap: Record<string, 'warning' | 'primary' | 'success' | 'danger
   rejected: 'danger',
 };
 
-export default async function CasesPage({ params }: { params: { tenant: string } }) {
+export default async function CasesPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -34,7 +30,7 @@ export default async function CasesPage({ params }: { params: { tenant: string }
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const { data: entries, error } = await supabase
     .from('case_entries')
@@ -56,9 +52,11 @@ export default async function CasesPage({ params }: { params: { tenant: string }
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Cases</h1>
-        <Button as={Link} href={`/${params.tenant}/cases/new`} color="primary">
-          Log New Case
-        </Button>
+        <Link href={`/${tenantSlug}/cases/new`}>
+          <Button color="primary">
+            Log New Case
+          </Button>
+        </Link>
       </div>
 
       {(!entries || entries.length === 0) ? (
@@ -67,41 +65,43 @@ export default async function CasesPage({ params }: { params: { tenant: string }
           <p className="text-sm mt-1">Click &quot;Log New Case&quot; to get started.</p>
         </div>
       ) : (
+        <div className="glass-panel p-4">
         <Table aria-label="Case entries table">
-          <TableHeader>
-            <TableColumn>Date</TableColumn>
-            <TableColumn>Template</TableColumn>
-            <TableColumn>MRN</TableColumn>
-            <TableColumn>Status</TableColumn>
-            <TableColumn>Actions</TableColumn>
-          </TableHeader>
-          <TableBody>
+          <Table.Header>
+            <Table.Column>Date</Table.Column>
+            <Table.Column>Template</Table.Column>
+            <Table.Column>MRN</Table.Column>
+            <Table.Column>Status</Table.Column>
+            <Table.Column>Actions</Table.Column>
+          </Table.Header>
+          <Table.Body>
             {entries.map((entry: any) => (
-              <TableRow key={entry.id}>
-                <TableCell>{entry.case_date}</TableCell>
-                <TableCell>
+              <Table.Row key={entry.id}>
+                <Table.Cell className="clinical-data">{entry.case_date}</Table.Cell>
+                <Table.Cell>
                   {entry.case_templates?.specialty} - {entry.case_templates?.name}
-                </TableCell>
-                <TableCell>{entry.patient_mrn}</TableCell>
-                <TableCell>
-                  <Chip color={statusColorMap[entry.status] || 'default'} variant="flat" size="sm">
+                </Table.Cell>
+                <Table.Cell className="clinical-data">{entry.patient_mrn}</Table.Cell>
+                <Table.Cell>
+                  <Chip color={statusColorMap[entry.status] || 'default'} variant="flat" size="sm" className={`badge-${entry.status}`}>
                     {entry.status}
                   </Chip>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    as={Link}
-                    href={`/${params.tenant}/cases/${entry.id}`}
-                    variant="light"
-                    size="sm"
-                  >
-                    View
-                  </Button>
-                </TableCell>
-              </TableRow>
+                </Table.Cell>
+                <Table.Cell>
+                  <Link href={`/${tenantSlug}/cases/${entry.id}`}>
+                    <Button
+                      variant="light"
+                      size="sm"
+                    >
+                      View
+                    </Button>
+                  </Link>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
         </Table>
+        </div>
       )}
     </div>
   );

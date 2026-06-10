@@ -2,7 +2,8 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import CaseForm from '@/components/CaseForm';
 
-export default async function NewCasePage({ params }: { params: { tenant: string } }) {
+export default async function NewCasePage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,7 +18,7 @@ export default async function NewCasePage({ params }: { params: { tenant: string
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const initialStatus = tenant.tenant_type === 'individual' ? 'pending' : 'draft';
 
