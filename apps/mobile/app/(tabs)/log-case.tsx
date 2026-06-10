@@ -9,7 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
+import { syncService } from '../../lib/sync';
+import { saveDraftCase } from '../../lib/db/storage';
 import type { CaseTemplate, TemplateField } from '@elogbook/shared';
 
 export default function LogCaseScreen() {
@@ -22,9 +25,14 @@ export default function LogCaseScreen() {
   const [patientDob, setPatientDob] = useState('');
   const [caseDate, setCaseDate] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [syncStatus, setSyncStatus] = useState(syncService.getStatus());
 
   useEffect(() => {
     loadTemplates();
+  }, []);
+
+  useEffect(() => {
+    return syncService.onStatusChange(setSyncStatus);
   }, []);
 
   const loadTemplates = async () => {
@@ -70,7 +78,10 @@ export default function LogCaseScreen() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSubmitting(false);
+      return;
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -78,7 +89,10 @@ export default function LogCaseScreen() {
       .eq('user_id', user.id)
       .single();
 
-    if (!profile) return;
+    if (!profile) {
+      setSubmitting(false);
+      return;
+    }
 
     const { data: tenant } = await supabase
       .from('tenants')
@@ -88,7 +102,7 @@ export default function LogCaseScreen() {
 
     const status = tenant?.tenant_type === 'individual' ? 'pending' : 'draft';
 
-    await supabase.from('case_entries').insert({
+    const caseData = {
       tenant_id: profile.tenant_id,
       resident_id: profile.id,
       template_id: selectedTemplate.id,
@@ -97,7 +111,16 @@ export default function LogCaseScreen() {
       case_date: caseDate,
       field_values: fieldValues,
       status,
-    });
+    };
+
+    try {
+      const { error } = await supabase.from('case_entries').insert(caseData);
+      if (error) throw error;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      await saveDraftCase(caseData);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
 
     setSubmitting(false);
     setSelectedTemplate(null);
@@ -176,6 +199,25 @@ export default function LogCaseScreen() {
   if (!selectedTemplate) {
     return (
       <ScrollView className="flex-1 bg-black px-4 pt-4">
+        {syncStatus !== 'idle' && (
+          <View
+            className={`rounded-lg px-4 py-2 mb-4 ${
+              syncStatus === 'syncing'
+                ? 'bg-blue-900'
+                : syncStatus === 'error'
+                  ? 'bg-red-900'
+                  : 'bg-yellow-900'
+            }`}
+          >
+            <Text className="text-white text-sm">
+              {syncStatus === 'syncing'
+                ? 'Syncing pending cases...'
+                : syncStatus === 'error'
+                  ? 'Sync error — will retry'
+                  : 'Offline — drafts saved locally'}
+            </Text>
+          </View>
+        )}
         <Text className="text-white text-2xl font-bold mb-6">Select Template</Text>
         {templates.length === 0 ? (
           <Text className="text-gray-400">No templates available.</Text>
@@ -205,6 +247,25 @@ export default function LogCaseScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView className="flex-1 px-4 pt-4">
+        {syncStatus !== 'idle' && (
+          <View
+            className={`rounded-lg px-4 py-2 mb-4 ${
+              syncStatus === 'syncing'
+                ? 'bg-blue-900'
+                : syncStatus === 'error'
+                  ? 'bg-red-900'
+                  : 'bg-yellow-900'
+            }`}
+          >
+            <Text className="text-white text-sm">
+              {syncStatus === 'syncing'
+                ? 'Syncing pending cases...'
+                : syncStatus === 'error'
+                  ? 'Sync error — will retry'
+                  : 'Offline — drafts saved locally'}
+            </Text>
+          </View>
+        )}
         <View className="flex-row items-center mb-6">
           <TouchableOpacity onPress={() => setSelectedTemplate(null)}>
             <Text className="text-blue-400 mr-3">Back</Text>

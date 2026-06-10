@@ -1,19 +1,18 @@
 {
   "name": "elogbook",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev:web": "turbo run dev --filter=@elogbook/web",
-    "dev:mobile": "turbo run start --filter=@elogbook/mobile",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
+    "dev:web": "pnpm --filter @elogbook/web dev",
+    "dev:mobile": "pnpm --filter @elogbook/mobile start",
+    "build:web": "pnpm --filter @elogbook/web build",
     "db:migrate": "supabase db push",
-    "db:seed": "supabase db seed",
     "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^6.0.0"
   }
 }

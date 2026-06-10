@@ -1,0 +1,5 @@
+packages:
+  - apps/*
+  - packages/*
+ignoredBuiltDependencies:
+  - '@heroui/shared-utils'
