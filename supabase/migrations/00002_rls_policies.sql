@@ -23,6 +23,9 @@ ALTER TABLE ai_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resident_ai_toggle ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_query_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_gateway_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accreditation_frameworks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attachment_signatures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE institution_billing ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- Helper Functions
@@ -183,21 +186,11 @@ CREATE POLICY "Authenticated users can insert own entries"
     AND resident_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
   );
 
-CREATE POLICY "Resident updates own draft entries"
-  ON case_entries FOR UPDATE
-  TO authenticated
-  USING (
-    tenant_id = get_tenant_id()
-    AND resident_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-    AND status = 'draft'
-  )
-  WITH CHECK (
-    tenant_id = get_tenant_id()
-    AND resident_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-    AND status = 'draft'
-  );
+DROP POLICY IF EXISTS "Resident updates own draft entries" ON case_entries;
+DROP POLICY IF EXISTS "Resident submits own entries (draft→pending)" ON case_entries;
+DROP POLICY IF EXISTS "Supervisor can update any entry in tenant" ON case_entries;
 
-CREATE POLICY "Resident submits own entries (draft→pending)"
+CREATE POLICY "Resident updates own draft entries only"
   ON case_entries FOR UPDATE
   TO authenticated
   USING (
@@ -211,16 +204,18 @@ CREATE POLICY "Resident submits own entries (draft→pending)"
     AND status IN ('draft', 'pending')
   );
 
-CREATE POLICY "Supervisor can update any entry in tenant"
+CREATE POLICY "Supervisor can approve/reject entries in tenant"
   ON case_entries FOR UPDATE
   TO authenticated
   USING (
     tenant_id = get_tenant_id()
     AND get_user_role() IN ('supervisor', 'director', 'institution_admin', 'admin')
+    AND status = 'pending'
   )
   WITH CHECK (
     tenant_id = get_tenant_id()
     AND get_user_role() IN ('supervisor', 'director', 'institution_admin', 'admin')
+    AND status IN ('approved', 'rejected')
   );
 
 -- ============================================================================
@@ -597,6 +592,84 @@ CREATE POLICY "Admin can manage payment gateway config"
 
 CREATE POLICY "Admin can update payment gateway config"
   ON payment_gateway_config FOR UPDATE
+  TO authenticated
+  USING (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('institution_admin', 'admin')
+  )
+  WITH CHECK (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('institution_admin', 'admin')
+  );
+
+-- ============================================================================
+-- accreditation_frameworks
+-- ============================================================================
+
+CREATE POLICY "Tenant members can read accreditation frameworks"
+  ON accreditation_frameworks FOR SELECT
+  TO authenticated
+  USING (tenant_id = get_tenant_id());
+
+CREATE POLICY "Director+ can create accreditation frameworks"
+  ON accreditation_frameworks FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('director', 'institution_admin', 'admin')
+  );
+
+CREATE POLICY "Director+ can update accreditation frameworks"
+  ON accreditation_frameworks FOR UPDATE
+  TO authenticated
+  USING (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('director', 'institution_admin', 'admin')
+  )
+  WITH CHECK (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('director', 'institution_admin', 'admin')
+  );
+
+CREATE POLICY "Director+ can delete accreditation frameworks"
+  ON accreditation_frameworks FOR DELETE
+  TO authenticated
+  USING (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('director', 'institution_admin', 'admin')
+  );
+
+-- ============================================================================
+-- attachment_signatures
+-- ============================================================================
+
+CREATE POLICY "Tenant members can read attachment signatures"
+  ON attachment_signatures FOR SELECT
+  TO authenticated
+  USING (tenant_id = get_tenant_id());
+
+CREATE POLICY "Users can insert signature for own profile"
+  ON attachment_signatures FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    tenant_id = get_tenant_id()
+    AND resident_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
+  );
+
+-- ============================================================================
+-- institution_billing
+-- ============================================================================
+
+CREATE POLICY "Admin roles can read institution billing"
+  ON institution_billing FOR SELECT
+  TO authenticated
+  USING (
+    tenant_id = get_tenant_id()
+    AND get_user_role() IN ('director', 'institution_admin', 'admin')
+  );
+
+CREATE POLICY "Institution admin+ can manage institution billing"
+  ON institution_billing FOR ALL
   TO authenticated
   USING (
     tenant_id = get_tenant_id()
