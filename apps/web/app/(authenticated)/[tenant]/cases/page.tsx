@@ -7,11 +7,12 @@ import {
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-const statusColorMap: Record<string, 'warning' | 'primary' | 'success' | 'danger'> = {
-  draft: 'warning',
-  pending: 'primary',
-  approved: 'success',
-  rejected: 'danger',
+type CaseEntryRow = {
+  id: string;
+  case_date: string;
+  patient_mrn: string | null;
+  status: string;
+  case_templates: { name: string; specialty: string } | { name: string; specialty: string }[];
 };
 
 export default async function CasesPage({ params }: { params: Promise<{ tenant: string }> }) {
@@ -41,12 +42,19 @@ export default async function CasesPage({ params }: { params: Promise<{ tenant: 
 
   if (error) {
     return (
-      <div>
+      <div role="alert">
         <h1 className="text-2xl font-bold mb-6">My Cases</h1>
         <p className="text-danger">Failed to load cases: {error.message}</p>
       </div>
     );
   }
+
+  const statusColorMap: Record<string, 'warning' | 'primary' | 'success' | 'danger'> = {
+    draft: 'warning',
+    pending: 'primary',
+    approved: 'success',
+    rejected: 'danger',
+  };
 
   return (
     <div>
@@ -75,15 +83,17 @@ export default async function CasesPage({ params }: { params: Promise<{ tenant: 
             <Table.Column>Actions</Table.Column>
           </Table.Header>
           <Table.Body>
-            {entries.map((entry: any) => (
+            {entries.map((entry: CaseEntryRow) => {
+              const template = Array.isArray(entry.case_templates) ? entry.case_templates[0] : entry.case_templates;
+              return (
               <Table.Row key={entry.id}>
                 <Table.Cell className="clinical-data">{entry.case_date}</Table.Cell>
                 <Table.Cell>
-                  {entry.case_templates?.specialty} - {entry.case_templates?.name}
+                  {template?.specialty} - {template?.name}
                 </Table.Cell>
                 <Table.Cell className="clinical-data">{entry.patient_mrn}</Table.Cell>
                 <Table.Cell>
-                  <Chip color={statusColorMap[entry.status] || 'default'} variant="flat" size="sm" className={`badge-${entry.status}`}>
+                  <Chip color={statusColorMap[entry.status] || 'default'} variant="flat" size="sm">
                     {entry.status}
                   </Chip>
                 </Table.Cell>
@@ -98,7 +108,7 @@ export default async function CasesPage({ params }: { params: Promise<{ tenant: 
                   </Link>
                 </Table.Cell>
               </Table.Row>
-            ))}
+            )})}
           </Table.Body>
         </Table>
         </div>

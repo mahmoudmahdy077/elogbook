@@ -155,13 +155,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         <span
                           className={
                             entry.is_deidentified
-                              ? 'badge-approved px-2 py-0.5 text-[10px] font-semibold rounded'
-                              : 'badge-pending px-2 py-0.5 text-[10px] font-semibold rounded'
+                              ? 'badge-approved px-2 py-0.5 text-xs font-semibold rounded'
+                              : 'badge-pending px-2 py-0.5 text-xs font-semibold rounded'
                           }
                         >
                           {entry.is_deidentified ? 'De-ID' : 'PII'}
                         </span>
-                        <span className="badge-draft px-2 py-0.5 text-[10px] font-semibold rounded">
+                        <span className="badge-draft px-2 py-0.5 text-xs font-semibold rounded">
                           Pending
                         </span>
                       </div>

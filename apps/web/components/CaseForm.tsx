@@ -81,15 +81,10 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
 
   useEffect(() => {
     async function loadTemplates() {
-      const { data: tenantTemplates, error } = await supabase
-        .from('case_templates')
-        .select('*')
-        .eq('tenant_id', tenantId);
-
-      const { data: globalTemplates } = await supabase
-        .from('case_templates')
-        .select('*')
-        .eq('tenant_id', GLOBAL_TENANT_ID);
+      const [{ data: tenantTemplates, error }, { data: globalTemplates }] = await Promise.all([
+        supabase.from('case_templates').select('*').eq('tenant_id', tenantId),
+        supabase.from('case_templates').select('*').eq('tenant_id', GLOBAL_TENANT_ID),
+      ]);
 
       if (error) {
         setErrors([error.message]);
@@ -230,7 +225,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           <div key={label} className="flex items-center">
             <div className="flex flex-col items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                   i < step
                     ? 'bg-primary text-white'
                     : i === step
@@ -336,11 +331,11 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
 
         {isDeidentified ? (
           <>
-            <div className="text-xs text-amber-500/80 bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5">
-              HIPAA Safe Harbor: No PHI will be stored. MRN hashed client-side before submission.
+            <div className="warning-banner text-xs rounded-lg p-2.5">
+              HIPAA Safe Harbor: No PHI will be stored. MRN encoded client-side before submission.
             </div>
             <TextField
-              label="Patient MRN (hashed client-side)"
+              label="Patient MRN (encoded client-side)"
               value={patientMrn}
               onChange={setPatientMrn}
               placeholder="Enter MRN for local hashing"
@@ -356,7 +351,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           </>
         ) : (
           <>
-            <div className="text-xs text-amber-500/80 bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5">
+            <div className="danger-banner text-xs rounded-lg p-2.5">
               PII Warning: Patient MRN and Date of Birth will be stored. Ensure compliance with your
               institution&apos;s data protection policies.
             </div>
@@ -597,7 +592,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       {renderStepIndicator()}
 
       {errors.length > 0 && (
-        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4">
+        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4" role="alert">
           {errors.map((err, i) => (
             <p key={i}>{err}</p>
           ))}

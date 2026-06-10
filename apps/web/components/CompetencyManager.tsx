@@ -153,7 +153,6 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
     setSaving(false);
     resetForm();
     setShowForm(false);
-    router.refresh();
     await fetchFrameworks();
   }
 
@@ -299,6 +298,8 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                     type="button"
                     className="flex-1 flex items-center gap-3 text-left"
                     onClick={() => toggleExpand(framework.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`framework-${framework.id}-details`}
                   >
                     <div>
                       <h3 className="font-semibold">{framework.name}</h3>

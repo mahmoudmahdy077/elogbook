@@ -4,7 +4,6 @@
 
 :root {
   --color-backdrop: #060814;
-  --color-backdrop-light: #F8FAFC;
   --color-primary: #0D9488;
   --color-primary-glow: rgba(13, 148, 136, 0.3);
   --color-secondary: #6366F1;
@@ -26,7 +25,6 @@
   --font-sans: var(--font-body);
   --font-mono: var(--font-mono);
   --color-backdrop: var(--color-backdrop);
-  --color-backdrop-light: var(--color-backdrop-light);
   --color-primary: var(--color-primary);
   --color-primary-glow: var(--color-primary-glow);
   --color-secondary: var(--color-secondary);
@@ -113,4 +111,16 @@ h1, h2, h3, h4, h5, h6 {
 .clinical-data {
   font-family: var(--font-mono);
   letter-spacing: 0.025em;
+}
+
+.warning-banner {
+  background: color-mix(in srgb, var(--color-amber-glow) 25%, transparent);
+  border: 1px solid var(--color-amber-glow);
+  color: #F59E0B;
+}
+
+.danger-banner {
+  background: color-mix(in srgb, var(--color-crimson-glow) 25%, transparent);
+  border: 1px solid var(--color-crimson-glow);
+  color: #EF4444;
 }
