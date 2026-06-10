@@ -1,12 +1,14 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { Tabs, Tab } from '@heroui/react';
+import { Tabs } from '@heroui/react';
 import TemplateEditor from '@/components/TemplateEditor';
 import UserManager from '@/components/UserManager';
 import AIConfigPanel from '@/components/AIConfigPanel';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
+import CompetencyManager from '@/components/CompetencyManager';
 
-export default async function AdminPage({ params }: { params: { tenant: string } }) {
+export default async function AdminPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -21,7 +23,7 @@ export default async function AdminPage({ params }: { params: { tenant: string }
   if (!profile) redirect('/login');
 
   const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== params.tenant) redirect('/login');
+  if (tenant.slug !== tenantSlug) redirect('/login');
 
   if (!['director', 'institution_admin', 'admin'].includes(profile.role)) {
     redirect('/login');
@@ -55,22 +57,32 @@ export default async function AdminPage({ params }: { params: { tenant: string }
     <div>
       <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
       <Tabs aria-label="Admin panels">
-        <Tab key="templates" title="Case Templates">
+        <Tabs.List>
+          <Tabs.Tab id="templates">Case Templates</Tabs.Tab>
+          <Tabs.Tab id="users">Users & Roles</Tabs.Tab>
+          <Tabs.Tab id="ai">AI Config</Tabs.Tab>
+          <Tabs.Tab id="payment">Payment Gateway</Tabs.Tab>
+          <Tabs.Tab id="accreditation">Accreditation</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel id="templates">
           <TemplateEditor tenantId={profile.tenant_id} templates={templates ?? []} />
-        </Tab>
-        <Tab key="users" title="Users & Roles">
+        </Tabs.Panel>
+        <Tabs.Panel id="users">
           <UserManager
             tenantId={profile.tenant_id}
             users={users ?? []}
             currentUserRole={profile.role}
           />
-        </Tab>
-        <Tab key="ai" title="AI Config">
+        </Tabs.Panel>
+        <Tabs.Panel id="ai">
           <AIConfigPanel tenantId={profile.tenant_id} config={aiConfig} />
-        </Tab>
-        <Tab key="payment" title="Payment Gateway">
+        </Tabs.Panel>
+        <Tabs.Panel id="payment">
           <PaymentGatewayPanel tenantId={profile.tenant_id} config={paymentConfig} />
-        </Tab>
+        </Tabs.Panel>
+        <Tabs.Panel id="accreditation">
+          <CompetencyManager tenantId={profile.tenant_id} />
+        </Tabs.Panel>
       </Tabs>
     </div>
   );
