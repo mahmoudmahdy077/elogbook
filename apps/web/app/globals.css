@@ -1,3 +1,98 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+@source "../../node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}";
+
+:root {
+  --color-backdrop: #060814;
+  --color-backdrop-light: #F8FAFC;
+  --color-primary: #0D9488;
+  --color-primary-glow: rgba(13, 148, 136, 0.3);
+  --color-secondary: #6366F1;
+  --color-secondary-glow: rgba(99, 102, 241, 0.3);
+  --color-neutral-dark: #0F172A;
+  --color-neutral-light: #E2E8F0;
+  --color-border: rgba(99, 102, 241, 0.15);
+  --color-border-glow: rgba(99, 102, 241, 0.3);
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  --color-amber-glow: rgba(217, 119, 6, 0.4);
+  --color-emerald-glow: rgba(5, 150, 105, 0.4);
+  --color-crimson-glow: rgba(220, 38, 38, 0.4);
+}
+
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --color-backdrop: var(--color-backdrop);
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+}
+
+body {
+  background-color: var(--color-backdrop);
+  color: var(--color-neutral-light);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 24px rgba(6, 8, 20, 0.4);
+  border-radius: 0.75rem;
+}
+
+.glass-panel:hover {
+  border-color: var(--color-border);
+}
+
+.glass-panel:focus-within {
+  border-color: var(--color-border-glow);
+  box-shadow: 0 0 0 1px var(--color-primary-glow), 0 4px 24px rgba(6, 8, 20, 0.4);
+}
+
+.badge-draft {
+  background: rgba(226, 232, 240, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  color: #E2E8F0;
+}
+
+.badge-pending {
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid var(--color-amber-glow);
+  color: #F59E0B;
+  box-shadow: 0 0 8px var(--color-amber-glow);
+}
+
+.badge-approved {
+  background: rgba(5, 150, 105, 0.15);
+  border: 1px solid var(--color-emerald-glow);
+  color: #10B981;
+  box-shadow: 0 0 8px var(--color-emerald-glow);
+}
+
+.badge-rejected {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid var(--color-crimson-glow);
+  color: #EF4444;
+  box-shadow: 0 0 8px var(--color-crimson-glow);
+}
+
+.clinical-data {
+  font-family: var(--font-mono);
+  letter-spacing: 0.025em;
+}
+
+.kpi-ring {
+  filter: drop-shadow(0 0 6px var(--color-primary-glow));
+}
