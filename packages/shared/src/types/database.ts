@@ -59,11 +59,69 @@ export interface CaseEntry {
   tenant_id: string;
   resident_id: string;
   template_id: string;
-  patient_mrn: string;
-  patient_dob: string;
+  patient_mrn: string | null;
+  patient_dob: string | null;
+  patient_age_years: number | null;
+  patient_hash: string | null;
   case_date: string;
   field_values: Record<string, unknown>;
   status: CaseStatus;
+  accreditation_mappings: AccreditationMapping[];
+  is_deidentified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FrameworkType = 'acgme' | 'scfhs' | 'gmc' | 'canmeds' | 'custom';
+
+export interface AccreditationMapping {
+  framework_id: string;
+  milestone_code: string;
+  competency_area: string;
+  procedure_role?: 'observed' | 'assisted' | 'performed' | 'supervised';
+}
+
+export interface AccreditationMilestone {
+  code: string;
+  description: string;
+  competency_area: string;
+  target_minimum: number;
+  specialty?: string;
+}
+
+export interface AccreditationFramework {
+  id: string;
+  tenant_id: string;
+  name: string;
+  version: string;
+  framework_type: FrameworkType;
+  milestones: AccreditationMilestone[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttachmentSignature {
+  id: string;
+  tenant_id: string;
+  attachment_id: string;
+  resident_id: string;
+  signature_hash: string;
+  verification_method: 'camera_hash' | 'manual_hash' | 'device_signature';
+  verified_at: string;
+  created_at: string;
+}
+
+export interface InstitutionBilling {
+  id: string;
+  tenant_id: string;
+  billing_period_start: string;
+  billing_period_end: string;
+  active_residents: number;
+  base_amount: number;
+  per_resident_fee: number;
+  total_amount: number;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'canceled';
+  invoice_url: string | null;
   created_at: string;
   updated_at: string;
 }
