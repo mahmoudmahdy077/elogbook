@@ -15,13 +15,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS approval_requests_entry_supervisor_unique
 -- 2. Add CHECK constraints for enum-like columns
 -- ============================================================================
 
-ALTER TABLE institutions
-  ADD CONSTRAINT institutions_tier_check
-  CHECK (tier IN ('free', 'premium', 'enterprise'));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'institutions_tier_check') THEN
+    ALTER TABLE institutions ADD CONSTRAINT institutions_tier_check
+      CHECK (tier IN ('free', 'premium', 'enterprise'));
+  END IF;
+END $$;
 
-ALTER TABLE one_time_purchases
-  ADD CONSTRAINT one_time_purchases_status_check
-  CHECK (status IN ('pending', 'completed', 'failed', 'refunded'));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'one_time_purchases_status_check') THEN
+    ALTER TABLE one_time_purchases ADD CONSTRAINT one_time_purchases_status_check
+      CHECK (status IN ('pending', 'completed', 'failed', 'refunded'));
+  END IF;
+END $$;
 
 -- ============================================================================
 -- 3. Add compound indexes for critical query paths
