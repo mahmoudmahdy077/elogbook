@@ -12,8 +12,6 @@ export const subscriptionPlanSchema = z.object({
 export const paymentGatewayConfigSchema = z.object({
   provider: z.enum(['stripe', 'paddle', 'lemonsqueezy', 'custom']),
   publishable_key: z.string().min(1),
-  encrypted_secret_key: z.string().min(1),
-  encrypted_webhook_secret: z.string().min(1),
   endpoint_url: z.string().url().nullable().optional(),
   is_active: z.boolean(),
 });

@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { Tabs } from '@heroui/react';
+import Link from 'next/link';
+import { Tabs, Card, Button } from '@heroui/react';
 import TemplateEditor from '@/components/TemplateEditor';
 import UserManager from '@/components/UserManager';
 import AIConfigPanel from '@/components/AIConfigPanel';
@@ -29,7 +30,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     redirect('/login');
   }
 
-  const [{ data: templates }, { data: users }, { data: aiConfig }, { data: paymentConfig }] =
+  const [{ data: templates }, { data: users }, { data: aiConfigRaw }, { data: paymentConfigRaw }, { data: caseCounts }] =
     await Promise.all([
       supabase
         .from('case_templates')
@@ -43,27 +44,68 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .order('created_at', { ascending: false }),
       supabase
         .from('ai_config')
-        .select('*')
+        .select('id, tenant_id, provider, model, endpoint_url, is_active, encrypted_api_key')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
       supabase
         .from('payment_gateway_config')
-        .select('*')
+        .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, encrypted_secret_key, encrypted_webhook_secret')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
+      supabase
+        .from('case_entries')
+        .select('status', { count: 'exact' })
+        .eq('tenant_id', profile.tenant_id),
     ]);
+
+  const aiConfig = aiConfigRaw
+    ? { ...aiConfigRaw, has_key: !!(aiConfigRaw as any).encrypted_api_key, encrypted_api_key: undefined }
+    : null;
+
+  const paymentConfig = paymentConfigRaw
+    ? { ...paymentConfigRaw, has_secret_key: !!(paymentConfigRaw as any).encrypted_secret_key, has_webhook_secret: !!(paymentConfigRaw as any).encrypted_webhook_secret, encrypted_secret_key: undefined, encrypted_webhook_secret: undefined }
+    : null;
+
+  const totalCases = caseCounts?.length ?? 0;
+  const pendingCases = (caseCounts ?? []).filter((c) => c.status === 'pending').length;
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
       <Tabs aria-label="Admin panels">
         <Tabs.List>
+          <Tabs.Tab id="overview">Overview</Tabs.Tab>
           <Tabs.Tab id="templates">Case Templates</Tabs.Tab>
           <Tabs.Tab id="users">Users & Roles</Tabs.Tab>
           <Tabs.Tab id="ai">AI Config</Tabs.Tab>
           <Tabs.Tab id="payment">Payment Gateway</Tabs.Tab>
           <Tabs.Tab id="accreditation">Accreditation</Tabs.Tab>
         </Tabs.List>
+        <Tabs.Panel id="overview">
+          <Card className="panel p-5">
+            <h2 className="text-lg font-heading font-semibold mb-2">Program Analytics</h2>
+            <p className="text-sm text-neutral-light/60 mb-4">
+              View institution-wide completion rates, pending verifications, and specialty distribution.
+            </p>
+            <div className="flex gap-6 mb-4">
+              <div>
+                <p className="text-xs text-neutral-light/50">Total Cases</p>
+                <p className="text-2xl font-bold font-heading">{totalCases}</p>
+              </div>
+              <div>
+                <p className="text-xs text-amber-400/60">Pending Verification</p>
+                <p className="text-2xl font-bold font-heading text-amber-400">{pendingCases}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-light/50">Residents</p>
+                <p className="text-2xl font-bold font-heading">{(users ?? []).length}</p>
+              </div>
+            </div>
+            <Link href={`/${tenantSlug}/admin/overview`}>
+              <Button variant="primary">Open Program Overview</Button>
+            </Link>
+          </Card>
+        </Tabs.Panel>
         <Tabs.Panel id="templates">
           <TemplateEditor tenantId={profile.tenant_id} templates={templates ?? []} />
         </Tabs.Panel>

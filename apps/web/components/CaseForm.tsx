@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, TextField, TextArea, Select, ListBox, ListBoxItem, Switch } from '@heroui/react';
+import { Button, TextField, TextArea, Select, ListBox, ListBoxItem, Switch, Label, Input } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { caseEntrySchema } from '@elogbook/shared';
+import HelpPopover from '@/components/HelpPopover';
+import { useToast } from '@/components/Toast';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 const GLOBAL_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -78,6 +81,11 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
 
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     async function loadTemplates() {
@@ -112,6 +120,55 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   const fields = selectedTemplate?.fields || [];
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (confirmSubmit) {
+        if (e.key === 'Escape') setConfirmSubmit(false);
+        return;
+      }
+      if (submitted) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          setSubmitted(false);
+          setSubmittedCaseId(null);
+          setStep(0);
+          setSelectedTemplateId('');
+          setFieldValues({});
+          setIsDeidentified(false);
+          setPatientMrn('');
+          setPatientDob('');
+          setPatientAgeYears('');
+          setCaseDate('');
+          setErrors([]);
+        }
+        return;
+      }
+
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+      const isTextArea = target.tagName === 'TEXTAREA';
+
+      if (e.key === 'Enter' && !e.shiftKey && !isTextArea) {
+        e.preventDefault();
+        if (step < STEPS.length - 1 && canProceed(step)) {
+          setErrors([]);
+          setStep(prev => prev + 1);
+        } else if (step === STEPS.length - 1) {
+          setConfirmSubmit(true);
+        }
+      }
+      if (e.key === 'Escape') {
+        if (step > 0) {
+          setErrors([]);
+          setStep(prev => prev - 1);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [step, confirmSubmit, submitted]);
 
   function getFieldKey(f: TemplateField): string {
     return f.key || f.name || '';
@@ -151,17 +208,54 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
     }
   }
 
+  async function handleSaveDraft() {
+    setErrors([]);
+    setSavingDraft(true);
+
+    const insertData: Record<string, unknown> = {
+      tenant_id: tenantId,
+      template_id: selectedTemplateId,
+      case_date: caseDate || new Date().toISOString().split('T')[0],
+      field_values: fieldValues,
+      status: 'draft',
+      accreditation_mappings: [],
+      is_deidentified: isDeidentified,
+    };
+
+    if (isDeidentified) {
+      insertData.patient_mrn = null;
+      insertData.patient_dob = null;
+      insertData.patient_age_years = Number(patientAgeYears) || null;
+      insertData.patient_hash = '';
+    } else {
+      insertData.patient_mrn = patientMrn || null;
+      insertData.patient_dob = patientDob || null;
+      insertData.patient_age_years = null;
+      insertData.patient_hash = null;
+    }
+
+    const { error } = await supabase.from('case_entries').insert(insertData);
+
+    if (error) {
+      setErrors([error.message]);
+      setSavingDraft(false);
+      return;
+    }
+
+    toast.show('Draft saved — you can continue editing from My Cases', 'success');
+    router.push(`/${tenantSlug}/cases`);
+  }
+
   async function handleSubmit() {
     setErrors([]);
 
     const parsedAge = Number(patientAgeYears);
-    const hash = isDeidentified ? btoa(patientMrn.trim() || 'anonymous') : '';
 
     const payload: Record<string, unknown> = isDeidentified
       ? {
           template_id: selectedTemplateId,
           patient_age_years: parsedAge,
-          patient_hash: hash,
+          patient_hash: '',
           case_date: caseDate,
           field_values: fieldValues,
           accreditation_mappings: [],
@@ -199,7 +293,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       insertData.patient_mrn = null;
       insertData.patient_dob = null;
       insertData.patient_age_years = parsedAge;
-      insertData.patient_hash = hash;
+      insertData.patient_hash = '';
     } else {
       insertData.patient_mrn = patientMrn;
       insertData.patient_dob = patientDob;
@@ -207,7 +301,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       insertData.patient_hash = null;
     }
 
-    const { error } = await supabase.from('case_entries').insert(insertData);
+    const { data: inserted, error } = await supabase.from('case_entries').insert(insertData).select('id').single();
 
     if (error) {
       setErrors([error.message]);
@@ -215,7 +309,10 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       return;
     }
 
-    router.push(`/${tenantSlug}/cases`);
+    setSubmittedCaseId((inserted as { id: string })?.id || null);
+    setSubmitted(true);
+    setLoading(false);
+    toast.show('Case logged successfully', 'success');
   }
 
   function renderStepIndicator() {
@@ -232,9 +329,11 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                       ? 'bg-primary text-white ring-4 ring-primary-glow'
                       : 'bg-neutral-dark border border-border text-neutral-light'
                 }`}
+                role="status"
+                aria-label={`${label}${i < step ? ' (completed)' : i === step ? ' (current)' : ''}`}
               >
                 {i < step ? (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                     <path
                       d="M11.5 3.5L5.5 9.5L2.5 6.5"
                       stroke="currentColor"
@@ -244,12 +343,12 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                     />
                   </svg>
                 ) : (
-                  <span>{i + 1}</span>
+                  <span aria-hidden="true">{i + 1}</span>
                 )}
               </div>
               <span
                 className={`text-xs mt-1.5 font-medium ${
-                  i <= step ? 'text-primary' : 'text-neutral-light/40'
+                  i <= step ? 'text-primary' : 'text-neutral-light/50'
                 }`}
               >
                 {label}
@@ -271,22 +370,32 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   function renderTemplateStep() {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
-          Select Case Template
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+            Select Case Template
+          </h3>
+          <HelpPopover>
+            <p className="mb-2">
+              <strong>Templates</strong> define the fields you need to fill out for a particular type of clinical case.
+            </p>
+            <p className="mb-2">
+              Templates are organized by <strong>specialty</strong> and <strong>case type</strong> — for example, a &ldquo;General Surgery &mdash; Laparoscopic Cholecystectomy&rdquo; template includes fields for operative findings, drain placement, and estimated blood loss.
+            </p>
+            <p>
+              Your program director sets up templates that match your accreditation framework. If you&apos;re unsure which template to use, ask your supervisor.
+            </p>
+          </HelpPopover>
+        </div>
         <p className="text-sm text-neutral-light/60">
           Choose a template for your logbook entry. This determines the required fields for
           documentation.
         </p>
         <Select
-          label="Case Template"
-          placeholder="Select a template"
           selectedKey={selectedTemplateId || null}
           onSelectionChange={(key) => {
-            setSelectedTemplateId(key || '');
+            setSelectedTemplateId(key ? String(key) : '');
             setFieldValues({});
           }}
-          isLoading={loadingTemplates}
           isRequired
         >
           <Select.Trigger aria-label="Select template">
@@ -295,7 +404,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           <Select.Popover>
             <ListBox aria-label="Select a template">
               {templates.map(t => (
-                <ListBoxItem id={t.id}>
+                <ListBoxItem key={t.id} id={t.id}>
                   {t.specialty} - {t.name}
                 </ListBoxItem>
               ))}
@@ -314,9 +423,19 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   function renderPatientInfoStep() {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
-          Patient Information
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+            Patient Information
+          </h3>
+          <HelpPopover>
+            <p className="mb-2">
+              <strong>De-identified mode</strong> keeps your case suitable for portfolio logging, research, and accreditation tracking. No protected health information (PHI) is stored — only age and an encoded reference number.
+            </p>
+            <p>
+              <strong>PII mode</strong> stores full patient identifiers for hospital record-keeping. Use this only when your institution requires it, and ensure you comply with data protection policies.
+            </p>
+          </HelpPopover>
+        </div>
 
         <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-dark/50 border border-border">
           <Switch isSelected={isDeidentified} onChange={setIsDeidentified}>
@@ -331,43 +450,49 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
 
         {isDeidentified ? (
           <>
-            <div className="warning-banner text-xs rounded-lg p-2.5">
-              HIPAA Safe Harbor: No PHI will be stored. MRN encoded client-side before submission.
+            <div className="flex items-center gap-3 mb-3">
+              <span className="badge-approved text-xs px-2.5 py-1 rounded-full">Safe Harbor Compliant</span>
+              <span className="text-xs text-emerald-400">No PHI stored</span>
             </div>
+            <div className="warning-banner text-xs rounded-lg p-2.5">
+              De-identified mode: safe for portfolio logging. No PHI is stored. Patient hash will be computed server-side.
+            </div>
+            <TextField value={patientMrn} onChange={setPatientMrn}>
+              <Label>Patient MRN (for reference only — not stored)</Label>
+              <Input placeholder="Enter MRN for local hashing" />
+            </TextField>
             <TextField
-              label="Patient MRN (encoded client-side)"
-              value={patientMrn}
-              onChange={setPatientMrn}
-              placeholder="Enter MRN for local hashing"
-            />
-            <TextField
-              label="Patient Age (years)"
               type="number"
               value={patientAgeYears}
               onChange={setPatientAgeYears}
               isRequired
-              placeholder="0-150"
-            />
+            >
+              <Label>Patient Age (years)</Label>
+              <Input placeholder="0-150" />
+            </TextField>
           </>
         ) : (
           <>
             <div className="danger-banner text-xs rounded-lg p-2.5">
-              PII Warning: Patient MRN and Date of Birth will be stored. Ensure compliance with your
-              institution&apos;s data protection policies.
+              PII mode: patient MRN and Date of Birth will be stored on the server. Only use this for hospital record-keeping. Ensure compliance with your institution&apos;s data protection policies before submitting.
             </div>
             <TextField
-              label="Patient MRN"
               value={patientMrn}
               onChange={setPatientMrn}
               isRequired
-            />
+            >
+              <Label>Patient MRN</Label>
+              <Input />
+            </TextField>
             <TextField
-              label="Patient DOB"
               type="date"
               value={patientDob}
               onChange={setPatientDob}
               isRequired
-            />
+            >
+              <Label>Patient DOB</Label>
+              <Input />
+            </TextField>
           </>
         )}
       </div>
@@ -382,12 +507,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
         </h3>
 
         <TextField
-          label="Case Date"
           type="date"
           value={caseDate}
           onChange={setCaseDate}
           isRequired
-        />
+        >
+          <Label>Case Date</Label>
+          <Input />
+        </TextField>
 
         {selectedTemplateId && fields.length > 0 && (
           <div className="border-t border-border pt-4 mt-2">
@@ -402,20 +529,21 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                 switch (type) {
                   case 'textarea':
                     return (
-                      <TextArea
-                        key={key}
-                        label={label}
-                        value={(fieldValues[key] as string) || ''}
-                        onChange={(v: string) => handleFieldChange(key, v)}
-                      />
+                      <>
+                        <Label>{label}</Label>
+                        <TextArea
+                          key={key}
+                          value={(fieldValues[key] as string) || ''}
+                          onChange={(e) => handleFieldChange(key, e.target.value)}
+                        />
+                      </>
                     );
                   case 'select':
                     return (
                       <Select
                         key={key}
-                        label={label}
                         selectedKey={(fieldValues[key] as string) || null}
-                        onSelectionChange={(val) => handleFieldChange(key, val || '')}
+                        onSelectionChange={(val) => handleFieldChange(key, val ? String(val) : '')}
                       >
                         <Select.Trigger aria-label={`Select ${label}`}>
                           <Select.Value />
@@ -423,7 +551,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                         <Select.Popover>
                           <ListBox aria-label={label}>
                             {options.map((opt: string) => (
-                              <ListBoxItem id={opt}>{opt}</ListBoxItem>
+                              <ListBoxItem key={opt} id={opt}>{opt}</ListBoxItem>
                             ))}
                           </ListBox>
                         </Select.Popover>
@@ -433,21 +561,25 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                     return (
                       <TextField
                         key={key}
-                        label={label}
                         type="number"
                         value={(fieldValues[key] as string) || ''}
                         onChange={(v: string) => handleFieldChange(key, v)}
-                      />
+                      >
+                        <Label>{label}</Label>
+                        <Input />
+                      </TextField>
                     );
                   case 'date':
                     return (
                       <TextField
                         key={key}
-                        label={label}
                         type="date"
                         value={(fieldValues[key] as string) || ''}
                         onChange={(v: string) => handleFieldChange(key, v)}
-                      />
+                      >
+                        <Label>{label}</Label>
+                        <Input />
+                      </TextField>
                     );
                   case 'checkbox':
                     return (
@@ -468,10 +600,12 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                     return (
                       <TextField
                         key={key}
-                        label={label}
                         value={(fieldValues[key] as string) || ''}
                         onChange={(v: string) => handleFieldChange(key, v)}
-                      />
+                      >
+                        <Label>{label}</Label>
+                        <Input />
+                      </TextField>
                     );
                 }
               })}
@@ -479,7 +613,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           </div>
         )}
         {selectedTemplateId && fields.length === 0 && (
-          <p className="text-sm text-neutral-light/40 italic">
+          <p className="text-sm text-neutral-light/50 italic">
             No fields defined for this template.
           </p>
         )}
@@ -488,9 +622,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   }
 
   function renderReviewStep() {
-    const hashPreview =
-      isDeidentified && patientMrn ? btoa(patientMrn) : '-';
-
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -518,9 +649,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                 <span className="text-sm font-medium">{patientAgeYears} years</span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-sm text-neutral-light/60">MRN Hash</span>
-                <span className="text-xs font-mono text-neutral-light/50 truncate max-w-[200px]">
-                  {hashPreview}
+                <span className="text-sm text-neutral-light/60">MRN</span>
+                <span className="text-xs text-neutral-light/50">
+                  Hashed server-side — not stored
                 </span>
               </div>
             </>
@@ -556,7 +687,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
                 }
                 return (
                   <div key={key} className="flex justify-between py-1">
-                    <span className="text-xs text-neutral-light/40">{field.label}</span>
+                    <span className="text-xs text-neutral-light/50">{field.label}</span>
                     <span className="text-xs font-medium">{display}</span>
                   </div>
                 );
@@ -571,51 +702,183 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   function renderNavigation() {
     return (
       <div className="flex justify-between mt-6 pt-4 border-t border-border">
-        <Button variant="light" onPress={handleBack} isDisabled={step === 0}>
+        <Button variant="ghost" onPress={handleBack} isDisabled={step === 0}>
           Back
         </Button>
-        {step < STEPS.length - 1 ? (
-          <Button color="primary" onPress={handleNext} isDisabled={!canProceed(step)}>
-            Continue
-          </Button>
-        ) : (
-          <Button color="primary" onPress={handleSubmit} isLoading={loading}>
-            Submit Case
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {step >= 2 && selectedTemplateId && !submitted && (
+            <Button variant="ghost" onPress={handleSaveDraft} isDisabled={savingDraft}>
+              Save Draft
+            </Button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button variant="primary" onPress={handleNext} isDisabled={!canProceed(step)}>
+              Continue
+            </Button>
+          ) : (
+            <Button variant="primary" onPress={() => setConfirmSubmit(true)} isDisabled={loading}>
+              Submit Case
+            </Button>
+          )}
+        </div>
       </div>
+    );
+  }
+
+  function renderConfirmDialog() {
+    return (
+      <AnimatePresence>
+        {confirmSubmit && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setConfirmSubmit(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              className="panel p-6 max-w-md w-full shadow-xl"
+            >
+              <h3 className="text-lg font-semibold font-heading mb-3">Confirm Submission</h3>
+
+              <div className="space-y-3 mb-5 text-sm">
+                <p className="text-neutral-light/80">
+                  You are about to submit this case entry. Please verify the information below is correct.
+                </p>
+
+                <div className="bg-neutral-dark/50 rounded-lg p-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-light/50">Template</span>
+                    <span className="font-medium">{selectedTemplate?.specialty} — {selectedTemplate?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-light/50">Mode</span>
+                    <span className={`font-medium ${isDeidentified ? 'text-amber-400' : 'text-red-400'}`}>
+                      {isDeidentified ? 'De-identified' : 'PII'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-light/50">Case Date</span>
+                    <span className="font-medium">{caseDate || '-'}</span>
+                  </div>
+                </div>
+
+                {!isDeidentified && (
+                  <div className="danger-banner text-xs rounded-lg p-2.5">
+                    This case contains identifiable patient data (MRN, DOB). Ensure compliance with your institution&apos;s data policies.
+                  </div>
+                )}
+
+                {isDeidentified && (
+                  <div className="warning-banner text-xs rounded-lg p-2.5">
+                    This case is de-identified. No protected health information will be stored on the server.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onPress={() => setConfirmSubmit(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onPress={handleSubmit} isDisabled={loading}>
+                  Confirm & Submit
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  function renderSubmittedState() {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="text-center py-8 space-y-5"
+      >
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-400/10 border border-emerald-400/30">
+          <svg className="w-8 h-8 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+          </svg>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-heading font-bold mb-1">Case Logged Successfully</h3>
+          <p className="text-sm text-neutral-light/50">
+            Your case has been saved and is now visible in your logbook.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          {submittedCaseId && (
+            <a
+              href={`/${tenantSlug}/cases/${submittedCaseId}`}
+              className="px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors"
+            >
+              View Case
+            </a>
+          )}
+          <a
+            href={`/${tenantSlug}/cases`}
+            className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Go to My Cases
+          </a>
+        </div>
+
+        <p className="text-xs text-neutral-light/50 pt-2">
+          Press <kbd className="px-1.5 py-0.5 rounded bg-neutral-dark border border-border text-xs">Enter</kbd> to log another case
+        </p>
+      </motion.div>
     );
   }
 
   return (
     <div className="glass-panel p-6">
-      {renderStepIndicator()}
+      {!submitted && renderStepIndicator()}
 
       {errors.length > 0 && (
-        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4" role="alert">
+        <div className="mb-4">
           {errors.map((err, i) => (
-            <p key={i}>{err}</p>
+            <ErrorDisplay key={i} message={err} />
           ))}
         </div>
       )}
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          variants={stepVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.2, ease: 'easeInOut' }}
-        >
-          {step === 0 && renderTemplateStep()}
-          {step === 1 && renderPatientInfoStep()}
-          {step === 2 && renderCaseDetailsStep()}
-          {step === 3 && renderReviewStep()}
-        </motion.div>
-      </AnimatePresence>
+      {submitted ? (
+        renderSubmittedState()
+      ) : (
+        <>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              {step === 0 && renderTemplateStep()}
+              {step === 1 && renderPatientInfoStep()}
+              {step === 2 && renderCaseDetailsStep()}
+              {step === 3 && renderReviewStep()}
+            </motion.div>
+          </AnimatePresence>
 
-      {renderNavigation()}
+          {renderNavigation()}
+        </>
+      )}
+
+      {renderConfirmDialog()}
     </div>
   );
 }

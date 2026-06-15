@@ -20,8 +20,19 @@ export interface Tenant {
   tenant_type: TenantType;
   plan_id: string | null;
   settings: Record<string, unknown>;
+  region: string;
+  data_retention_days: number;
+  consent_required: boolean;
+  compliance_frameworks: string[];
   created_at: string;
   updated_at: string;
+}
+
+export interface ComplianceConfiguration {
+  region: string;
+  data_retention_days: number;
+  consent_required: boolean;
+  compliance_frameworks: string[];
 }
 
 export interface Profile {
@@ -161,9 +172,23 @@ export interface AIConfig {
   tenant_id: string;
   provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'custom';
   model: string;
-  encrypted_api_key: string;
+  // API key managed server-side only
+  has_key?: boolean;
   endpoint_url: string | null;
   is_active: boolean;
+}
+
+export interface AIQueryLog {
+  id: string;
+  tenant_id: string;
+  resident_id: string;
+  query: string;
+  response: string | null;
+  tokens_used: number | null;
+  disclaimer_rendered: boolean;
+  response_format: 'text' | 'stream';
+  safety_flags: string[];
+  created_at: string;
 }
 
 export interface ProgramGoal {
@@ -194,8 +219,9 @@ export interface PaymentGatewayConfig {
   tenant_id: string;
   provider: 'stripe' | 'paddle' | 'lemonsqueezy' | 'custom';
   publishable_key: string;
-  encrypted_secret_key: string;
-  encrypted_webhook_secret: string;
+  // Secret key and webhook secret managed server-side only
+  has_secret_key?: boolean;
+  has_webhook_secret?: boolean;
   endpoint_url: string | null;
   is_active: boolean;
 }

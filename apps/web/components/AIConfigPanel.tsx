@@ -10,15 +10,16 @@ import {
   ListBoxItem,
   Switch,
   Card,
+  Label,
+  Input,
 } from '@heroui/react';
-import { createClient } from '@/lib/supabase/client';
 
 interface AIConfigData {
   id: string;
   tenant_id: string;
   provider: string;
   model: string;
-  encrypted_api_key: string;
+  has_key: boolean;
   endpoint_url: string | null;
   is_active: boolean;
 }
@@ -76,17 +77,15 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
     }
 
     setLoading(true);
-    const supabase = createClient();
 
     const payload: Record<string, unknown> = {
-      tenant_id: tenantId,
       provider,
       model: model.trim(),
       is_active: isActive,
     };
 
     if (apiKey.trim()) {
-      payload.encrypted_api_key = apiKey.trim();
+      payload.api_key = apiKey.trim();
     }
     if (provider === 'custom') {
       payload.endpoint_url = endpointUrl.trim() || null;
@@ -94,32 +93,27 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
       payload.endpoint_url = null;
     }
 
-    if (config?.id) {
-      const { error: updateError } = await supabase
-        .from('ai_config')
-        .update(payload)
-        .eq('id', config.id);
+    try {
+      const res = await fetch(`/api/${tenantId}/admin/ai-config`, {
+        method: config?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to save configuration.');
         setLoading(false);
         return;
       }
-    } else {
-      const { error: insertError } = await supabase
-        .from('ai_config')
-        .insert(payload);
 
-      if (insertError) {
-        setError(insertError.message);
-        setLoading(false);
-        return;
-      }
+      setSuccess('AI configuration saved successfully.');
+      router.refresh();
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSuccess('AI configuration saved successfully.');
-    router.refresh();
   }
 
   return (
@@ -136,54 +130,56 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         )}
 
         <Select
-          label="Provider"
           selectedKey={provider}
           onSelectionChange={(value) => {
-            if (value) setProvider(value);
+            if (value) setProvider(String(value));
           }}
         >
           <Select.Trigger aria-label="Select AI provider"><Select.Value /></Select.Trigger>
           <Select.Popover>
             <ListBox aria-label="Select AI provider">
               {PROVIDERS.map((p) => (
-                <ListBoxItem id={p.key}>{p.label}</ListBoxItem>
+                <ListBoxItem key={p.key} id={p.key}>{p.label}</ListBoxItem>
               ))}
             </ListBox>
           </Select.Popover>
         </Select>
 
         <TextField
-          label="Model"
           value={model}
           onChange={setModel}
           isRequired
-          placeholder={DEFAULT_MODELS[provider] ?? 'Enter model name'}
-        />
+        >
+          <Label>Model</Label>
+          <Input placeholder={DEFAULT_MODELS[provider] ?? 'Enter model name'} />
+        </TextField>
 
         <TextField
-          label="API Key"
           type="password"
           value={apiKey}
           onChange={setApiKey}
-          placeholder={config ? 'Leave blank to keep existing' : 'Enter API key'}
-        />
+        >
+          <Label>API Key</Label>
+          <Input placeholder={config?.has_key ? 'sk-•••••••• (leave blank to keep existing)' : 'Enter API key'} />
+        </TextField>
 
         {provider === 'custom' && (
           <TextField
-            label="Endpoint URL"
             value={endpointUrl}
             onChange={setEndpointUrl}
-            placeholder="https://api.example.com/v1"
-          />
+          >
+            <Label>Endpoint URL</Label>
+            <Input placeholder="https://api.example.com/v1" />
+          </TextField>
         )}
 
         <div className="flex items-center gap-2">
-          <Switch isSelected={isActive} onValueChange={setIsActive}>
+          <Switch isSelected={isActive} onChange={setIsActive}>
             Enable AI Insights
           </Switch>
         </div>
 
-        <Button color="primary" onPress={handleSave} isLoading={loading}>
+        <Button variant="primary" onPress={handleSave} isDisabled={loading}>
           Save Configuration
         </Button>
       </Card.Content>

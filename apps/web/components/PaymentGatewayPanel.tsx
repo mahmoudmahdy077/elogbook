@@ -10,16 +10,17 @@ import {
   ListBoxItem,
   Switch,
   Card,
+  Label,
+  Input,
 } from '@heroui/react';
-import { createClient } from '@/lib/supabase/client';
 
 interface GatewayConfig {
   id: string;
   tenant_id: string;
   provider: string;
   publishable_key: string;
-  encrypted_secret_key: string;
-  encrypted_webhook_secret: string;
+  has_secret_key: boolean;
+  has_webhook_secret: boolean;
   endpoint_url: string | null;
   is_active: boolean;
 }
@@ -67,20 +68,18 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
     }
 
     setLoading(true);
-    const supabase = createClient();
 
     const payload: Record<string, unknown> = {
-      tenant_id: tenantId,
       provider,
       publishable_key: publishableKey.trim(),
       is_active: isActive,
     };
 
     if (secretKey.trim()) {
-      payload.encrypted_secret_key = secretKey.trim();
+      payload.secret_key = secretKey.trim();
     }
     if (webhookSecret.trim()) {
-      payload.encrypted_webhook_secret = webhookSecret.trim();
+      payload.webhook_secret = webhookSecret.trim();
     }
     if (provider === 'custom') {
       payload.endpoint_url = endpointUrl.trim() || null;
@@ -88,32 +87,27 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
       payload.endpoint_url = null;
     }
 
-    if (config?.id) {
-      const { error: updateError } = await supabase
-        .from('payment_gateway_config')
-        .update(payload)
-        .eq('id', config.id);
+    try {
+      const res = await fetch(`/api/${tenantId}/admin/payment-gateway`, {
+        method: config?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-      if (updateError) {
-        setError(updateError.message);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to save configuration.');
         setLoading(false);
         return;
       }
-    } else {
-      const { error: insertError } = await supabase
-        .from('payment_gateway_config')
-        .insert(payload);
 
-      if (insertError) {
-        setError(insertError.message);
-        setLoading(false);
-        return;
-      }
+      setSuccess('Payment gateway configuration saved successfully.');
+      router.refresh();
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSuccess('Payment gateway configuration saved successfully.');
-    router.refresh();
   }
 
   return (
@@ -130,61 +124,65 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         )}
 
         <Select
-          label="Provider"
           selectedKey={provider}
           onSelectionChange={(value) => {
-            if (value) setProvider(value);
+            if (value) setProvider(String(value));
           }}
         >
           <Select.Trigger aria-label="Select payment provider"><Select.Value /></Select.Trigger>
           <Select.Popover>
             <ListBox aria-label="Select payment provider">
               {PROVIDERS.map((p) => (
-                <ListBoxItem id={p.key}>{p.label}</ListBoxItem>
+                <ListBoxItem key={p.key} id={p.key}>{p.label}</ListBoxItem>
               ))}
             </ListBox>
           </Select.Popover>
         </Select>
 
         <TextField
-          label="Publishable Key"
           value={publishableKey}
           onChange={setPublishableKey}
           isRequired={!config}
-        />
+        >
+          <Label>Publishable Key</Label>
+          <Input placeholder="pk_..." />
+        </TextField>
 
         <TextField
-          label="Secret Key"
           type="password"
           value={secretKey}
           onChange={setSecretKey}
-          placeholder={config ? 'Leave blank to keep existing' : 'Enter secret key'}
-        />
+        >
+          <Label>Secret Key</Label>
+          <Input placeholder={config?.has_secret_key ? '•••••••• (leave blank to keep existing)' : 'Enter secret key'} />
+        </TextField>
 
         <TextField
-          label="Webhook Secret"
           type="password"
           value={webhookSecret}
           onChange={setWebhookSecret}
-          placeholder={config ? 'Leave blank to keep existing' : 'Enter webhook secret'}
-        />
+        >
+          <Label>Webhook Secret</Label>
+          <Input placeholder={config?.has_webhook_secret ? '•••••••• (leave blank to keep existing)' : 'Enter webhook secret'} />
+        </TextField>
 
         {provider === 'custom' && (
           <TextField
-            label="Custom Endpoint URL"
             value={endpointUrl}
             onChange={setEndpointUrl}
-            placeholder="https://api.example.com/payments"
-          />
+          >
+            <Label>Custom Endpoint URL</Label>
+            <Input placeholder="https://api.example.com/payments" />
+          </TextField>
         )}
 
         <div className="flex items-center gap-2">
-          <Switch isSelected={isActive} onValueChange={setIsActive}>
+          <Switch isSelected={isActive} onChange={setIsActive}>
             Enable Payments
           </Switch>
         </div>
 
-        <Button color="primary" onPress={handleSave} isLoading={loading}>
+        <Button variant="primary" onPress={handleSave} isDisabled={loading}>
           Save Configuration
         </Button>
       </Card.Content>

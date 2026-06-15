@@ -12,6 +12,8 @@ import {
   Table,
   Modal,
   useOverlayState,
+  Label,
+  Input,
 } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -36,11 +38,12 @@ const ROLE_OPTIONS = [
   { key: 'resident', label: 'Resident' },
   { key: 'supervisor', label: 'Supervisor' },
   { key: 'director', label: 'Director' },
+  { key: 'institution_admin', label: 'Institution Admin' },
 ];
 
-const ROLE_COLORS: Record<string, 'primary' | 'secondary' | 'warning' | 'danger' | 'success'> = {
-  resident: 'primary',
-  supervisor: 'secondary',
+const ROLE_COLORS: Record<string, 'accent' | 'warning' | 'danger' | 'success'> = {
+  resident: 'accent',
+  supervisor: 'accent',
   director: 'warning',
   institution_admin: 'danger',
   admin: 'success',
@@ -83,7 +86,6 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       options: {
         data: {
           full_name: inviteName.trim(),
-          role: inviteRole,
           specialty: inviteSpecialty || null,
         },
       },
@@ -96,25 +98,36 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     }
 
     setLoading(false);
-    setSuccess(`Invitation sent to ${inviteEmail}`);
+    setSuccess(`Invitation sent to ${inviteEmail}. Role will need to be assigned separately.`);
     resetForm();
     router.refresh();
     overlay.close();
   }
 
   async function handleRoleChange(userId: string, newRole: string) {
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId);
+    setError('');
+    setLoading(true);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    try {
+      const res = await fetch(`/api/${tenantId}/admin/assign-role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, role: newRole }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to update role.');
+        setLoading(false);
+        return;
+      }
+
+      router.refresh();
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    router.refresh();
   }
 
   return (
@@ -128,7 +141,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Users</h2>
-        <Button onPress={overlay.open} color="primary">
+        <Button onPress={overlay.open} variant="primary">
           Invite User
         </Button>
       </div>
@@ -136,25 +149,25 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       {users.length === 0 ? (
         <p className="text-default-500">No users found.</p>
       ) : (
-        <Table aria-label="Users table">
+        <Table.Root aria-label="Users table" variant="primary">
+          <Table.Content>
           <Table.Header>
-            <Table.Column>Name</Table.Column>
-            <Table.Column>Role</Table.Column>
-            <Table.Column>Specialty</Table.Column>
+            <Table.Column id="name">Name</Table.Column>
+            <Table.Column id="role">Role</Table.Column>
+            <Table.Column id="specialty">Specialty</Table.Column>
           </Table.Header>
           <Table.Body>
             {users.map((u) => (
-              <Table.Row key={u.id}>
+              <Table.Row key={u.id} id={u.id}>
                 <Table.Cell>{u.full_name}</Table.Cell>
                 <Table.Cell>
                   {['institution_admin', 'admin'].includes(currentUserRole) ? (
                     <Select
                       aria-label="Role"
-                      size="sm"
                       selectedKey={u.role}
                       onSelectionChange={(value) => {
                         if (value && value !== u.role) {
-                          handleRoleChange(u.id, value);
+                          handleRoleChange(u.id, String(value));
                         }
                       }}
                     >
@@ -162,13 +175,13 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
                       <Select.Popover>
                         <ListBox aria-label="Select role">
                           {ROLE_OPTIONS.map((opt) => (
-                            <ListBoxItem id={opt.key}>{opt.label}</ListBoxItem>
+                            <ListBoxItem key={opt.key} id={opt.key}>{opt.label}</ListBoxItem>
                           ))}
                         </ListBox>
                       </Select.Popover>
                     </Select>
                   ) : (
-                    <Chip variant="flat" size="sm" color={ROLE_COLORS[u.role] || 'default'}>
+                    <Chip variant="soft" size="sm" color={ROLE_COLORS[u.role] || 'default'}>
                       {u.role}
                     </Chip>
                   )}
@@ -177,57 +190,61 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
               </Table.Row>
             ))}
           </Table.Body>
-        </Table>
+          </Table.Content>
+        </Table.Root>
       )}
 
       <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
         <Modal.Header>Invite User</Modal.Header>
         <Modal.Body className="gap-4">
           <TextField
-            label="Email"
             type="email"
             value={inviteEmail}
             onChange={setInviteEmail}
             isRequired
-            placeholder="user@example.com"
-          />
+          >
+            <Label>Email</Label>
+            <Input placeholder="user@example.com" />
+          </TextField>
           <TextField
-            label="Full Name"
             value={inviteName}
             onChange={setInviteName}
             isRequired
-          />
+          >
+            <Label>Full Name</Label>
+            <Input placeholder="Full name" />
+          </TextField>
           <Select
-            label="Role"
             selectedKey={inviteRole}
             onSelectionChange={(value) => {
-              if (value) setInviteRole(value);
+              if (value) setInviteRole(String(value));
             }}
           >
             <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
             <Select.Popover>
               <ListBox aria-label="Select role">
                 {ROLE_OPTIONS.map((opt) => (
-                  <ListBoxItem id={opt.key}>{opt.label}</ListBoxItem>
+                  <ListBoxItem key={opt.key} id={opt.key}>{opt.label}</ListBoxItem>
                 ))}
               </ListBox>
             </Select.Popover>
           </Select>
           <TextField
-            label="Specialty"
             value={inviteSpecialty}
             onChange={setInviteSpecialty}
-            placeholder="e.g. Cardiology"
-          />
+          >
+            <Label>Specialty</Label>
+            <Input placeholder="e.g. Cardiology" />
+          </TextField>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onPress={overlay.close}>
+          <Button variant="ghost" onPress={overlay.close}>
             Cancel
           </Button>
           <Button
-            color="primary"
+            variant="primary"
             onPress={() => handleInvite(overlay.close)}
-            isLoading={loading}
+            isDisabled={loading}
           >
             Send Invite
           </Button>

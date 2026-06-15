@@ -25,7 +25,7 @@ export const accreditationMappingSchema = z.object({
 export const caseEntryDeidentifiedSchema = z.object({
   template_id: z.string().uuid(),
   patient_age_years: z.number().int().min(0).max(150),
-  patient_hash: z.string().min(1).max(128),
+  patient_hash: z.string().max(128),
   case_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   field_values: z.record(z.string(), z.unknown()),
   accreditation_mappings: z.array(accreditationMappingSchema).default([]),
@@ -75,4 +75,11 @@ export const accreditationFrameworkSchema = z.object({
   version: z.string().default('1.0'),
   framework_type: z.enum(['acgme', 'scfhs', 'gmc', 'canmeds', 'custom']),
   milestones: z.array(accreditationMilestoneSchema).min(1),
+});
+
+export const aiQuerySchema = z.object({
+  query: z.string().min(1).max(500),
+  resident_id: z.string().uuid(),
+  tenant_id: z.string().uuid(),
+  stream: z.boolean().default(false),
 });
