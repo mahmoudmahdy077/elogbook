@@ -1,24 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import { motion, useMotionValue, animate } from 'framer-motion';
 
 interface ProgressRingProps {
   percentage: number;
   label: string;
-  color: string;
-  glowColor: string;
   size?: number;
 }
 
 export default function ProgressRing({
   percentage,
   label,
-  color,
-  glowColor,
   size = 100,
 }: ProgressRingProps) {
-  const [animatedPct, setAnimatedPct] = useState(0);
+  const motionPct = useMotionValue(0);
+  const displayRef = useRef<SVGTextElement>(null);
   const strokeWidth = 6;
   const radius = (size - strokeWidth * 2) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -26,9 +23,22 @@ export default function ProgressRing({
   const offset = circumference * (1 - clampedPct / 100);
 
   useEffect(() => {
-    const timer = setTimeout(() => setAnimatedPct(clampedPct), 100);
-    return () => clearTimeout(timer);
-  }, [clampedPct]);
+    const controls = animate(motionPct, clampedPct, {
+      type: 'spring',
+      stiffness: 100,
+      damping: 15,
+    });
+    return controls.stop;
+  }, [clampedPct, motionPct]);
+
+  useEffect(() => {
+    const unsubscribe = motionPct.on('change', (v) => {
+      if (displayRef.current) {
+        displayRef.current.textContent = `${Math.round(v)}%`;
+      }
+    });
+    return unsubscribe;
+  }, [motionPct]);
 
   return (
     <motion.div
@@ -51,16 +61,17 @@ export default function ProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={color}
+          stroke="var(--color-primary)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+          style={{ filter: 'drop-shadow(0 0 6px currentColor)' }}
         />
         <text
+          ref={displayRef}
           x={size / 2}
           y={size / 2 + 2}
           textAnchor="middle"
@@ -70,7 +81,7 @@ export default function ProgressRing({
           fontFamily="var(--font-heading)"
           transform={`rotate(90, ${size / 2}, ${size / 2})`}
         >
-          {Math.round(animatedPct)}%
+          0%
         </text>
       </svg>
       <span className="text-xs text-neutral-light/50 text-center">{label}</span>

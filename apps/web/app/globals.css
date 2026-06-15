@@ -93,9 +93,10 @@ h1, h2, h3 {
 
 /* Default surface: opaque panel for cards, lists, containers */
 .panel {
-  background: var(--color-neutral-dark);
+  background: var(--color-surface-solid);
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
+  padding: 1.5rem;
 }
 
 .panel:focus-within {
@@ -105,12 +106,13 @@ h1, h2, h3 {
 
 /* Elevated surface: glassmorphism reserved for overlays, modals, wizards */
 .glass-panel {
-  background: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
+  background: var(--color-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 0.75rem;
-  box-shadow: var(--glass-shadow);
+  padding: 1.5rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
 .glass-panel-sheet {
@@ -135,6 +137,10 @@ h1, h2, h3 {
   background: color-mix(in srgb, var(--color-neutral-light) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-neutral-light) 20%, transparent);
   color: var(--color-neutral-light);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .badge-pending {
@@ -142,6 +148,10 @@ h1, h2, h3 {
   border: 1px solid var(--color-amber-glow);
   color: var(--color-pending);
   box-shadow: var(--shadow-pending);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .badge-approved {
@@ -149,6 +159,10 @@ h1, h2, h3 {
   border: 1px solid var(--color-emerald-glow);
   color: var(--color-approved);
   box-shadow: var(--shadow-approved);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .badge-rejected {
@@ -156,6 +170,20 @@ h1, h2, h3 {
   border: 1px solid var(--color-crimson-glow);
   color: var(--color-rejected);
   box-shadow: var(--shadow-rejected);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-draft {
+  background: color-mix(in srgb, var(--color-neutral-light) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-neutral-light) 20%, transparent);
+  color: var(--color-neutral-light);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .clinical-data {

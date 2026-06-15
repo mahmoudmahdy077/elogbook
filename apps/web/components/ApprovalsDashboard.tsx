@@ -1,9 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import ApprovalActions from '@/components/ApprovalActions';
+import EmptyState from '@/components/EmptyState';
+import ErrorDisplay from '@/components/ErrorDisplay';
+
+function SimpleCounter({ value }: { value: number }) {
+  const [displayed, setDisplayed] = useState(0);
+  const prevRef = useRef(0);
+
+  useEffect(() => {
+    const start = prevRef.current;
+    const diff = value - start;
+    const duration = 600;
+    const startTime = performance.now();
+
+    function step(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setDisplayed(Math.round(start + diff * progress));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+    prevRef.current = value;
+  }, [value]);
+
+  return <>{displayed}</>;
+}
 
 interface Props {
   tenantId: string;
@@ -42,6 +67,11 @@ interface PendingEntry {
   approval_requests: RelationApprovalRequest[];
 }
 
+interface AllEntry {
+  id: string;
+  status: string;
+}
+
 const itemVariants = {
   enter: { opacity: 0, y: 16 },
   center: { opacity: 1, y: 0 },
@@ -50,6 +80,7 @@ const itemVariants = {
 
 export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   const [entries, setEntries] = useState<PendingEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<AllEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [supabase] = useState(() => createClient());
@@ -58,28 +89,71 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     setLoading(true);
     setError(null);
 
-    const { data, error: queryError } = await supabase
-      .from('case_entries')
-      .select(
-        'id, case_date, field_values, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name), approval_requests:entry_id(id, status, requested_at, comment)'
-      )
-      .eq('tenant_id', tenantId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+    const [pendingRes, allRes] = await Promise.all([
+      supabase
+        .from('case_entries')
+        .select(
+          'id, case_date, field_values, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name)'
+        )
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_entries')
+        .select('id, status')
+        .eq('tenant_id', tenantId),
+    ]);
 
-    if (queryError) {
-      setError(queryError.message);
+    if (pendingRes.error) {
+      setError(pendingRes.error.message);
+      setLoading(false);
+      return;
+    }
+    if (allRes.error) {
+      setError(allRes.error.message);
       setLoading(false);
       return;
     }
 
-    setEntries((data as PendingEntry[]) || []);
+    setAllEntries((allRes.data || []) as AllEntry[]);
+
+    const entries = (pendingRes.data || []) as Omit<PendingEntry, 'approval_requests'>[];
+    const entryIds = entries.map((e) => e.id);
+
+    if (entryIds.length > 0) {
+      const { data: approvalData, error: approvalError } = await supabase
+        .from('approval_requests')
+        .select('id, status, requested_at, comment, entry_id')
+        .in('entry_id', entryIds);
+
+      if (approvalError) {
+        setError(approvalError.message);
+        setLoading(false);
+        return;
+      }
+
+      const approvalMap = new Map<string, RelationApprovalRequest[]>();
+      for (const a of (approvalData || [])) {
+        const entryId = (a as { entry_id: string }).entry_id;
+        if (!approvalMap.has(entryId)) approvalMap.set(entryId, []);
+        approvalMap.get(entryId)!.push(a as unknown as RelationApprovalRequest);
+      }
+
+      const merged = entries.map((e) => ({
+        ...e,
+        approval_requests: approvalMap.get(e.id) || [],
+      })) as PendingEntry[];
+
+      setEntries(merged);
+    } else {
+      setEntries([]);
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
     fetchPending();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const pendingCount = entries.length;
@@ -94,8 +168,8 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
   if (error) {
     return (
-      <div className="panel p-8 text-center">
-        <p className="text-danger">{error}</p>
+      <div className="panel p-8">
+        <ErrorDisplay message={error} onRetry={fetchPending} />
       </div>
     );
   }
@@ -114,10 +188,53 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
         </span>
       </div>
 
-      {entries.length === 0 ? (
-        <div className="panel p-8 text-center">
-          <p className="text-sm text-neutral-light/50">No pending approvals</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="panel p-4 text-center">
+          <p className="text-2xl font-bold text-amber-400 font-heading">
+            <SimpleCounter value={pendingCount} />
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">Pending</p>
         </div>
+        <div className="panel p-4 text-center">
+          <p className="text-2xl font-bold text-teal-400 font-heading">
+            <SimpleCounter value={entries.filter(e => new Date(e.case_date).toDateString() === new Date().toDateString()).length} />
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">Today</p>
+        </div>
+        <div className="panel p-4 text-center">
+          <p className="text-2xl font-bold text-indigo-400 font-heading">
+            <SimpleCounter value={entries.filter(e => {
+              const d = new Date(e.created_at);
+              const weekAgo = new Date();
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              return d > weekAgo;
+            }).length} />
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">This Week</p>
+        </div>
+        <div className="panel p-4 text-center">
+          <p className="text-2xl font-bold text-emerald-400 font-heading">
+            <SimpleCounter value={
+              allEntries.length > 0
+                ? Math.round((allEntries.filter(e => e.status === 'approved').length / allEntries.length) * 100)
+                : 0
+            } />
+            <span className="text-lg">%</span>
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">Approval Rate</p>
+        </div>
+      </div>
+
+      {entries.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg className="w-5 h-5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+            </svg>
+          }
+          title="No pending approvals"
+          description="All cases have been reviewed. New submissions will appear here."
+        />
       ) : (
         <div className="space-y-4">
           <AnimatePresence>
@@ -161,7 +278,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         >
                           {entry.is_deidentified ? 'De-ID' : 'PII'}
                         </span>
-                        <span className="badge-draft px-2 py-0.5 text-xs font-semibold rounded">
+                        <span className="badge-pending px-2 py-0.5 text-xs font-semibold rounded">
                           Pending
                         </span>
                       </div>
@@ -169,7 +286,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <span className="text-neutral-light/40 block text-xs">
+                        <span className="text-neutral-light/50 block text-xs">
                           Template
                         </span>
                         <span className="font-medium">
@@ -178,7 +295,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         </span>
                       </div>
                       <div>
-                        <span className="text-neutral-light/40 block text-xs">
+                        <span className="text-neutral-light/50 block text-xs">
                           Case Date
                         </span>
                         <span className="clinical-data text-sm">
@@ -189,7 +306,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
                     {fieldEntries.length > 0 && (
                       <div className="border-t border-border pt-3">
-                        <span className="text-xs text-neutral-light/40 block mb-2">
+                        <span className="text-xs text-neutral-light/50 block mb-2">
                           Field Values
                         </span>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -198,7 +315,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                               key={key}
                               className="flex justify-between gap-2"
                             >
-                              <span className="text-xs text-neutral-light/40 truncate">
+                              <span className="text-xs text-neutral-light/50 truncate">
                                 {key}
                               </span>
                               <span className="text-xs font-medium truncate">

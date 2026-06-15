@@ -70,11 +70,11 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, delay: delay * 0.001, ease: 'easeOut' }}
-      className="panel p-4 flex flex-col items-center gap-2"
+      className="panel p-4 flex flex-col items-center gap-2 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
     >
       <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90" role="img" aria-label={`${label}: ${value} of ${max}`}>
         <title>{`${label}: ${value} of ${max}`}</title>
-        <circle cx="44" cy="44" r={radius} fill="none" stroke="var(--color-border)" strokeWidth="6" />
+        <circle cx="44" cy="44" r={radius} fill="none" stroke="var(--color-neutral-dark)" strokeWidth="6" />
         <motion.circle
           cx="44" cy="44" r={radius}
           fill="none"
@@ -85,12 +85,12 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 0.8, delay: delay * 0.001 + 0.2, ease: 'easeOut' }}
-          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+          style={{ filter: 'drop-shadow(0 0 6px currentColor)' }}
         />
       </svg>
       <div className="text-center">
-        <p className="text-2xl font-bold">{animatedValue}</p>
-        <p className="text-xs text-neutral-light/50">{label}</p>
+        <p className="text-2xl font-bold text-[var(--color-text-primary)]">{animatedValue}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
       </div>
     </motion.div>
   );
@@ -143,8 +143,8 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-2xl font-heading font-bold">Welcome, {profile.full_name}</h1>
-          <p className="text-sm text-neutral-light/50 mt-0.5">
+          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">Welcome, {profile.full_name}</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
             {role === 'resident' && `${profile.specialty || 'Resident'} — ${tenantType === 'individual' ? 'Individual Account' : 'Institution'}`}
             {role === 'supervisor' && 'Supervisor Dashboard'}
             {(role === 'director' || role === 'institution_admin' || role === 'admin') && 'Program Director Dashboard'}
@@ -177,9 +177,9 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          className="panel p-4"
+          className="panel p-4 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
         >
-          <h2 className="font-heading font-semibold mb-3">Recent Cases</h2>
+          <h2 className="font-heading font-semibold mb-3 text-[var(--color-text-primary)]">Recent Cases</h2>
           {recentCases.length === 0 ? (
             <EmptyState
               icon={
@@ -214,12 +214,12 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
-          className="panel p-4"
+          className="panel p-4 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
         >
           {/* Resident: Goal Progress */}
           {role === 'resident' && (
             <>
-              <h2 className="font-heading font-semibold mb-3">Goal Progress</h2>
+              <h2 className="font-heading font-semibold mb-3 text-[var(--color-text-primary)]">Goal Progress</h2>
               {goals.length === 0 ? (
                 <EmptyState
                   title="No goals assigned yet"
@@ -243,7 +243,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {(role === 'supervisor' || role === 'director' || role === 'institution_admin' || role === 'admin') && (
             <>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-heading font-semibold">Pending Approvals</h2>
+                <h2 className="font-heading font-semibold text-[var(--color-text-primary)]">Pending Approvals</h2>
                 {pendingApprovals > 0 && (
                   <Link href={`/${tenantSlug}/approvals`} className="text-xs text-primary hover:underline">
                     Review all →
@@ -272,7 +272,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {/* Director/Admin: Resident Overview */}
           {(role === 'director' || role === 'institution_admin' || role === 'admin') && tenantType === 'institution' && (
             <div className="mt-4">
-              <h3 className="font-heading font-semibold text-sm mb-2">Resident Overview</h3>
+              <h3 className="font-heading font-semibold text-sm mb-2 text-[var(--color-text-primary)]">Resident Overview</h3>
               <p className="text-xs text-neutral-light/50 mb-2">{totalResidents} residents in program</p>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {residents.slice(0, 8).map((r) => (
@@ -297,27 +297,27 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         transition={{ duration: 0.4, delay: 0.5 }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
-        <Link href={`/${tenantSlug}/cases`} className="panel p-3 text-center text-sm hover:border-primary transition-colors flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
+        <Link href={`/${tenantSlug}/cases`} className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
           <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
           </svg>
           Cases
         </Link>
         {role !== 'resident' && (
-          <Link href={`/${tenantSlug}/approvals`}             className="panel p-3 text-center text-sm hover:border-primary transition-colors flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
+          <Link href={`/${tenantSlug}/approvals`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
             <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
             Approvals
           </Link>
         )}
-        <Link href={`/${tenantSlug}/goals`}             className="panel p-3 text-center text-sm hover:border-primary transition-colors flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
+        <Link href={`/${tenantSlug}/goals`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
           <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
           Goals
         </Link>
-        <Link href={`/${tenantSlug}/reports`}             className="panel p-3 text-center text-sm hover:border-primary transition-colors flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
+        <Link href={`/${tenantSlug}/reports`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
           <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
             <path d="M15.5 2A1.5 1.5 0 0014 3.5v13a1.5 1.5 0 001.5 1.5h1a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0016.5 2h-1zM9.5 6A1.5 1.5 0 008 7.5v9A1.5 1.5 0 009.5 18h1a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0010.5 6h-1zM3.5 10A1.5 1.5 0 002 11.5v5A1.5 1.5 0 003.5 18h1A1.5 1.5 0 006 16.5v-5A1.5 1.5 0 004.5 10h-1z" />
           </svg>
