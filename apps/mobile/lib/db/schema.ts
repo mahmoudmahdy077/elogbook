@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 1,
+  version: 2,
   tables: [
     tableSchema({
       name: 'case_entries',
@@ -31,6 +31,20 @@ export const schema = appSchema({
         { name: 'name', type: 'string' },
         { name: 'fields', type: 'string' },
         { name: 'required_fields', type: 'string' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'program_goals',
+      columns: [
+        { name: 'tenant_id', type: 'string' },
+        { name: 'resident_id', type: 'string' },
+        { name: 'title', type: 'string' },
+        { name: 'target_count', type: 'number' },
+        { name: 'current_count', type: 'number' },
+        { name: 'specialty', type: 'string', isOptional: true },
+        { name: 'local_sync_status', type: 'string' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

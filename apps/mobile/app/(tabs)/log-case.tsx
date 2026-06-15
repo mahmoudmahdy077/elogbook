@@ -173,7 +173,18 @@ export default function LogCaseScreen() {
       setConfirmationSuccess(true);
       setShowConfirmation(true);
     } catch {
-      await saveDraftCase(caseData);
+      await saveDraftCase({
+        tenantId: profile.tenant_id,
+        residentId: profile.id,
+        templateId: selectedTemplate.id,
+        patientMrn: isDeidentified ? undefined : patientMrn,
+        patientDob: isDeidentified ? undefined : patientDob,
+        patientAgeYears: isDeidentified ? Number(patientAge) : undefined,
+        caseDate: caseDate,
+        fieldValues: fieldValues,
+        isDeidentified: isDeidentified,
+        status,
+      });
       haptics.offlineSave();
       setConfirmationSuccess(false);
       setShowConfirmation(true);
