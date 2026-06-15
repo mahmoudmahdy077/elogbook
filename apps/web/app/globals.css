@@ -1,38 +1,77 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
 @source "../../node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}";
 
 :root {
   --color-backdrop: #060814;
+  --color-surface: rgba(15, 23, 42, 0.8);
+  --color-surface-solid: #0F172A;
   --color-primary: #0D9488;
-  --color-primary-glow: rgba(13, 148, 136, 0.3);
+  --color-primary-hover: #14B8A6;
+  --color-primary-glow: rgba(13, 148, 136, 0.35);
   --color-secondary: #6366F1;
-  --color-secondary-glow: rgba(99, 102, 241, 0.3);
-  --color-neutral-dark: #0F172A;
+  --color-secondary-hover: #818CF8;
+  --color-secondary-glow: rgba(99, 102, 241, 0.35);
   --color-neutral-light: #E2E8F0;
+  --color-neutral-dark: #0F172A;
   --color-border: rgba(99, 102, 241, 0.15);
-  --color-border-glow: rgba(99, 102, 241, 0.3);
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'Geist Mono', monospace;
+  --color-border-active: rgba(99, 102, 241, 0.4);
+  --color-border-glow: rgba(99, 102, 241, 0.35);
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+  --color-text-on-primary: #FFFFFF;
 
-  --color-amber-glow: rgba(217, 119, 6, 0.4);
-  --color-emerald-glow: rgba(5, 150, 105, 0.4);
-  --color-crimson-glow: rgba(220, 38, 38, 0.4);
+  --color-pending: #FCD34D;
+  --color-approved: #6EE7B7;
+  --color-rejected: #FCA5A5;
+
+  --color-amber-glow: rgba(245, 158, 11, 0.45);
+  --color-emerald-glow: rgba(16, 185, 129, 0.45);
+  --color-crimson-glow: rgba(239, 68, 68, 0.45);
+
+  --shadow-pending: 0 0 8px rgba(252, 211, 77, 0.4);
+  --shadow-approved: 0 0 8px rgba(110, 231, 183, 0.4);
+  --shadow-rejected: 0 0 8px rgba(252, 165, 165, 0.4);
+  --shadow-primary: 0 0 8px rgba(13, 148, 136, 0.3);
+
+  --font-heading: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --motion-default: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --glass-blur: 12px;
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 8px 32px rgba(6, 8, 20, 0.4);
 }
 
 @theme inline {
   --font-sans: var(--font-body);
   --font-mono: var(--font-mono);
   --color-backdrop: var(--color-backdrop);
+  --color-surface: var(--color-surface);
+  --color-surface-solid: var(--color-surface-solid);
   --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
   --color-primary-glow: var(--color-primary-glow);
   --color-secondary: var(--color-secondary);
+  --color-secondary-hover: var(--color-secondary-hover);
   --color-secondary-glow: var(--color-secondary-glow);
   --color-neutral-dark: var(--color-neutral-dark);
   --color-neutral-light: var(--color-neutral-light);
   --color-border: var(--color-border);
+  --color-border-active: var(--color-border-active);
   --color-border-glow: var(--color-border-glow);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-on-primary: var(--color-text-on-primary);
+  --color-pending: var(--color-pending);
+  --color-approved: var(--color-approved);
+  --color-rejected: var(--color-rejected);
   --color-amber-glow: var(--color-amber-glow);
   --color-emerald-glow: var(--color-emerald-glow);
   --color-crimson-glow: var(--color-crimson-glow);
@@ -46,9 +85,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3 {
   font-family: var(--font-heading);
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /* Default surface: opaque panel for cards, lists, containers */
@@ -66,10 +106,20 @@ h1, h2, h3, h4, h5, h6 {
 /* Elevated surface: glassmorphism reserved for overlays, modals, wizards */
 .glass-panel {
   background: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
   border-radius: 0.75rem;
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-panel-sheet {
+  background: color-mix(in srgb, var(--color-neutral-dark) 60%, transparent);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px 16px 0 0;
+  box-shadow: var(--glass-shadow);
 }
 
 .glass-panel:hover {
@@ -88,24 +138,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .badge-pending {
-  background: color-mix(in srgb, var(--color-amber-glow) 38%, transparent);
+  background: color-mix(in srgb, var(--color-amber-glow) 40%, transparent);
   border: 1px solid var(--color-amber-glow);
-  color: #F59E0B;
-  box-shadow: 0 0 6px var(--color-amber-glow);
+  color: var(--color-pending);
+  box-shadow: var(--shadow-pending);
 }
 
 .badge-approved {
-  background: color-mix(in srgb, var(--color-emerald-glow) 38%, transparent);
+  background: color-mix(in srgb, var(--color-emerald-glow) 40%, transparent);
   border: 1px solid var(--color-emerald-glow);
-  color: #10B981;
-  box-shadow: 0 0 6px var(--color-emerald-glow);
+  color: var(--color-approved);
+  box-shadow: var(--shadow-approved);
 }
 
 .badge-rejected {
-  background: color-mix(in srgb, var(--color-crimson-glow) 38%, transparent);
+  background: color-mix(in srgb, var(--color-crimson-glow) 40%, transparent);
   border: 1px solid var(--color-crimson-glow);
-  color: #EF4444;
-  box-shadow: 0 0 6px var(--color-crimson-glow);
+  color: var(--color-rejected);
+  box-shadow: var(--shadow-rejected);
 }
 
 .clinical-data {
@@ -116,11 +166,19 @@ h1, h2, h3, h4, h5, h6 {
 .warning-banner {
   background: color-mix(in srgb, var(--color-amber-glow) 25%, transparent);
   border: 1px solid var(--color-amber-glow);
-  color: #F59E0B;
+  color: var(--color-pending);
 }
 
 .danger-banner {
   background: color-mix(in srgb, var(--color-crimson-glow) 25%, transparent);
   border: 1px solid var(--color-crimson-glow);
-  color: #EF4444;
+  color: var(--color-rejected);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
