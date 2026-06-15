@@ -18,8 +18,9 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
 
   if (!profile) redirect('/login');
 
-  const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== tenantSlug) redirect('/login');
+  const tenants = profile.tenants as { slug: string; tenant_type: string }[];
+  const tenant = tenants[0];
+  if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   const { count: totalCount } = await supabase
     .from('case_entries')
@@ -52,8 +53,14 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
   const specialtyCounts: Record<string, number> = {};
   const statusCounts: Record<string, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
 
-  for (const e of (entries ?? [])) {
-    const specialty = (e.case_templates as unknown as { specialty: string })?.specialty ?? 'Unknown';
+  interface EntryRow {
+    id: string;
+    status: string;
+    case_templates: { specialty: string }[];
+  }
+
+  for (const e of (entries ?? []) as EntryRow[]) {
+    const specialty = e.case_templates[0]?.specialty ?? 'Unknown';
     specialtyCounts[specialty] = (specialtyCounts[specialty] || 0) + 1;
     statusCounts[e.status] = (statusCounts[e.status] || 0) + 1;
   }
@@ -79,37 +86,45 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Reports & Analytics</h1>
         <a href={`/api/${tenantSlug}/export-pdf`}>
-          <Button color="primary">
+          <Button variant="primary">
             Export PDF
           </Button>
         </a>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card className="panel">
-          <Card.Content className="text-center">
-            <p className="text-sm text-default-500">Total Cases</p>
-            <p className="text-3xl font-bold clinical-data">{totalCount ?? 0}</p>
-          </Card.Content>
-        </Card>
-        <Card className="panel border-t-3 border-t-success">
-          <Card.Content className="text-center">
-            <p className="text-sm text-success">Approved</p>
-            <p className="text-3xl font-bold text-success clinical-data">{approvedCount ?? 0}</p>
-          </Card.Content>
-        </Card>
-        <Card className="panel border-t-3 border-t-primary">
-          <Card.Content className="text-center">
-            <p className="text-sm text-primary">Pending</p>
-            <p className="text-3xl font-bold text-primary clinical-data">{pendingCount ?? 0}</p>
-          </Card.Content>
-        </Card>
-        <Card className="panel border-t-3 border-t-warning">
-          <Card.Content className="text-center">
-            <p className="text-sm text-warning">Drafts</p>
-            <p className="text-3xl font-bold text-warning clinical-data">{draftCount ?? 0}</p>
-          </Card.Content>
-        </Card>
+      <div className="panel p-5 mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-8 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-neutral-light/40" />
+              <div>
+                <p className="text-xs text-neutral-light/50">Total Cases</p>
+                <p className="text-2xl font-bold font-heading">{totalCount ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_var(--color-emerald-glow)]" />
+              <div>
+                <p className="text-xs text-emerald-400/60">Approved</p>
+                <p className="text-2xl font-bold font-heading text-emerald-400">{approvedCount ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_var(--color-amber-glow)]" />
+              <div>
+                <p className="text-xs text-amber-400/60">Pending</p>
+                <p className="text-2xl font-bold font-heading text-amber-400">{pendingCount ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-neutral-light/30" />
+              <div>
+                <p className="text-xs text-neutral-light/50">Drafts</p>
+                <p className="text-2xl font-bold font-heading text-neutral-light/70">{draftCount ?? 0}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

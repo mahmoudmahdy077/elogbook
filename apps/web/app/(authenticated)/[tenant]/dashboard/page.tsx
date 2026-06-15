@@ -1,83 +1,167 @@
+import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, Button } from '@heroui/react';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import AIInsightsPanel from '@/components/AIInsightsPanel';
+import DashboardContent from '@/components/DashboardContent';
+
+type CaseStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+
+interface CaseRow {
+  id: string;
+  case_date: string;
+  status: string;
+  case_templates: { name: string; specialty: string };
+}
+
+interface GoalRow {
+  id: string;
+  title: string;
+  target_count: number;
+  deadline: string;
+  specialty: string | null;
+}
+
+interface ProgressRow {
+  goal_id: string;
+  current_count: number;
+}
+
+interface ResidentProfileRow {
+  id: string;
+  full_name: string;
+  specialty: string | null;
+}
 
 export default async function DashboardPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
+  const auth = await getAuthContext();
+
+  if (auth.tenant.slug !== tenantSlug) redirect('/login');
+
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { profile, tenant } = auth;
+  const residentId = profile.id;
+  const tenantId = profile.tenant_id;
+  const role = profile.role;
 
-  if (!user) redirect('/login');
+  const isResident = role === 'resident';
+  const isDirectorPlus = role === 'director' || role === 'institution_admin' || role === 'admin';
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, tenant_id, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
+  const selectFields = isDirectorPlus
+    ? 'id, case_date, status, resident_id, case_templates!inner(name, specialty)'
+    : 'id, case_date, status, case_templates!inner(name, specialty)';
 
-  if (!profile) redirect('/login');
+  const queries = [
+    supabase
+      .from('case_entries')
+      .select(selectFields)
+      .eq('tenant_id', tenantId)
+      .eq(isResident ? 'resident_id' : 'tenant_id', isResident ? residentId : tenantId)
+      .order('created_at', { ascending: false })
+      .limit(isResident ? 5 : 100),
+    supabase
+      .from('program_goals')
+      .select('id, title, target_count, deadline, specialty')
+      .eq('resident_id', residentId)
+      .eq('tenant_id', tenantId),
+  ];
 
-  const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== tenantSlug) redirect('/login');
+  const [casesResult, goalResult] = await Promise.all(queries);
 
-  const { count: draftCount } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('resident_id', profile.id)
-    .eq('status', 'draft');
+  const allCaseRows = (casesResult.data || []) as unknown as (CaseRow & { resident_id?: string })[];
+  const stats: Record<CaseStatus, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
+  for (const r of allCaseRows) {
+    const s = r.status as CaseStatus;
+    if (s in stats) stats[s]++;
+  }
 
-  const { count: approvedCount } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('resident_id', profile.id)
-    .eq('status', 'approved');
+  const recentCases = allCaseRows.slice(0, 5).map((r) => ({
+    id: r.id,
+    case_date: r.case_date,
+    status: r.status as CaseStatus,
+    template_name: r.case_templates?.name || '',
+    template_specialty: r.case_templates?.specialty || '',
+  }));
 
-  const { count: pendingCount } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('resident_id', profile.id)
-    .eq('status', 'pending');
+  const goalRows = (goalResult.data || []) as unknown as GoalRow[];
+  const goalProgressMap: Record<string, number> = {};
+  if (goalRows.length > 0) {
+    const goalIds = goalRows.map((g) => g.id);
+    const { data: progressRows } = await supabase
+      .from('goal_progress')
+      .select('goal_id, current_count')
+      .in('goal_id', goalIds);
+    for (const p of (progressRows || []) as ProgressRow[]) {
+      goalProgressMap[p.goal_id] = p.current_count;
+    }
+  }
 
-  const { data: aiToggle } = await supabase
-    .from('resident_ai_toggle')
-    .select('enabled')
-    .eq('tenant_id', profile.tenant_id)
-    .eq('resident_id', profile.id)
-    .maybeSingle();
+  const goals = goalRows.map((g) => ({
+    id: g.id,
+    title: g.title,
+    current: goalProgressMap[g.id] || 0,
+    target: g.target_count,
+    deadline: g.deadline,
+    specialty: g.specialty,
+  }));
 
-  const showAIInsights = aiToggle?.enabled === true;
+  const pendingApprovals = isResident
+    ? 0
+    : stats.pending;
+
+  let residents: { id: string; full_name: string; specialty: string | null; total_cases: number; approved: number }[] = [];
+  let totalResidents = 0;
+
+  if (isDirectorPlus) {
+    const { data: residentProfiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, specialty')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'resident');
+
+    totalResidents = (residentProfiles || []).length;
+
+    if (residentProfiles && residentProfiles.length > 0) {
+      const totalByResident: Record<string, number> = {};
+      const approvedByResident: Record<string, number> = {};
+
+      for (const c of allCaseRows) {
+        if (c.resident_id) {
+          totalByResident[c.resident_id] = (totalByResident[c.resident_id] || 0) + 1;
+          if (c.status === 'approved') {
+            approvedByResident[c.resident_id] = (approvedByResident[c.resident_id] || 0) + 1;
+          }
+        }
+      }
+
+      residents = residentProfiles.map((rp: ResidentProfileRow) => ({
+        id: rp.id,
+        full_name: rp.full_name,
+        specialty: rp.specialty,
+        total_cases: totalByResident[rp.id] || 0,
+        approved: approvedByResident[rp.id] || 0,
+      }));
+    }
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-          <Link href={`/${tenantSlug}/cases/new`}>
-            <Button color="primary">
-              Log New Case
-            </Button>
-          </Link>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="panel">
-          <Card.Header className="font-heading">Draft Cases</Card.Header>
-          <Card.Content><p className="text-3xl font-bold clinical-data">{draftCount ?? 0}</p></Card.Content>
-        </Card>
-        <Card className="panel">
-          <Card.Header className="font-heading">Pending Review</Card.Header>
-          <Card.Content><p className="text-3xl font-bold clinical-data">{pendingCount ?? 0}</p></Card.Content>
-        </Card>
-        <Card className="panel">
-          <Card.Header className="font-heading">Approved Cases</Card.Header>
-          <Card.Content><p className="text-3xl font-bold clinical-data">{approvedCount ?? 0}</p></Card.Content>
-        </Card>
-      </div>
-
-      {showAIInsights && (
-        <AIInsightsPanel tenantId={profile.tenant_id} residentId={profile.id} />
-      )}
-    </div>
+    <DashboardContent
+      data={{
+        profile: {
+          id: profile.id,
+          role: profile.role,
+          full_name: profile.full_name,
+          specialty: profile.specialty,
+          tenant_id: profile.tenant_id,
+        },
+        tenantSlug,
+        stats,
+        recentCases,
+        goals,
+        residents,
+        pendingApprovals,
+        totalResidents,
+        tenantType: tenant.tenant_type as 'individual' | 'institution',
+      }}
+    />
   );
 }

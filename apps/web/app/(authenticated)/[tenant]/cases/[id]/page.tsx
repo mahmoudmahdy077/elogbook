@@ -1,12 +1,15 @@
+import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Chip, Button } from '@heroui/react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
+  const auth = await getAuthContext();
+
+  if (auth.tenant.slug !== tenantSlug) redirect('/login');
+
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) notFound();
 
   const { data: entry } = await supabase
     .from('case_entries')
@@ -21,6 +24,10 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   if (!entry) notFound();
 
+  const isResident = auth.profile.role === 'resident';
+  if (isResident && entry.resident_id !== auth.profile.id) notFound();
+  if (!isResident && entry.tenant_id !== auth.tenant.id) notFound();
+
   const { data: approvals } = await supabase
     .from('approval_requests')
     .select('*, profiles(full_name)')
@@ -30,7 +37,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
   const statusColor = (s: string) => {
     switch (s) {
       case 'draft': return 'warning' as const;
-      case 'pending': return 'primary' as const;
+      case 'pending': return 'accent' as const;
       case 'approved': return 'success' as const;
       case 'rejected': return 'danger' as const;
       default: return 'default' as const;
@@ -41,7 +48,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
     switch (s) {
       case 'approved': return 'success' as const;
       case 'rejected': return 'danger' as const;
-      default: return 'primary' as const;
+      default: return 'accent' as const;
     }
   };
 
@@ -55,7 +62,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
             </h1>
             <p className="text-sm text-default-500">Logged by {entry.profiles?.full_name}</p>
           </div>
-          <Chip color={statusColor(entry.status)} variant="flat">{entry.status}</Chip>
+          <Chip color={statusColor(entry.status)} variant="soft">{entry.status}</Chip>
         </Card.Header>
         <Card.Content className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -90,7 +97,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
           {entry.status === 'draft' && (
             <form action={`/${tenantSlug}/cases/${id}/submit`} method="POST">
-              <Button type="submit" color="primary">
+              <Button type="submit" variant="primary">
                 Submit for Approval
               </Button>
             </form>
@@ -119,7 +126,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
                   <Chip
                     color={approvalStatusColor(a.status)}
                     size="sm"
-                    variant="flat"
+                    variant="soft"
                   >
                     {a.status}
                   </Chip>

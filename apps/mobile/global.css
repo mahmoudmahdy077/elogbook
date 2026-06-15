@@ -1,3 +1,32 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+@source "./app";
+@source "./components";
+
+@theme {
+  --color-backdrop: #060814;
+  --color-panel: #0f172a;
+  --color-primary: #0d9488;
+  --color-secondary: #6366f1;
+  --color-amber: #d97706;
+  --color-emerald: #059669;
+  --color-crimson: #dc2626;
+  --color-neutral-light: #e2e8f0;
+  --color-neutral-dark: #0f172a;
+
+  --font-heading: "Outfit", sans-serif;
+  --font-body: "Inter", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+}
+
+@layer components {
+  .glass-panel-mobile {
+    background-color: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+  }
+}

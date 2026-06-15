@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+  const router = useRouter();
 
   const handleOtpLogin = async () => {
     setError('');
@@ -39,7 +41,20 @@ export default function LoginPage() {
     } else {
       const params = new URLSearchParams(window.location.search);
       const next = params.get('next');
-      location.href = next || '/dashboard';
+      if (next) {
+        router.push(next);
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        const profileResult = await supabase
+          .from('profiles')
+          .select('tenant_id, tenants!inner(slug)')
+          .eq('user_id', session?.user?.id ?? '')
+          .single();
+        const slug = (profileResult.data as Record<string, unknown> | null)?.tenants
+          ? ((profileResult.data as Record<string, unknown>).tenants as Record<string, unknown>)?.slug as string
+          : null;
+        router.push(slug ? `/${slug}/dashboard` : '/dashboard');
+      }
     }
     setLoading(false);
   };

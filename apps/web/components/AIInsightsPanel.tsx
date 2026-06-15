@@ -6,6 +6,7 @@ import {
   TextArea,
   Button,
   Spinner,
+  Label,
 } from '@heroui/react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -41,7 +42,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         return;
       }
 
-      setResponse((data as any)?.response ?? 'No response received.');
+      setResponse((data as { response?: string })?.response ?? 'No response received.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     }
@@ -59,18 +60,16 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
           <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
         )}
 
+        <Label>Ask a question about your cases (optional)</Label>
         <TextArea
-          label="Ask a question about your cases (optional)"
-          placeholder="e.g. What patterns do you see in my surgical cases? Leave blank for a general analysis."
           value={query}
-          onChange={setQuery}
-          minRows={2}
+          onChange={(e) => setQuery(e.target.value)}
+          rows={2}
         />
 
         <Button
-          color="primary"
+          variant="primary"
           onPress={handleAnalyze}
-          isLoading={loading}
           isDisabled={loading}
         >
           {query.trim() ? 'Ask AI' : 'Analyze My Cases'}
@@ -78,7 +77,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
 
         {loading && (
           <div className="flex justify-center py-4">
-            <Spinner label="Analyzing your cases..." />
+            <Spinner />
           </div>
         )}
 

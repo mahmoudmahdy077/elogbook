@@ -1,28 +1,34 @@
+import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, ProgressBar } from '@heroui/react';
 import GoalForm from '@/components/GoalForm';
+import EmptyState from '@/components/EmptyState';
 
-export default async function GoalsPage() {
+interface GoalRow {
+  id: string;
+  title: string;
+  target_count: number;
+  deadline: string;
+  specialty: string | null;
+  description: string | null;
+  goal_progress: { current_count: number } | null;
+  profiles: { full_name: string } | null;
+}
+
+export default async function GoalsPage({ params }: { params: Promise<{ tenant: string }> }) {
+  const { tenant: tenantSlug } = await params;
+  const auth = await getAuthContext();
+
+  const isDirector = ['director', 'institution_admin', 'admin'].includes(auth.profile.role);
+
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', user!.id)
-    .single();
-
-  if (!profile) return null;
-
-  const isDirector = ['director', 'institution_admin', 'admin'].includes(profile.role);
-
   let goalsQuery = supabase
     .from('program_goals')
     .select('*, goal_progress(current_count), profiles!program_goals_resident_id_fkey(full_name)')
-    .eq('tenant_id', profile.tenant_id);
+    .eq('tenant_id', auth.profile.tenant_id);
 
   if (!isDirector) {
-    goalsQuery = goalsQuery.eq('resident_id', profile.id);
+    goalsQuery = goalsQuery.eq('resident_id', auth.profile.id);
   }
 
   const { data: goals } = await goalsQuery.order('created_at', { ascending: false });
@@ -32,9 +38,11 @@ export default async function GoalsPage() {
     const { data: residentsData } = await supabase
       .from('profiles')
       .select('id, full_name')
-      .eq('tenant_id', profile.tenant_id);
+      .eq('tenant_id', auth.profile.tenant_id);
     residents = residentsData ?? [];
   }
+
+  const typedGoals = (goals ?? []) as GoalRow[];
 
   return (
     <div>
@@ -44,25 +52,33 @@ export default async function GoalsPage() {
         </h1>
         {isDirector && (
           <GoalForm
-            tenantId={profile.tenant_id}
-            directorId={profile.id}
+            tenantId={auth.profile.tenant_id}
+            directorId={auth.profile.id}
             residents={residents}
           />
         )}
       </div>
 
-      {!goals || goals.length === 0 ? (
-        <p className="text-default-500">No goals set yet.</p>
+      {!typedGoals || typedGoals.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg className="w-5 h-5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            </svg>
+          }
+          title={isDirector ? 'No goals set yet' : 'No goals assigned yet'}
+          description={isDirector ? 'Create goals to track resident progress toward accreditation milestones.' : 'Your program director will assign goals to track your progress.'}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {goals.map((goal: any) => {
+          {typedGoals.map((goal) => {
             const current = goal.goal_progress?.current_count ?? 0;
             const target = goal.target_count as number;
             const percentage = Math.min(Math.round((current / target) * 100), 100);
             const isOverdue = new Date(goal.deadline) < new Date() && current < target;
             const isComplete = current >= target;
 
-            let color: 'success' | 'danger' | 'primary' = 'primary';
+            let color: 'success' | 'danger' | 'accent' = 'accent';
             if (isComplete) color = 'success';
             else if (isOverdue) color = 'danger';
 
@@ -73,7 +89,7 @@ export default async function GoalsPage() {
                     <h3 className="text-lg font-semibold">{goal.title}</h3>
                     {isDirector && (
                       <p className="text-sm text-default-500">
-                        {(goal.profiles as any)?.full_name}
+                        {(goal.profiles)?.full_name}
                       </p>
                     )}
                   </div>

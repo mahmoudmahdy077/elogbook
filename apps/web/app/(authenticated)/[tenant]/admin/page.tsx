@@ -23,8 +23,9 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
 
   if (!profile) redirect('/login');
 
-  const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== tenantSlug) redirect('/login');
+  const tenants = profile.tenants as { slug: string }[];
+  const tenant = tenants[0];
+  if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   if (!['director', 'institution_admin', 'admin'].includes(profile.role)) {
     redirect('/login');
@@ -58,12 +59,23 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .eq('tenant_id', profile.tenant_id),
     ]);
 
+  interface AiConfigRaw {
+    encrypted_api_key?: string;
+    [key: string]: unknown;
+  }
+
+  interface PaymentConfigRaw {
+    encrypted_secret_key?: string;
+    encrypted_webhook_secret?: string;
+    [key: string]: unknown;
+  }
+
   const aiConfig = aiConfigRaw
-    ? { ...aiConfigRaw, has_key: !!(aiConfigRaw as any).encrypted_api_key, encrypted_api_key: undefined }
+    ? { ...aiConfigRaw, has_key: !!(aiConfigRaw as AiConfigRaw).encrypted_api_key, encrypted_api_key: undefined }
     : null;
 
   const paymentConfig = paymentConfigRaw
-    ? { ...paymentConfigRaw, has_secret_key: !!(paymentConfigRaw as any).encrypted_secret_key, has_webhook_secret: !!(paymentConfigRaw as any).encrypted_webhook_secret, encrypted_secret_key: undefined, encrypted_webhook_secret: undefined }
+    ? { ...paymentConfigRaw, has_secret_key: !!(paymentConfigRaw as PaymentConfigRaw).encrypted_secret_key, has_webhook_secret: !!(paymentConfigRaw as PaymentConfigRaw).encrypted_webhook_secret, encrypted_secret_key: undefined, encrypted_webhook_secret: undefined }
     : null;
 
   const totalCases = caseCounts?.length ?? 0;

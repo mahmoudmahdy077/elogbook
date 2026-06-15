@@ -5,3 +5,24 @@ dist/
 .env
 .env.local
 .superpowers/
+
+# Universal
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Node.js / TypeScript
+build/
+coverage/
+*.log
+.env.*
+
+# Dependencies
+.pnpm-store/
+
+# Mobile
+*.apk
+*.ipa

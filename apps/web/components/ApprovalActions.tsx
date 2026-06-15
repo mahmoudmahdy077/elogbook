@@ -20,26 +20,20 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
   const handleAction = async (action: 'approve' | 'reject') => {
     setLoading(action);
 
-    const { error: reqError } = await supabase
-      .from('approval_requests')
-      .update({
-        status: action === 'approve' ? 'approved' : 'rejected',
-        comment: comment || null,
-        resolved_at: new Date().toISOString(),
-      })
-      .eq('id', requestId);
-
-    if (reqError) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       setLoading(null);
       return;
     }
 
-    const { error: entryError } = await supabase
-      .from('case_entries')
-      .update({ status: action === 'approve' ? 'approved' : 'rejected' })
-      .eq('id', entryId);
+    const rpcName = action === 'approve' ? 'approve_case' : 'reject_case';
+    const { error } = await supabase.rpc(rpcName, {
+      p_entry_id: entryId,
+      p_supervisor_id: user.id,
+      p_comment: comment || null,
+    });
 
-    if (entryError) {
+    if (error) {
       setLoading(null);
       return;
     }
@@ -51,25 +45,21 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
   return (
     <div className="space-y-3">
       <TextArea
-        label="Comment (optional)"
         value={comment}
-        onChange={setComment}
+        onChange={(e) => setComment(e.target.value)}
         placeholder="Add feedback..."
-        minRows={2}
+        rows={2}
       />
       <div className="flex gap-3">
         <Button
-          color="danger"
-          variant="flat"
-          isLoading={loading === 'reject'}
+          variant="danger-soft"
           isDisabled={loading !== null}
           onPress={() => handleAction('reject')}
         >
           Reject
         </Button>
         <Button
-          color="success"
-          isLoading={loading === 'approve'}
+          variant="primary"
           isDisabled={loading !== null}
           onPress={() => handleAction('approve')}
         >

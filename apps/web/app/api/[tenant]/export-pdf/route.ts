@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   _request: Request,
-  { params }: { params: { tenant: string } }
+  { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const { tenant: paramTenant } = await params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -23,7 +24,7 @@ export async function GET(
   }
 
   const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== params.tenant) {
+  if (tenant.slug !== paramTenant) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
 
@@ -50,7 +51,7 @@ export async function GET(
     body: {
       cases: caseData,
       resident_name: profile.full_name,
-      tenant: params.tenant,
+      tenant: paramTenant,
     },
   });
 
@@ -63,7 +64,7 @@ export async function GET(
   return new NextResponse(pdfResponse, {
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="elogbook-report-${params.tenant}.pdf"`,
+      'Content-Disposition': `attachment; filename="elogbook-report-${paramTenant}.pdf"`,
     },
   });
 }

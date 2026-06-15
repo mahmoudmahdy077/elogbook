@@ -10,6 +10,8 @@ import {
   ListBox,
   ListBoxItem,
   Chip,
+  Label,
+  Input,
 } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -80,7 +82,6 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
 
   useEffect(() => {
     fetchFrameworks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   function resetForm() {
@@ -191,8 +192,8 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
       )}
 
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Accreditation Frameworks</h2>
-        <Button color="primary" onPress={handleToggleForm}>
+        <h2 className="text-lg font-heading font-semibold">Accreditation Frameworks</h2>
+        <Button variant="primary" onPress={handleToggleForm}>
           {showForm ? 'Cancel' : 'New Framework'}
         </Button>
       </div>
@@ -211,25 +212,26 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
               <h3 className="text-base font-semibold">Create Accreditation Framework</h3>
 
               <TextField
-                label="Name"
                 value={name}
                 onChange={setName}
                 isRequired
-                placeholder="e.g. ACGME General Surgery Milestones"
-              />
+              >
+                <Label>Name</Label>
+                <Input placeholder="e.g. ACGME General Surgery Milestones" />
+              </TextField>
 
               <TextField
-                label="Version"
                 value={version}
                 onChange={setVersion}
-                placeholder="1.0"
-              />
+              >
+                <Label>Version</Label>
+                <Input placeholder="1.0" />
+              </TextField>
 
               <Select
-                label="Framework Type"
                 selectedKey={frameworkType}
                 onSelectionChange={(val) => {
-                  if (val) setFrameworkType(val as FrameworkType);
+                  if (val) setFrameworkType(String(val) as FrameworkType);
                 }}
               >
                 <Select.Trigger aria-label="Select framework type">
@@ -246,18 +248,17 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                 </Select.Popover>
               </Select>
 
+              <Label>Milestones (JSON)</Label>
               <TextArea
-                label="Milestones (JSON)"
                 value={milestonesJson}
-                onChange={setMilestonesJson}
-                isRequired
-                minRows={8}
-                placeholder={`[\n  {\n    "code": "PC1",\n    "description": "Perform complete history and physical",\n    "competency_area": "Patient Care",\n    "target_minimum": 50\n  },\n  {\n    "code": "MK1",\n    "description": "Apply biomedical knowledge",\n    "competency_area": "Medical Knowledge",\n    "target_minimum": 30\n  }\n]`}
+                onChange={(e) => setMilestonesJson(e.target.value)}
+                required
+                rows={8}
               />
 
               <div className="flex gap-2 justify-end">
                 <Button
-                  variant="light"
+                  variant="ghost"
                   onPress={() => {
                     resetForm();
                     setShowForm(false);
@@ -265,7 +266,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                 >
                   Cancel
                 </Button>
-                <Button color="primary" onPress={handleCreate} isLoading={saving}>
+                <Button variant="primary" onPress={handleCreate} isDisabled={saving}>
                   Create Framework
                 </Button>
               </div>
@@ -304,7 +305,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                     <div>
                       <h3 className="font-semibold">{framework.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <Chip variant="flat" size="sm" color="primary">
+                        <Chip variant="soft" size="sm" color="accent">
                           {framework.framework_type.toUpperCase()}
                         </Chip>
                         <span className="text-xs text-default-400">v{framework.version}</span>
@@ -318,10 +319,9 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Button
                       size="sm"
-                      color="danger"
-                      variant="flat"
+                      variant="danger-soft"
                       onPress={() => handleDelete(framework.id)}
-                      isLoading={deleting === framework.id}
+                      isDisabled={deleting === framework.id}
                     >
                       Delete
                     </Button>
@@ -359,7 +359,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                                 key={m.code}
                                 className="flex items-start gap-3 p-2.5 rounded-lg bg-neutral-dark/30"
                               >
-                                <Chip variant="flat" size="sm" color="secondary">
+                                <Chip variant="soft" size="sm" color="accent">
                                   {m.code}
                                 </Chip>
                                 <div className="flex-1 min-w-0">

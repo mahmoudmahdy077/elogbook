@@ -132,11 +132,23 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
         return;
       }
 
+      interface ApprovalDataRaw {
+        id: string;
+        status: string;
+        requested_at: string;
+        comment: string | null;
+        entry_id: string;
+      }
+
       const approvalMap = new Map<string, RelationApprovalRequest[]>();
-      for (const a of (approvalData || [])) {
-        const entryId = (a as { entry_id: string }).entry_id;
-        if (!approvalMap.has(entryId)) approvalMap.set(entryId, []);
-        approvalMap.get(entryId)!.push(a as unknown as RelationApprovalRequest);
+      for (const a of (approvalData || []) as ApprovalDataRaw[]) {
+        if (!approvalMap.has(a.entry_id)) approvalMap.set(a.entry_id, []);
+        approvalMap.get(a.entry_id)!.push({
+          id: a.id,
+          status: a.status,
+          requested_at: a.requested_at,
+          comment: a.comment,
+        });
       }
 
       const merged = entries.map((e) => ({

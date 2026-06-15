@@ -1,52 +1,50 @@
+import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Chip } from '@heroui/react';
 import { redirect } from 'next/navigation';
 import SubscriptionPlans from '@/components/SubscriptionPlans';
 
+interface SubscriptionPlan {
+  name: string;
+  price_monthly: number;
+}
+
 export default async function BillingPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
+  const auth = await getAuthContext();
+
+  if (auth.tenant.slug !== tenantSlug) redirect('/login');
+
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, user_id, tenant_id, tenants!inner(slug, tenant_type)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) redirect('/login');
-
-  const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
-  if (tenant.slug !== tenantSlug) redirect('/login');
 
   const { data: plans } = await supabase
     .from('subscription_plans')
     .select('*')
-    .eq('tenant_type', tenant.tenant_type)
+    .eq('tenant_type', auth.tenant.tenant_type)
     .order('price_monthly', { ascending: true });
 
   const { data: subscription } = await supabase
     .from('subscriptions')
     .select('*, plan:subscription_plans(*)')
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', auth.profile.tenant_id)
     .eq('status', 'active')
     .maybeSingle();
 
   const { data: gatewayConfig } = await supabase
     .from('payment_gateway_config')
     .select('*')
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', auth.profile.tenant_id)
     .eq('is_active', true)
     .maybeSingle();
 
   const { data: purchases } = await supabase
     .from('one_time_purchases')
     .select('*')
-    .eq('resident_id', profile.id)
+    .eq('resident_id', auth.profile.id)
     .eq('purchase_type', 'ai_report')
     .order('created_at', { ascending: false });
+
+  const plan = (subscription as Record<string, unknown> | null)?.plan as SubscriptionPlan | null;
 
   return (
     <div className="space-y-8">
@@ -61,14 +59,14 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xl font-bold">
-                  {(subscription.plan as any)?.name ?? 'Unknown Plan'}
+                  {plan?.name ?? 'Unknown Plan'}
                 </p>
                 <p className="text-default-500">
-                  ${Number((subscription.plan as any)?.price_monthly ?? 0).toFixed(2)}/month
+                  ${Number(plan?.price_monthly ?? 0).toFixed(2)}/month
                 </p>
               </div>
               <div className="text-right">
-                <Chip color="success" variant="flat" size="sm">Active</Chip>
+                <Chip color="success" variant="soft" size="sm">Active</Chip>
                 {subscription.current_period_end && (
                   <p className="text-sm text-default-500 mt-1 clinical-data">
                     Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
@@ -82,7 +80,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
       <SubscriptionPlans
         plans={plans ?? []}
-        tenantId={profile.tenant_id}
+        tenantId={auth.profile.tenant_id}
         gatewayProvider={gatewayConfig?.provider ?? null}
         publishableKey={gatewayConfig?.publishable_key ?? null}
         currentPlanId={subscription?.plan_id ?? null}
@@ -111,7 +109,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
                   </div>
                   <Chip
                     color={p.status === 'completed' ? 'success' : 'warning'}
-                    variant="flat"
+                    variant="soft"
                     size="sm"
                   >
                     {p.status === 'completed' ? 'Delivered' : 'Pending'}

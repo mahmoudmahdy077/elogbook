@@ -14,5 +14,10 @@
   },
   "devDependencies": {
     "typescript": "^6.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "lightningcss": "1.30.1"
+    }
   }
 }

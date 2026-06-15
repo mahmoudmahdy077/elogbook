@@ -11,6 +11,8 @@ import {
   ListBox,
   ListBoxItem,
   useOverlayState,
+  Label,
+  Input,
 } from '@heroui/react';
 import { programGoalSchema } from '@elogbook/shared';
 import { createClient } from '@/lib/supabase/client';
@@ -57,7 +59,7 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     });
 
     if (!result.success) {
-      setError(result.error.errors.map((e) => e.message).join(', '));
+      setError(result.error.issues.map((e) => e.message).join(', '));
       return;
     }
 
@@ -107,7 +109,7 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
 
   return (
     <>
-      <Button onPress={overlay.open} color="primary">New Goal</Button>
+      <Button onPress={overlay.open} variant="primary">New Goal</Button>
       <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
         <Modal.Header>Create Goal</Modal.Header>
         <Modal.Body>
@@ -115,59 +117,69 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
             <div className="text-danger text-sm bg-danger-50 p-2 rounded">{error}</div>
           )}
           <Select
-            label="Resident"
             selectedKey={residentId || null}
             onSelectionChange={(key) => {
-              if (key) setResidentId(key);
+              if (key) setResidentId(String(key));
             }}
             isRequired
           >
-            <Select.Trigger aria-label="Select resident"><Select.Value /></Select.Trigger>
+            <Label>Resident</Label>
+            <Select.Trigger>
+              <Select.Value />
+            </Select.Trigger>
             <Select.Popover>
               <ListBox aria-label="Select resident">
                 {residents.map((r) => (
-                  <ListBoxItem id={r.id}>{r.full_name}</ListBoxItem>
+                  <ListBoxItem key={r.id} id={r.id}>{r.full_name}</ListBoxItem>
                 ))}
               </ListBox>
             </Select.Popover>
           </Select>
           <TextField
-            label="Title"
             value={title}
             onChange={setTitle}
             isRequired
-          />
+          >
+            <Label>Title</Label>
+            <Input placeholder="e.g. Complete 50 appendectomies" />
+          </TextField>
           <TextField
-            label="Target Count"
             type="number"
             value={targetCount}
             onChange={setTargetCount}
             isRequired
-          />
+          >
+            <Label>Target Count</Label>
+            <Input placeholder="50" />
+          </TextField>
           <TextField
-            label="Specialty"
             value={specialty}
             onChange={setSpecialty}
-          />
+          >
+            <Label>Specialty</Label>
+            <Input placeholder="e.g. General Surgery" />
+          </TextField>
           <TextField
-            label="Deadline"
             type="date"
             value={deadline}
             onChange={setDeadline}
             isRequired
-          />
+          >
+            <Label>Deadline</Label>
+            <Input />
+          </TextField>
+          <Label>Description</Label>
           <TextArea
-            label="Description"
             value={description}
-            onChange={setDescription}
+            onChange={(e) => setDescription(e.target.value)}
           />
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onPress={overlay.close}>Cancel</Button>
+          <Button variant="ghost" onPress={overlay.close}>Cancel</Button>
           <Button
-            color="primary"
+            variant="primary"
             onPress={() => handleSubmit(overlay.close)}
-            isLoading={loading}
+            isDisabled={loading}
           >
             Create
           </Button>

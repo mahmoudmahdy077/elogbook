@@ -21,8 +21,9 @@ This document governs all visual styling, layout choices, and components across 
 * **Clinical Data (MRNs, Codes, Dates)**: `Geist Mono` or `JetBrains Mono` for distinct monospace visual recognition.
 
 ### Elevation & Layering
-* **Cards & Modals**: Semi-transparent glassmorphic panels.
-  - Backdrop Blur: `backdrop-filter: blur(12px)`.
+* **Data Panels (`.panel`)**: Opaque, deep navy-slate background with thin semi-transparent indigo borders. Default surface for cards, lists, tables, and content containers.
+* **Overlay Panels (`.glass-panel`)**: Reserved exclusively for transient overlay surfaces — modals, wizards, dialogs, and sheets. Uses `backdrop-filter: blur(12px)` with a semi-transparent background.
+  - Glassmorphism is a deliberate elevation signal, not a default card style. Never use `.glass-panel` for data-dense content containers.
   - Border: `1px solid rgba(255, 255, 255, 0.05)`.
   - Shadow: Soft, diffused drop-shadow with a color tint matching the backdrop.
 
