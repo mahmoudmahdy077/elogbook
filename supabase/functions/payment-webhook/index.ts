@@ -1,31 +1,39 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
+import { corsHeaders } from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const WEBHOOK_ORIGINS = ['https://api.stripe.com'];
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin && WEBHOOK_ORIGINS.includes(origin) ? origin : null);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers });
   }
 
   const signature = req.headers.get('stripe-signature');
   if (!signature) {
-    return new Response(JSON.stringify({ error: 'Missing stripe-signature header' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: 'Missing stripe-signature header' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
   }
 
   const body = await req.text();
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   const { data: gatewayConfigs } = await supabase
     .from('payment_gateway_config')
@@ -34,10 +42,11 @@ serve(async (req) => {
     .eq('is_active', true);
 
   if (!gatewayConfigs || gatewayConfigs.length === 0) {
-    return new Response(JSON.stringify({ error: 'No active Stripe gateway configs found' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('No active Stripe gateway configs found');
+    return new Response(
+      JSON.stringify({ error: 'No active Stripe gateway configs found' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
   }
 
   for (const gwConfig of gatewayConfigs) {
@@ -47,18 +56,50 @@ serve(async (req) => {
         httpClient: Stripe.createFetchHttpClient(),
       });
 
-      const event = await stripe.webhooks.constructEventAsync(
-        body,
-        signature,
-        gwConfig.encrypted_webhook_secret
-      );
+      let event: Stripe.Event;
+      try {
+        event = await stripe.webhooks.constructEventAsync(
+          body,
+          signature,
+          gwConfig.encrypted_webhook_secret
+        );
+      } catch (sigErr) {
+        console.error('Stripe webhook signature verification failed', {
+          gateway_config_id: gwConfig.id,
+          error: sigErr instanceof Error ? sigErr.message : String(sigErr),
+        });
+        continue;
+      }
+
+      const { data: existingEvent } = await supabase
+        .from('stripe_events')
+        .select('id')
+        .eq('stripe_event_id', event.id)
+        .maybeSingle();
+
+      if (existingEvent) {
+        console.info('Duplicate Stripe event skipped', { stripe_event_id: event.id });
+        return new Response(
+          JSON.stringify({ received: true, duplicate: true }),
+          { headers: { ...headers, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      await supabase.from('stripe_events').insert({
+        stripe_event_id: event.id,
+        event_type: event.type,
+        processed: false,
+      });
 
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object;
           const { tenant_id, plan_id } = session.metadata ?? {};
 
-          if (!tenant_id || !plan_id) break;
+          if (!tenant_id || !plan_id) {
+            console.error('Checkout session missing metadata', { event_id: event.id, session_id: session.id });
+            break;
+          }
 
           const subscriptionId = session.subscription as string;
 
@@ -124,16 +165,26 @@ serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ received: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      await supabase
+        .from('stripe_events')
+        .update({ processed: true })
+        .eq('stripe_event_id', event.id);
+
+      return new Response(
+        JSON.stringify({ received: true }),
+        { headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    } catch (err) {
+      console.error('Error processing webhook for gateway config', {
+        gateway_config_id: gwConfig.id,
+        error: err instanceof Error ? err.message : String(err),
       });
-    } catch {
       continue;
     }
   }
 
-  return new Response(JSON.stringify({ error: 'Webhook signature verification failed' }), {
-    status: 400,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return new Response(
+    JSON.stringify({ error: 'Webhook signature verification failed' }),
+    { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+  );
 });

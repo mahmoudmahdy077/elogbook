@@ -1,99 +1,180 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const MANDATORY_DISCLAIMER = 'This is an educational reflection tool and does not constitute medical advice.';
+
+const DIAGNOSIS_PATTERNS = /(patient has|diagnosed with|suffers from|condition is|presenting with classic|indicative of|consistent with.*disease)/i;
+const PRESCRIPTION_PATTERNS = /(prescribe|take \d+\s*mg|dosage of|administer|recommend.*medication|start.*treatment\s+with)/i;
+const PROGNOSIS_PATTERNS = /(will recover|likely to develop|prognosis is|life expectancy|expected outcome|will resolve)/i;
+
+function checkSafety(text: string): string[] {
+  const flags: string[] = [];
+  if (DIAGNOSIS_PATTERNS.test(text)) flags.push('blocked_diagnosis');
+  if (PRESCRIPTION_PATTERNS.test(text)) flags.push('blocked_prescription');
+  if (PROGNOSIS_PATTERNS.test(text)) flags.push('blocked_prognosis');
+  return flags;
+}
+
+function ensureDisclaimer(text: string): string {
+  if (text.includes('does not constitute medical advice')) return text;
+  const safetyFlags = checkSafety(text);
+  let result = text;
+  if (safetyFlags.length > 0) {
+    result = `Note: Some content was filtered to comply with medical safety guidelines.\n\n${result}`;
+  }
+  return `${result}\n\n---\n${MANDATORY_DISCLAIMER}`;
+}
+
+const AI_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+}
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers });
   }
 
+  const authResult = await authenticate(req);
+  if (authResult instanceof Response) return authResult;
+  const { supabase, tenantId, role } = authResult;
+
+  let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
   try {
-    const { tenant_id, resident_id, query } = await req.json();
-
-    if (!tenant_id || !resident_id) {
-      return new Response(
-        JSON.stringify({ error: 'tenant_id and resident_id are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    body = await req.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
+  }
 
-    const { data: aiToggle, error: toggleError } = await supabase
-      .from('resident_ai_toggle')
-      .select('enabled')
-      .eq('tenant_id', tenant_id)
-      .eq('resident_id', resident_id)
-      .maybeSingle();
+  const { resident_id, query, stream = false, is_deidentified } = body;
 
-    if (toggleError || !aiToggle || !aiToggle.enabled) {
-      return new Response(
-        JSON.stringify({ error: 'AI insights are not enabled for this resident' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  if (!resident_id) {
+    return new Response(
+      JSON.stringify({ error: 'resident_id is required' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    const { data: aiConfig, error: configError } = await supabase
-      .from('ai_config')
-      .select('*')
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .maybeSingle();
+  if (is_deidentified === false) {
+    return new Response(
+      JSON.stringify({ error: 'Cannot send identifiable patient data to external AI. Set is_deidentified=true or remove PHI.' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    if (configError || !aiConfig) {
-      return new Response(
-        JSON.stringify({ error: 'No active AI configuration found for this tenant' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const { data: aiToggle, error: toggleError } = await supabase
+    .from('resident_ai_toggle')
+    .select('enabled, quota_limit, quota_used')
+    .eq('tenant_id', tenantId)
+    .eq('resident_id', resident_id)
+    .maybeSingle();
 
-    const { data: cases, error: casesError } = await supabase
-      .from('case_entries')
-      .select(`
-        case_date,
-        patient_mrn,
-        field_values,
-        case_templates!inner(name, specialty)
-      `)
-      .eq('resident_id', resident_id)
-      .eq('tenant_id', tenant_id)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(50);
+  if (toggleError || !aiToggle || !aiToggle.enabled) {
+    return new Response(
+      JSON.stringify({ error: 'AI insights are not enabled for this resident' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    if (casesError) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch case data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  if (aiToggle.quota_limit != null && aiToggle.quota_used != null && aiToggle.quota_used >= aiToggle.quota_limit) {
+    return new Response(
+      JSON.stringify({ error: 'AI query quota exceeded' }),
+      { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    const caseSummary = (cases ?? []).map((c: any) => {
-      const template = c.case_templates as any;
-      return `Date: ${c.case_date}, Specialty: ${template?.specialty ?? 'N/A'}, Template: ${template?.name ?? 'N/A'}, MRN: ${c.patient_mrn}, Fields: ${JSON.stringify(c.field_values ?? {})}`;
-    }).join('\n');
+  const { data: aiConfig, error: configError } = await supabase
+    .from('ai_config')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .maybeSingle();
 
-    const systemPrompt = `You are a clinical AI assistant for medical residents using E-Logbook. You analyze surgical and clinical case entries to provide educational insights, identify patterns, suggest areas for improvement, and help residents reflect on their training. Be concise, supportive, and evidence-based. Do not provide medical diagnoses or treatment recommendations.`;
+  if (configError || !aiConfig) {
+    return new Response(
+      JSON.stringify({ error: 'No active AI configuration found for this tenant' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    const userPrompt = query
-      ? `The resident has asked: "${query}"\n\nHere are their recent approved cases for context:\n${caseSummary}\n\nPlease respond to their query using the case data above as context.`
-      : `Please analyze the following approved case entries for this medical resident. Provide insights on:\n1. Case volume and distribution by specialty\n2. Patterns in case complexity or types\n3. Suggested areas for development or additional exposure\n4. Any notable trends\n\nHere are the cases:\n${caseSummary}`;
+  const { data: cases, error: casesError } = await supabase
+    .from('case_entries')
+    .select(`
+      case_date,
+      field_values,
+      case_templates!inner(name, specialty)
+    `)
+    .eq('resident_id', resident_id)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+    .eq('is_deidentified', true)
+    .order('created_at', { ascending: false })
+    .limit(50);
 
-    const provider = aiConfig.provider as string;
-    const model = aiConfig.model as string;
-    const apiKey = aiConfig.encrypted_api_key as string;
-    let aiResponse: string;
-    let tokensUsed: number | null = null;
+  if (casesError) {
+    console.error('Failed to fetch case data', { error: casesError.message });
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch case data' }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
+  const caseSummary = (cases ?? []).map((c: any) => {
+    const template = c.case_templates as any;
+    const fieldLabels = c.field_values
+      ? Object.keys(c.field_values).join(', ')
+      : 'N/A';
+    return `Date: ${c.case_date}, Specialty: ${template?.specialty ?? 'N/A'}, Template: ${template?.name ?? 'N/A'}, Fields: ${fieldLabels}`;
+  }).join('\n');
+
+  const systemPrompt = `You are an educational clinical reflection assistant for medical residents using E-Logbook. You analyze de-identified surgical and clinical case entries to provide educational insights.
+
+You MAY:
+- Identify clinical patterns and trends across cases
+- Suggest areas for further study and skill development
+- Cite relevant medical guidelines as educational references
+- Ask reflective questions to encourage clinical growth
+
+You MUST NOT:
+- Diagnose medical conditions
+- Prescribe medications or recommend dosages
+- Make prognosis statements
+- Recommend specific treatments
+
+All data you receive is de-identified. You must not attempt to re-identify patients.
+
+Every response MUST end with: "This is an educational reflection tool and does not constitute medical advice."
+
+Be concise, supportive, and evidence-based.`;
+
+  const userPrompt = query
+    ? `The resident has asked: "${query}"\n\nHere are their recent approved de-identified cases for context:\n${caseSummary}\n\nPlease respond to their query using the case data above as context.`
+    : `Please analyze the following approved de-identified case entries for this medical resident. Provide insights on:\n1. Case volume and distribution by specialty\n2. Patterns in case complexity or types\n3. Suggested areas for development or additional exposure\n4. Any notable trends\n\nHere are the cases:\n${caseSummary}`;
+
+  const provider = aiConfig.provider as string;
+  const model = aiConfig.model as string;
+  const apiKey = aiConfig.encrypted_api_key as string;
+  let aiResponse: string;
+  let tokensUsed: number | null = null;
+
+  try {
     if (provider === 'openai') {
-      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -110,9 +191,10 @@ serve(async (req) => {
       });
 
       if (!openaiRes.ok) {
+        console.error('OpenAI API error', { status: openaiRes.status, body: await openaiRes.text() });
         return new Response(
-          JSON.stringify({ error: `OpenAI error: ${await openaiRes.text()}` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'AI provider error' }),
+          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -120,7 +202,7 @@ serve(async (req) => {
       aiResponse = openaiData.choices?.[0]?.message?.content ?? 'No response generated.';
       tokensUsed = openaiData.usage?.total_tokens ?? null;
     } else if (provider === 'openrouter') {
-      const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const openrouterRes = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -139,9 +221,10 @@ serve(async (req) => {
       });
 
       if (!openrouterRes.ok) {
+        console.error('OpenRouter API error', { status: openrouterRes.status, body: await openrouterRes.text() });
         return new Response(
-          JSON.stringify({ error: `OpenRouter error: ${await openrouterRes.text()}` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'AI provider error' }),
+          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -149,7 +232,7 @@ serve(async (req) => {
       aiResponse = openrouterData.choices?.[0]?.message?.content ?? 'No response generated.';
       tokensUsed = openrouterData.usage?.total_tokens ?? null;
     } else if (provider === 'anthropic') {
-      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+      const anthropicRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
@@ -165,9 +248,10 @@ serve(async (req) => {
       });
 
       if (!anthropicRes.ok) {
+        console.error('Anthropic API error', { status: anthropicRes.status, body: await anthropicRes.text() });
         return new Response(
-          JSON.stringify({ error: `Anthropic error: ${await anthropicRes.text()}` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'AI provider error' }),
+          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -176,7 +260,7 @@ serve(async (req) => {
       tokensUsed = (anthropicData.usage?.input_tokens ?? 0) + (anthropicData.usage?.output_tokens ?? 0);
     } else if (provider === 'azure') {
       const baseUrl = aiConfig.endpoint_url?.replace(/\/$/, '') ?? `https://${aiConfig.model.split('.')[0]}.openai.azure.com`;
-      const azureRes = await fetch(`${baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`, {
+      const azureRes = await fetchWithTimeout(`${baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`, {
         method: 'POST',
         headers: {
           'api-key': apiKey,
@@ -192,9 +276,10 @@ serve(async (req) => {
       });
 
       if (!azureRes.ok) {
+        console.error('Azure API error', { status: azureRes.status, body: await azureRes.text() });
         return new Response(
-          JSON.stringify({ error: `Azure error: ${await azureRes.text()}` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'AI provider error' }),
+          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -206,11 +291,11 @@ serve(async (req) => {
       if (!endpointUrl) {
         return new Response(
           JSON.stringify({ error: 'Custom provider requires an endpoint_url' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
-      const customRes = await fetch(endpointUrl, {
+      const customRes = await fetchWithTimeout(endpointUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -227,9 +312,10 @@ serve(async (req) => {
       });
 
       if (!customRes.ok) {
+        console.error('Custom provider API error', { status: customRes.status, body: await customRes.text() });
         return new Response(
-          JSON.stringify({ error: `Custom provider error: ${await customRes.text()}` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'AI provider error' }),
+          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -238,27 +324,114 @@ serve(async (req) => {
       tokensUsed = customData.usage?.total_tokens ?? null;
     } else {
       return new Response(
-        JSON.stringify({ error: `Unsupported provider: ${provider}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `Unsupported provider: ${escapeHtml(provider)}` }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      console.error('AI provider request timed out', { provider, model });
+      return new Response(
+        JSON.stringify({ error: 'AI provider request timed out' }),
+        { status: 504, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.error('AI provider unexpected error', { error: err instanceof Error ? err.message : String(err) });
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!stream) {
+    aiResponse = ensureDisclaimer(aiResponse);
+    const safetyFlags = checkSafety(aiResponse);
 
     await supabase.from('ai_query_logs').insert({
-      tenant_id,
+      tenant_id: tenantId,
       resident_id,
       query: query || 'Auto-analysis',
       response: aiResponse,
       tokens_used: tokensUsed,
+      disclaimer_rendered: aiResponse.includes('does not constitute medical advice'),
+      response_format: 'text',
+      safety_flags: safetyFlags,
     });
 
     return new Response(
-      JSON.stringify({ response: aiResponse, tokens_used: tokensUsed }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ response: aiResponse, tokens_used: tokensUsed, disclaimer_rendered: true, safety_flags: safetyFlags, model }),
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
+
+  const sseStream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      let fullResponse = '';
+      const safetyFlags: string[] = [];
+
+      async function streamResponse() {
+        try {
+          if (provider === 'openai') {
+            const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], temperature: 0.7, stream: true }),
+            });
+            const reader = openaiRes.body?.getReader();
+            if (!reader) { controller.close(); return; }
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+              for (const line of lines) {
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  const token = parsed.choices?.[0]?.delta?.content ?? '';
+                  if (token) { fullResponse += token; controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token })}\n\n`)); }
+                } catch { /* skip parse errors */ }
+              }
+            }
+          } else {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: aiResponse })}\n\n`));
+            fullResponse = aiResponse;
+          }
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'AI provider request timed out' })}\n\n`));
+          } else {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : 'Stream error' })}\n\n`));
+          }
+        }
+
+        const finalResponse = ensureDisclaimer(fullResponse);
+        const flags = checkSafety(finalResponse);
+        const disclaimerRendered = finalResponse.includes('does not constitute medical advice');
+
+        await supabase.from('ai_query_logs').insert({
+          tenant_id: tenantId,
+          resident_id,
+          query: query || 'Auto-analysis',
+          response: finalResponse,
+          tokens_used: tokensUsed,
+          disclaimer_rendered: disclaimerRendered,
+          response_format: 'stream',
+          safety_flags: flags,
+        });
+
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, tokens_used: tokensUsed, disclaimer_rendered: disclaimerRendered, safety_flags: flags })}\n\n`));
+        controller.close();
+      }
+
+      streamResponse();
+    },
+  });
+
+  return new Response(sseStream, {
+    headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+  });
 });
