@@ -24,7 +24,7 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
   const supabase = await createServerSupabase();
   let goalsQuery = supabase
     .from('program_goals')
-    .select('*, goal_progress(current_count), profiles!program_goals_resident_id_fkey(full_name)')
+    .select('*, goal_progress(current_count), profiles!resident_id(full_name)')
     .eq('tenant_id', auth.profile.tenant_id);
 
   if (!isDirector) {

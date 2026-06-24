@@ -4,6 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import type { UserRole } from '@elogbook/shared';
+import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 
 export default function TabLayout() {
   const [role, setRole] = useState<UserRole | null>(null);
@@ -34,8 +35,8 @@ export default function TabLayout() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#060814' }}>
-        <ActivityIndicator color="#0D9488" size="large" />
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }
@@ -48,9 +49,9 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: '#0a0a0a', borderTopColor: '#1a1a1a' },
-        tabBarActiveTintColor: '#0D9488',
-        tabBarInactiveTintColor: '#666',
+        tabBarStyle: { backgroundColor: clinicalTokens.colors.neutral.dark, borderTopColor: clinicalTokens.colors.neutral.dark },
+        tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
+        tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
       }}
     >
       <Tabs.Screen

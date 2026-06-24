@@ -63,3 +63,39 @@ This document governs all visual styling, layout choices, and components across 
 * **No purple-to-blue gradients**: Use refined indigo-to-teal gradients.
 * **No nested hard-bordered cards**: Avoid placing boxes inside boxes with identical borders. Use depth layers instead.
 * **No gray text on colored backgrounds**: Ensure strict contrast ratios exceeding Web Content Accessibility Guidelines (WCAG) AAA standards (minimum 7:1 ratio for body text).
+
+---
+
+## 5. Design Token Governance
+
+### Single Source of Truth
+All design tokens are defined in `packages/shared/src/constants/design-tokens.ts`. This TypeScript file is the **single source of truth** — never define colors, fonts, spacing, or shadows anywhere else.
+
+### Using Clinical Tokens
+- **React Native inline styles**: Use `clinicalTokens.colors.*` (e.g., `clinicalTokens.colors.backdrop.dark`)
+- **NativeWind classes**: Use semantic class names — `bg-backdrop`, `bg-panel`, `text-primary`, `text-muted`, `border-border`, `bg-primary`
+- **Never** use raw hex values or Tailwind base palette names (`bg-slate-900`, `text-gray-400`, `border-indigo-500`)
+- **Placeholder colors**: Must use `clinicalTokens.colors.text.muted` as inline style (NativeWind doesn't support `placeholderTextColor`)
+
+### Platform Component Pattern
+- Shared components use the `.web.tsx` / `.native.tsx` extension pattern
+- Platform defaults must be **identical** — see ProgressRing (`size=120`, `strokeWidth=8`) and ClinicalText size map for examples
+- Any divergence requires a documented justification in the component file
+
+### GlassPanel Usage Rules
+- `.glass-panel` is reserved for **transient overlay surfaces only**: modals, wizards, dialogs, sheets
+- **Never** use `.glass-panel` for data-dense content containers (cards, lists, tables)
+- Data panels use `.panel` class with opaque `bg-panel` instead
+
+### How to Add New Design Tokens
+1. Add the value to `design-tokens.ts` in the appropriate category
+2. Add the Tailwind mapping in `apps/web/tailwind.config.ts` (and `apps/mobile/tailwind.config.js` if needed)
+3. Add the CSS variable in `apps/web/app/globals.css` `@theme inline` block
+4. Update this DESIGN.md with the new token name and usage
+
+### PR Compliance Checklist
+- [ ] No hardcoded hex colors (`'#...'`) — use `clinicalTokens.*` or NativeWind semantic classes
+- [ ] No Tailwind base palette colors (`bg-slate-*`, `text-gray-*`, `border-indigo-*`)
+- [ ] Platform components have matching defaults (`.web.tsx` aligns with `.native.tsx`)
+- [ ] `.glass-panel` only used for transient overlays, not data content
+- [ ] All new text meets WCAG AAA contrast ratio (7:1)

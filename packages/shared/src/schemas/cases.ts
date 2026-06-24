@@ -13,7 +13,16 @@ export const caseTemplateSchema = z.object({
   name: z.string().min(1),
   fields: z.array(templateFieldSchema).min(1),
   required_fields: z.array(z.string()),
-});
+}).refine(
+  (data) => {
+    const fieldKeys = new Set(data.fields.map(f => f.key));
+    return data.required_fields.every(k => fieldKeys.has(k));
+  },
+  {
+    message: 'All required_fields must exist in fields[].key',
+    path: ['required_fields'],
+  }
+);
 
 export const accreditationMappingSchema = z.object({
   framework_id: z.string().uuid(),
@@ -25,7 +34,7 @@ export const accreditationMappingSchema = z.object({
 export const caseEntryDeidentifiedSchema = z.object({
   template_id: z.string().uuid(),
   patient_age_years: z.number().int().min(0).max(150),
-  patient_hash: z.string().max(128),
+  patient_hash: z.string().min(1).max(128),
   case_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   field_values: z.record(z.string(), z.unknown()),
   accreditation_mappings: z.array(accreditationMappingSchema).default([]),
@@ -34,8 +43,8 @@ export const caseEntryDeidentifiedSchema = z.object({
 
 export const caseEntryIdentifiedSchema = z.object({
   template_id: z.string().uuid(),
-  patient_mrn: z.string().min(1).max(50),
-  patient_dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  patient_mrn: z.string().min(1).max(50).nullable(),
+  patient_dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   case_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   field_values: z.record(z.string(), z.unknown()),
   accreditation_mappings: z.array(accreditationMappingSchema).default([]),
@@ -72,14 +81,21 @@ export const accreditationMilestoneSchema = z.object({
 
 export const accreditationFrameworkSchema = z.object({
   name: z.string().min(1).max(200),
+  tenant_id: z.string().uuid(),
   version: z.string().default('1.0'),
   framework_type: z.enum(['acgme', 'scfhs', 'gmc', 'canmeds', 'custom']),
   milestones: z.array(accreditationMilestoneSchema).min(1),
 });
 
 export const aiQuerySchema = z.object({
-  query: z.string().min(1).max(500),
+  query: z.string().min(1).max(2000),
   resident_id: z.string().uuid(),
   tenant_id: z.string().uuid(),
   stream: z.boolean().default(false),
+});
+
+export const residentAiToggleSchema = z.object({
+  enabled: z.boolean(),
+  quota_limit: z.number().int().min(1).nullable().optional(),
+  quota_used: z.number().int().min(0).default(0),
 });

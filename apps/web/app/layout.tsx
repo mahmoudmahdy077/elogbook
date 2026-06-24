@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit, Inter, Geist_Mono } from 'next/font/google';
+import { APP_NAME } from '@elogbook/shared';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import './globals.css';
 
@@ -8,7 +9,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-body' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
-  title: 'E-Logbook',
+  title: APP_NAME,
   description: 'Electronic logbook for medical residents',
 };
 

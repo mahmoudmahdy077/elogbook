@@ -4,10 +4,47 @@ project_id = "elogbook"
 port = 54322
 
 [auth]
+enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback", "elogbook://auth/callback"]
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "elogbook://auth/callback", "http://localhost:8081/*"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_confirmations = false
+enable_autoconfirm = true
+
+[auth.sessions]
+timebox = false
+inactivity_timeout = 86400
+
+[auth.rate_limit]
+token_refresh = 30
+signup = 5
+login = 10
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public"]
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+[analytics]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "20MB"
 
 [functions]
+enabled = true
+verify_jwt = true
+import_map = "./import_map.json"
+
 [functions.generate-pdf]
 [functions.ai-insights]
 [functions.payment-webhook]

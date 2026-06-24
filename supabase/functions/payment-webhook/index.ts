@@ -5,6 +5,29 @@ import { corsHeaders } from '../_shared/auth.ts';
 
 const WEBHOOK_ORIGINS = ['https://api.stripe.com'];
 
+let cachedConfigs: { id: string; secret: string; webhookSecret: string }[] | null = null;
+let configCacheTime = 0;
+const CONFIG_CACHE_TTL = 300_000;
+
+async function getGatewayConfigs(supabase: ReturnType<typeof createClient>) {
+  const now = Date.now();
+  if (cachedConfigs && (now - configCacheTime) < CONFIG_CACHE_TTL) {
+    return cachedConfigs;
+  }
+  const { data } = await supabase
+    .from('payment_gateway_config')
+    .select('id, encrypted_secret_key, encrypted_webhook_secret')
+    .eq('provider', 'stripe')
+    .eq('is_active', true);
+  cachedConfigs = (data ?? []).map((c: any) => ({
+    id: c.id,
+    secret: c.encrypted_secret_key,
+    webhookSecret: c.encrypted_webhook_secret,
+  }));
+  configCacheTime = now;
+  return cachedConfigs;
+}
+
 serve(async (req) => {
   const origin = req.headers.get('Origin');
   const headers = corsHeaders(origin && WEBHOOK_ORIGINS.includes(origin) ? origin : null);
@@ -35,11 +58,7 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  const { data: gatewayConfigs } = await supabase
-    .from('payment_gateway_config')
-    .select('*')
-    .eq('provider', 'stripe')
-    .eq('is_active', true);
+  const gatewayConfigs = await getGatewayConfigs(supabase);
 
   if (!gatewayConfigs || gatewayConfigs.length === 0) {
     console.error('No active Stripe gateway configs found');
@@ -51,7 +70,7 @@ serve(async (req) => {
 
   for (const gwConfig of gatewayConfigs) {
     try {
-      const stripe = new Stripe(gwConfig.encrypted_secret_key, {
+      const stripe = new Stripe(gwConfig.secret, {
         apiVersion: '2024-06-20',
         httpClient: Stripe.createFetchHttpClient(),
       });
@@ -61,7 +80,7 @@ serve(async (req) => {
         event = await stripe.webhooks.constructEventAsync(
           body,
           signature,
-          gwConfig.encrypted_webhook_secret
+          gwConfig.webhookSecret
         );
       } catch (sigErr) {
         console.error('Stripe webhook signature verification failed', {
@@ -85,11 +104,26 @@ serve(async (req) => {
         );
       }
 
-      await supabase.from('stripe_events').insert({
-        stripe_event_id: event.id,
-        event_type: event.type,
-        processed: false,
-      });
+      const { error: insertError } = await supabase
+        .from('stripe_events')
+        .insert({
+          stripe_event_id: event.id,
+          event_type: event.type,
+          processed: false,
+        })
+        .select('id')
+        .maybeSingle();
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          console.info('Duplicate Stripe event (race condition)', { stripe_event_id: event.id });
+          return new Response(
+            JSON.stringify({ received: true, duplicate: true }),
+            { headers: { ...headers, 'Content-Type': 'application/json' } }
+          );
+        }
+        throw insertError;
+      }
 
       switch (event.type) {
         case 'checkout.session.completed': {
@@ -98,6 +132,28 @@ serve(async (req) => {
 
           if (!tenant_id || !plan_id) {
             console.error('Checkout session missing metadata', { event_id: event.id, session_id: session.id });
+            break;
+          }
+
+          const { data: validTenant } = await supabase
+            .from('tenants')
+            .select('id')
+            .eq('id', tenant_id)
+            .maybeSingle();
+
+          if (!validTenant) {
+            console.error('Invalid tenant_id in checkout session', { tenant_id, session_id: session.id });
+            break;
+          }
+
+          const { data: validPlan } = await supabase
+            .from('subscription_plans')
+            .select('id')
+            .eq('id', plan_id)
+            .maybeSingle();
+
+          if (!validPlan) {
+            console.error('Invalid plan_id in checkout session', { plan_id, session_id: session.id });
             break;
           }
 
@@ -177,6 +233,8 @@ serve(async (req) => {
     } catch (err) {
       console.error('Error processing webhook for gateway config', {
         gateway_config_id: gwConfig.id,
+        stripe_event_id: event?.id,
+        event_type: event?.type,
         error: err instanceof Error ? err.message : String(err),
       });
       continue;

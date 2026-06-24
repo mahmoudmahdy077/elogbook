@@ -67,7 +67,7 @@ function ToastContainer({ toasts }: { toasts: ToastItem[] }) {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const show = useCallback((message: string, type: ToastType = 'success') => {
     const id = Math.random().toString(36).slice(2);

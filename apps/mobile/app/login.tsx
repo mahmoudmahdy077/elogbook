@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { clinicalTokens } from '@elogbook/shared';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -50,20 +51,20 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1 px-6 justify-center"
-      style={{ backgroundColor: '#060814' }}
+      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View className="items-center mb-10">
-        <Text className="text-white text-3xl font-bold">E-Logbook</Text>
-        <Text className="text-gray-400 mt-2 text-center">
+        <Text className="text-white text-3xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>E-Logbook</Text>
+        <Text className="text-gray-400 mt-2 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
           Surgical logbook for residents &amp; institutions
         </Text>
       </View>
 
       {sent ? (
         <View className="bg-gray-900 rounded-xl p-6 border border-gray-800 items-center">
-          <Text className="text-white text-lg font-semibold mb-2">Check your email</Text>
-          <Text className="text-gray-400 text-center">
+          <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>Check your email</Text>
+          <Text className="text-gray-400 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
             We sent a magic link to {email}
           </Text>
         </View>
@@ -71,7 +72,7 @@ export default function LoginScreen() {
         <View className="gap-4">
           {error && (
             <View className="bg-red-900/50 border border-red-500/30 rounded-xl px-4 py-3">
-              <Text className="text-red-400 text-sm">{error}</Text>
+              <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{error}</Text>
             </View>
           )}
 
@@ -85,6 +86,7 @@ export default function LoginScreen() {
             value={email}
             onChangeText={(text) => { setEmail(text); setError(null); }}
             accessibilityLabel="Email address input"
+            style={{ fontFamily: clinicalTokens.fonts.body }}
           />
 
           <TouchableOpacity
@@ -97,7 +99,7 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-white font-semibold text-base">
+              <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>
                 {cooldown ? 'Please wait...' : 'Send Magic Link'}
               </Text>
             )}

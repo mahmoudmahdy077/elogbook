@@ -12,6 +12,7 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { aiQuerySchema } from '@elogbook/shared';
+import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 import GlassPanel from '../../components/GlassPanel';
 
@@ -68,7 +69,7 @@ export default function AIInsightsScreen() {
     loadProfile();
 
     const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false);
+      setIsOffline(state.isConnected !== true);
     });
 
     return () => {
@@ -132,7 +133,7 @@ export default function AIInsightsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color="#0D9488" size="large" />
       </View>
     );
@@ -140,7 +141,7 @@ export default function AIInsightsScreen() {
 
   if (!canAccess) {
     return (
-      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <Text className="text-slate-400 text-center">
           AI Insights is available for residents and directors only.
         </Text>
@@ -151,36 +152,36 @@ export default function AIInsightsScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1"
-      style={{ backgroundColor: '#060814' }}
+      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text className="text-white text-2xl font-bold mb-1">AI Insights</Text>
-        <Text className="text-slate-500 text-xs mb-4" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
+        <Text className="text-slate-500 text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           {quotaUsed} of {MAX_QUERIES} queries used today
         </Text>
 
         {isOffline && (
           <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-            <Text className="text-red-400 text-sm text-center">
+            <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
               Offline — AI insights require a connection
             </Text>
           </View>
         )}
 
         <View className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-3 mb-4">
-          <Text className="text-amber-400 text-xs text-center">
+          <Text className="text-amber-400 text-xs text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
             AI-generated insights are for educational purposes only and do not constitute medical advice.
           </Text>
         </View>
 
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">
+          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
             Ask a clinical question
           </Text>
           <TextInput
             className="text-white text-sm min-h-[80px]"
-            style={{ fontFamily: 'Geist Mono' }}
+            style={{ fontFamily: clinicalTokens.fonts.mono }}
             multiline
             textAlignVertical="top"
             placeholder="e.g., What are the key competencies for laparoscopic cholecystectomy?"
@@ -195,7 +196,7 @@ export default function AIInsightsScreen() {
             accessibilityLabel="AI clinical reflection query"
           />
           <View className="flex-row justify-between items-center mt-2">
-            <Text className="text-slate-500 text-xs" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {query.length}/500
             </Text>
             <TouchableOpacity
@@ -208,7 +209,7 @@ export default function AIInsightsScreen() {
               {submitting ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text className={`text-sm font-semibold ${quotaRemaining > 0 ? 'text-white' : 'text-slate-500'}`}>
+                <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-slate-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
                   Ask
                 </Text>
               )}
@@ -218,14 +219,14 @@ export default function AIInsightsScreen() {
 
         {error && (
           <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-            <Text className="text-red-400 text-sm">{error}</Text>
+            <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{error}</Text>
           </View>
         )}
 
         {response ? (
           <GlassPanel style={{ marginBottom: 12 }}>
-            <Text className="text-indigo-400 text-xs uppercase tracking-wider mb-2">Response</Text>
-            <Text className="text-slate-200 text-sm" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-indigo-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Response</Text>
+            <Text className="text-slate-200 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {response}
             </Text>
           </GlassPanel>
@@ -233,7 +234,7 @@ export default function AIInsightsScreen() {
 
         {quotaRemaining <= 0 && !response && (
           <View className="items-center py-8">
-            <Text className="text-slate-400 text-center">
+            <Text className="text-slate-400 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
               You have reached your daily query limit. Insights will reset tomorrow.
             </Text>
           </View>

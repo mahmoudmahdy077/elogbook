@@ -6,18 +6,25 @@
     "packages/*"
   ],
   "scripts": {
+    "typecheck": "pnpm -r typecheck",
     "dev:web": "pnpm --filter @elogbook/web dev",
     "dev:mobile": "pnpm --filter @elogbook/mobile start",
     "build:web": "pnpm --filter @elogbook/web build",
+    "analyze": "ANALYZE=true pnpm build:web",
     "db:migrate": "supabase db push",
-    "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout"
+    "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint"
   },
   "devDependencies": {
-    "typescript": "^6.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "lightningcss": "1.30.1"
-    }
+    "@next/bundle-analyzer": "^16.2.9",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint-plugin-react": "^7.37.5",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.9"
   }
 }

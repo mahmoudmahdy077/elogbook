@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
 import ProgressRing from '../../components/ProgressRing';
+import { clinicalTokens } from '@elogbook/shared';
 
 interface Stats {
   draft: number;
@@ -32,7 +33,7 @@ export default function DashboardScreen() {
     loadData();
 
     const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false);
+      setIsOffline(state.isConnected !== true);
     });
 
     const syncUnsub = syncService.onStatusChange((status) => {
@@ -138,7 +139,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-backdrop items-center justify-center">
-        <ActivityIndicator color="#0D9488" size="large" />
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }
@@ -146,36 +147,36 @@ export default function DashboardScreen() {
   return (
     <ScrollView className="flex-1 bg-backdrop px-4 pt-4">
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-white text-2xl font-bold">Dashboard</Text>
-        <Text className="text-slate-500 text-xs">
+        <Text className="text-white text-2xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>Dashboard</Text>
+        <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
           Last synced: {lastSyncAgo}
         </Text>
       </View>
 
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-          <Text className="text-red-400 text-sm text-center">Offline — showing cached data</Text>
+          <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
         </View>
       )}
 
       <View className="flex-row gap-3 mb-6">
         <View className="flex-1 bg-slate-900 rounded-xl p-4 border border-indigo-500/15">
-          <Text className="text-slate-400 text-3xl font-bold">{stats.draft}</Text>
-          <Text className="text-slate-500 mt-1 text-xs">Drafts</Text>
+          <Text className="text-slate-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.draft}</Text>
+          <Text className="text-slate-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Drafts</Text>
         </View>
         <View className="flex-1 bg-amber-500/10 rounded-xl p-4 border border-amber-500/30">
-          <Text className="text-amber-400 text-3xl font-bold" style={{ fontFamily: 'Geist Mono' }}>{stats.pending}</Text>
-          <Text className="text-amber-500 mt-1 text-xs">Pending</Text>
+          <Text className="text-amber-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.pending}</Text>
+          <Text className="text-amber-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Pending</Text>
         </View>
         <View className="flex-1 bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/30">
-          <Text className="text-emerald-400 text-3xl font-bold" style={{ fontFamily: 'Geist Mono' }}>{stats.approved}</Text>
-          <Text className="text-emerald-500 mt-1 text-xs">Approved</Text>
+          <Text className="text-emerald-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.approved}</Text>
+          <Text className="text-emerald-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Approved</Text>
         </View>
       </View>
 
       {goals.length > 0 && (
         <View className="mb-6">
-          <Text className="text-white text-lg font-semibold mb-4">Goal Progress</Text>
+          <Text className="text-white text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Goal Progress</Text>
           <View className="flex-row gap-4 flex-wrap">
             {goals.map((g) => (
               <ProgressRing
@@ -189,9 +190,9 @@ export default function DashboardScreen() {
             ))}
           </View>
           <View className="mt-3 bg-slate-900 rounded-xl p-4 border border-indigo-500/15">
-            <Text className="text-white text-sm font-semibold">
-              {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
-            </Text>
+          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
+          </Text>
           </View>
         </View>
       )}
@@ -200,7 +201,7 @@ export default function DashboardScreen() {
         className="bg-teal-600 rounded-xl py-4 items-center mb-8"
         onPress={() => router.push('/log-case')}
       >
-        <Text className="text-white font-semibold text-base">Log New Case</Text>
+        <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log New Case</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -10,9 +10,13 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
+import { getDatabase } from '../../lib/db/database';
+import type { CaseEntry } from '../../lib/db/models/CaseEntry';
+import { upsertCaseEntry } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
 import GlassPanel from '../../components/GlassPanel';
 import StatusBadge from '../../components/StatusBadge';
+import { clinicalTokens } from '@elogbook/shared';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
 interface CaseDetail {
@@ -67,45 +71,75 @@ export default function CaseDetailScreen() {
 
     setRole(profile.role as UserRole);
 
-    const { data: entry } = await supabase
-      .from('case_entries')
-      .select(
-        'id, case_date, status, is_deidentified, patient_mrn, patient_dob, patient_age_years, patient_hash, field_values, created_at, updated_at, template_id, resident_id, case_templates(name, specialty), profiles!case_entries_resident_id_fkey(full_name), approval_requests(comment, status)'
-      )
-      .eq('id', caseId)
-      .single();
+    const db = getDatabase();
+    try {
+      const localEntry = await db.get<CaseEntry>('case_entries').find(caseId);
+      if (localEntry) {
+        setCaseDetail({
+          id: localEntry.id,
+          resident_name: '',
+          specialty: '',
+          template_name: '',
+          case_date: localEntry.caseDate ?? '',
+          status: (localEntry.status ?? 'draft') as CaseStatus,
+          is_deidentified: localEntry.isDeidentified ?? true,
+          patient_mrn: localEntry.patientMrn ?? null,
+          patient_dob: localEntry.patientDob ?? null,
+          patient_age_years: localEntry.patientAgeYears ?? null,
+          patient_hash: localEntry.patientHash ?? null,
+          field_values: localEntry.fieldValues ?? {},
+          rejection_comment: null,
+          created_at: localEntry.createdAt?.toISOString() ?? '',
+          updated_at: localEntry.updatedAt?.toISOString() ?? '',
+        });
+        setLoading(false);
+      }
+    } catch {
+      // Not in local DB — proceed to network fetch
+    }
 
-    if (entry) {
-      const rejectionRequest = (entry as any).approval_requests?.find(
-        (r: any) => r.status === 'rejected'
-      );
-      setCaseDetail({
-        id: entry.id,
-        resident_name: (entry as any).profiles?.full_name ?? 'Unknown',
-        specialty: (entry as any).case_templates?.specialty ?? '',
-        template_name: (entry as any).case_templates?.name ?? '',
-        case_date: entry.case_date,
-        status: entry.status as CaseStatus,
-        is_deidentified: entry.is_deidentified,
-        patient_mrn: entry.patient_mrn,
-        patient_dob: entry.patient_dob,
-        patient_age_years: entry.patient_age_years,
-        patient_hash: entry.patient_hash,
-        field_values: entry.field_values ?? {},
-        rejection_comment: rejectionRequest?.comment ?? null,
-        created_at: entry.created_at,
-        updated_at: entry.updated_at,
-      });
+    if (!isOffline) {
+      const { data: entry } = await supabase
+        .from('case_entries')
+        .select(
+          'id, case_date, status, is_deidentified, patient_mrn, patient_dob, patient_age_years, patient_hash, field_values, created_at, updated_at, template_id, resident_id, case_templates(name, specialty), profiles(full_name), approval_requests(comment, status)'
+        )
+        .eq('id', caseId)
+        .single();
+
+      if (entry) {
+        const rejectionRequest = (entry as any).approval_requests?.find(
+          (r: any) => r.status === 'rejected'
+        );
+        setCaseDetail({
+          id: entry.id,
+          resident_name: (entry as any).profiles?.full_name ?? 'Unknown',
+          specialty: (entry as any).case_templates?.specialty ?? '',
+          template_name: (entry as any).case_templates?.name ?? '',
+          case_date: entry.case_date,
+          status: entry.status as CaseStatus,
+          is_deidentified: entry.is_deidentified,
+          patient_mrn: entry.patient_mrn,
+          patient_dob: entry.patient_dob,
+          patient_age_years: entry.patient_age_years,
+          patient_hash: entry.patient_hash,
+          field_values: entry.field_values ?? {},
+          rejection_comment: rejectionRequest?.comment ?? null,
+          created_at: entry.created_at,
+          updated_at: entry.updated_at,
+        });
+        await upsertCaseEntry(entry as Record<string, unknown>);
+      }
     }
 
     setLoading(false);
-  }, [caseId]);
+  }, [caseId, isOffline]);
 
   useEffect(() => {
     loadCase();
 
     const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false);
+      setIsOffline(state.isConnected !== true);
     });
 
     return () => {
@@ -159,7 +193,7 @@ export default function CaseDetailScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color="#0D9488" size="large" />
       </View>
     );
@@ -167,7 +201,7 @@ export default function CaseDetailScreen() {
 
   if (!caseDetail) {
     return (
-      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <Text className="text-slate-400">Case not found.</Text>
         <TouchableOpacity
           className="mt-4 bg-teal-600 px-6 py-2 rounded-lg"
@@ -185,17 +219,17 @@ export default function CaseDetailScreen() {
   const canEdit = caseDetail.status === 'draft' || caseDetail.status === 'rejected';
 
   return (
-    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: '#060814' }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }} contentContainerStyle={{ paddingBottom: 40 }}>
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-          <Text className="text-red-400 text-sm text-center">Offline — actions require a connection</Text>
+          <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — actions require a connection</Text>
         </View>
       )}
 
       <View className="flex-row justify-between items-start mb-4">
         <View className="flex-1 mr-3">
-          <Text className="text-white text-xl font-bold">{caseDetail.specialty}</Text>
-          <Text className="text-indigo-400 text-sm" style={{ fontFamily: 'Geist Mono' }}>
+          <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
+          <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {caseDetail.template_name}
           </Text>
         </View>
@@ -203,7 +237,7 @@ export default function CaseDetailScreen() {
       </View>
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">Patient Info</Text>
+        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
         {caseDetail.is_deidentified ? (
           <View>
             <Text className="text-slate-300 text-sm" style={{ fontFamily: 'Geist Mono' }}>
@@ -226,30 +260,30 @@ export default function CaseDetailScreen() {
       </GlassPanel>
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">Case Data</Text>
-        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
+        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Date: {caseDetail.case_date}
         </Text>
-        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Resident: {caseDetail.resident_name}
         </Text>
-        <Text className="text-slate-500 text-xs mt-2" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-slate-500 text-xs mt-2" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Created: {new Date(caseDetail.created_at).toLocaleString()}
         </Text>
-        <Text className="text-slate-500 text-xs" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Updated: {new Date(caseDetail.updated_at).toLocaleString()}
         </Text>
       </GlassPanel>
 
       {Object.keys(caseDetail.field_values).length > 0 && (
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">Fields</Text>
+          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
           {Object.entries(caseDetail.field_values).map(([key, value]) => (
             <View key={key} className="flex-row justify-between py-1 border-b border-slate-700/30">
-              <Text className="text-slate-400 text-sm" style={{ fontFamily: 'Geist Mono' }}>
+              <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
                 {key}
               </Text>
-              <Text className="text-slate-200 text-sm flex-1 text-right ml-4" style={{ fontFamily: 'Geist Mono' }}>
+              <Text className="text-slate-200 text-sm flex-1 text-right ml-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
                 {String(value ?? '—')}
               </Text>
             </View>
@@ -259,8 +293,8 @@ export default function CaseDetailScreen() {
 
       {caseDetail.status === 'rejected' && caseDetail.rejection_comment && (
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-red-400 text-xs uppercase tracking-wider mb-1">Rejection Comment</Text>
-          <Text className="text-slate-300 text-sm">{caseDetail.rejection_comment}</Text>
+          <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
+          <Text className="text-slate-300 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
         </GlassPanel>
       )}
 
@@ -271,7 +305,7 @@ export default function CaseDetailScreen() {
           accessibilityLabel="Edit this case"
           accessibilityRole="button"
         >
-          <Text className="text-white font-semibold">Edit Case</Text>
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Edit Case</Text>
         </TouchableOpacity>
       )}
 
@@ -284,7 +318,7 @@ export default function CaseDetailScreen() {
             accessibilityLabel="Approve case"
             accessibilityRole="button"
           >
-            <Text className="text-emerald-400 font-semibold">
+            <Text className="text-emerald-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               {processing ? 'Processing...' : 'Approve'}
             </Text>
           </TouchableOpacity>
@@ -295,7 +329,7 @@ export default function CaseDetailScreen() {
             accessibilityLabel="Reject case"
             accessibilityRole="button"
           >
-            <Text className="text-red-400 font-semibold">
+            <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               {processing ? 'Processing...' : 'Reject'}
             </Text>
           </TouchableOpacity>
@@ -309,7 +343,7 @@ export default function CaseDetailScreen() {
           accessibilityLabel="Resubmit case"
           accessibilityRole="button"
         >
-          <Text className="text-white font-semibold">Resubmit Case</Text>
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
         </TouchableOpacity>
       )}
     </ScrollView>

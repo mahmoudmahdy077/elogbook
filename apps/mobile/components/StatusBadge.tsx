@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { clinicalTokens } from '@elogbook/shared';
 
 type StatusType = 'draft' | 'pending' | 'approved' | 'rejected';
 
@@ -7,42 +8,80 @@ interface StatusBadgeProps {
   status: StatusType;
 }
 
-const STATUS_STYLES: Record<StatusType, { bg: string; border: string; text: string; label: string; shadow: string }> = {
+const STATUS_CONFIG: Record<StatusType, { 
+  bgColor: string; 
+  borderColor: string; 
+  textColor: string; 
+  label: string; 
+  glowColor?: string;
+}> = {
   draft: {
-    bg: 'bg-slate-500/10',
-    border: 'border-slate-500/30',
-    text: 'text-slate-400',
+    bgColor: 'rgba(148, 163, 184, 0.1)',
+    borderColor: 'rgba(148, 163, 184, 0.3)',
+    textColor: '#94A3B8',
     label: 'Draft',
-    shadow: '',
   },
   pending: {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    text: 'text-amber-400',
+    bgColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(252, 211, 77, 0.3)',
+    textColor: '#FCD34D',
     label: 'Pending',
-    shadow: 'shadow-amber-500/20',
+    glowColor: 'rgba(252, 211, 77, 0.4)',
   },
   approved: {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    text: 'text-emerald-400',
+    bgColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    textColor: '#6EE7B7',
     label: 'Approved',
-    shadow: 'shadow-emerald-500/20',
+    glowColor: 'rgba(110, 231, 183, 0.4)',
   },
   rejected: {
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/30',
-    text: 'text-red-400',
+    bgColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    textColor: '#FCA5A5',
     label: 'Rejected',
-    shadow: 'shadow-red-500/20',
+    glowColor: 'rgba(252, 165, 165, 0.4)',
   },
 };
 
+const baseStyles = StyleSheet.create({
+  container: {
+    borderRadius: clinicalTokens.radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  text: {
+    fontSize: 10,
+    textTransform: 'uppercase',
+    fontFamily: clinicalTokens.fonts.heading,
+    fontWeight: '600' as const,
+  },
+});
+
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES.draft;
+  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
+  
+  const containerStyle = [
+    baseStyles.container,
+    {
+      backgroundColor: config.bgColor,
+      borderColor: config.borderColor,
+    },
+    config.glowColor && Platform.OS === 'ios' ? {
+      shadowColor: config.glowColor,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+    } : {},
+    config.glowColor && Platform.OS === 'android' ? {
+      elevation: 4,
+    } : {},
+  ];
+
   return (
-    <View className={`rounded-full px-3 py-0.5 border ${s.bg} ${s.border} ${s.shadow}`}>
-      <Text className={`text-xs font-semibold uppercase ${s.text}`}>{s.label}</Text>
+    <View style={containerStyle}>
+      <Text style={[baseStyles.text, { color: config.textColor }]}>{config.label}</Text>
     </View>
   );
 }

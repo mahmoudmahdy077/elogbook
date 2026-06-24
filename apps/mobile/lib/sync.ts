@@ -1,3 +1,5 @@
+import { Q } from '@nozbe/watermelondb';
+import { getDatabase } from './db/database';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
@@ -5,10 +7,10 @@ import {
   getDraftCases,
   getConflictedCases,
   updateSyncStatus,
-  removeDraft,
   upsertCaseEntry,
-  upsertTemplate,
-  upsertProgramGoal,
+  batchUpsertCaseEntries,
+  batchUpsertTemplates,
+  batchUpsertGoals,
   getLastSyncTimestamp,
   setLastSyncTimestamp,
 } from './db/storage';
@@ -26,7 +28,10 @@ class SyncService {
   private appStateSub: { remove: () => void } | null = null;
   private retryDelays = [30000, 60000, 120000, 300000];
   private retryIndex = 0;
+  private retryCount = 0;
+  private readonly MAX_RETRIES = 10;
   private pushMutex = false;
+  private syncing = false;
   private tenantId: string | null = null;
 
   constructor() {
@@ -40,10 +45,10 @@ class SyncService {
 
   private initNetworkListener() {
     this.netInfoUnsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected && this.status === 'offline') {
+      if (state.isConnected === true && this.status === 'offline') {
         this.initSync(this.tenantId ?? undefined);
         this.status = 'idle';
-      } else if (!state.isConnected) {
+      } else if (state.isConnected !== true) {
         this.status = 'offline';
         this.emitStatus();
       }
@@ -92,7 +97,8 @@ class SyncService {
       .eq('tenant_id', tenantId);
 
     if (lastSync) {
-      query = query.gt('updated_at', new Date(lastSync).toISOString());
+      // Use gte (not gt) to avoid missing records updated at the exact same timestamp
+      query = query.gte('updated_at', new Date(lastSync).toISOString());
     }
 
     const { data, error } = await query;
@@ -102,11 +108,10 @@ class SyncService {
     }
 
     if (data && data.length > 0) {
-      for (const row of data) {
-        await upsertCaseEntry(row as Record<string, unknown>);
-      }
+      await batchUpsertCaseEntries(data as Record<string, unknown>[]);
     }
 
+    // Only update timestamp on complete success (errors are caught by caller)
     const now = Date.now();
     await setLastSyncTimestamp(now);
   }
@@ -123,9 +128,7 @@ class SyncService {
     }
 
     if (data) {
-      for (const row of data) {
-        await upsertTemplate(row as Record<string, unknown>);
-      }
+      await batchUpsertTemplates(data as Record<string, unknown>[]);
     }
   }
 
@@ -141,9 +144,7 @@ class SyncService {
     }
 
     if (programGoals) {
-      for (const g of programGoals) {
-        await upsertProgramGoal(g as Record<string, unknown>);
-      }
+      await batchUpsertGoals(programGoals as Record<string, unknown>[]);
     }
   }
 
@@ -192,15 +193,10 @@ class SyncService {
         if (!result.error) {
           await updateSyncStatus(draft, 'synced');
           this.retryIndex = 0;
-        } else if (
-          typeof result.error === 'object' &&
-          result.error &&
-          'code' in result.error &&
-          (result.error as { code: string }).code === '409'
-        ) {
-          await this.handleConflict(draft);
+          this.retryCount = 0;
         } else {
-          console.error('Push case error:', result.error);
+          const err = result.error as { code?: string; message?: string; details?: string };
+          console.error('Push case error:', err);
         }
       }
     } finally {
@@ -239,35 +235,28 @@ class SyncService {
     }
   }
 
-  private async handleConflict(draft: import('./db/models/CaseEntry').CaseEntry) {
-    const { data: serverCase } = await supabase
-      .from('case_entries')
-      .select('updated_at')
-      .eq('id', draft.id)
-      .single();
+  async initSync(tenantId?: string) {
+    if (this.syncing) return;
+    this.syncing = true;
 
-    if (serverCase) {
-      const serverUpdated = new Date(serverCase.updated_at).getTime();
-      const localUpdated = draft.updatedAt.getTime();
-
-      if (serverUpdated > localUpdated) {
-        await updateSyncStatus(draft, 'conflict');
-        this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
-        return;
-      }
+    if (this.retryCount >= this.MAX_RETRIES) {
+      console.error('Sync failed after max retries. Stopping automatic retry.');
+      this.setStatus('error');
+      this.retryCount = 0;
+      this.syncing = false;
+      return;
     }
 
-    await updateSyncStatus(draft, 'conflict');
-    this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
-  }
-
-  async initSync(tenantId?: string) {
     const tid = tenantId ?? this.tenantId;
-    if (!tid) return;
+    if (!tid) {
+      this.syncing = false;
+      return;
+    }
 
     const netState = await NetInfo.fetch();
-    if (!netState.isConnected) {
+    if (netState.isConnected !== true) {
       this.setStatus('offline');
+      this.syncing = false;
       return;
     }
 
@@ -281,15 +270,20 @@ class SyncService {
       await this.pushCases();
       await this.handleConflicts();
       this.setStatus('synced');
+      this.retryCount = 0;
+      this.retryIndex = 0;
       setTimeout(() => {
         if (this.status === 'synced') this.setStatus('idle');
       }, 3000);
     } catch (err) {
       console.error('Sync error:', err);
       this.setStatus('error');
+      this.retryCount++;
       const delay = this.retryDelays[Math.min(this.retryIndex, this.retryDelays.length - 1)];
       this.retryIndex++;
       setTimeout(() => this.initSync(tid), delay);
+    } finally {
+      this.syncing = false;
     }
   }
 

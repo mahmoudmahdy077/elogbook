@@ -1,5 +1,6 @@
 'use client';
 
+import { APP_NAME } from '@elogbook/shared';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -70,7 +71,7 @@ export default function Sidebar({
             }`}
             aria-label="Go to dashboard"
           >
-            {collapsed ? 'E' : 'E-Logbook'}
+            {collapsed ? 'E' : APP_NAME}
           </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}

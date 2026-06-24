@@ -1,12 +1,17 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
   const { tenant: tenantSlug } = await params;
+
+  const { allowed, retryAfter } = checkRateLimit(`payment-gateway:${tenantSlug}`);
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,7 +29,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as unknown as { slug: string };
+  const tenant = (profile.tenants as { slug: string }[])[0];
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }

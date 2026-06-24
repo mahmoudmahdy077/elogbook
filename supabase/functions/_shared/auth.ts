@@ -1,11 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const ALLOWED_ORIGINS = [
+const DEFAULT_ORIGINS = [
   'https://elogbook.dev',
   'https://app.elogbook.dev',
   'http://localhost:3000',
   'http://localhost:19006',
+  'http://localhost:8081',
 ];
+
+const ALLOWED_ORIGINS: string[] = (() => {
+  const env = Deno.env.get('ALLOWED_ORIGINS');
+  if (env) return env.split(',').map((o) => o.trim());
+  return DEFAULT_ORIGINS;
+})();
 
 interface AuthResult {
   supabase: ReturnType<typeof createClient>;
@@ -57,8 +64,8 @@ export async function authenticate(request: Request): Promise<AuthResult | Respo
     );
   }
 
-  const tenantId = user.app_metadata?.tenant_id ?? user.user_metadata?.tenant_id;
-  const role = user.app_metadata?.role ?? user.user_metadata?.role ?? 'resident';
+  const tenantId = user.app_metadata?.tenant_id;
+  const role = user.app_metadata?.user_role;
 
   if (!tenantId) {
     return new Response(
@@ -67,13 +74,20 @@ export async function authenticate(request: Request): Promise<AuthResult | Respo
     );
   }
 
-  const adminClient = createClient(envVars.url, envVars.serviceRoleKey);
+  if (!role) {
+    return new Response(
+      JSON.stringify({ error: 'User has no role assignment' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
-  return { supabase: adminClient, user, tenantId, role };
+  return { supabase, user, tenantId, role };
 }
 
+export { ALLOWED_ORIGINS };
+
 export function corsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.startsWith(o))
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some((o) => origin === o)
     ? origin
     : ALLOWED_ORIGINS[0];
   return {

@@ -1,9 +1,25 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
-import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { authenticate, corsHeaders, escapeHtml, ALLOWED_ORIGINS } from '../_shared/auth.ts';
 
 const AUTHORIZED_ROLES = ['director', 'institution_admin', 'admin'];
+
+const checkoutRateLimit = new Map<string, { count: number; windowStart: number }>();
+const CHECKOUT_RATE_LIMIT_MAX = 5;
+const CHECKOUT_RATE_LIMIT_WINDOW = 60_000;
+
+function checkCheckoutRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = checkoutRateLimit.get(userId);
+  if (!entry || now - entry.windowStart > CHECKOUT_RATE_LIMIT_WINDOW) {
+    checkoutRateLimit.set(userId, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= CHECKOUT_RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
 
 serve(async (req) => {
   const origin = req.headers.get('Origin');
@@ -21,6 +37,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: 'Insufficient permissions: requires director, institution_admin, or admin role' }),
       { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!checkCheckoutRateLimit(tenantId)) {
+    return new Response(
+      JSON.stringify({ error: 'Too many checkout requests. Please wait before trying again.' }),
+      { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 
@@ -85,7 +108,7 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const allowedOrigin = origin && ['https://elogbook.dev', 'https://app.elogbook.dev', 'http://localhost:3000', 'http://localhost:19006'].includes(origin)
+    const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
       ? origin
       : 'https://app.elogbook.dev';
 

@@ -50,28 +50,51 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     ? 'id, case_date, status, resident_id, case_templates!inner(name, specialty)'
     : 'id, case_date, status, case_templates!inner(name, specialty)';
 
-  const queries = [
-    supabase
-      .from('case_entries')
-      .select(selectFields)
-      .eq('tenant_id', tenantId)
-      .eq(isResident ? 'resident_id' : 'tenant_id', isResident ? residentId : tenantId)
-      .order('created_at', { ascending: false })
-      .limit(isResident ? 5 : 100),
+  let casesQuery = supabase
+    .from('case_entries')
+    .select(selectFields)
+    .eq('tenant_id', tenantId);
+  if (isResident) casesQuery = casesQuery.eq('resident_id', residentId);
+  casesQuery = casesQuery.order('created_at', { ascending: false }).limit(isResident ? 5 : 100);
+
+  const queries: any[] = [
+    casesQuery,
     supabase
       .from('program_goals')
       .select('id, title, target_count, deadline, specialty')
       .eq('resident_id', residentId)
       .eq('tenant_id', tenantId),
   ];
+  if (isResident) {
+    queries.push(
+      supabase
+        .from('goal_progress')
+        .select('goal_id, current_count')
+        .eq('resident_id', residentId)
+    );
+  }
+  if (isDirectorPlus) {
+    queries.push(
+      supabase
+        .from('profiles')
+        .select('id, full_name, specialty')
+        .eq('tenant_id', tenantId)
+        .eq('role', 'resident')
+    );
+  }
 
-  const [casesResult, goalResult] = await Promise.all(queries);
+  const results = await Promise.all(queries);
+  const casesResult = results[0] as { data: (CaseRow & { resident_id?: string })[] | null };
+  const goalResult = results[1] as { data: GoalRow[] | null };
+  const progressResult = results.length > 2 ? results[2] as { data: ProgressRow[] | null } : { data: null };
+  const residentsDataResult = results.length > 3 ? results[3] as { data: ResidentProfileRow[] | null } : { data: null };
 
-  const allCaseRows = (casesResult.data || []) as unknown as (CaseRow & { resident_id?: string })[];
+  const allCaseRows = casesResult.data ?? [];
   const stats: Record<CaseStatus, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
   for (const r of allCaseRows) {
+    if (!['draft', 'pending', 'approved', 'rejected'].includes(r.status)) continue;
     const s = r.status as CaseStatus;
-    if (s in stats) stats[s]++;
+    stats[s]++;
   }
 
   const recentCases = allCaseRows.slice(0, 5).map((r) => ({
@@ -82,15 +105,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     template_specialty: r.case_templates?.specialty || '',
   }));
 
-  const goalRows = (goalResult.data || []) as unknown as GoalRow[];
+  const goalRows = goalResult.data ?? [];
   const goalProgressMap: Record<string, number> = {};
-  if (goalRows.length > 0) {
-    const goalIds = goalRows.map((g) => g.id);
-    const { data: progressRows } = await supabase
-      .from('goal_progress')
-      .select('goal_id, current_count')
-      .in('goal_id', goalIds);
-    for (const p of (progressRows || []) as ProgressRow[]) {
+  const progressRows = progressResult.data;
+  if (progressRows) {
+    for (const p of progressRows) {
       goalProgressMap[p.goal_id] = p.current_count;
     }
   }
@@ -112,11 +131,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   let totalResidents = 0;
 
   if (isDirectorPlus) {
-    const { data: residentProfiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, specialty')
-      .eq('tenant_id', tenantId)
-      .eq('role', 'resident');
+    const residentProfiles = residentsDataResult.data;
 
     totalResidents = (residentProfiles || []).length;
 

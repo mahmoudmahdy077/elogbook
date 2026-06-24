@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { supabase } from '../../lib/supabase';
 import { useHaptics } from '../../lib/haptics';
 import GlassPanel from '../../components/GlassPanel';
 import StatusBadge from '../../components/StatusBadge';
+import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
 interface ApprovalItem {
@@ -24,6 +25,68 @@ interface ApprovalItem {
   status: 'pending' | 'approved' | 'rejected';
   comment: string | null;
 }
+
+const ApprovalCard = React.memo(function ApprovalCard({
+  item,
+  isProcessing,
+  isOffline,
+  onConfirm,
+}: {
+  item: ApprovalItem;
+  isProcessing: boolean;
+  isOffline: boolean;
+  onConfirm: (approvalId: string, entryId: string, action: 'approve' | 'reject') => void;
+}) {
+  const isPending = item.status === 'pending';
+  return (
+    <GlassPanel style={{ marginBottom: 12 }}>
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 mr-3">
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{item.resident_name}</Text>
+          <Text className="text-indigo-400 text-xs mt-0.5" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {item.specialty}
+          </Text>
+          <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {item.case_date}
+          </Text>
+          {item.comment && (
+            <Text className="text-slate-400 text-xs mt-1" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.body }}>
+              {item.comment}
+            </Text>
+          )}
+        </View>
+        <StatusBadge status={item.status === 'pending' ? 'pending' : item.status === 'approved' ? 'approved' : 'rejected'} />
+      </View>
+
+      {isPending && (
+        <View className="flex-row gap-3 mt-3 pt-3 border-t border-slate-700/50">
+          <TouchableOpacity
+            className="flex-1 bg-emerald-600/20 rounded-lg py-2.5 items-center border border-emerald-500/40"
+            onPress={() => onConfirm(item.id, item.entry_id, 'approve')}
+            disabled={isProcessing || isOffline}
+            accessibilityLabel={`Approve case from ${item.resident_name}`}
+            accessibilityRole="button"
+          >
+            <Text className="text-emerald-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {isProcessing ? '...' : 'Approve'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 bg-red-600/20 rounded-lg py-2.5 items-center border border-red-500/40"
+            onPress={() => onConfirm(item.id, item.entry_id, 'reject')}
+            disabled={isProcessing || isOffline}
+            accessibilityLabel={`Reject case from ${item.resident_name}`}
+            accessibilityRole="button"
+          >
+            <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {isProcessing ? '...' : 'Reject'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </GlassPanel>
+  );
+});
 
 export default function ApprovalsScreen() {
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
@@ -65,7 +128,7 @@ export default function ApprovalsScreen() {
     const { data: requests } = await supabase
       .from('approval_requests')
       .select(
-        'id, entry_id, status, comment, requested_at, case_entries(resident_id, case_date, template_id, case_templates(specialty, name)), profiles!approval_requests_supervisor_id_fkey(full_name)'
+        'id, entry_id, status, comment, requested_at, case_entries(resident_id, case_date, template_id, case_templates(specialty, name)), profiles!supervisor_id(full_name)'
       )
       .eq('case_entries.tenant_id', profile.tenant_id)
       .order('requested_at', { ascending: false });
@@ -90,7 +153,7 @@ export default function ApprovalsScreen() {
     loadProfileAndApprovals();
 
     const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false);
+      setIsOffline(state.isConnected !== true);
     });
 
     return () => {
@@ -157,7 +220,7 @@ export default function ApprovalsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color="#0D9488" size="large" />
       </View>
     );
@@ -165,7 +228,7 @@ export default function ApprovalsScreen() {
 
   if (role && role !== 'supervisor' && role !== 'director' && role !== 'admin') {
     return (
-      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <Text className="text-slate-400 text-center">
           You do not have permission to view approvals.
         </Text>
@@ -174,18 +237,18 @@ export default function ApprovalsScreen() {
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: '#060814' }}>
+    <View className="flex-1" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
-          <Text className="text-red-400 text-sm text-center font-semibold">
+          <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             Offline — approvals require a connection
           </Text>
         </View>
       )}
 
       <View className="px-4 pt-4 pb-2">
-        <Text className="text-white text-2xl font-bold mb-1">Approvals</Text>
-        <Text className="text-slate-500 text-xs mb-3" style={{ fontFamily: 'Geist Mono' }}>
+        <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Approvals</Text>
+        <Text className="text-slate-500 text-xs mb-3" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           {approvals.filter((a) => a.status === 'pending').length} pending
         </Text>
       </View>
@@ -202,59 +265,14 @@ export default function ApprovalsScreen() {
             <Text className="text-slate-400 text-center">No approval requests found.</Text>
           </View>
         }
-        renderItem={({ item }) => {
-          const isProcessing = processingIds.has(item.id);
-          const isPending = item.status === 'pending';
-
-          return (
-            <GlassPanel style={{ marginBottom: 12 }}>
-              <View className="flex-row justify-between items-start">
-                <View className="flex-1 mr-3">
-                  <Text className="text-white font-semibold">{item.resident_name}</Text>
-                  <Text className="text-indigo-400 text-xs mt-0.5" style={{ fontFamily: 'Geist Mono' }}>
-                    {item.specialty}
-                  </Text>
-                  <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
-                    {item.case_date}
-                  </Text>
-                  {item.comment && (
-                    <Text className="text-slate-400 text-xs mt-1" numberOfLines={2}>
-                      {item.comment}
-                    </Text>
-                  )}
-                </View>
-                <StatusBadge status={item.status === 'pending' ? 'pending' : item.status === 'approved' ? 'approved' : 'rejected'} />
-              </View>
-
-              {isPending && (
-                <View className="flex-row gap-3 mt-3 pt-3 border-t border-slate-700/50">
-                  <TouchableOpacity
-                    className="flex-1 bg-emerald-600/20 rounded-lg py-2.5 items-center border border-emerald-500/40"
-                    onPress={() => confirmAction(item.id, item.entry_id, 'approve')}
-                    disabled={isProcessing || isOffline}
-                    accessibilityLabel={`Approve case from ${item.resident_name}`}
-                    accessibilityRole="button"
-                  >
-                    <Text className="text-emerald-400 font-semibold text-sm">
-                      {isProcessing ? '...' : 'Approve'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="flex-1 bg-red-600/20 rounded-lg py-2.5 items-center border border-red-500/40"
-                    onPress={() => confirmAction(item.id, item.entry_id, 'reject')}
-                    disabled={isProcessing || isOffline}
-                    accessibilityLabel={`Reject case from ${item.resident_name}`}
-                    accessibilityRole="button"
-                  >
-                    <Text className="text-red-400 font-semibold text-sm">
-                      {isProcessing ? '...' : 'Reject'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </GlassPanel>
-          );
-        }}
+        renderItem={useCallback(({ item }: { item: ApprovalItem }) => (
+          <ApprovalCard
+            item={item}
+            isProcessing={processingIds.has(item.id)}
+            isOffline={isOffline}
+            onConfirm={confirmAction}
+          />
+        ), [processingIds, isOffline, confirmAction])}
       />
     </View>
   );

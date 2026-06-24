@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle, Defs, Filter, FeGaussianBlur, Text as SvgText } from 'react-native-svg';
+import { clinicalTokens } from '@elogbook/shared';
 
 interface ProgressRingProps {
   percentage: number;
@@ -57,7 +58,7 @@ export default function ProgressRing({
           alignmentBaseline="central"
           fill="white"
           fontSize={size * 0.18}
-          fontFamily="Outfit"
+          fontFamily={clinicalTokens.fonts.heading}
           fontWeight="600"
         >
           {Math.round(clampedPct)}%
@@ -68,7 +69,7 @@ export default function ProgressRing({
           color: '#E2E8F0',
           fontSize: 12,
           marginTop: 4,
-          fontFamily: 'Inter',
+          fontFamily: clinicalTokens.fonts.body,
           textAlign: 'center',
         }}
         numberOfLines={1}

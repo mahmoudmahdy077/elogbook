@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "bynara": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Bynara",
+      "options": {
+        "apiKey": "{env:NARAYA_API_KEY}",
+        "baseURL": "https://router.bynara.id/v1"
+      },
+      "models": {
+        "claude-sonnet-4.5": {
+          "name": "Claude Sonnet 4.5"
+        }
+      }
+    }
+  },
+  "model": "bynara/claude-sonnet-4.5"
+}

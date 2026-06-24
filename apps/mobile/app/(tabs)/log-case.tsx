@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { syncService } from '../../lib/sync';
 import { saveDraftCase } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
 import { caseEntrySchema } from '@elogbook/shared';
+import { clinicalTokens } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField } from '@elogbook/shared';
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -46,6 +47,16 @@ export default function LogCaseScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationSuccess, setConfirmationSuccess] = useState(true);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const confirmationTypeRef = useRef<'offline' | 'submitted' | null>(null);
+  const syncColorMap: Record<string, string> = {
+    'text-blue-400': '#60A5FA',
+    'text-green-400': '#34D399',
+    'text-yellow-400': '#FBBF24',
+    'text-red-400': '#F87171',
+    'text-emerald-400': '#34D399',
+    'text-amber-400': '#FBBF24',
+  };
 
   const [isDeidentified, setIsDeidentified] = useState(true);
   const [patientMrn, setPatientMrn] = useState('');
@@ -102,6 +113,7 @@ export default function LogCaseScreen() {
 
   const setFieldValue = (key: string, value: string) => {
     setFieldValues((prev) => ({ ...prev, [key]: value }));
+    if (validationError) setValidationError(null);
   };
 
   const handleSubmit = async () => {
@@ -125,9 +137,11 @@ export default function LogCaseScreen() {
           is_deidentified: false as const,
         };
 
+    setValidationError(null);
     const validation = caseEntrySchema.safeParse(entryData);
     if (!validation.success) {
       const firstError = validation.error.issues[0];
+      setValidationError(firstError?.message ?? 'Invalid case data');
       return;
     }
 
@@ -171,6 +185,7 @@ export default function LogCaseScreen() {
       if (error) throw error;
       haptics.submitSuccess();
       setConfirmationSuccess(true);
+      confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
     } catch {
       await saveDraftCase({
@@ -187,6 +202,7 @@ export default function LogCaseScreen() {
       });
       haptics.offlineSave();
       setConfirmationSuccess(false);
+      confirmationTypeRef.current = 'offline';
       setShowConfirmation(true);
     }
 
@@ -194,13 +210,17 @@ export default function LogCaseScreen() {
       setShowConfirmation(false);
       setSubmitting(false);
       isSubmitting.current = false;
-      if (confirmationSuccess) {
+      if (confirmationTypeRef.current === 'submitted') {
         setPatientMrn('');
         setPatientDob('');
         setPatientAge('');
         setCaseDate('');
         setFieldValues({});
+        setConfirmationSuccess(false);
+      } else if (confirmationTypeRef.current === 'offline') {
+        setConfirmationSuccess(false);
       }
+      confirmationTypeRef.current = null;
     }, 2000);
   };
 
@@ -210,7 +230,7 @@ export default function LogCaseScreen() {
     if (field.type === 'select' && field.options) {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2">{field.label}</Text>
+          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <View className="flex-row flex-wrap gap-2">
             {field.options.map((opt) => (
               <TouchableOpacity
@@ -235,7 +255,7 @@ export default function LogCaseScreen() {
     if (field.type === 'textarea') {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2">{field.label}</Text>
+          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <TextInput
             className="bg-slate-900 text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]"
             multiline
@@ -253,7 +273,7 @@ export default function LogCaseScreen() {
 
     return (
       <View key={field.key} className="mb-4">
-        <Text className="text-gray-400 mb-2">{field.label}</Text>
+        <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
         <TextInput
           className="bg-slate-900 text-white rounded-xl px-4 py-3 border border-indigo-500/15"
           placeholder={field.label}
@@ -277,11 +297,11 @@ export default function LogCaseScreen() {
       offline: { bg: 'bg-amber-900/50', border: 'border-amber-500/30', text: 'Offline Mode — cases saved locally', icon: 'cloud-offline-outline' as const, color: 'text-amber-400' },
       synced: { bg: 'bg-emerald-900/50', border: 'border-emerald-500/30', text: 'Synced', icon: 'checkmark-circle-outline' as const, color: 'text-emerald-400' },
     };
-    const c = config[syncStatus as keyof typeof config] ?? config.syncing;
+        const c = config[syncStatus as keyof typeof config] ?? config.syncing;
     return (
       <View className={`rounded-lg px-4 py-2 mb-4 flex-row items-center gap-2 ${c.bg} border ${c.border}`}>
-        <Ionicons name={c.icon} size={16} color={c.color.replace('text-', '#') || '#fff'} />
-        <Text className={`${c.color} text-sm`}>{c.text}</Text>
+        <Ionicons name={c.icon} size={16}         color={syncColorMap[c.color] || clinicalTokens.colors.text.muted} />
+        <Text className={`${c.color} text-sm`} style={{ fontFamily: clinicalTokens.fonts.body }}>{c.text}</Text>
       </View>
     );
   };
@@ -289,16 +309,16 @@ export default function LogCaseScreen() {
   const renderConfirmation = () => (
     <Modal transparent animationType="fade" visible={showConfirmation}>
       <View className="flex-1 items-center justify-center bg-black/60">
-        <View className="bg-slate-900 rounded-2xl p-8 items-center border border-indigo-500/15 mx-8" style={{ backgroundColor: '#0F172A' }}>
+        <View className="bg-slate-900 rounded-2xl p-8 items-center border border-indigo-500/15 mx-8" style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}>
           <Ionicons
             name={confirmationSuccess ? 'checkmark-circle' : 'cloud-done-outline'}
             size={64}
-            color={confirmationSuccess ? '#0D9488' : '#D97706'}
+            color={confirmationSuccess ? clinicalTokens.colors.primary.DEFAULT : clinicalTokens.colors.warning.DEFAULT}
           />
-          <Text className="text-white text-xl font-bold mt-4 text-center">
+          <Text className="text-white text-xl mt-4 text-center" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {confirmationSuccess ? 'Case Logged Successfully' : 'Saved Offline'}
           </Text>
-          <Text className={confirmationSuccess ? 'text-amber-400 mt-2 text-center' : 'text-gray-400 mt-2 text-center'}>
+          <Text className={confirmationSuccess ? 'text-amber-400 mt-2 text-center' : 'text-gray-400 mt-2 text-center'} style={{ fontFamily: clinicalTokens.fonts.body }}>
             {confirmationSuccess ? 'Pending Verification' : 'Will sync when online'}
           </Text>
         </View>
@@ -306,7 +326,7 @@ export default function LogCaseScreen() {
     </Modal>
   );
 
-  const renderTemplateCard = ({ item: t }: { item: CaseTemplate }) => (
+  const renderTemplateCard = useCallback(({ item: t }: { item: CaseTemplate }) => (
     <TouchableOpacity
       className="bg-slate-900 border border-indigo-500/15 rounded-xl p-4 active:scale-95 m-1 flex-1"
       style={{ maxWidth: '48%' }}
@@ -315,19 +335,19 @@ export default function LogCaseScreen() {
       accessibilityRole="button"
     >
       <Ionicons name={getSpecialtyIcon(t.specialty)} size={28} color="#0D9488" />
-      <Text className="text-white font-semibold mt-3" numberOfLines={2}>
+      <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
         {t.specialty} - {t.name}
       </Text>
-      <Text className="text-indigo-400 text-xs mt-2 bg-indigo-500/10 self-start px-2 py-0.5 rounded-full">
+      <Text className="text-indigo-400 text-xs mt-2 bg-indigo-500/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
         {t.fields.length} field{t.fields.length !== 1 ? 's' : ''}
       </Text>
     </TouchableOpacity>
-  );
+  ), [selectTemplate]);
 
   if (loading) {
     return (
-      <View className="flex-1 px-4 pt-4" style={{ backgroundColor: '#060814' }}>
-        <Text className="text-white text-2xl font-bold mb-6">Select Template</Text>
+      <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+        <Text className="text-white text-2xl mb-6" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
             <View key={i} className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
@@ -343,7 +363,7 @@ export default function LogCaseScreen() {
 
   if (!selectedTemplate) {
     return (
-      <View className="flex-1" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         {renderSyncBanner()}
         <FlatList
           data={templates}
@@ -352,19 +372,19 @@ export default function LogCaseScreen() {
           numColumns={2}
           contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
           ListHeaderComponent={
-            <Text className="text-white text-2xl font-bold mb-4 px-1">Select Template</Text>
+            <Text className="text-white text-2xl mb-4 px-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
           }
           ListEmptyComponent={
             <View className="items-center py-16">
               <Ionicons name="clipboard-outline" size={48} color="#64748B" />
-              <Text className="text-gray-400 text-center mt-4">
+              <Text className="text-gray-400 text-center mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
                 {fetchError ? 'Unable to load templates' : 'No templates available. Contact your program director.'}
               </Text>
-              {fetchError && (
-                <TouchableOpacity className="mt-4 bg-indigo-600 px-6 py-2 rounded-lg" onPress={loadTemplates} accessibilityLabel="Retry loading templates" accessibilityRole="button">
-                  <Text className="text-white">Retry</Text>
-                </TouchableOpacity>
-              )}
+                {fetchError && (
+                  <TouchableOpacity className="mt-4 bg-indigo-600 px-6 py-2 rounded-lg" onPress={loadTemplates} accessibilityLabel="Retry loading templates" accessibilityRole="button">
+                    <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Retry</Text>
+                  </TouchableOpacity>
+                )}
             </View>
           }
         />
@@ -375,7 +395,7 @@ export default function LogCaseScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1"
-      style={{ backgroundColor: '#060814' }}
+      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
@@ -384,21 +404,21 @@ export default function LogCaseScreen() {
           <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
             <Ionicons name="arrow-back" size={24} color="#6366F1" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold flex-1">
+          <Text className="text-white text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {selectedTemplate.specialty} - {selectedTemplate.name}
           </Text>
           <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
-            <Text className="text-indigo-400 text-sm">Change Template</Text>
+            <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
           </TouchableOpacity>
         </View>
 
         <View className="flex-row items-center justify-between mb-4 px-1">
-          <Text className="text-gray-300 text-sm">De-identified entry</Text>
+          <Text className="text-gray-300 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>De-identified entry</Text>
           <Switch
             value={isDeidentified}
             onValueChange={setIsDeidentified}
-            trackColor={{ false: '#334155', true: '#0D9488' }}
-            thumbColor={isDeidentified ? '#fff' : '#94A3B8'}
+            trackColor={{ false: clinicalTokens.colors.neutral.light, true: clinicalTokens.colors.primary.DEFAULT }}
+            thumbColor={isDeidentified ? clinicalTokens.colors.text.onPrimary : clinicalTokens.colors.text.muted}
             accessibilityLabel="Toggle de-identification"
           />
         </View>
@@ -406,7 +426,7 @@ export default function LogCaseScreen() {
         <View className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-6">
           {isDeidentified ? (
             <>
-              <Text className="text-gray-400 mb-2">Patient Age (years)</Text>
+              <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Age (years)</Text>
               <TextInput
                 className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
                 placeholder="Age in years"
@@ -421,7 +441,7 @@ export default function LogCaseScreen() {
             </>
           ) : (
             <>
-              <Text className="text-gray-400 mb-2">MRN</Text>
+              <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>MRN</Text>
               <TextInput
                 className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
                 placeholder="Patient MRN"
@@ -433,7 +453,7 @@ export default function LogCaseScreen() {
                 accessibilityLabel="Patient MRN"
               />
 
-              <Text className="text-gray-400 mb-2 mt-4">Date of Birth</Text>
+              <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Date of Birth</Text>
               <TextInput
                 className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
                 placeholder="YYYY-MM-DD"
@@ -447,7 +467,7 @@ export default function LogCaseScreen() {
             </>
           )}
 
-          <Text className="text-gray-400 mb-2 mt-4">Case Date</Text>
+          <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Date</Text>
           <TextInput
             className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
             placeholder="YYYY-MM-DD"
@@ -465,6 +485,13 @@ export default function LogCaseScreen() {
         </View>
       </ScrollView>
 
+      {validationError && (
+        <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-2 mx-4">
+          <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>
+            {validationError}
+          </Text>
+        </View>
+      )}
       <View className="absolute bottom-0 left-0 right-0 p-4 border-t border-indigo-500/15" style={{ backgroundColor: 'rgba(6,8,20,0.9)', paddingBottom: Math.max(16, Platform.OS === 'ios' ? 34 : 16) }}>
         <TouchableOpacity
           className={`bg-teal-600 rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
@@ -476,7 +503,7 @@ export default function LogCaseScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-semibold text-base">Submit for Verification</Text>
+            <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Submit for Verification</Text>
           )}
         </TouchableOpacity>
       </View>

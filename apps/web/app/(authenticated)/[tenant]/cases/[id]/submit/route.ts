@@ -53,13 +53,23 @@ export async function POST(
     .in('role', ['supervisor', 'director']);
 
   if (supervisors && supervisors.length > 0) {
-    await supabase.from('approval_requests').insert(
+    const { error: approvalError } = await supabase.from('approval_requests').insert(
       supervisors.map((s) => ({
         entry_id: id,
         supervisor_id: s.id,
         status: 'pending',
       }))
     );
+
+    if (approvalError) {
+      await supabase
+        .from('case_entries')
+        .update({ status: 'draft' })
+        .eq('id', id);
+      return NextResponse.json({
+        error: 'Failed to create approval requests. Case has been returned to draft.',
+      }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
   }
 
   return NextResponse.json({ success: true });

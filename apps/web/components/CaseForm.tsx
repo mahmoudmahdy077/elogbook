@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
-import { caseEntrySchema } from '@elogbook/shared';
+import { caseEntrySchema, GLOBAL_TENANT_ID } from '@elogbook/shared';
 import { useToast } from '@/components/Toast';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
@@ -15,8 +15,6 @@ import PatientInfoStep from '@/components/case-form/PatientInfoStep';
 import CaseDetailsStep from '@/components/case-form/CaseDetailsStep';
 import ReviewStep from '@/components/case-form/ReviewStep';
 import ConfirmDialog from '@/components/case-form/ConfirmDialog';
-
-const GLOBAL_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 interface CaseFormProps {
   tenantId: string;
@@ -125,7 +123,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
     setFieldValues(prev => ({ ...prev, [key]: value }));
   }
 
-  function canProceed(stepIndex: number): boolean {
+  const canProceed = useCallback((stepIndex: number): boolean => {
     switch (stepIndex) {
       case 0: return !!selectedTemplateId;
       case 1:
@@ -135,7 +133,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       case 2: return caseDate.trim() !== '';
       default: return true;
     }
-  }
+  }, [selectedTemplateId, isDeidentified, patientAgeYears, patientMrn, patientDob, caseDate]);
 
   function handleNext() {
     if (step < STEPS.length - 1 && canProceed(step)) {
@@ -161,10 +159,20 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       is_deidentified: isDeidentified,
     };
     if (isDeidentified) {
+      const mrnForHash = patientMrn || `temp-${Date.now()}`;
+      const { data: hash, error: hashError } = await supabase.rpc('hash_patient_mrn', {
+        p_mrn: mrnForHash,
+        p_tenant_id: tenantId,
+      });
+      if (hashError) {
+        setErrors(['Failed to generate patient hash. Please try again.']);
+        setSavingDraft(false);
+        return;
+      }
       insertData.patient_mrn = null;
       insertData.patient_dob = null;
       insertData.patient_age_years = Number(patientAgeYears) || null;
-      insertData.patient_hash = '';
+      insertData.patient_hash = hash || '';
     } else {
       insertData.patient_mrn = patientMrn || null;
       insertData.patient_dob = patientDob || null;
@@ -191,7 +199,17 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       status: initialStatus, accreditation_mappings: [], is_deidentified: isDeidentified,
     };
     if (isDeidentified) {
-      insertData.patient_mrn = null; insertData.patient_dob = null; insertData.patient_age_years = parsedAge; insertData.patient_hash = '';
+      const mrnForHash = patientMrn || `temp-${Date.now()}`;
+      const { data: hash, error: hashError } = await supabase.rpc('hash_patient_mrn', {
+        p_mrn: mrnForHash,
+        p_tenant_id: tenantId,
+      });
+      if (hashError) {
+        setErrors(['Failed to generate patient hash. Please try again.']);
+        setLoading(false);
+        return;
+      }
+      insertData.patient_mrn = null; insertData.patient_dob = null; insertData.patient_age_years = parsedAge; insertData.patient_hash = hash || '';
     } else {
       insertData.patient_mrn = patientMrn; insertData.patient_dob = patientDob; insertData.patient_age_years = null; insertData.patient_hash = null;
     }
@@ -227,7 +245,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [step, confirmSubmit, submitted]);
+  }, [step, confirmSubmit, submitted, canProceed]);
 
   return (
     <div className="glass-panel p-6">

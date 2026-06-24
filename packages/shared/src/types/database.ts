@@ -1,13 +1,15 @@
 export type TenantType = 'individual' | 'institution';
 export type UserRole = 'resident' | 'supervisor' | 'director' | 'institution_admin' | 'admin';
 export type CaseStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'unpaid' | 'trialing';
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
 export interface Institution {
   id: string;
   name: string;
   slug: string;
   settings: Record<string, unknown>;
-  tier: string;
+  tier: 'free' | 'premium' | 'enterprise';
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +28,7 @@ export interface Tenant {
   compliance_frameworks: string[];
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface ComplianceConfiguration {
@@ -44,6 +47,7 @@ export interface Profile {
   specialty: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface CaseTemplate {
@@ -55,6 +59,7 @@ export interface CaseTemplate {
   required_fields: string[];
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface TemplateField {
@@ -81,6 +86,7 @@ export interface CaseEntry {
   is_deidentified: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export type FrameworkType = 'acgme' | 'scfhs' | 'gmc' | 'canmeds' | 'custom';
@@ -140,14 +146,19 @@ export interface InstitutionBilling {
 export interface CaseAttachment {
   id: string;
   entry_id: string;
+  tenant_id: string;
   file_path: string;
+  file_name: string;
+  file_size: number;
   file_type: string;
+  uploaded_by: string;
   uploaded_at: string;
 }
 
 export interface ApprovalRequest {
   id: string;
   entry_id: string;
+  tenant_id: string;
   supervisor_id: string;
   status: 'pending' | 'approved' | 'rejected';
   comment: string | null;
@@ -202,6 +213,8 @@ export interface ProgramGoal {
   deadline: string;
   description: string | null;
   created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface SubscriptionPlan {
@@ -212,6 +225,61 @@ export interface SubscriptionPlan {
   features: Record<string, unknown>;
   tenant_type: TenantType;
   max_residents: number | null;
+  stripe_price_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  tenant_id: string;
+  plan_id: string;
+  status: SubscriptionStatus;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  gateway_subscription_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StripeEvent {
+  id: string;
+  stripe_event_id: string;
+  type: string;
+  status: string;
+  created_at: string;
+  processed_at: string | null;
+}
+
+export interface Payment {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  stripe_event_id: string | null;
+  created_at: string;
+}
+
+export interface OneTimePurchase {
+  id: string;
+  tenant_id: string;
+  resident_id: string;
+  purchase_type: string;
+  amount: number;
+  status: PaymentStatus;
+  created_at: string;
+}
+
+export interface ResidentAIToggle {
+  id: string;
+  tenant_id: string;
+  resident_id: string;
+  enabled: boolean;
+  quota_limit: number | null;
+  quota_used: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PaymentGatewayConfig {

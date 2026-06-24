@@ -2,7 +2,156 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
 
+function sanitizeQuery(input: string): string {
+  const trimmed = input.slice(0, 1000);
+  const sanitized = trimmed.replace(/[^a-zA-Z0-9\s.,!?;:'()\-_@\/]/g, '');
+  return sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+}
+
 const MANDATORY_DISCLAIMER = 'This is an educational reflection tool and does not constitute medical advice.';
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_MAX_SIZE = 200;
+const memoryCache = new Map<string, { response: string; tokens: number; expires: number }>();
+
+function evictStaleCache(): void {
+  const now = Date.now();
+  for (const [key, val] of memoryCache) {
+    if (val.expires <= now) memoryCache.delete(key);
+  }
+  if (memoryCache.size > CACHE_MAX_SIZE) {
+    const entries = [...memoryCache.entries()].sort((a, b) => a[1].expires - b[1].expires);
+    const toDelete = entries.slice(0, entries.length - CACHE_MAX_SIZE);
+    for (const [key] of toDelete) memoryCache.delete(key);
+  }
+}
+
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW_MS = 60000;
+
+async function checkRateLimitDb(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  residentId: string
+): Promise<boolean> {
+  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { count, error } = await supabase
+    .from('ai_query_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('resident_id', residentId)
+    .gte('created_at', since);
+
+  if (error) {
+    console.error('Rate limit check error:', error);
+    return true;
+  }
+
+  return (count ?? 0) < RATE_LIMIT_MAX;
+}
+
+const ALLOWED_AZURE_DOMAINS = ['openai.azure.com'];
+const PRIVATE_IP_RANGES = [
+  /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./,
+  /^0\./, /^169\.254\./, /^::1$/, /^fc00:/, /^fe80:/,
+];
+
+async function isValidEndpoint(urlStr: string, provider: string): Promise<boolean> {
+  let url: URL;
+  try {
+    url = new URL(urlStr);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:') return false;
+  if (provider === 'azure') {
+    const hostnameParts = url.hostname.split('.');
+    if (hostnameParts.length < 2) return false;
+    const domain = hostnameParts.slice(-2).join('.');
+    return ALLOWED_AZURE_DOMAINS.includes(domain);
+  }
+  if (provider === 'custom') {
+    const hostname = url.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return false;
+    if (PRIVATE_IP_RANGES.some((r) => r.test(hostname))) return false;
+    try {
+      const addresses = await Deno.resolveDns(hostname, 'A');
+      for (const addr of addresses) {
+        if (addr.startsWith('10.') || addr.startsWith('192.168.') ||
+            addr.startsWith('127.') || addr.startsWith('169.254.') ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(addr)) return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function getCachedResponse(supabase: any, tenantId: string, residentId: string, queryHash: string) {
+  evictStaleCache();
+  const mem = memoryCache.get(queryHash);
+  if (mem && mem.expires > Date.now()) {
+    return mem;
+  }
+
+  const { data } = await supabase
+    .from('ai_response_cache')
+    .select('response_text, tokens_used')
+    .eq('tenant_id', tenantId)
+    .eq('resident_id', residentId)
+    .eq('query_hash', queryHash)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (data) {
+    memoryCache.set(queryHash, {
+      response: data.response_text,
+      tokens: data.tokens_used,
+      expires: Date.now() + CACHE_TTL_MS,
+    });
+    return memoryCache.get(queryHash);
+  }
+  return null;
+}
+
+async function setCachedResponse(
+  supabase: any,
+  tenantId: string,
+  residentId: string,
+  queryHash: string,
+  query: string,
+  response: string,
+  tokens: number,
+  model: string,
+  provider: string
+) {
+  evictStaleCache();
+  memoryCache.set(queryHash, { response, tokens, expires: Date.now() + CACHE_TTL_MS });
+
+  const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
+  await supabase.from('ai_response_cache').upsert({
+    tenant_id: tenantId,
+    resident_id: residentId,
+    query_hash: queryHash,
+    query_text: query,
+    response_text: response,
+    tokens_used: tokens,
+    model,
+    provider,
+    expires_at: expiresAt,
+  }, { onConflict: 'tenant_id,resident_id,query_hash' });
+}
+
+async function computeQueryHash(query: string, model: string, tenantId: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(query + model + tenantId);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 const DIAGNOSIS_PATTERNS = /(patient has|diagnosed with|suffers from|condition is|presenting with classic|indicative of|consistent with.*disease)/i;
 const PRESCRIPTION_PATTERNS = /(prescribe|take \d+\s*mg|dosage of|administer|recommend.*medication|start.*treatment\s+with)/i;
@@ -61,7 +210,8 @@ serve(async (req) => {
     );
   }
 
-  const { resident_id, query, stream = false, is_deidentified } = body;
+  const { resident_id, query: rawQuery, stream = false, is_deidentified } = body;
+  const query = rawQuery ? sanitizeQuery(rawQuery) : undefined;
 
   if (!resident_id) {
     return new Response(
@@ -70,7 +220,7 @@ serve(async (req) => {
     );
   }
 
-  if (is_deidentified === false) {
+  if (is_deidentified !== true) {
     return new Response(
       JSON.stringify({ error: 'Cannot send identifiable patient data to external AI. Set is_deidentified=true or remove PHI.' }),
       { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
@@ -94,6 +244,13 @@ serve(async (req) => {
   if (aiToggle.quota_limit != null && aiToggle.quota_used != null && aiToggle.quota_used >= aiToggle.quota_limit) {
     return new Response(
       JSON.stringify({ error: 'AI query quota exceeded' }),
+      { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!await checkRateLimitDb(supabase, tenantId, resident_id)) {
+    return new Response(
+      JSON.stringify({ error: 'Rate limit exceeded. Please wait before making another request.' }),
       { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
@@ -136,10 +293,8 @@ serve(async (req) => {
 
   const caseSummary = (cases ?? []).map((c: any) => {
     const template = c.case_templates as any;
-    const fieldLabels = c.field_values
-      ? Object.keys(c.field_values).join(', ')
-      : 'N/A';
-    return `Date: ${c.case_date}, Specialty: ${template?.specialty ?? 'N/A'}, Template: ${template?.name ?? 'N/A'}, Fields: ${fieldLabels}`;
+    const fieldCount = c.field_values ? Object.keys(c.field_values).length : 0;
+    return `Date: ${c.case_date}, Specialty: ${template?.specialty ?? 'N/A'}, Template: ${template?.name ?? 'N/A'}, Field Count: ${fieldCount}`;
   }).join('\n');
 
   const systemPrompt = `You are an educational clinical reflection assistant for medical residents using E-Logbook. You analyze de-identified surgical and clinical case entries to provide educational insights.
@@ -169,6 +324,24 @@ Be concise, supportive, and evidence-based.`;
   const provider = aiConfig.provider as string;
   const model = aiConfig.model as string;
   const apiKey = aiConfig.encrypted_api_key as string;
+
+  const queryForCache = query || 'Auto-analysis';
+  const queryHash = await computeQueryHash(queryForCache, model, tenantId);
+  const cached = await getCachedResponse(supabase, tenantId, resident_id, queryHash);
+  if (cached) {
+    return new Response(
+      JSON.stringify({
+        response: cached.response,
+        tokens_used: cached.tokens,
+        disclaimer_rendered: true,
+        safety_flags: [],
+        model,
+        cached: true,
+      }),
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
   let aiResponse: string;
   let tokensUsed: number | null = null;
 
@@ -259,7 +432,21 @@ Be concise, supportive, and evidence-based.`;
       aiResponse = anthropicData.content?.[0]?.text ?? 'No response generated.';
       tokensUsed = (anthropicData.usage?.input_tokens ?? 0) + (anthropicData.usage?.output_tokens ?? 0);
     } else if (provider === 'azure') {
+      const allowedAzureModels = ['gpt-4', 'gpt-4-32k', 'gpt-35-turbo', 'gpt-35-turbo-16k'];
+      const normalizedModel = model.toLowerCase().replace(/_/g, '-');
+      if (!allowedAzureModels.some(m => normalizedModel.startsWith(m.toLowerCase()))) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid Azure model specified' }),
+          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+        );
+      }
       const baseUrl = aiConfig.endpoint_url?.replace(/\/$/, '') ?? `https://${aiConfig.model.split('.')[0]}.openai.azure.com`;
+      if (!await isValidEndpoint(baseUrl, 'azure')) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid Azure endpoint URL' }),
+          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+        );
+      }
       const azureRes = await fetchWithTimeout(`${baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`, {
         method: 'POST',
         headers: {
@@ -291,6 +478,12 @@ Be concise, supportive, and evidence-based.`;
       if (!endpointUrl) {
         return new Response(
           JSON.stringify({ error: 'Custom provider requires an endpoint_url' }),
+          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!await isValidEndpoint(endpointUrl, 'custom')) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or blocked custom endpoint URL' }),
           { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
         );
       }
@@ -344,8 +537,10 @@ Be concise, supportive, and evidence-based.`;
   }
 
   if (!stream) {
-    aiResponse = ensureDisclaimer(aiResponse);
     const safetyFlags = checkSafety(aiResponse);
+    aiResponse = ensureDisclaimer(aiResponse);
+
+    await setCachedResponse(supabase, tenantId, resident_id, queryHash, queryForCache, aiResponse, tokensUsed ?? 0, model, provider);
 
     await supabase.from('ai_query_logs').insert({
       tenant_id: tenantId,
@@ -408,9 +603,11 @@ Be concise, supportive, and evidence-based.`;
           }
         }
 
+        const flags = checkSafety(fullResponse);
         const finalResponse = ensureDisclaimer(fullResponse);
-        const flags = checkSafety(finalResponse);
         const disclaimerRendered = finalResponse.includes('does not constitute medical advice');
+
+        await setCachedResponse(supabase, tenantId, resident_id, queryHash, queryForCache, finalResponse, tokensUsed ?? 0, model, provider);
 
         await supabase.from('ai_query_logs').insert({
           tenant_id: tenantId,

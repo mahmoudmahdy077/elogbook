@@ -2,23 +2,63 @@
   "expo": {
     "name": "E-Logbook",
     "slug": "elogbook",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "elogbook",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#060814"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.elogbook.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera is used to attach photos to case entries",
+        "NSPhotoLibraryUsageDescription": "Photo library access is used to attach images to case entries"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#060814"
+      },
+      "package": "com.elogbook.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Camera is used to attach photos to case entries"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Photo library access is used to attach images to case entries"
+        }
+      ],
+      "expo-notifications",
+      "expo-haptics",
       "expo-font"
     ],
     "extra": {
       "supabaseUrl": "",
       "supabaseAnonKey": ""
     },
-    "ios": {
-      "infoPlist": {
-        "NSCameraUsageDescription": "E-Logbook needs camera access to capture case photos."
-      }
-    }
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "jsEngine": "hermes",
+    "newArchEnabled": true
   }
 }

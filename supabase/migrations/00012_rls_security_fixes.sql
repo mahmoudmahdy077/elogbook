@@ -257,24 +257,8 @@ CREATE POLICY no_inserts_for_lapsed_tenants
     END
   );
 
-CREATE POLICY no_submit_for_lapsed_tenants
-  ON case_entries
-  FOR UPDATE
-  TO authenticated
-  USING (deleted_at IS NULL)
-  WITH CHECK (
-    CASE
-      WHEN get_user_role() IN ('supervisor', 'director', 'institution_admin', 'admin') THEN true
-      WHEN OLD.status = 'draft' AND case_entries.status = 'pending' THEN
-        NOT EXISTS (
-          SELECT 1
-          FROM subscriptions
-          WHERE subscriptions.tenant_id = case_entries.tenant_id
-            AND subscriptions.status IN ('past_due', 'unpaid')
-        )
-      ELSE true
-    END
-  );
+-- no_submit_for_lapsed_tenants policy removed - handled by trigger in 00010
+-- OLD cannot be used in WITH CHECK; use BEFORE UPDATE trigger instead
 
 -- ============================================================================
 -- 7. Fix handle_new_user() trigger — restrict roles to 'resident' and 'supervisor'

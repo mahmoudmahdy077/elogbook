@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
@@ -8,6 +8,7 @@ import { getAllCasesForResident, getConflictedCases } from '../../lib/db/storage
 import { syncService } from '../../lib/sync';
 import { supabase } from '../../lib/supabase';
 import StatusBadge from '../../components/StatusBadge';
+import { clinicalTokens } from '@elogbook/shared';
 import type { CaseStatus } from '@elogbook/shared';
 
 interface CaseData {
@@ -23,6 +24,57 @@ interface CaseData {
 }
 
 type FilterType = 'all' | 'draft' | 'pending' | 'approved' | 'rejected' | 'conflict';
+
+const FILTER_CHIPS: { key: FilterType; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'draft', label: 'Drafts' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+  { key: 'conflict', label: 'Conflicts' },
+];
+
+const SYNC_STATUS_LABELS: Record<string, string> = {
+  draft: 'Offline',
+  modified: 'Modified',
+  conflict: 'Conflict',
+  synced: '',
+};
+
+const CaseCard = React.memo(function CaseCard({
+  item,
+  onPress,
+}: {
+  item: CaseData;
+  onPress: (c: CaseData) => void;
+}) {
+  return (
+    <TouchableOpacity
+      className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-3"
+      onPress={() => onPress(item)}
+    >
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 mr-3">
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            {item.template_specialty} - {item.template_name}
+          </Text>
+          <Text className="text-slate-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
+          </Text>
+          <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {item.case_date}
+          </Text>
+        </View>
+        <View className="flex-col items-end gap-1">
+          <StatusBadge status={item.status} />
+          {SYNC_STATUS_LABELS[item.local_sync_status] ? (
+            <Text className="text-xs text-slate-500" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+          ) : null}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export default function MyCasesScreen() {
   const [cases, setCases] = useState<CaseData[]>([]);
@@ -79,7 +131,7 @@ export default function MyCasesScreen() {
   useEffect(() => {
     loadCases();
     const unsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false);
+      setIsOffline(state.isConnected !== true);
     });
     return () => unsub();
   }, [loadCases]);
@@ -91,33 +143,20 @@ export default function MyCasesScreen() {
     setRefreshing(false);
   }, [loadCases]);
 
-  const filteredCases = filter === 'all'
-    ? cases
-    : filter === 'conflict'
-      ? cases.filter(c => conflictDrafts.some(d => d.entryId === c.id))
-      : cases.filter(c => c.status === filter);
+  const filteredCases = useMemo(() =>
+    filter === 'all'
+      ? cases
+      : filter === 'conflict'
+        ? cases.filter(c => conflictDrafts.some(d => d.entryId === c.id))
+        : cases.filter(c => c.status === filter),
+  [filter, cases, conflictDrafts]
+  );
 
-  const FILTER_CHIPS: { key: FilterType; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'draft', label: 'Drafts' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'rejected', label: 'Rejected' },
-    { key: 'conflict', label: 'Conflicts' },
-  ];
-
-  const handleCaseTap = (c: CaseData) => {
+  const handleCaseTap = useCallback((c: CaseData) => {
     if (c.status === 'rejected') {
       router.push({ pathname: '/log-case', params: { editCaseId: c.id } });
     }
-  };
-
-  const SYNC_STATUS_LABELS: Record<string, string> = {
-    draft: 'Offline',
-    modified: 'Modified',
-    conflict: 'Conflict',
-    synced: '',
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -131,23 +170,23 @@ export default function MyCasesScreen() {
     <View className="flex-1 bg-backdrop">
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
-          <Text className="text-red-400 text-sm text-center font-semibold">Offline — showing cached data</Text>
+          <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
         </View>
       )}
 
       {conflictDrafts.length > 0 && (
         <View className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-3 flex-row items-center gap-2">
-          <Text className="text-amber-400 text-sm flex-1">
+          <Text className="text-amber-400 text-sm flex-1" style={{ fontFamily: clinicalTokens.fonts.body }}>
             Case updated by supervisor — offline edits saved as new draft
           </Text>
           <TouchableOpacity onPress={() => setFilter('conflict')}>
-            <Text className="text-amber-400 font-semibold text-sm">View</Text>
+            <Text className="text-amber-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>View</Text>
           </TouchableOpacity>
         </View>
       )}
 
       <View className="px-4 pt-4 pb-2">
-        <Text className="text-white text-2xl font-bold mb-3">My Cases</Text>
+        <Text className="text-white text-2xl mb-3" style={{ fontFamily: clinicalTokens.fonts.heading }}>My Cases</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2 mb-2">
           {FILTER_CHIPS.map((chip) => (
             <TouchableOpacity
@@ -159,7 +198,7 @@ export default function MyCasesScreen() {
               }`}
               onPress={() => setFilter(chip.key)}
             >
-              <Text className={`text-xs font-semibold ${filter === chip.key ? 'text-white' : 'text-slate-400'}`}>
+              <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-slate-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
                 {chip.label}
               </Text>
             </TouchableOpacity>
@@ -176,35 +215,12 @@ export default function MyCasesScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         ListEmptyComponent={
           <View className="bg-slate-900 rounded-xl p-6 border border-indigo-500/15 items-center">
-            <Text className="text-slate-400">No cases found.</Text>
+            <Text className="text-slate-400" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
           </View>
         }
-        renderItem={({ item: c }) => (
-          <TouchableOpacity
-            className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-3"
-            onPress={() => handleCaseTap(c)}
-          >
-            <View className="flex-row justify-between items-start">
-              <View className="flex-1 mr-3">
-                <Text className="text-white font-semibold">
-                  {c.template_specialty} - {c.template_name}
-                </Text>
-                <Text className="text-slate-400 text-xs mt-1 font-mono">
-                  {c.is_deidentified ? `Age: — Hash: ${c.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${c.patient_mrn}`}
-                </Text>
-                <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
-                  {c.case_date}
-                </Text>
-              </View>
-              <View className="flex-col items-end gap-1">
-                <StatusBadge status={c.status} />
-                {SYNC_STATUS_LABELS[c.local_sync_status] ? (
-                  <Text className="text-xs text-slate-500">{SYNC_STATUS_LABELS[c.local_sync_status]}</Text>
-                ) : null}
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
+        renderItem={useCallback(({ item }: { item: CaseData }) => (
+          <CaseCard item={item} onPress={handleCaseTap} />
+        ), [handleCaseTap])}
       />
     </View>
   );

@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import ApprovalsDashboard from '@/components/ApprovalsDashboard';
+import ApprovalsDashboard from '@/components/approvals/ApprovalsDashboard';
 
 export default async function ApprovalsPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;

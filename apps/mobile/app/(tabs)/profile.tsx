@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import GlassPanel from '../../components/GlassPanel';
+import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
 interface ProfileData {
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#060814' }}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color="#0D9488" size="large" />
       </View>
     );
@@ -113,15 +114,15 @@ export default function ProfileScreen() {
 
   if (loadError || !profile) {
     return (
-      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: '#060814' }}>
-        <Text className="text-slate-400 mb-4">Unable to load profile.</Text>
+      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+        <Text className="text-slate-400 mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Unable to load profile.</Text>
         <TouchableOpacity
           className="bg-teal-600 px-6 py-2 rounded-lg"
           onPress={loadProfile}
           accessibilityLabel="Retry loading profile"
           accessibilityRole="button"
         >
-          <Text className="text-white font-semibold">Retry</Text>
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -130,15 +131,15 @@ export default function ProfileScreen() {
   const initial = profile.full_name.charAt(0).toUpperCase();
 
   return (
-    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: '#060814' }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }} contentContainerStyle={{ paddingBottom: 40 }}>
       <View className="items-center mb-8 mt-4">
         <View className="w-20 h-20 rounded-full bg-teal-600 items-center justify-center mb-4">
-          <Text className="text-white text-3xl font-bold">{initial}</Text>
+          <Text className="text-white text-3xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{initial}</Text>
         </View>
-        <Text className="text-white text-xl font-bold">{profile.full_name}</Text>
-        <Text className="text-slate-400 mt-1">{titleCase(profile.role)}</Text>
+        <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{profile.full_name}</Text>
+        <Text className="text-slate-400 mt-1" style={{ fontFamily: clinicalTokens.fonts.body }}>{titleCase(profile.role)}</Text>
         {profile.specialty && (
-          <Text className="text-teal-400 mt-1" style={{ fontFamily: 'Geist Mono' }}>
+          <Text className="text-teal-400 mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {profile.specialty}
           </Text>
         )}
@@ -146,9 +147,9 @@ export default function ProfileScreen() {
 
       {(plan || subscriptionStatus) && (
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">Subscription</Text>
+          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Subscription</Text>
           {plan && (
-            <Text className="text-white font-semibold">{plan.name}</Text>
+            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{plan.name}</Text>
           )}
           {subscriptionStatus && (
             <Text
@@ -159,7 +160,7 @@ export default function ProfileScreen() {
                     ? 'text-amber-400'
                     : 'text-red-400'
               }`}
-              style={{ fontFamily: 'Geist Mono' }}
+              style={{ fontFamily: clinicalTokens.fonts.mono }}
             >
               {titleCase(subscriptionStatus)}
             </Text>
@@ -167,35 +168,35 @@ export default function ProfileScreen() {
           <TouchableOpacity
             className="mt-3 bg-indigo-600/20 rounded-lg py-2.5 items-center border border-indigo-500/40"
             onPress={() => {
-              router.push('/(tabs)/profile' as any);
+              Alert.alert('Coming Soon', 'Subscription management will be available in a future update.');
             }}
             accessibilityLabel="Manage subscription"
             accessibilityRole="button"
           >
-            <Text className="text-indigo-400 font-semibold text-sm">Manage Subscription</Text>
+            <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
           </TouchableOpacity>
         </GlassPanel>
       )}
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2">Account</Text>
+        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Account</Text>
         <View className="flex-row justify-between py-2 border-b border-slate-700/30">
-          <Text className="text-slate-400 text-sm">Role</Text>
-          <Text className="text-white text-sm" style={{ fontFamily: 'Geist Mono' }}>
+          <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Role</Text>
+          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {titleCase(profile.role)}
           </Text>
         </View>
         {profile.specialty && (
           <View className="flex-row justify-between py-2 border-b border-slate-700/30">
-            <Text className="text-slate-400 text-sm">Specialty</Text>
-            <Text className="text-white text-sm" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Specialty</Text>
+            <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {profile.specialty}
             </Text>
           </View>
         )}
         <View className="flex-row justify-between py-2">
-          <Text className="text-slate-400 text-sm">ID</Text>
-          <Text className="text-slate-500 text-xs" style={{ fontFamily: 'Geist Mono' }}>
+          <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>ID</Text>
+          <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {profile.id.slice(0, 8)}...
           </Text>
         </View>
@@ -207,7 +208,7 @@ export default function ProfileScreen() {
         accessibilityLabel="Sign out"
         accessibilityRole="button"
       >
-        <Text className="text-red-400 font-semibold">Sign Out</Text>
+        <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
