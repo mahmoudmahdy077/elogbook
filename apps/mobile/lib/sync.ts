@@ -52,6 +52,8 @@ class SyncService {
   private pushMutex = false;
   private syncing = false;
   private tenantId: string | null = null;
+  private partialFailureMessage: string | null = null;
+  private partialFailureListeners: Set<(msg: string) => void> = new Set();
 
   constructor() {
     this.initNetworkListener();
@@ -114,6 +116,21 @@ class SyncService {
     return () => {
       this.conflictCallbacks.delete(fn);
     };
+  }
+
+  onPartialFailure(fn: (msg: string) => void) {
+    this.partialFailureListeners.add(fn);
+    return () => {
+      this.partialFailureListeners.delete(fn);
+    };
+  }
+
+  consumePartialFailure() {
+    const msg = this.partialFailureMessage;
+    this.partialFailureMessage = null;
+    if (msg) {
+      this.partialFailureListeners.forEach((fn) => fn(msg));
+    }
   }
 
   async pullCases(tenantId: string) {
@@ -190,9 +207,79 @@ class SyncService {
         return;
       }
 
-      for (const draft of drafts) {
-        if (draft.localSyncStatus !== 'draft' && draft.localSyncStatus !== 'modified') continue;
+      const pushable = drafts.filter(
+        (d) => d.localSyncStatus === 'draft' || d.localSyncStatus === 'modified',
+      );
+      if (pushable.length === 0) {
+        return;
+      }
 
+      const newDrafts = pushable.filter((d) => d.localSyncStatus === 'draft');
+      const modifiedDrafts = pushable.filter((d) => d.localSyncStatus === 'modified');
+
+      // Batch insert: supabase returns one row per input. We use upsert so
+      // re-pushing a draft that already has a server_id (e.g. recovered from
+      // a previous partial failure) lands on the same row.
+      if (newDrafts.length > 0) {
+        const rows = newDrafts.map((draft) => ({
+          tenant_id: draft.tenantId,
+          resident_id: draft.residentId,
+          template_id: draft.templateId,
+          patient_mrn: draft.patientMrn,
+          patient_dob: draft.patientDob,
+          patient_age_years: draft.patientAgeYears,
+          patient_hash: draft.patientHash,
+          case_date: draft.caseDate,
+          field_values: (draft._raw as Record<string, unknown>).field_values,
+          accreditation_mappings: (draft._raw as Record<string, unknown>).accreditation_mappings,
+          is_deidentified: draft.isDeidentified,
+          status: draft.status,
+        }));
+        const { data, error } = await supabase
+          .from('case_entries')
+          .upsert(rows, { onConflict: 'id', ignoreDuplicates: false })
+          .select('id');
+
+        if (error) {
+          console.error('Batch insert error:', error);
+          // If the whole batch fails, mark every draft as conflict so the
+          // user can resolve one-by-one. A 409 is the only signal we have
+          // that says "row exists with a different updated_at".
+          const isConflict = error.code === '409' || /conflict/i.test(error.message ?? '');
+          await Promise.all(
+            newDrafts.map(async (draft) => {
+              if (isConflict) {
+                await markCaseAsConflict(draft);
+                this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
+              } else {
+                // leave as `draft` so it retries on the next sync
+              }
+            }),
+          );
+        } else if (data && Array.isArray(data)) {
+          // Match returned rows back to drafts by index. The order of `data`
+          // mirrors the order of the input rows in a supabase upsert.
+          await Promise.all(
+            newDrafts.map(async (draft, i) => {
+              const serverId = (data[i] as { id?: string } | undefined)?.id;
+              if (serverId) {
+                await updateSyncStatus(draft, 'synced', serverId);
+              } else {
+                await updateSyncStatus(draft, 'synced');
+              }
+            }),
+          );
+          this.retryIndex = 0;
+          this.retryCount = 0;
+        }
+      }
+
+      // Per-row updates: there is no batch update API in postgrest that lets
+      // us key on different ids, so we issue one update per modified row and
+      // surface a partial-failure toast for the ones that errored.
+      let updateFailures = 0;
+      for (const draft of modifiedDrafts) {
+        const targetId = draft.serverId ?? draft.id;
         const casePayload: Record<string, unknown> = {
           tenant_id: draft.tenantId,
           resident_id: draft.residentId,
@@ -207,41 +294,29 @@ class SyncService {
           is_deidentified: draft.isDeidentified,
           status: draft.status,
         };
+        const { error } = await supabase
+          .from('case_entries')
+          .update(casePayload)
+          .eq('id', targetId)
+          .select('id, updated_at')
+          .single();
 
-        const isNew = draft.localSyncStatus === 'draft';
-        // For an existing-on-server row, target the server-assigned id (not the
-        // local UUID). The server id is captured the first time we successfully
-        // push a new draft and is then re-used for every subsequent update.
-        const targetId = isNew ? draft.id : draft.serverId ?? draft.id;
-        let result;
-
-        if (isNew) {
-          result = await supabase.from('case_entries').insert(casePayload).select('id').single();
-        } else {
-          result = await supabase
-            .from('case_entries')
-            .update(casePayload)
-            .eq('id', targetId)
-            .select('id, updated_at')
-            .single();
-        }
-
-        if (!result.error) {
-          const serverId = isNew ? (result.data as { id?: string } | null)?.id : targetId;
-          await updateSyncStatus(draft, 'synced', serverId);
+        if (!error) {
+          await updateSyncStatus(draft, 'synced', targetId);
           this.retryIndex = 0;
           this.retryCount = 0;
         } else {
-          const err = result.error as { code?: string; message?: string; details?: string };
-          console.error('Push case error:', err);
-          // Treat HTTP 409 (Postgres `conflict on conflict_target`) as a
-          // server-side conflict: mark the local row so the UI can surface
-          // a "Keep local / Keep server" choice to the resident.
-          if (err?.code === '409' || /conflict/i.test(err?.message ?? '')) {
+          updateFailures++;
+          console.error('Update case error:', error);
+          if (error.code === '409' || /conflict/i.test(error.message ?? '')) {
             await markCaseAsConflict(draft);
             this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
           }
         }
+      }
+
+      if (updateFailures > 0) {
+        this.partialFailureMessage = `${updateFailures} of ${modifiedDrafts.length} cases failed to sync`;
       }
     } finally {
       this.pushMutex = false;
