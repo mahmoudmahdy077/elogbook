@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useSyncInit } from '../../lib/sync';
 import { useAuthGuard } from '../../lib/auth-guard';
+import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
 import type { UserRole } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 
@@ -58,14 +59,15 @@ export default function TabLayout() {
   const showAIInsights = role === 'resident' || role === 'director' || role === 'admin';
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { backgroundColor: clinicalTokens.colors.neutral.dark, borderTopColor: clinicalTokens.colors.neutral.dark },
-        tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
-        tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
-      }}
-    >
+    <ScreenErrorBoundary screenName="Tabs">
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { backgroundColor: clinicalTokens.colors.neutral.dark, borderTopColor: clinicalTokens.colors.neutral.dark },
+          tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
+          tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -128,5 +130,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </ScreenErrorBoundary>
   );
 }
