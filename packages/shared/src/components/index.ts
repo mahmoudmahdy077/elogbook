@@ -1,14 +1,15 @@
-export { Panel, type PanelProps } from './Panel.web';
-export { Panel as NativePanel, type PanelProps as NativePanelProps } from './Panel.native';
+// Re-exports the web variants of the cross-platform components. The
+// .native.tsx variants are NOT imported here — they are only resolved
+// by Metro via the `react-native` package.json#exports condition
+// (see browser.ts / native.ts in the package root). This keeps the
+// .native.tsx files (which depend on react-native, react-native-svg,
+// @react-native-community/blur) out of the web build graph entirely.
+//
+// Schema, types, and constants are platform-agnostic and live in the
+// root index.ts. Do NOT add RN-only imports here.
 
-export { GlassPanel, type GlassPanelProps } from './GlassPanel.web';
-export { GlassPanel as NativeGlassPanel, type GlassPanelProps as NativeGlassPanelProps } from './GlassPanel.native';
-
-export { StatusBadge, type StatusBadgeProps, type StatusVariant, type BadgeSize } from './StatusBadge.web';
-export { StatusBadge as NativeStatusBadge, type StatusBadgeProps as NativeStatusBadgeProps } from './StatusBadge.native';
-
-export { ProgressRing, type ProgressRingProps } from './ProgressRing.web';
-export { ProgressRing as NativeProgressRing, type ProgressRingProps as NativeProgressRingProps } from './ProgressRing.native';
-
-export { ClinicalText, type ClinicalTextProps, type ClinicalTextSize } from './ClinicalText.web';
-export { ClinicalText as NativeClinicalText, type ClinicalTextProps as NativeClinicalTextProps } from './ClinicalText.native';
+export type { PanelProps } from './Panel.web';
+export type { GlassPanelProps } from './GlassPanel.web';
+export type { StatusBadgeProps, StatusVariant, BadgeSize } from './StatusBadge.web';
+export type { ProgressRingProps } from './ProgressRing.web';
+export type { ClinicalTextProps, ClinicalTextSize } from './ClinicalText.web';

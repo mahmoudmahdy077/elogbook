@@ -1,10 +1,29 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function MfaEnrollPage() {
+  return (
+    <Suspense fallback={<MfaEnrollFallback />}>
+      <MfaEnrollInner />
+    </Suspense>
+  );
+}
+
+function MfaEnrollFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
+      <div className="w-full max-w-md panel p-8">
+        <h1 className="text-2xl font-heading font-bold text-center">Set up MFA</h1>
+        <p className="text-sm text-neutral-light/60 text-center mt-4">Loading…</p>
+      </div>
+    </div>
+  );
+}
+
+function MfaEnrollInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [qr, setQr] = useState<{ uri: string; secret: string; factorId: string } | null>(null);

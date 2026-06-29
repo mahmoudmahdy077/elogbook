@@ -121,40 +121,19 @@ export default async function AuditPage({
     );
   }
 
-  // CSV / JSON export (rate-limited by the row count cap below; logged as audit_export).
+  // CSV / JSON export is handled by a separate route handler at
+  // /[tenant]/audit/export/route.ts. The page no longer returns
+  // a Response — Next 16 requires pages to return ReactNode only.
   if (exportFormat === 'csv' || exportFormat === 'json') {
-    const allLogs = (logs as AuditLogRow[]) ?? [];
-    if (allLogs.length > 5000) {
-      return (
-        <div>
-          <h1 className="text-2xl font-bold mb-6">Audit Trail</h1>
-          <p className="text-danger">Export too large ({allLogs.length} rows). Narrow the date range.</p>
-        </div>
-      );
-    }
-
-    // Audit the export itself (defence-in-depth: a privileged user
-    // exporting data should leave a trace).
-    await supabase.from('audit_logs').insert({
-      tenant_id: auth.profile.tenant_id,
-      action: 'audit_export',
-      resource_type: 'audit',
-      resource_id: null,
-      user_id: auth.user.id,
-      metadata: { format: exportFormat, row_count: allLogs.length, filters: { action_type, resource_type, user_id, date_from, date_to } },
-    });
-
-    const body = exportFormat === 'json'
-      ? JSON.stringify(allLogs, null, 2)
-      : toCsv(allLogs);
-    const contentType = exportFormat === 'json' ? 'application/json' : 'text/csv';
-    const filename = `audit-${tenantSlug}-${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
-    return new Response(body, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
+    redirect(`/${tenantSlug}/audit/export?${new URLSearchParams({
+      ...(date_from ? { date_from } : {}),
+      ...(date_to ? { date_to } : {}),
+      ...(action_type ? { action_type } : {}),
+      ...(resource_type ? { resource_type } : {}),
+      ...(user_id ? { user_id } : {}),
+      ...(view ? { view } : {}),
+      format: exportFormat,
+    }).toString()}`);
   }
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);

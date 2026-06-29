@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss';
-import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
+import { clinicalTokens } from '@elogbook/shared';
 
 const { colors, fonts, spacing, radius, shadows, animation, glass } = clinicalTokens;
 

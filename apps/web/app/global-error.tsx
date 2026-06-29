@@ -1,3 +1,5 @@
+'use client';
+
 import * as Sentry from '@sentry/nextjs';
 import type { NextPage } from 'next';
 import ErrorBoundary from '@/components/ErrorBoundary';

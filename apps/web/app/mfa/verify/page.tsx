@@ -1,12 +1,31 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type Factor = { id: string; type: 'totp' };
 
 export default function MfaVerifyPage() {
+  return (
+    <Suspense fallback={<MfaVerifyFallback />}>
+      <MfaVerifyInner />
+    </Suspense>
+  );
+}
+
+function MfaVerifyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
+      <div className="w-full max-w-md panel p-8">
+        <h1 className="text-2xl font-heading font-bold text-center">Verify with MFA</h1>
+        <p className="text-sm text-neutral-light/60 text-center mt-4">Loading…</p>
+      </div>
+    </div>
+  );
+}
+
+function MfaVerifyInner() {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClient();

@@ -2,19 +2,54 @@
   "name": "@elogbook/shared",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": { "build": "tsc", "typecheck": "tsc --noEmit" },
-  "dependencies": { "zod": "^4.4.3" },
+  "browser": "./src/browser.ts",
+  "react-native": "./src/native.ts",
+  "exports": {
+    ".": {
+      "react-native": "./src/native.ts",
+      "browser": "./src/browser.ts",
+      "default": "./src/index.ts"
+    },
+    "./types/database.server": {
+      "react-native": "./src/types/database.server.ts",
+      "browser": "./src/types/database.server.ts",
+      "default": "./src/types/database.server.ts"
+    },
+    "./types/branded": {
+      "react-native": "./src/types/branded.ts",
+      "browser": "./src/types/branded.ts",
+      "default": "./src/types/branded.ts"
+    },
+    "./test/fixtures": {
+      "react-native": "./src/test/fixtures.ts",
+      "browser": "./src/test/fixtures.ts",
+      "default": "./src/test/fixtures.ts"
+    },
+    "./*": {
+      "react-native": "./src/*",
+      "browser": "./src/*",
+      "default": "./src/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
   "devDependencies": {
     "typescript": "^6.0.3",
     "@types/react": "^19.0.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-native": "^0.76.0",
-    "react-native-svg": "^15.0.0",
-    "@react-native-community/blur": "^4.4.0",
     "framer-motion": "^12.0.0"
+  },
+  "peerDependenciesMeta": {
+    "framer-motion": { "optional": true }
   }
 }
