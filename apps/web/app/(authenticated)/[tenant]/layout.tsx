@@ -43,6 +43,13 @@ export default async function TenantLayout({
     redirect(`/${auth.tenant.slug}/dashboard`);
   }
 
+  // P6.1: enforce TOTP MFA for director / institution_admin / admin.
+  // The /mfa/* pages live at the top level (outside this layout), so
+  // no recursion guard is needed here.
+  if (auth.mfaRequired) {
+    redirect(`/${auth.tenant.slug}/mfa/verify?next=/${auth.tenant.slug}/dashboard`);
+  }
+
   const userRole = auth.profile.role;
   const tenantSlug = auth.tenant.slug;
   const subscriptionStatus = (auth.subscription?.status as 'active' | 'trialing' | 'past_due' | 'unpaid' | 'canceled') ?? 'active';
