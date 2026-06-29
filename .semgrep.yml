@@ -1,0 +1,136 @@
+rules:
+  # ----------------------------------------------------------------------
+  # 1. dangerouslySetInnerHTML in JSX — XSS risk. Must be paired with a
+  #    trusted sanitizer (DOMPurify / server-rendered content from
+  #    service_role). Anything else is a finding.
+  # ----------------------------------------------------------------------
+  - id: jsx-dangerously-set-inner-html
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      dangerouslySetInnerHTML is an XSS risk. Only use it with a
+      trusted sanitizer (e.g. DOMPurify) or content rendered by
+      service_role. Add the sanitizer and a code-review justification
+      comment above the call site.
+    pattern-either:
+      - pattern: |
+          $X.dangerouslySetInnerHTML = ...
+      - pattern: |
+          <$X dangerouslySetInnerHTML={...} />
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+
+  # ----------------------------------------------------------------------
+  # 2. Hard-coded secrets. Catches Stripe live keys, OpenAI keys, JWT
+  #    secrets, AWS access keys, Google API keys, and the project's own
+  #    APP_ENCRYPTION_KEY.
+  # ----------------------------------------------------------------------
+  - id: hardcoded-secret
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Hard-coded secret detected. Move to an environment variable /
+      GitHub Actions secret. Never commit credentials.
+    pattern-either:
+      - pattern-regex: 'sk_live_[A-Za-z0-9]{16,}'
+      - pattern-regex: 'sk_test_[A-Za-z0-9]{16,}'
+      - pattern-regex: 'pk_live_[A-Za-z0-9]{16,}'
+      - pattern-regex: 'sk-[A-Za-z0-9]{20,}'
+      - pattern-regex: 'sk_proj_[A-Za-z0-9]{16,}'
+      - pattern-regex: 'AIza[0-9A-Za-z\-_]{35}'
+      - pattern-regex: 'AKIA[0-9A-Z]{16}'
+      - pattern-regex: 'gh[pousr]_[A-Za-z0-9]{36,}'
+      - pattern-regex: 'eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}'
+      - pattern-regex: 'APP_ENCRYPTION_KEY\s*=\s*"[A-Za-z0-9+/=_\-]{16,}"'
+      - pattern-regex: 'SUPABASE_SERVICE_ROLE_KEY\s*=\s*"eyJ[^"]+"'
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+        - "**/.next/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+
+  # ----------------------------------------------------------------------
+  # 3. `as any` and `: any` casts in the shared package — these hide
+  #    type bugs that could leak into both web and mobile. The shared
+  #    layer must be strictly typed; force a code-review decision per
+  #    cast.
+  # ----------------------------------------------------------------------
+  - id: shared-package-any-cast
+    languages: [typescript]
+    severity: WARNING
+    message: >-
+      `any` cast in the shared package. Shared types propagate to both
+      web and mobile; unsafe casts can hide runtime bugs. Replace with
+      a specific type or `unknown` and narrow.
+    pattern-either:
+      - pattern: ($X as any)
+      - pattern: |
+          let $X: any
+      - pattern: |
+          const $X: any = ...
+      - pattern: |
+          function $F(...): any { ... }
+    paths:
+      include:
+        - "packages/shared/**"
+      exclude:
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+
+  # ----------------------------------------------------------------------
+  # 4. console.log in non-test source. Logs leak PHI / API keys to the
+  #    browser console and to the Edge Function log aggregator. Use a
+  #    structured logger (e.g. `lib/logger.ts`) instead.
+  # ----------------------------------------------------------------------
+  - id: console-log-in-source
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      console.log in source code. Use a structured logger that
+      redacts PHI, not console.log. console.* in Edge Functions is
+      captured by Supabase and may persist.
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.debug(...)
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/e2e/**"
+
+  # ----------------------------------------------------------------------
+  # 5. SQL string concatenation / template literals. Supabase JS
+  #    queries must use parameterized `.eq()` / `.rpc()` / `.from()` —
+  #    never raw SQL. Catches the common foot-gun.
+  # ----------------------------------------------------------------------
+  - id: sql-string-concat
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      SQL string concatenation detected. Use parameterized Supabase
+      queries (`.from(...).select()` with `.eq()` filters) or the
+      `rpc()` helper. Raw concatenated SQL is a SQL-injection risk.
+    pattern-either:
+      - pattern: |
+          `SELECT ... ${$X} ...`
+      - pattern: |
+          `... ${$X} ... WHERE ...`
+      - pattern: |
+          "SELECT ... " + $X + ...
+      - pattern: |
+          supabase.rpc($F, `...${$X}...`)
+    paths:
+      include:
+        - "apps/**"
+        - "packages/**"
+        - "supabase/functions/**"
+      exclude:
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+        - "**/*.test.ts"

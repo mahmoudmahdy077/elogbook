@@ -1,0 +1,62 @@
+name: Semgrep
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, feat/**, fix/**, security/**]
+  schedule:
+    - cron: '23 4 * * 2'  # Tuesdays 04:23 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Semgrep (custom config)
+        # P7.2: run with our curated .semgrep.yml. `--error` makes the
+        # step exit non-zero on any ERROR-severity finding, so a
+        # regression in any of the five rules blocks the build.
+        run: |
+          semgrep \
+            --config .semgrep.yml \
+            --config p/typescript \
+            --config p/owasp-top-ten \
+            --config p/javascript \
+            --error \
+            --sarif --output semgrep.sarif \
+            --metrics off \
+            --exclude '**/node_modules/**' \
+            --exclude '**/.next/**' \
+            --exclude '**/dist/**' \
+            --exclude '**/build/**' \
+            .
+        env:
+          SEMGREP_SEND_METRICS: "off"
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: semgrep.sarif
+          retention-days: 30
