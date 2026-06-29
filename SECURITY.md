@@ -69,6 +69,18 @@ We maintain a security acknowledgments page for researchers who report valid iss
 - **Mobile:** SQLCipher at rest; biometrics gate; screenshot prevention; certificate pinning; SecureStore for tokens.
 - **Web:** CSP with nonce + `strict-dynamic`; `frame-ancestors 'none'`; `SameSite=Lax` cookies; explicit `Secure`/`HttpOnly`.
 
+## Compliance artifacts
+
+| Artifact | Location |
+|----------|----------|
+| Penetration test report template | [`docs/compliance/pen-test-report-template.md`](docs/compliance/pen-test-report-template.md) |
+| Data Protection Impact Assessment (DPIA) template | [`docs/compliance/dpia-template.md`](docs/compliance/dpia-template.md) |
+| HIPAA Security Rule checklist | [`docs/compliance/hipaa-checklist.md`](docs/compliance/hipaa-checklist.md) |
+| GDPR Article-by-article checklist | [`docs/compliance/gdpr-checklist.md`](docs/compliance/gdpr-checklist.md) |
+
+Past pen-test reports are kept under `docs/compliance/pen-test-YYYY-MM-DD-<vendor>.md`
+and treated as confidential (do not push to a public fork).
+
 ## Out-of-band disclosures
 
 For coordinated disclosure (CVE assignment, embargoed releases, multi-vendor issues), email `security@elogbook.example` with the subject line starting with `[COORDINATED]`.
