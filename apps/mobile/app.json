@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.elogbook.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Camera is used to attach photos to case entries",
-        "NSPhotoLibraryUsageDescription": "Photo library access is used to attach images to case entries"
+        "NSPhotoLibraryUsageDescription": "Photo library access is used to attach images to case entries",
+        "NSFaceIDUsageDescription": "FaceID is used to keep your patient data private on this device."
       }
     },
     "android": {
@@ -27,7 +28,9 @@
       },
       "package": "com.elogbook.app",
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
       ]
     },
     "plugins": [

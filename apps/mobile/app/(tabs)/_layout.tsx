@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Text, AppState } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useSyncInit } from '../../lib/sync';
 import { useAuthGuard } from '../../lib/auth-guard';
 import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
+import {
+  authenticateWithBiometrics,
+  isBiometricSessionValid,
+  markBiometricAuthed,
+} from '../../lib/biometric-gate';
 import type { UserRole } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 
@@ -15,6 +20,8 @@ export default function TabLayout() {
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [biometricUnlocked, setBiometricUnlocked] = useState(false);
+  const [biometricError, setBiometricError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -39,6 +46,43 @@ export default function TabLayout() {
     })();
   }, []);
 
+  // Biometric gate: re-authenticate when the app comes back to the foreground
+  // or on first mount. A 5-minute in-memory cache avoids prompting again for
+  // short in-app navigations. The `authed` outcome (or `unavailable` on
+  // devices without biometrics enrolled) is what unblocks the tabs.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setBiometricUnlocked(false);
+      return;
+    }
+    if (isBiometricSessionValid()) {
+      setBiometricUnlocked(true);
+      return;
+    }
+    (async () => {
+      const r = await authenticateWithBiometrics('Unlock E-Logbook');
+      if (r.outcome === 'authed') {
+        markBiometricAuthed();
+        setBiometricUnlocked(true);
+      } else if (r.outcome === 'unavailable') {
+        setBiometricUnlocked(true);
+      } else {
+        setBiometricError(r.reason ?? r.outcome);
+      }
+    })();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background') {
+        // Invalidate the cached biometric session on background so a
+        // subsequent foreground forces a re-prompt.
+        setBiometricUnlocked(false);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   if (authLoading || loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
@@ -52,6 +96,49 @@ export default function TabLayout() {
       router.replace('/login');
     }
     return null;
+  }
+
+  if (!biometricUnlocked) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-6"
+        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+      >
+        <Ionicons name="lock-closed" size={56} color={clinicalTokens.colors.primary.DEFAULT} />
+        <Text
+          className="text-white text-xl mt-4 text-center"
+          style={{ fontFamily: clinicalTokens.fonts.heading }}
+          accessibilityRole="header"
+        >
+          Locked
+        </Text>
+        <Text
+          className="text-slate-400 text-sm mt-2 mb-6 text-center"
+          style={{ fontFamily: clinicalTokens.fonts.body }}
+        >
+          {biometricError ? `Authentication required (${biometricError})` : 'Authenticate to view your cases'}
+        </Text>
+        <TouchableOpacity
+          className="bg-teal-600 rounded-xl py-3 px-6"
+          onPress={async () => {
+            setBiometricError(null);
+            const r = await authenticateWithBiometrics('Unlock E-Logbook');
+            if (r.outcome === 'authed') {
+              markBiometricAuthed();
+              setBiometricUnlocked(true);
+            } else if (r.outcome === 'unavailable') {
+              setBiometricUnlocked(true);
+            } else {
+              setBiometricError(r.reason ?? r.outcome);
+            }
+          }}
+          accessibilityLabel="Retry biometric authentication"
+          accessibilityRole="button"
+        >
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Unlock</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   const showLogCase = role === 'resident';

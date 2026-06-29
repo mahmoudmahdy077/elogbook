@@ -86,6 +86,9 @@ importers:
       expo-image-picker:
         specifier: ~56.0.15
         version: 56.0.15(expo@56.0.8)
+      expo-local-authentication:
+        specifier: ^56.0.4
+        version: 56.0.4(expo@56.0.8)
       expo-notifications:
         specifier: ~56.0.15
         version: 56.0.15(expo@56.0.8)(react-native@0.85.3(@babel/core@7.29.7)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
@@ -3770,6 +3773,11 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  expo-local-authentication@56.0.4:
+    resolution: {integrity: sha512-OpW2vs72E+SwHV+82CUlP873yClDaAesa26d2tjnUGxT2FJBJ3+aTncNFZHKjh812JQ0/fB5LVIY25+g+om5zg==}
+    peerDependencies:
+      expo: '*'
 
   expo-modules-autolinking@56.0.14:
     resolution: {integrity: sha512-9ugtZkheNPYDkW4DZopY1rH2BCbUICaafUEPxRgbLDR5UNRF5K3cdHMIMEt8pxZPq2+eX4wCm+6pbSvdY/DPHg==}
@@ -11066,6 +11074,11 @@ snapshots:
     transitivePeerDependencies:
       - expo
       - supports-color
+
+  expo-local-authentication@56.0.4(expo@56.0.8):
+    dependencies:
+      expo: 56.0.8(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(@expo/metro-runtime@4.0.1(react-native@0.85.3(@babel/core@7.29.7)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.7)))(expo-router@56.2.8)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native-worklets@0.8.3(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(react-native@0.85.3(@babel/core@7.29.7)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.7))(react@19.2.7))(react-native@0.85.3(@babel/core@7.29.7)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
+      invariant: 2.2.4
 
   expo-modules-autolinking@56.0.14(typescript@6.0.3):
     dependencies:
