@@ -74,6 +74,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   const [accreditationFrameworks, setAccreditationFrameworks] = useState<AccreditationFramework[]>([]);
 
   const [isDeidentified, setIsDeidentified] = useState(false);
+  // SECURITY: patientMrn and patientDob are PHI. They MUST NOT be persisted to
+  // localStorage, sessionStorage, or any other client-side storage. They live
+  // only in React state and are written to the server on save/submit.
   const [patientMrn, setPatientMrn] = useState('');
   const [patientDob, setPatientDob] = useState('');
   const [patientAgeYears, setPatientAgeYears] = useState('');
