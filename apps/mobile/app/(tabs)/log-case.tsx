@@ -19,20 +19,10 @@ import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
 import { saveDraftCase } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
+import { generatePatientHash } from '../../lib/patient-hash';
 import { caseEntrySchema } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField } from '@elogbook/shared';
-
-// TODO: Replace with expo-crypto for proper SHA-256 hashing
-function generatePatientHash(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(8, '0');
-}
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   surgery: 'cut',
@@ -248,6 +238,9 @@ export default function LogCaseScreen() {
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
     } catch {
+      const patientHashValue = isDeidentified
+        ? await generatePatientHash(profile.tenant_id, patientAge, '')
+        : undefined;
       await saveDraftCase({
         tenantId: profile.tenant_id,
         residentId: profile.id,
@@ -255,7 +248,7 @@ export default function LogCaseScreen() {
         patientMrn: isDeidentified ? undefined : patientMrn,
         patientDob: isDeidentified ? undefined : patientDob,
         patientAgeYears: isDeidentified ? Number(patientAge) : undefined,
-        patientHash: isDeidentified ? generatePatientHash(`${patientAge}-${Date.now()}-${Math.random()}`) : undefined,
+        patientHash: patientHashValue,
         caseDate: caseDate,
         fieldValues: fieldValues,
         isDeidentified: isDeidentified,
