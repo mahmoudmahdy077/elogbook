@@ -40,6 +40,13 @@ login = 10
 # P6.1: TOTP MFA enabled; required for director+ at app level.
 max_enrolled_factors = 5
 
+[auth.sso]
+# P6.0: enterprise SSO. Each tenant can register a SAML metadata URL or
+# OIDC discovery URL via the `tenant_sso_configs` table (migration 00058).
+# Supabase's built-in SSO is enabled here at the project level; the per-
+# tenant routing lives in the `sso-callback` edge function.
+enabled = true
+
 [api]
 enabled = true
 port = 54321
@@ -66,3 +73,4 @@ import_map = "./import_map.json"
 [functions.ai-insights]
 [functions.payment-webhook]
 [functions.create-checkout]
+[functions.sso-callback]

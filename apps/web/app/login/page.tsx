@@ -84,6 +84,17 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            <a
+              href="/login/sso"
+              className="w-full inline-block text-center py-2.5 rounded-lg border border-border bg-neutral-dark/50 text-neutral-light font-medium text-sm hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
+            >
+              Sign in with SSO
+            </a>
+            <div className="flex items-center gap-3 text-xs text-neutral-light/40">
+              <hr className="flex-1 border-border" />
+              <span>or</span>
+              <hr className="flex-1 border-border" />
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1.5">Email</label>
               <input
