@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
 import ProgressRing from '../../components/ProgressRing';
+import { AccessibleText } from '../../components/AccessibleText';
 import { clinicalTokens } from '@elogbook/shared';
 
 interface Stats {
@@ -160,17 +161,62 @@ export default function DashboardScreen() {
       )}
 
       <View className="flex-row gap-3 mb-6">
-        <View className="flex-1 bg-slate-900 rounded-xl p-4 border border-indigo-500/15">
-          <Text className="text-slate-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.draft}</Text>
-          <Text className="text-slate-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Drafts</Text>
+        <View
+          className="flex-1 bg-slate-900 rounded-xl p-4 border border-indigo-500/15"
+          accessible
+          accessibilityLabel={`${stats.draft} drafts`}
+        >
+          <AccessibleText
+            className="text-slate-400 text-3xl"
+            accessibilityLabel={`${stats.draft} drafts`}
+            style={{ fontFamily: clinicalTokens.fonts.mono }}
+          >
+            {stats.draft}
+          </AccessibleText>
+          <AccessibleText
+            className="text-slate-500 mt-1 text-xs"
+            style={{ fontFamily: clinicalTokens.fonts.body }}
+          >
+            Drafts
+          </AccessibleText>
         </View>
-        <View className="flex-1 bg-amber-500/10 rounded-xl p-4 border border-amber-500/30">
-          <Text className="text-amber-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.pending}</Text>
-          <Text className="text-amber-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Pending</Text>
+        <View
+          className="flex-1 bg-amber-500/10 rounded-xl p-4 border border-amber-500/30"
+          accessible
+          accessibilityLabel={`${stats.pending} pending`}
+        >
+          <AccessibleText
+            className="text-amber-400 text-3xl"
+            accessibilityLabel={`${stats.pending} pending`}
+            style={{ fontFamily: clinicalTokens.fonts.mono }}
+          >
+            {stats.pending}
+          </AccessibleText>
+          <AccessibleText
+            className="text-amber-500 mt-1 text-xs"
+            style={{ fontFamily: clinicalTokens.fonts.body }}
+          >
+            Pending
+          </AccessibleText>
         </View>
-        <View className="flex-1 bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/30">
-          <Text className="text-emerald-400 text-3xl" style={{ fontFamily: clinicalTokens.fonts.mono }}>{stats.approved}</Text>
-          <Text className="text-emerald-500 mt-1 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>Approved</Text>
+        <View
+          className="flex-1 bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/30"
+          accessible
+          accessibilityLabel={`${stats.approved} approved`}
+        >
+          <AccessibleText
+            className="text-emerald-400 text-3xl"
+            accessibilityLabel={`${stats.approved} approved`}
+            style={{ fontFamily: clinicalTokens.fonts.mono }}
+          >
+            {stats.approved}
+          </AccessibleText>
+          <AccessibleText
+            className="text-emerald-500 mt-1 text-xs"
+            style={{ fontFamily: clinicalTokens.fonts.body }}
+          >
+            Approved
+          </AccessibleText>
         </View>
       </View>
 
