@@ -49,7 +49,6 @@
           "photosPermission": "Photo library access is used to attach images to case entries"
         }
       ],
-      "expo-notifications",
       "expo-haptics",
       "expo-font",
       [

@@ -1,3 +1,20 @@
+// P5.17 decision (documented): we removed the `expo-notifications` plugin
+// from app.json rather than wiring real push notifications. Rationale:
+//   1. Real push requires (a) the server to maintain a push_tokens table
+//      keyed on user_id + device_id, (b) an `notify_resident` RPC that
+//      the approval flow invokes, and (c) a server-side APNS/FCM credential
+//      configured per-tenant. The full plumbing is too large for the
+//      mobile-app phase and is better owned by the Supabase layer in
+//      Phase 2 / Phase 6.
+//   2. The polling loop here still surfaces rejections within 60s, which
+//      is acceptable for the supervisor-review workflow. When push lands,
+//      the next migration (P5.17+) will add `expo-notifications` back,
+//      add a `push_tokens` migration, and replace the polling interval
+//      with the platform push handler.
+//
+// Until then, this file stays as the polling implementation that the
+// MyCases / Approvals screens rely on.
+
 import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
