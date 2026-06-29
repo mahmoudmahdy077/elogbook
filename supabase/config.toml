@@ -62,6 +62,9 @@ enabled = false
 
 [storage]
 enabled = true
+# P6.9: 20MB per-file limit for case attachments. Per-tenant quota
+# (in MB) is stored on subscription_plans.storage_quota_mb and
+# enforced by the case-attachments bucket policy in migration 00061.
 file_size_limit = "20MB"
 
 [functions]
