@@ -15,6 +15,7 @@ import {
   getLastSyncTimestamp,
   setLastSyncTimestamp,
 } from './db/storage';
+import { pickMaxServerUpdatedAt } from './sync-incremental';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
@@ -117,8 +118,9 @@ class SyncService {
       .eq('tenant_id', tenantId);
 
     if (lastSync) {
-      // Use gte (not gt) to avoid missing records updated at the exact same timestamp
-      query = query.gte('updated_at', new Date(lastSync).toISOString());
+      // Use gt (not gte) to avoid re-pulling the boundary row on the next sync.
+      // We track the max(updated_at) we just saw and only fetch strictly newer rows.
+      query = query.gt('updated_at', new Date(lastSync).toISOString());
     }
 
     const { data, error } = await query;
@@ -131,9 +133,13 @@ class SyncService {
       await batchUpsertCaseEntries(data as Record<string, unknown>[]);
     }
 
-    // Only update timestamp on complete success (errors are caught by caller)
-    const now = Date.now();
-    await setLastSyncTimestamp(now);
+    // Advance the cursor to the max server-side updated_at we just observed
+    // (not Date.now(), which can be ahead of the server clock and miss rows).
+    // If nothing was returned, leave the cursor untouched so we don't lose progress.
+    const maxUpdated = pickMaxServerUpdatedAt((data ?? []) as Record<string, unknown>[]);
+    if (maxUpdated > 0) {
+      await setLastSyncTimestamp(maxUpdated);
+    }
   }
 
   async pullTemplates(tenantId: string) {
