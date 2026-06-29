@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useSyncInit } from '../../lib/sync';
+import { useAuthGuard } from '../../lib/auth-guard';
 import type { UserRole } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 
 export default function TabLayout() {
   useSyncInit();
+  const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,12 +38,19 @@ export default function TabLayout() {
     })();
   }, []);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
+  }
+
+  if (!isAuthenticated) {
+    if (typeof window !== 'undefined' || router.canGoBack()) {
+      router.replace('/login');
+    }
+    return null;
   }
 
   const showLogCase = role === 'resident';
