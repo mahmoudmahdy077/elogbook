@@ -16,6 +16,7 @@ import {
   setLastSyncTimestamp,
 } from './db/storage';
 import { pickMaxServerUpdatedAt } from './sync-incremental';
+import { computeRetryDelayMs, MAX_RETRY_DELAY_MS, RETRY_DELAYS_MS } from './sync-retry';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
@@ -43,7 +44,7 @@ class SyncService {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private netInfoUnsubscribe: (() => void) | null = null;
   private appStateSub: { remove: () => void } | null = null;
-  private retryDelays = [30000, 60000, 120000, 300000];
+  private retryDelays: readonly number[] = RETRY_DELAYS_MS;
   private retryIndex = 0;
   private retryCount = 0;
   private readonly MAX_RETRIES = 10;
@@ -67,8 +68,12 @@ class SyncService {
   private initNetworkListener() {
     this.netInfoUnsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected === true && this.status === 'offline') {
-        this.initSync(this.tenantId ?? undefined);
+        // Reconnect: reset retry bookkeeping so we start fresh instead of
+        // inheriting an exhausted backoff from the offline window.
+        this.retryCount = 0;
+        this.retryIndex = 0;
         this.status = 'idle';
+        this.initSync(this.tenantId ?? undefined);
       } else if (state.isConnected !== true) {
         this.status = 'offline';
         this.emitStatus();
@@ -305,7 +310,7 @@ class SyncService {
       console.error('Sync error:', err);
       this.setStatus('error');
       this.retryCount++;
-      const delay = this.retryDelays[Math.min(this.retryIndex, this.retryDelays.length - 1)];
+      const delay = computeRetryDelayMs(this.retryIndex);
       this.retryIndex++;
       setTimeout(() => this.initSync(tid), delay);
     } finally {
