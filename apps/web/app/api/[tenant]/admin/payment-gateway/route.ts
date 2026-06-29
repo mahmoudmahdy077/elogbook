@@ -2,22 +2,25 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
-  const { tenant: tenantSlug } = await params;
+  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
+  if (csrfError) return csrfError;
 
-  const { allowed, retryAfter } = checkRateLimit(`payment-gateway:${tenantSlug}`);
-  if (!allowed) return rateLimitResponse(retryAfter);
+  const { tenant: tenantSlug } = await params;
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const { allowed, retryAfter } = checkRateLimit(`payment-gateway:${user.id}`);
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   const { data: profile } = await supabase
     .from('profiles')
