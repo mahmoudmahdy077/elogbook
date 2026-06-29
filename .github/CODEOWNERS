@@ -1,0 +1,52 @@
+# CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# When a PR touches a matching path, the listed owners are auto-assigned
+# for review. Update this file when responsibilities change.
+
+# Default: require review from a lead maintainer
+*       @mahmo
+
+# Web app
+/apps/web/                          @mahmo
+/apps/web/app/                      @mahmo
+/apps/web/components/               @mahmo
+/apps/web/lib/                      @mahmo
+/apps/web/middleware.ts             @mahmo
+/apps/web/next.config.js            @mahmo
+
+# Mobile app
+/apps/mobile/                       @mahmo
+/apps/mobile/app/                   @mahmo
+/apps/mobile/components/            @mahmo
+/apps/mobile/lib/                   @mahmo
+/apps/mobile/app.json               @mahmo
+
+# Backend
+/supabase/                          @mahmo
+/supabase/migrations/               @mahmo
+/supabase/functions/                @mahmo
+/supabase/config.toml               @mahmo
+/supabase/seed.sql                  @mahmo
+
+# Shared
+/packages/shared/                   @mahmo
+/packages/shared/src/types/         @mahmo
+/packages/shared/src/schemas/       @mahmo
+/packages/shared/src/constants/     @mahmo
+/packages/shared/src/components/    @mahmo
+
+# CI / CD / infra
+/.github/                           @mahmo
+/.github/workflows/                 @mahmo
+/Dockerfile                         @mahmo
+/docker-compose.yml                 @mahmo
+/turbo.json                         @mahmo
+/package.json                       @mahmo
+/pnpm-workspace.yaml                @mahmo
+
+# Documentation
+/README.md                          @mahmo
+/SECURITY.md                        @mahmo
+/ENTERPRISE_TRANSFORMATION_PLAN.md   @mahmo
+/docs/                              @mahmo
+/specs/                             @mahmo

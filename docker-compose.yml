@@ -1,0 +1,37 @@
+# E-Logbook Enterprise — local dev stack
+#
+# Usage:
+#   docker compose up -d
+#   docker compose ps          # wait for "healthy"
+#   curl http://localhost:3000/api/health
+#
+# The web service is built from apps/web/Dockerfile. For Supabase
+# (Postgres, Auth, Edge Functions) use the Supabase CLI in a separate
+# shell: `supabase start`. The two stacks are intentionally not coupled
+# here — Supabase is most easily run via its own CLI which handles the
+# ~12 docker images it needs.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: elogbook-web:local
+    container_name: elogbook-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
