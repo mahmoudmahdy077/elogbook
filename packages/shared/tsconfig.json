@@ -12,8 +12,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["react", "react-native"]
+    "types": ["react"]
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/**/*.native.tsx", "src/components/native.ts", "src/native.ts"]
 }
