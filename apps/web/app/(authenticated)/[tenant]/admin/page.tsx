@@ -79,7 +79,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     : null;
 
   const totalCases = caseCounts?.length ?? 0;
-  const pendingCases = (caseCounts ?? []).filter((c) => c.status === 'pending').length;
+  const pendingCases = (caseCounts ?? []).filter((c: { status: string }) => c.status === 'pending').length;
 
   return (
     <div>

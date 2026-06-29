@@ -96,7 +96,7 @@ async function handleSubmit(
 
   if (supervisors && supervisors.length > 0) {
     const { error: approvalError } = await supabase.from('approval_requests').insert(
-      supervisors.map((s) => ({
+      supervisors.map((s: { id: string }) => ({
         tenant_id: entry.tenant_id,
         entry_id: id,
         supervisor_id: s.id,

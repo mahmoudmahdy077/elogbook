@@ -99,7 +99,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
             <p className="text-sm text-default-400">No AI report purchases yet.</p>
           ) : (
             <div className="space-y-2">
-              {purchases.map((p) => (
+              {purchases.map((p: { id: string; purchase_type: string; amount: number; created_at: string; status: string }) => (
                 <div key={p.id} className="flex items-center justify-between border-b border-divider pb-2">
                   <div>
                     <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>

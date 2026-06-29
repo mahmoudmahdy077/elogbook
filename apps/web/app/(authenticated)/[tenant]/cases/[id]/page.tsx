@@ -112,7 +112,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           </Card.Header>
           <Card.Content>
             <div className="space-y-3">
-              {approvals.map((a) => (
+              {approvals.map((a: { id: string; supervisor_id: string; status: string; comment: string | null; resolved_at: string | null; profiles?: { full_name?: string } }) => (
                 <div
                   key={a.id}
                   className="flex justify-between items-center border-b border-divider pb-2"
