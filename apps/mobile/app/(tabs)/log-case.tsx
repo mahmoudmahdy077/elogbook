@@ -26,6 +26,7 @@ import { generatePatientHash } from '../../lib/patient-hash';
 import { caseEntrySchema } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField } from '@elogbook/shared';
+import { DateField } from '../../components/DateField';
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   surgery: 'cut',
@@ -610,36 +611,25 @@ export default function LogCaseScreen() {
               />
 
               <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Date of Birth</Text>
-              {/* TODO(T5.11): Replace with native DateTimePicker */}
-              <TextInput
-                className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#666"
-                returnKeyType="next"
-                blurOnSubmit={false}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                value={patientDob}
-                onChangeText={setPatientDob}
+              <DateField
+                label="Date of Birth"
                 accessibilityLabel="Patient date of birth"
+                value={patientDob}
+                onChange={setPatientDob}
+                maximumDate={new Date()}
               />
             </>
           )}
 
-          {/* TODO(T5.11): Replace with native DateTimePicker */}
-          <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Date</Text>
-          <TextInput
-            className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#666"
-            returnKeyType="next"
-            blurOnSubmit={false}
-            keyboardType="numbers-and-punctuation"
-            maxLength={10}
-            value={caseDate}
-            onChangeText={setCaseDate}
-            accessibilityLabel="Case date"
-          />
+          <View className="mt-4">
+            <DateField
+              label="Case Date"
+              accessibilityLabel="Case date"
+              value={caseDate}
+              onChange={setCaseDate}
+              maximumDate={new Date()}
+            />
+          </View>
         </View>
 
         <View className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-6">

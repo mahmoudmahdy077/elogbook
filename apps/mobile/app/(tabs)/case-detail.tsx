@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
@@ -44,6 +46,8 @@ export default function CaseDetailScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
 
   const haptics = useHaptics();
 
@@ -148,7 +152,7 @@ export default function CaseDetailScreen() {
   }, [loadCase]);
 
   const handleApprovalAction = useCallback(
-    async (action: 'approve' | 'reject') => {
+    async (action: 'approve' | 'reject', comment?: string) => {
       if (!caseId || !caseDetail) return;
       setProcessing(true);
       haptics.approvalAction();
@@ -158,7 +162,7 @@ export default function CaseDetailScreen() {
           action === 'approve' ? 'approve_case' : 'reject_case',
           {
             p_entry_id: caseId,
-            ...(action === 'reject' ? { p_comment: '' } : {}),
+            ...(action === 'reject' ? { p_comment: comment ?? '' } : {}),
           }
         );
 
@@ -178,18 +182,33 @@ export default function CaseDetailScreen() {
 
   const confirmAction = useCallback(
     (action: 'approve' | 'reject') => {
-      const title = action === 'approve' ? 'Approve Case?' : 'Reject Case?';
-      Alert.alert(title, `This case will be ${action}ed.`, [
+      if (action === 'reject') {
+        setRejectComment('');
+        setRejectModalOpen(true);
+        return;
+      }
+      const title = 'Approve Case?';
+      Alert.alert(title, 'This case will be approved.', [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: action === 'approve' ? 'Approve' : 'Reject',
-          style: action === 'approve' ? 'default' : 'destructive',
+          text: 'Approve',
+          style: 'default',
           onPress: () => handleApprovalAction(action),
         },
       ]);
     },
     [handleApprovalAction]
   );
+
+  const submitReject = useCallback(() => {
+    const trimmed = rejectComment.trim();
+    if (!trimmed) {
+      Alert.alert('Reason required', 'Please provide a reason for rejecting this case.');
+      return;
+    }
+    setRejectModalOpen(false);
+    handleApprovalAction('reject', trimmed);
+  }, [rejectComment, handleApprovalAction]);
 
   if (loading) {
     return (
@@ -346,6 +365,50 @@ export default function CaseDetailScreen() {
           <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
         </TouchableOpacity>
       )}
+
+      <Modal transparent animationType="fade" visible={rejectModalOpen}>
+        <View className="flex-1 items-center justify-center bg-black/60 px-6">
+          <View
+            className="w-full rounded-2xl p-6 border border-indigo-500/15"
+            style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}
+          >
+            <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              Reject Case
+            </Text>
+            <Text className="text-slate-400 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
+              Please provide a reason. The resident will see this message.
+            </Text>
+            <TextInput
+              className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]"
+              multiline
+              textAlignVertical="top"
+              placeholder="Reason for rejection"
+              placeholderTextColor="#666"
+              value={rejectComment}
+              onChangeText={setRejectComment}
+              accessibilityLabel="Rejection reason"
+            />
+            <View className="flex-row gap-3 mt-4">
+              <TouchableOpacity
+                className="flex-1 rounded-lg py-3 items-center bg-slate-800"
+                onPress={() => { setRejectModalOpen(false); setRejectComment(''); }}
+                accessibilityLabel="Cancel rejection"
+                accessibilityRole="button"
+              >
+                <Text className="text-slate-300" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 rounded-lg py-3 items-center bg-red-600"
+                onPress={submitReject}
+                accessibilityLabel="Confirm rejection"
+                accessibilityRole="button"
+              >
+                <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

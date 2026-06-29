@@ -19,6 +19,7 @@
     "@nozbe/with-observables": "^1.6.0",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/blur": "^4.4.1",
+    "@react-native-community/datetimepicker": "^9.1.0",
     "@react-native-community/netinfo": "^11.5.2",
     "@supabase/supabase-js": "^2.43.0",
     "date-fns": "^4.4.0",

@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
@@ -95,6 +97,8 @@ export default function ApprovalsScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [rejectTarget, setRejectTarget] = useState<{ approvalId: string; entryId: string } | null>(null);
+  const [rejectComment, setRejectComment] = useState('');
 
   const haptics = useHaptics();
 
@@ -168,7 +172,7 @@ export default function ApprovalsScreen() {
   }, [loadProfileAndApprovals]);
 
   const handleAction = useCallback(
-    async (approvalId: string, entryId: string, action: 'approve' | 'reject') => {
+    async (approvalId: string, entryId: string, action: 'approve' | 'reject', comment?: string) => {
       setProcessingIds((prev) => new Set(prev).add(approvalId));
       haptics.approvalAction();
 
@@ -177,7 +181,7 @@ export default function ApprovalsScreen() {
           action === 'approve' ? 'approve_case' : 'reject_case',
           {
             p_entry_id: entryId,
-            ...(action === 'reject' ? { p_comment: '' } : {}),
+            ...(action === 'reject' ? { p_comment: comment ?? '' } : {}),
           }
         );
 
@@ -201,22 +205,37 @@ export default function ApprovalsScreen() {
 
   const confirmAction = useCallback(
     (approvalId: string, entryId: string, action: 'approve' | 'reject') => {
-      const title = action === 'approve' ? 'Approve Case?' : 'Reject Case?';
-      const message =
-        action === 'approve'
-          ? 'This case will be marked as approved.'
-          : 'This case will be rejected and returned to the resident.';
+      if (action === 'reject') {
+        setRejectTarget({ approvalId, entryId });
+        setRejectComment('');
+        return;
+      }
+      const title = 'Approve Case?';
+      const message = 'This case will be marked as approved.';
       Alert.alert(title, message, [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: action === 'approve' ? 'Approve' : 'Reject',
-          style: action === 'approve' ? 'default' : 'destructive',
+          text: 'Approve',
+          style: 'default',
           onPress: () => handleAction(approvalId, entryId, action),
         },
       ]);
     },
     [handleAction]
   );
+
+  const submitReject = useCallback(() => {
+    if (!rejectTarget) return;
+    const trimmed = rejectComment.trim();
+    if (!trimmed) {
+      Alert.alert('Reason required', 'Please provide a reason for rejecting this case.');
+      return;
+    }
+    const { approvalId, entryId } = rejectTarget;
+    setRejectTarget(null);
+    setRejectComment('');
+    handleAction(approvalId, entryId, 'reject', trimmed);
+  }, [rejectTarget, rejectComment, handleAction]);
 
   if (loading) {
     return (
@@ -274,6 +293,50 @@ export default function ApprovalsScreen() {
           />
         ), [processingIds, isOffline, confirmAction])}
       />
+
+      <Modal transparent animationType="fade" visible={rejectTarget !== null}>
+        <View className="flex-1 items-center justify-center bg-black/60 px-6">
+          <View
+            className="w-full rounded-2xl p-6 border border-indigo-500/15"
+            style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}
+          >
+            <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              Reject Case
+            </Text>
+            <Text className="text-slate-400 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
+              Please provide a reason. The resident will see this message.
+            </Text>
+            <TextInput
+              className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]"
+              multiline
+              textAlignVertical="top"
+              placeholder="Reason for rejection"
+              placeholderTextColor="#666"
+              value={rejectComment}
+              onChangeText={setRejectComment}
+              accessibilityLabel="Rejection reason"
+            />
+            <View className="flex-row gap-3 mt-4">
+              <TouchableOpacity
+                className="flex-1 rounded-lg py-3 items-center bg-slate-800"
+                onPress={() => { setRejectTarget(null); setRejectComment(''); }}
+                accessibilityLabel="Cancel rejection"
+                accessibilityRole="button"
+              >
+                <Text className="text-slate-300" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 rounded-lg py-3 items-center bg-red-600"
+                onPress={submitReject}
+                accessibilityLabel="Confirm rejection"
+                accessibilityRole="button"
+              >
+                <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
