@@ -1,23 +1,16 @@
 import { describe, it, expect } from 'vitest';
 
-// Re-export the helper to make the storage module's readJsonField testable
-// in isolation. We re-implement the same logic here intentionally; the goal
-// of this test is to lock in the contract — strings get parsed, objects pass
-// through, null/undefined fall back. If the helper ever drifts, the test
-// fails and we revisit the storage module.
-type ReadJsonField = <T>(value: unknown, fallback: T) => T;
-
-const readJsonField: ReadJsonField = (value, fallback) => {
+function readJsonField<T>(value: unknown, fallback: T): T {
   if (value == null) return fallback;
   if (typeof value === 'string') {
     try {
-      return JSON.parse(value) as ReturnType<ReadJsonField>;
+      return JSON.parse(value) as T;
     } catch {
       return fallback;
     }
   }
-  return value as ReturnType<ReadJsonField>;
-};
+  return value as T;
+}
 
 describe('readJsonField', () => {
   it('parses a JSON string into an object', () => {
@@ -25,7 +18,7 @@ describe('readJsonField', () => {
   });
 
   it('parses a JSON string into an array', () => {
-    expect(readJsonField('[1,2,3]', [] as number[])).toEqual([1, 2, 3]);
+    expect(readJsonField<number[]>('[1,2,3]', [])).toEqual([1, 2, 3]);
   });
 
   it('returns the fallback when the value is null or undefined', () => {
@@ -44,7 +37,7 @@ describe('readJsonField', () => {
 
   it('passes through an array value', () => {
     const arr = [1, 2];
-    expect(readJsonField(arr, [] as number[])).toBe(arr);
+    expect(readJsonField<number[]>(arr, [])).toBe(arr);
   });
 
   it('parses an empty-string back to fallback', () => {
