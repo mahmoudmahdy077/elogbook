@@ -1,12 +1,13 @@
 import '../global.css';
 
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ToastAndroid, Platform, Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
+import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -52,6 +53,28 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
+  // Block screenshots / screen recording while PHI is on-screen. The hook
+  // asks the OS to suppress the framebuffer so any attempted screenshot
+  // produces a blank image (iOS) or is blocked entirely (Android with
+  // FLAG_SECURE).
+  usePreventScreenCapture();
+
+  useEffect(() => {
+    const off = onScreenshotAttempt(() => {
+      const msg = 'Screenshots are disabled to protect patient data.';
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(msg, ToastAndroid.LONG);
+      } else {
+        Alert.alert('Screenshots blocked', msg);
+      }
+    });
+    return () => off();
+  }, []);
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Outfit': require('../assets/fonts/Outfit-Regular.ttf'),
@@ -68,10 +91,12 @@ export default function RootLayout() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="login" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <ScreenshotAwareLayout>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="login" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </ScreenshotAwareLayout>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
