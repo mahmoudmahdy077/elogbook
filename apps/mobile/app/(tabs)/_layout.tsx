@@ -3,10 +3,12 @@ import { Tabs } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { useSyncInit } from '../../lib/sync';
 import type { UserRole } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 
 export default function TabLayout() {
+  useSyncInit();
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 

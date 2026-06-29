@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Q } from '@nozbe/watermelondb';
 import { getDatabase } from './db/database';
 import { AppState, AppStateStatus } from 'react-native';
@@ -19,6 +20,21 @@ type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
 type ConflictCallback = (residentId: string, entryId: string) => void;
 
+type SupabaseLike = {
+  auth: {
+    onAuthStateChange: (cb: (event: string, session: { user?: { id: string } } | null) => void) => {
+      data: { subscription: { unsubscribe: () => void } };
+    };
+  };
+  from: (table: string) => {
+    select: (cols: string) => {
+      eq: (col: string, val: string) => {
+        single: () => Promise<{ data: { tenant_id: string } | null; error: unknown }>;
+      };
+    };
+  };
+};
+
 class SyncService {
   private status: SyncStatus = 'idle';
   private listeners: Set<(status: SyncStatus) => void> = new Set();
@@ -39,8 +55,12 @@ class SyncService {
     this.initAppStateListener();
   }
 
-  setTenantId(id: string) {
-    this.tenantId = id;
+  setTenantId(id: string | null | undefined) {
+    this.tenantId = id ?? null;
+  }
+
+  getTenantId(): string | null {
+    return this.tenantId;
   }
 
   private initNetworkListener() {
@@ -328,3 +348,39 @@ class SyncService {
 }
 
 export const syncService = new SyncService();
+
+export function attachSyncAuthListener(
+  sb: SupabaseLike = supabase as unknown as SupabaseLike,
+  svc: SyncService = syncService,
+): () => void {
+  const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT' || !session?.user) {
+      if (event === 'SIGNED_OUT') {
+        svc.setTenantId(null);
+        svc.cleanup();
+      }
+      return;
+    }
+    try {
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', session.user.id)
+        .single();
+      const tenantId = profile?.tenant_id;
+      if (tenantId) {
+        svc.setTenantId(tenantId);
+        svc.startPeriodicSync();
+      }
+    } catch (err) {
+      console.error('attachSyncAuthListener: failed to resolve tenant', err);
+    }
+  });
+  return subscription?.unsubscribe ?? (() => undefined);
+}
+
+export function useSyncInit(): void {
+  useEffect(() => {
+    return attachSyncAuthListener();
+  }, []);
+}
