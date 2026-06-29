@@ -68,3 +68,37 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
+
+  audit:
+    name: pnpm audit + license check
+    runs-on: ubuntu-latest
+    continue-on-error: true  # TODO: flip to false in P7.1 once stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=high
+
+  e2e:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: cd apps/web && PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_LOCAL }}
+      # Note: e2e requires a running dev server. In CI this is wired via
+      # the webServer block in playwright.config.ts which calls pnpm dev.

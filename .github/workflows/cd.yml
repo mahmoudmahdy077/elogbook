@@ -1,0 +1,103 @@
+name: CD
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ----------------------------------------------------------------------
+  # Deploy web to Vercel
+  # ----------------------------------------------------------------------
+  web:
+    name: Deploy Web (Vercel)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:web
+      - id: deploy
+        uses: vercel/actions/cli@latest
+        with:
+          args: 'deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}'
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ----------------------------------------------------------------------
+  # Push database migrations
+  # ----------------------------------------------------------------------
+  db:
+    name: Push DB migrations
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # ----------------------------------------------------------------------
+  # Deploy edge functions
+  # ----------------------------------------------------------------------
+  functions:
+    name: Deploy Edge Functions
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: production
+    needs: [db]
+    strategy:
+      matrix:
+        function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      # TODO(P6.5): add SCIM, webhooks, dispatch-webhook functions
+
+  # ----------------------------------------------------------------------
+  # Build mobile (EAS Build)
+  # ----------------------------------------------------------------------
+  mobile:
+    name: Build Mobile (EAS)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: pnpm --filter @elogbook/mobile expo prebuild --clean
+      - run: eas build --platform all --non-interactive --auto-submit
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
