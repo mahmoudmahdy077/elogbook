@@ -96,6 +96,11 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
 });
 
 export function canAccessTenant(auth: AuthResult, requestedTenantSlug: string): boolean {
-  if (auth.profile.role === 'admin') return true;
+  // P4.8: global 'admin' no longer has automatic cross-tenant access.
+  // Cross-tenant access now requires an explicit grant via the
+  // admin_tenants join table (see migration 00064_admin_tenants.sql)
+  // and an audit-logged re-authentication. For now, the only
+  // tenant a profile can access is the one in their JWT.
+  // (TODO P6.x: add the join table + admin tenant-switcher UI.)
   return auth.tenant.slug === requestedTenantSlug;
 }

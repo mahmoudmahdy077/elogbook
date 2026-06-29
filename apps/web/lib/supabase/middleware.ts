@@ -77,8 +77,12 @@ export async function updateSession(request: NextRequest) {
     const urlTenantSlug = segments[0];
 
     if (urlTenantSlug) {
+      // P4.8: removed the global-admin bypass. Every authenticated user
+      // is now scoped to their JWT tenant. Cross-tenant access requires
+      // an explicit grant (admin_tenants join, added in a follow-up
+      // migration) + audit-logged re-auth.
       const info = await getUserTenantSlug(supabase, user.id);
-      if (info && info.role !== 'admin' && info.slug !== urlTenantSlug) {
+      if (info && info.slug !== urlTenantSlug) {
         return NextResponse.redirect(
           new URL(`/${info.slug}/dashboard`, request.url),
         );
