@@ -8,8 +8,8 @@ export class CaseTemplate extends Model {
   @text('tenant_id') tenantId!: string;
   @text('specialty') specialty!: string;
   @text('name') name!: string;
-  @json('fields', (raw) => raw) fields!: TemplateField[];
-  @json('required_fields', (raw) => raw) requiredFields!: string[];
+  @json('fields', (raw: string) => (raw ? JSON.parse(raw) : [])) fields!: TemplateField[];
+  @json('required_fields', (raw: string) => (raw ? JSON.parse(raw) : [])) requiredFields!: string[];
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 }

@@ -230,8 +230,8 @@ class SyncService {
           patient_age_years: draft.patientAgeYears,
           patient_hash: draft.patientHash,
           case_date: draft.caseDate,
-          field_values: (draft._raw as Record<string, unknown>).field_values,
-          accreditation_mappings: (draft._raw as Record<string, unknown>).accreditation_mappings,
+          field_values: draft.fieldValues,
+          accreditation_mappings: draft.accreditationMappings,
           is_deidentified: draft.isDeidentified,
           status: draft.status,
         }));
@@ -289,8 +289,8 @@ class SyncService {
           patient_age_years: draft.patientAgeYears,
           patient_hash: draft.patientHash,
           case_date: draft.caseDate,
-          field_values: (draft._raw as Record<string, unknown>).field_values,
-          accreditation_mappings: (draft._raw as Record<string, unknown>).accreditation_mappings,
+          field_values: draft.fieldValues,
+          accreditation_mappings: draft.accreditationMappings,
           is_deidentified: draft.isDeidentified,
           status: draft.status,
         };

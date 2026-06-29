@@ -12,8 +12,8 @@ export class CaseEntry extends Model {
   @field('patient_age_years') patientAgeYears!: number | null;
   @text('patient_hash') patientHash!: string | null;
   @text('case_date') caseDate!: string;
-  @json('field_values', (raw) => raw) fieldValues!: Record<string, unknown>;
-  @json('accreditation_mappings', (raw) => raw) accreditationMappings!: unknown[];
+  @json('field_values', (raw: string) => (raw ? JSON.parse(raw) : {})) fieldValues!: Record<string, unknown>;
+  @json('accreditation_mappings', (raw: string) => (raw ? JSON.parse(raw) : [])) accreditationMappings!: unknown[];
   @field('is_deidentified') isDeidentified!: boolean;
   @text('status') status!: string;
   @text('local_sync_status') localSyncStatus!: string;

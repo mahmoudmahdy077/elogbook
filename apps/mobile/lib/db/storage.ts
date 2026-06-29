@@ -6,19 +6,28 @@ import { CaseTemplate } from './models/CaseTemplate';
 import { ProgramGoal } from './models/ProgramGoal';
 import type { CaseStatus } from '@elogbook/shared';
 
-type RawRecord = Record<string, unknown>;
-
 // Safely parse dates — Supabase returns ISO string timestamps,
 // but old code used Number() which produces Invalid Date for strings.
 function parseDate(value: unknown): Date {
   if (typeof value === 'number') return new Date(value);
   if (typeof value === 'string') {
-    // If it's a numeric string (milliseconds), parse as number
     const num = Number(value);
     if (!isNaN(num)) return new Date(num);
     return new Date(value);
   }
   return new Date();
+}
+
+function readJsonField<T>(value: unknown, fallback: T): T {
+  if (value == null) return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  return value as T;
 }
 
 type DraftCaseData = {
@@ -40,7 +49,6 @@ export async function saveDraftCase(data: DraftCaseData): Promise<CaseEntry> {
   const db = getDatabase();
   const draft = await db.write(async () => {
     return db.get<CaseEntry>('case_entries').create((entry) => {
-      const raw = entry._raw as RawRecord;
       entry.tenantId = data.tenantId;
       entry.residentId = data.residentId;
       entry.templateId = data.templateId;
@@ -49,8 +57,8 @@ export async function saveDraftCase(data: DraftCaseData): Promise<CaseEntry> {
       entry.patientAgeYears = data.patientAgeYears ?? null;
       entry.patientHash = data.patientHash ?? null;
       entry.caseDate = data.caseDate;
-      raw.field_values = JSON.stringify(data.fieldValues ?? {});
-      raw.accreditation_mappings = JSON.stringify(data.accreditationMappings ?? []);
+      entry.fieldValues = data.fieldValues ?? {};
+      entry.accreditationMappings = data.accreditationMappings ?? [];
       entry.isDeidentified = data.isDeidentified;
       entry.status = data.status ?? 'draft';
       entry.localSyncStatus = 'draft';
@@ -159,8 +167,6 @@ export async function upsertCaseEntry(serverData: Record<string, unknown>): Prom
   const match = existing.length > 0 ? existing[0] : null;
 
   // CRITICAL: Do NOT overwrite local unsynced changes with server data
-  // If the local record has pending changes (draft/modified), preserve them.
-  // The push phase will handle uploading these to the server.
   if (match) {
     const localStatus = match.localSyncStatus;
     if (localStatus === 'draft' || localStatus === 'modified' || localStatus === 'created') {
@@ -171,7 +177,6 @@ export async function upsertCaseEntry(serverData: Record<string, unknown>): Prom
   return db.write(async () => {
     if (match) {
       return match.update((entry) => {
-        const raw = entry._raw as RawRecord;
         entry.tenantId = String(serverData.tenant_id ?? entry.tenantId);
         entry.residentId = String(serverData.resident_id ?? entry.residentId);
         entry.templateId = String(serverData.template_id ?? entry.templateId);
@@ -180,8 +185,8 @@ export async function upsertCaseEntry(serverData: Record<string, unknown>): Prom
         entry.patientAgeYears = serverData.patient_age_years != null ? Number(serverData.patient_age_years) : entry.patientAgeYears;
         entry.patientHash = serverData.patient_hash != null ? String(serverData.patient_hash) : entry.patientHash;
         entry.caseDate = String(serverData.case_date ?? entry.caseDate);
-        raw.field_values = typeof serverData.field_values === 'string' ? serverData.field_values : JSON.stringify(serverData.field_values ?? {});
-        raw.accreditation_mappings = typeof serverData.accreditation_mappings === 'string' ? serverData.accreditation_mappings : JSON.stringify(serverData.accreditation_mappings ?? []);
+        entry.fieldValues = readJsonField(serverData.field_values, entry.fieldValues);
+        entry.accreditationMappings = readJsonField(serverData.accreditation_mappings, entry.accreditationMappings);
         entry.isDeidentified = Boolean(serverData.is_deidentified ?? entry.isDeidentified);
         entry.status = String(serverData.status ?? entry.status);
         entry.localSyncStatus = 'synced';
@@ -189,8 +194,7 @@ export async function upsertCaseEntry(serverData: Record<string, unknown>): Prom
       });
     } else {
       return db.get<CaseEntry>('case_entries').create((entry) => {
-        const raw = entry._raw as RawRecord;
-        raw.id = String(serverData.id);
+        (entry as unknown as { id: string }).id = String(serverData.id);
         entry.tenantId = String(serverData.tenant_id ?? '');
         entry.residentId = String(serverData.resident_id ?? '');
         entry.templateId = String(serverData.template_id ?? '');
@@ -199,8 +203,8 @@ export async function upsertCaseEntry(serverData: Record<string, unknown>): Prom
         entry.patientAgeYears = serverData.patient_age_years != null ? Number(serverData.patient_age_years) : null;
         entry.patientHash = serverData.patient_hash != null ? String(serverData.patient_hash) : null;
         entry.caseDate = String(serverData.case_date ?? '');
-        raw.field_values = typeof serverData.field_values === 'string' ? String(serverData.field_values) : JSON.stringify(serverData.field_values ?? {});
-        raw.accreditation_mappings = typeof serverData.accreditation_mappings === 'string' ? String(serverData.accreditation_mappings) : JSON.stringify(serverData.accreditation_mappings ?? []);
+        entry.fieldValues = readJsonField(serverData.field_values, {});
+        entry.accreditationMappings = readJsonField(serverData.accreditation_mappings, []);
         entry.isDeidentified = Boolean(serverData.is_deidentified ?? true);
         entry.status = String(serverData.status ?? 'draft');
         entry.localSyncStatus = 'synced';
@@ -221,23 +225,21 @@ export async function upsertTemplate(serverData: Record<string, unknown>): Promi
   return db.write(async () => {
     if (match) {
       return match.update((t) => {
-        const raw = t._raw as RawRecord;
         t.tenantId = String(serverData.tenant_id ?? t.tenantId);
         t.specialty = String(serverData.specialty ?? t.specialty);
         t.name = String(serverData.name ?? t.name);
-        raw.fields = typeof serverData.fields === 'string' ? serverData.fields : JSON.stringify(serverData.fields ?? []);
-        raw.required_fields = typeof serverData.required_fields === 'string' ? serverData.required_fields : JSON.stringify(serverData.required_fields ?? []);
+        t.fields = readJsonField(serverData.fields, t.fields);
+        t.requiredFields = readJsonField(serverData.required_fields, t.requiredFields);
         t.updatedAt = serverData.updated_at ? parseDate(serverData.updated_at) : new Date();
       });
     } else {
       return db.get<CaseTemplate>('case_templates').create((t) => {
-        const raw = t._raw as RawRecord;
-        raw.id = String(serverData.id);
+        (t as unknown as { id: string }).id = String(serverData.id);
         t.tenantId = String(serverData.tenant_id ?? '');
         t.specialty = String(serverData.specialty ?? '');
         t.name = String(serverData.name ?? '');
-        raw.fields = typeof serverData.fields === 'string' ? serverData.fields : JSON.stringify(serverData.fields ?? []);
-        raw.required_fields = typeof serverData.required_fields === 'string' ? serverData.required_fields : JSON.stringify(serverData.required_fields ?? []);
+        t.fields = readJsonField(serverData.fields, []);
+        t.requiredFields = readJsonField(serverData.required_fields, []);
         t.createdAt = serverData.created_at ? parseDate(serverData.created_at) : new Date();
         t.updatedAt = serverData.updated_at ? parseDate(serverData.updated_at) : new Date();
       });
@@ -266,8 +268,7 @@ export async function upsertProgramGoal(serverData: Record<string, unknown>): Pr
       });
     } else {
       return db.get<ProgramGoal>('program_goals').create((g) => {
-        const raw = g._raw as RawRecord;
-        raw.id = String(serverData.id);
+        (g as unknown as { id: string }).id = String(serverData.id);
         g.tenantId = String(serverData.tenant_id ?? '');
         g.residentId = String(serverData.resident_id ?? '');
         g.title = String(serverData.title ?? '');
@@ -284,25 +285,23 @@ export async function upsertProgramGoal(serverData: Record<string, unknown>): Pr
 
 export async function batchUpsertCaseEntries(serverDataList: Record<string, unknown>[]): Promise<void> {
   const db = getDatabase();
-  const ids = serverDataList.map(s => String(s.id)).filter(Boolean);
+  const ids = serverDataList.map((s) => String(s.id)).filter(Boolean);
   const existingRecords = ids.length > 0
     ? await db.get<CaseEntry>('case_entries').query(Q.where('id', Q.oneOf(ids))).fetch()
     : [];
-  const existingMap = new Map(existingRecords.map(r => [r.id, r]));
+  const existingMap = new Map(existingRecords.map((r) => [r.id, r]));
 
   await db.write(async () => {
-    const batch = serverDataList.map(serverData => {
+    const batch = serverDataList.map((serverData) => {
       const id = String(serverData.id);
       const match = existingMap.get(id);
 
-      // Preserve local unsynced changes
       if (match) {
         const localStatus = match.localSyncStatus;
         if (localStatus === 'draft' || localStatus === 'modified' || localStatus === 'created') {
           return null;
         }
-        return match.prepareUpdate(entry => {
-          const raw = entry._raw as RawRecord;
+        return match.prepareUpdate((entry) => {
           entry.tenantId = String(serverData.tenant_id ?? entry.tenantId);
           entry.residentId = String(serverData.resident_id ?? entry.residentId);
           entry.templateId = String(serverData.template_id ?? entry.templateId);
@@ -311,8 +310,8 @@ export async function batchUpsertCaseEntries(serverDataList: Record<string, unkn
           entry.patientAgeYears = serverData.patient_age_years != null ? Number(serverData.patient_age_years) : entry.patientAgeYears;
           entry.patientHash = serverData.patient_hash != null ? String(serverData.patient_hash) : entry.patientHash;
           entry.caseDate = String(serverData.case_date ?? entry.caseDate);
-          raw.field_values = typeof serverData.field_values === 'string' ? serverData.field_values : JSON.stringify(serverData.field_values ?? {});
-          raw.accreditation_mappings = typeof serverData.accreditation_mappings === 'string' ? serverData.accreditation_mappings : JSON.stringify(serverData.accreditation_mappings ?? []);
+          entry.fieldValues = readJsonField(serverData.field_values, entry.fieldValues);
+          entry.accreditationMappings = readJsonField(serverData.accreditation_mappings, entry.accreditationMappings);
           entry.isDeidentified = Boolean(serverData.is_deidentified ?? entry.isDeidentified);
           entry.status = String(serverData.status ?? entry.status);
           entry.localSyncStatus = 'synced';
@@ -320,9 +319,8 @@ export async function batchUpsertCaseEntries(serverDataList: Record<string, unkn
         });
       }
 
-      return db.get<CaseEntry>('case_entries').prepareCreate(entry => {
-        const raw = entry._raw as RawRecord;
-        raw.id = String(serverData.id);
+      return db.get<CaseEntry>('case_entries').prepareCreate((entry) => {
+        (entry as unknown as { id: string }).id = String(serverData.id);
         entry.tenantId = String(serverData.tenant_id ?? '');
         entry.residentId = String(serverData.resident_id ?? '');
         entry.templateId = String(serverData.template_id ?? '');
@@ -331,8 +329,8 @@ export async function batchUpsertCaseEntries(serverDataList: Record<string, unkn
         entry.patientAgeYears = serverData.patient_age_years != null ? Number(serverData.patient_age_years) : null;
         entry.patientHash = serverData.patient_hash != null ? String(serverData.patient_hash) : null;
         entry.caseDate = String(serverData.case_date ?? '');
-        raw.field_values = typeof serverData.field_values === 'string' ? String(serverData.field_values) : JSON.stringify(serverData.field_values ?? {});
-        raw.accreditation_mappings = typeof serverData.accreditation_mappings === 'string' ? String(serverData.accreditation_mappings) : JSON.stringify(serverData.accreditation_mappings ?? []);
+        entry.fieldValues = readJsonField(serverData.field_values, {});
+        entry.accreditationMappings = readJsonField(serverData.accreditation_mappings, []);
         entry.isDeidentified = Boolean(serverData.is_deidentified ?? true);
         entry.status = String(serverData.status ?? 'draft');
         entry.localSyncStatus = 'synced';
@@ -350,37 +348,35 @@ export async function batchUpsertCaseEntries(serverDataList: Record<string, unkn
 
 export async function batchUpsertTemplates(serverDataList: Record<string, unknown>[]): Promise<void> {
   const db = getDatabase();
-  const ids = serverDataList.map(s => String(s.id)).filter(Boolean);
+  const ids = serverDataList.map((s) => String(s.id)).filter(Boolean);
   const existingRecords = ids.length > 0
     ? await db.get<CaseTemplate>('case_templates').query(Q.where('id', Q.oneOf(ids))).fetch()
     : [];
-  const existingMap = new Map(existingRecords.map(r => [r.id, r]));
+  const existingMap = new Map(existingRecords.map((r) => [r.id, r]));
 
   await db.write(async () => {
-    const batch = serverDataList.map(serverData => {
+    const batch = serverDataList.map((serverData) => {
       const id = String(serverData.id);
       const match = existingMap.get(id);
 
       if (match) {
-        return match.prepareUpdate(t => {
-          const raw = t._raw as RawRecord;
+        return match.prepareUpdate((t) => {
           t.tenantId = String(serverData.tenant_id ?? t.tenantId);
           t.specialty = String(serverData.specialty ?? t.specialty);
           t.name = String(serverData.name ?? t.name);
-          raw.fields = typeof serverData.fields === 'string' ? serverData.fields : JSON.stringify(serverData.fields ?? []);
-          raw.required_fields = typeof serverData.required_fields === 'string' ? serverData.required_fields : JSON.stringify(serverData.required_fields ?? []);
+          t.fields = readJsonField(serverData.fields, t.fields);
+          t.requiredFields = readJsonField(serverData.required_fields, t.requiredFields);
           t.updatedAt = serverData.updated_at ? parseDate(serverData.updated_at) : new Date();
         });
       }
 
-      return db.get<CaseTemplate>('case_templates').prepareCreate(t => {
-        const raw = t._raw as RawRecord;
-        raw.id = String(serverData.id);
+      return db.get<CaseTemplate>('case_templates').prepareCreate((t) => {
+        (t as unknown as { id: string }).id = String(serverData.id);
         t.tenantId = String(serverData.tenant_id ?? '');
         t.specialty = String(serverData.specialty ?? '');
         t.name = String(serverData.name ?? '');
-        raw.fields = typeof serverData.fields === 'string' ? serverData.fields : JSON.stringify(serverData.fields ?? []);
-        raw.required_fields = typeof serverData.required_fields === 'string' ? serverData.required_fields : JSON.stringify(serverData.required_fields ?? []);
+        t.fields = readJsonField(serverData.fields, []);
+        t.requiredFields = readJsonField(serverData.required_fields, []);
         t.createdAt = serverData.created_at ? parseDate(serverData.created_at) : new Date();
         t.updatedAt = serverData.updated_at ? parseDate(serverData.updated_at) : new Date();
       });
@@ -394,19 +390,19 @@ export async function batchUpsertTemplates(serverDataList: Record<string, unknow
 
 export async function batchUpsertGoals(serverDataList: Record<string, unknown>[]): Promise<void> {
   const db = getDatabase();
-  const ids = serverDataList.map(s => String(s.id)).filter(Boolean);
+  const ids = serverDataList.map((s) => String(s.id)).filter(Boolean);
   const existingRecords = ids.length > 0
     ? await db.get<ProgramGoal>('program_goals').query(Q.where('id', Q.oneOf(ids))).fetch()
     : [];
-  const existingMap = new Map(existingRecords.map(r => [r.id, r]));
+  const existingMap = new Map(existingRecords.map((r) => [r.id, r]));
 
   await db.write(async () => {
-    const batch = serverDataList.map(serverData => {
+    const batch = serverDataList.map((serverData) => {
       const id = String(serverData.id);
       const match = existingMap.get(id);
 
       if (match) {
-        return match.prepareUpdate(g => {
+        return match.prepareUpdate((g) => {
           g.tenantId = String(serverData.tenant_id ?? g.tenantId);
           g.residentId = String(serverData.resident_id ?? g.residentId);
           g.title = String(serverData.title ?? g.title);
@@ -418,9 +414,8 @@ export async function batchUpsertGoals(serverDataList: Record<string, unknown>[]
         });
       }
 
-      return db.get<ProgramGoal>('program_goals').prepareCreate(g => {
-        const raw = g._raw as RawRecord;
-        raw.id = String(serverData.id);
+      return db.get<ProgramGoal>('program_goals').prepareCreate((g) => {
+        (g as unknown as { id: string }).id = String(serverData.id);
         g.tenantId = String(serverData.tenant_id ?? '');
         g.residentId = String(serverData.resident_id ?? '');
         g.title = String(serverData.title ?? '');
