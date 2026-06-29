@@ -8,20 +8,37 @@ enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000/auth/callback", "elogbook://auth/callback", "http://localhost:8081/*"]
 jwt_expiry = 3600
-enable_signup = true
+# P2.16: enterprise-grade auth — admin-invite-only (no self-signup),
+# email confirmation required, timeboxed sessions.
+enable_signup = false
 
 [auth.email]
-enable_confirmations = false
-enable_autoconfirm = true
+enable_confirmations = true
+enable_autoconfirm = false
+# SMTP must be configured at the Supabase project level. Local dev
+# can use a local SMTP catcher (e.g. MailHog on :1025) or the
+# inbucket included in the local Supabase stack.
+# smtp_host = "<SMTP_HOST>"
+# smtp_port = 587
+# smtp_user = "<SMTP_USER>"
+# smtp_pass = "<SMTP_PASS>"
+# smtp_admin_email = "admin@elogbook.example"
+# smtp_sender_name = "E-Logbook"
 
 [auth.sessions]
-timebox = false
-inactivity_timeout = 86400
+# P2.16: timebox PHI access to 8h absolute, 30 min idle.
+timebox = true
+timebox_duration = 28800  # 8h
+inactivity_timeout = 1800  # 30 min
 
 [auth.rate_limit]
 token_refresh = 30
 signup = 5
 login = 10
+
+[auth.mfa]
+# P6.1: TOTP MFA enabled; required for director+ at app level.
+max_enrolled_factors = 5
 
 [api]
 enabled = true
