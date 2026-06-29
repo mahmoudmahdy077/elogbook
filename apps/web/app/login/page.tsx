@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { safeRelativePath } from '@/lib/safe-redirect';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,8 +18,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     const params = new URLSearchParams(window.location.search);
-    const next = params.get('next');
-    const redirectTo = next
+    const next = safeRelativePath(params.get('next'));
+    const redirectTo = next !== '/'
       ? `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`
       : `${location.origin}/auth/callback`;
     await supabase.auth.signInWithOtp({
@@ -40,8 +41,8 @@ export default function LoginPage() {
       setError(authError.message);
     } else {
       const params = new URLSearchParams(window.location.search);
-      const next = params.get('next');
-      if (next) {
+      const next = safeRelativePath(params.get('next'));
+      if (next !== '/') {
         router.push(next);
       } else {
         const { data: { session } } = await supabase.auth.getSession();
