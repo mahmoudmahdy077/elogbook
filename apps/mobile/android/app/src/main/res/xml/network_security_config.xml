@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Certificate pinning for *.supabase.co on Android.
+
+  Pin set below is a PLACEHOLDER. Before shipping, fetch the live
+  certificate chain for the Supabase project (e.g.
+  `openssl s_client -connect <project>.supabase.co:443 -showcerts`)
+  and replace the pin-sha256 values with the SHA-256 of the leaf and
+  intermediate certificates.
+
+  We pin by SPKI (subject public key info) so a key rotation that
+  re-uses the same key is unaffected, but a different CA/leaf swap is
+  rejected. The expiry date on the pin must be reviewed at least every
+  12 months — at which point rotate the certificate and update this
+  file with a new backup pin.
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+  <domain-config>
+    <domain includeSubdomains="true">supabase.co</domain>
+    <pin-set expiration="2027-12-31">
+      <!-- Placeholder pin — replace with real SHA-256 of leaf SPKI before ship -->
+      <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+      <!-- Backup pin (intermediate CA) — required so the app still works after rotation -->
+      <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+    </pin-set>
+  </domain-config>
+</network-security-config>

@@ -31,7 +31,8 @@
         "CAMERA",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
-      ]
+      ],
+      "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml"
     },
     "plugins": [
       "expo-router",
@@ -50,7 +51,18 @@
       ],
       "expo-notifications",
       "expo-haptics",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false
+          },
+          "ios": {
+            "deploymentTarget": "15.0"
+          }
+        }
+      ]
     ],
     "extra": {
       "supabaseUrl": "",
