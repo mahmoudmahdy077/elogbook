@@ -11,7 +11,9 @@ import {
   Platform,
   Modal,
   Switch,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
@@ -20,6 +22,17 @@ import { useHaptics } from '../../lib/haptics';
 import { caseEntrySchema } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField } from '@elogbook/shared';
+
+// TODO: Replace with expo-crypto for proper SHA-256 hashing
+function generatePatientHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   surgery: 'cut',
@@ -41,6 +54,8 @@ function getSpecialtyIcon(specialty: string): keyof typeof Ionicons.glyphMap {
 export default function LogCaseScreen() {
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<CaseTemplate | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const isSubmitting = useRef(false);
@@ -66,10 +81,54 @@ export default function LogCaseScreen() {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [syncStatus, setSyncStatus] = useState(syncService.getStatus());
 
+  const AUTO_SAVE_KEY = 'case_form_draft';
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        await AsyncStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({
+          selectedTemplateId,
+          patientMrn,
+          patientDob,
+          fieldValues,
+          isDeidentified,
+          step,
+        }));
+      } catch { /* storage limit */ }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [selectedTemplateId, patientMrn, patientDob, fieldValues, isDeidentified]);
+
   const haptics = useHaptics();
 
   useEffect(() => {
     loadTemplates();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const draft = await AsyncStorage.getItem(AUTO_SAVE_KEY);
+        if (draft) {
+          const data = JSON.parse(draft);
+          const hasData = data.selectedTemplateId || data.patientMrn;
+          if (hasData) {
+            Alert.alert('Unsaved Draft', 'You have an unsaved case draft. Recover it?', [
+              { text: 'Discard', style: 'destructive', onPress: () => AsyncStorage.removeItem(AUTO_SAVE_KEY) },
+              { text: 'Recover', onPress: () => {
+                if (data.selectedTemplateId) setSelectedTemplateId(data.selectedTemplateId);
+                if (data.patientMrn !== undefined) setPatientMrn(data.patientMrn);
+                if (data.patientDob !== undefined) setPatientDob(data.patientDob);
+                if (data.fieldValues !== undefined) setFieldValues(data.fieldValues);
+                if (data.isDeidentified !== undefined) setIsDeidentified(data.isDeidentified);
+                if (data.step !== undefined) setStep(data.step);
+              }},
+            ]);
+          } else {
+            await AsyncStorage.removeItem(AUTO_SAVE_KEY);
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    })();
   }, []);
 
   useEffect(() => {
@@ -183,6 +242,7 @@ export default function LogCaseScreen() {
     try {
       const { error } = await supabase.from('case_entries').insert(caseData);
       if (error) throw error;
+      await AsyncStorage.removeItem(AUTO_SAVE_KEY);
       haptics.submitSuccess();
       setConfirmationSuccess(true);
       confirmationTypeRef.current = 'submitted';
@@ -195,6 +255,7 @@ export default function LogCaseScreen() {
         patientMrn: isDeidentified ? undefined : patientMrn,
         patientDob: isDeidentified ? undefined : patientDob,
         patientAgeYears: isDeidentified ? Number(patientAge) : undefined,
+        patientHash: isDeidentified ? generatePatientHash(`${patientAge}-${Date.now()}-${Math.random()}`) : undefined,
         caseDate: caseDate,
         fieldValues: fieldValues,
         isDeidentified: isDeidentified,
@@ -398,7 +459,7 @@ export default function LogCaseScreen() {
       style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
         {renderSyncBanner()}
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
@@ -454,12 +515,15 @@ export default function LogCaseScreen() {
               />
 
               <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Date of Birth</Text>
+              {/* TODO(T5.11): Replace with native DateTimePicker */}
               <TextInput
                 className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="#666"
                 returnKeyType="next"
                 blurOnSubmit={false}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
                 value={patientDob}
                 onChangeText={setPatientDob}
                 accessibilityLabel="Patient date of birth"
@@ -467,6 +531,7 @@ export default function LogCaseScreen() {
             </>
           )}
 
+          {/* TODO(T5.11): Replace with native DateTimePicker */}
           <Text className="text-gray-400 mb-2 mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Date</Text>
           <TextInput
             className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
@@ -474,6 +539,8 @@ export default function LogCaseScreen() {
             placeholderTextColor="#666"
             returnKeyType="next"
             blurOnSubmit={false}
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
             value={caseDate}
             onChangeText={setCaseDate}
             accessibilityLabel="Case date"
