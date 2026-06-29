@@ -72,7 +72,6 @@ jobs:
   audit:
     name: pnpm audit + license check
     runs-on: ubuntu-latest
-    continue-on-error: true  # TODO: flip to false in P7.1 once stable
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3

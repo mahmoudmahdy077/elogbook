@@ -1,0 +1,102 @@
+name: DAST (ZAP baseline)
+
+on:
+  # Vercel auto-deploys each PR to a preview URL. The integration
+  # publishes a deployment_status event; we run the scan only when the
+  # preview was successfully built.
+  deployment_status:
+    types: [success]
+  # Allow manual runs against a URL of the operator's choice (e.g. a
+  # staging environment).
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "URL to scan (e.g. https://staging.elogbook.example)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: dast-${{ github.event.deployment.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  zap-baseline:
+    name: ZAP baseline scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Resolve target URL
+        id: url
+        run: |
+          if [ "${{ github.event_name }}" = "deployment_status" ]; then
+            URL="${{ github.event.deployment_status.target_url }}"
+            # Vercel returns the target_url as a bare hostname on some
+            # payloads; fall back to the deployment payload.
+            if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+              URL="${{ github.event.deployment.payload.web_url }}"
+            fi
+            # Vercel preview URLs always use https.
+            URL="${URL#http://}"
+            URL="https://${URL}"
+          else
+            URL="${{ inputs.target_url }}"
+          fi
+          if [ -z "$URL" ] || [ "$URL" = "https://" ]; then
+            echo "::error::No target URL resolved; aborting."
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Resolved target URL: $URL"
+
+      - name: Run ZAP baseline
+        # P7.3: ZAP baseline scan against the Vercel preview URL.
+        # Fail on HIGH (and above) alerts; warnings/info are
+        # non-blocking. Mounts the working dir to /zap/wrk so the
+        # report files persist on the runner. To scan an
+        # authenticated app, drop a session-establishment hook into
+        # .github/dast/ and uncomment the --hook line below.
+        run: |
+          docker run --rm \
+            -v "$PWD/zap-reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t "${{ steps.url.outputs.url }}" \
+              -m 10 \
+              -r zap-baseline.html \
+              -J zap-baseline.json \
+              -l WARN
+
+      - name: Fail on HIGH alerts
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, sys, os
+          path = "zap-reports/zap-baseline.json"
+          if not os.path.exists(path):
+              print(f"::error::ZAP report {path} not found")
+              sys.exit(1)
+          with open(path) as f:
+              data = json.load(f)
+          # ZAP severity buckets: High, Medium, Low, Informational
+          high = [a for a in data.get("site", [{}])[0].get("alerts", []) if a.get("riskdesc", "").startswith("High")]
+          if high:
+              print(f"::error::ZAP found {len(high)} HIGH alert(s):")
+              for a in high:
+                  print(f"- {a.get('name')}: {a.get('desc', '')[:200]}")
+                  for inst in a.get("instances", [])[:3]:
+                      print(f"    {inst.get('uri')}")
+              sys.exit(1)
+          print(f"ZAP: 0 HIGH alerts. Medium={len([a for a in data.get('site',[{}])[0].get('alerts',[]) if a.get('riskdesc','').startswith('Medium')])} Low={len([a for a in data.get('site',[{}])[0].get('alerts',[]) if a.get('riskdesc','').startswith('Low')])}")
+          PY
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-reports
+          path: zap-reports/
+          retention-days: 30

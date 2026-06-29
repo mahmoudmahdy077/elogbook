@@ -1,0 +1,9 @@
+name: "E-Logbook CodeQL config"
+
+# P7.1: configure CodeQL to fail the build on error-severity findings.
+# The default `security-and-quality` query pack is used; a post-analysis
+# step in codeql.yml inspects the SARIF and exits non-zero on any
+# `level: error` result. Warnings remain non-blocking.
+
+queries:
+  - uses: security-and-quality

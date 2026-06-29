@@ -36,6 +36,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config-file: .github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
@@ -43,6 +44,9 @@ jobs:
           category: "/language:${{ matrix.language }}"
           upload: always
           sarif-output: codeql-${{ matrix.language }}.sarif
+          # P7.1: fail the build on any error-severity finding.
+          # Warnings remain non-blocking. The check is performed by
+          # a post-step that inspects the SARIF for `level: error`.
 
       - name: Upload SARIF
         if: always()
@@ -51,3 +55,43 @@ jobs:
           name: codeql-${{ matrix.language }}-sarif
           path: codeql-${{ matrix.language }}.sarif
           retention-days: 30
+
+      # P7.1: fail the build on any SARIF result with `level: error`.
+      # CodeQL's analyze step uploads the SARIF but exits 0 even when
+      # findings exist; this step is the explicit gate. Warnings (level:
+      # warning) remain non-blocking.
+      - name: Fail on error-severity findings
+        if: always() && hashFiles(format('codeql-{0}.sarif', matrix.language)) != ''
+        run: |
+          set -e
+          SARIF="codeql-${{ matrix.language }}.sarif"
+          python3 - <<'PY'
+          import json, sys, os
+          sarif_path = os.environ.get("SARIF", "codeql-javascript-typescript.sarif")
+          if not os.path.exists(sarif_path):
+              print(f"::notice::{sarif_path} not found; skipping")
+              sys.exit(0)
+          with open(sarif_path) as f:
+              sarif = json.load(f)
+          errors = []
+          for run in sarif.get("runs", []):
+              for r in run.get("results", []):
+                  if r.get("level") == "error":
+                      rule_id = r.get("ruleId", "?")
+                      msg = (r.get("message", {}).get("text") or "")[:160]
+                      loc = ""
+                      for loc0 in r.get("locations", []):
+                          pl = loc0.get("physicalLocation", {})
+                          uri = pl.get("artifactLocation", {}).get("uri", "")
+                          line = pl.get("region", {}).get("startLine", "")
+                          loc = f" ({uri}:{line})"
+                          break
+                      errors.append(f"- {rule_id}{loc}: {msg}")
+          if errors:
+              print("::error::CodeQL found error-severity findings:")
+              print("\n".join(errors))
+              sys.exit(1)
+          print("CodeQL: no error-severity findings.")
+          PY
+        env:
+          SARIF: codeql-${{ matrix.language }}.sarif

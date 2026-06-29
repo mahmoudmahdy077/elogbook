@@ -1,0 +1,76 @@
+name: Container Scan (Trivy)
+
+on:
+  push:
+    branches: [master, feat/**, fix/**, security/**]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '37 5 * * 3'  # Wednesdays 05:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-web:
+    name: Build + Trivy scan (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build web image
+        # P7.4: build the image that the CD pipeline would ship, so
+        # the scanner sees the same artifact as production. We do
+        # NOT push it; the scanner reads the local image.
+        run: docker buildx build \
+              --tag elogbook-web:scan \
+              --load \
+              --file apps/web/Dockerfile \
+              .
+
+      - name: Run Trivy (SARIF)
+        # Default severity gate: CRITICAL only (--exit-code 1 --severity CRITICAL).
+        # Lower severities are reported in the SARIF + the run summary.
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: elogbook-web:scan
+          format: 'sarif'
+          output: 'trivy-web.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN'
+          ignore-unfixed: true
+          exit-code: '0'  # don't fail the SARIF-generation step
+          vuln-type: 'os,library'
+        # The exit-code is 0 here so we can upload the SARIF even when
+        # there are findings; the next step enforces the gate.
+
+      - name: Enforce CRITICAL gate
+        # P7.4 fail-on-CRITICAL gate. Keeps a build green when the
+        # only findings are HIGH/MEDIUM (recorded for triage).
+        run: |
+          trivy image \
+            --severity CRITICAL \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --no-progress \
+            elogbook-web:scan
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-web.sarif
+          category: trivy-web
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-web-sarif
+          path: trivy-web.sarif
+          retention-days: 30
