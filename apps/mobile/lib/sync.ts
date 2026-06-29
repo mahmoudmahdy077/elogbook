@@ -9,6 +9,7 @@ import {
   getConflictedCases,
   updateSyncStatus,
   upsertCaseEntry,
+  markCaseAsConflict,
   batchUpsertCaseEntries,
   batchUpsertTemplates,
   batchUpsertGoals,
@@ -233,6 +234,13 @@ class SyncService {
         } else {
           const err = result.error as { code?: string; message?: string; details?: string };
           console.error('Push case error:', err);
+          // Treat HTTP 409 (Postgres `conflict on conflict_target`) as a
+          // server-side conflict: mark the local row so the UI can surface
+          // a "Keep local / Keep server" choice to the resident.
+          if (err?.code === '409' || /conflict/i.test(err?.message ?? '')) {
+            await markCaseAsConflict(draft);
+            this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
+          }
         }
       }
     } finally {

@@ -108,6 +108,25 @@ export async function updateSyncStatus(
   });
 }
 
+export async function markCaseAsModified(entry: CaseEntry): Promise<void> {
+  const db = getDatabase();
+  await db.write(async () => {
+    await entry.update((e) => {
+      e.localSyncStatus = 'modified';
+      e.updatedAt = new Date();
+    });
+  });
+}
+
+export async function markCaseAsConflict(entry: CaseEntry): Promise<void> {
+  const db = getDatabase();
+  await db.write(async () => {
+    await entry.update((e) => {
+      e.localSyncStatus = 'conflict';
+    });
+  });
+}
+
 export async function getAllCasesForResident(residentId: string): Promise<CaseEntry[]> {
   const db = getDatabase();
   return db.get<CaseEntry>('case_entries')

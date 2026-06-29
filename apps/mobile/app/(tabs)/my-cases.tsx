@@ -133,7 +133,16 @@ export default function MyCasesScreen() {
     const unsub = NetInfo.addEventListener((state) => {
       setIsOffline(state.isConnected !== true);
     });
-    return () => unsub();
+    const unsubConflict = syncService.setConflictCallback((_residentId, entryId) => {
+      setConflictDrafts((prev) =>
+        prev.some((c) => c.entryId === entryId) ? prev : [...prev, { entryId, residentId: '' }],
+      );
+      loadCases();
+    });
+    return () => {
+      unsub();
+      unsubConflict();
+    };
   }, [loadCases]);
 
   const handleRefresh = useCallback(async () => {
