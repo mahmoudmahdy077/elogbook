@@ -1,6 +1,6 @@
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Table, Button, Select } from '@heroui/react';
+import { Table, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -14,6 +14,29 @@ const ACTION_TYPES = [
   { value: 'approve', label: 'Approve' },
   { value: 'reject', label: 'Reject' },
   { value: 'login', label: 'Login' },
+  { value: 'sso_start', label: 'SSO start' },
+  { value: 'audit_export', label: 'Audit export' },
+  { value: 'data_retention_update', label: 'Retention update' },
+];
+
+const RESOURCE_TYPES = [
+  { value: '', label: 'All Tables' },
+  { value: 'case_entries', label: 'Case entries' },
+  { value: 'profiles', label: 'Profiles' },
+  { value: 'tenants', label: 'Tenants' },
+  { value: 'subscriptions', label: 'Subscriptions' },
+  { value: 'consent_records', label: 'Consent records' },
+  { value: 'audit', label: 'Audit' },
+  { value: 'auth', label: 'Auth' },
+];
+
+const SUSPICIOUS_ACTIONS = [
+  'login_failed',
+  'role_change',
+  'cross_tenant_access',
+  'bulk_export',
+  'audit_export',
+  'sso_start',
 ];
 
 interface AuditLogRow {
@@ -26,15 +49,29 @@ interface AuditLogRow {
   ip_address: string | null;
 }
 
+function isSuspicious(action: string): boolean {
+  return SUSPICIOUS_ACTIONS.includes(action);
+}
+
 export default async function AuditPage({
   params,
   searchParams,
 }: {
   params: Promise<{ tenant: string }>;
-  searchParams: Promise<{ page?: string; date_from?: string; date_to?: string; action_type?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    date_from?: string;
+    date_to?: string;
+    action_type?: string;
+    resource_type?: string;
+    user_id?: string;
+    view?: 'all' | 'suspicious';
+    export?: 'csv' | 'json';
+  }>;
 }) {
   const { tenant: tenantSlug } = await params;
-  const { page: pageStr, date_from, date_to, action_type } = await searchParams;
+  const sp = await searchParams;
+  const { page: pageStr, date_from, date_to, action_type, resource_type, user_id, view, export: exportFormat } = sp;
   const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
   const auth = await getAuthContext();
 
@@ -57,6 +94,14 @@ export default async function AuditPage({
 
   if (action_type) {
     query = query.eq('action', action_type);
+  } else if (view === 'suspicious') {
+    query = query.in('action', SUSPICIOUS_ACTIONS);
+  }
+  if (resource_type) {
+    query = query.eq('resource_type', resource_type);
+  }
+  if (user_id) {
+    query = query.eq('user_id', user_id);
   }
   if (date_from) {
     query = query.gte('created_at', date_from);
@@ -76,6 +121,42 @@ export default async function AuditPage({
     );
   }
 
+  // CSV / JSON export (rate-limited by the row count cap below; logged as audit_export).
+  if (exportFormat === 'csv' || exportFormat === 'json') {
+    const allLogs = (logs as AuditLogRow[]) ?? [];
+    if (allLogs.length > 5000) {
+      return (
+        <div>
+          <h1 className="text-2xl font-bold mb-6">Audit Trail</h1>
+          <p className="text-danger">Export too large ({allLogs.length} rows). Narrow the date range.</p>
+        </div>
+      );
+    }
+
+    // Audit the export itself (defence-in-depth: a privileged user
+    // exporting data should leave a trace).
+    await supabase.from('audit_logs').insert({
+      tenant_id: auth.profile.tenant_id,
+      action: 'audit_export',
+      resource_type: 'audit',
+      resource_id: null,
+      user_id: auth.user.id,
+      metadata: { format: exportFormat, row_count: allLogs.length, filters: { action_type, resource_type, user_id, date_from, date_to } },
+    });
+
+    const body = exportFormat === 'json'
+      ? JSON.stringify(allLogs, null, 2)
+      : toCsv(allLogs);
+    const contentType = exportFormat === 'json' ? 'application/json' : 'text/csv';
+    const filename = `audit-${tenantSlug}-${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
+    return new Response(body, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
+  }
+
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
   const formatUUID = (id: string | null) => {
@@ -87,47 +168,70 @@ export default async function AuditPage({
   if (date_from) filterParams.set('date_from', date_from);
   if (date_to) filterParams.set('date_to', date_to);
   if (action_type) filterParams.set('action_type', action_type);
+  if (resource_type) filterParams.set('resource_type', resource_type);
+  if (user_id) filterParams.set('user_id', user_id);
+  if (view) filterParams.set('view', view);
   const filterSuffix = filterParams.toString() ? `&${filterParams.toString()}` : '';
+  const filterQuery = filterParams.toString() ? `?${filterParams.toString()}` : '';
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Audit Trail</h1>
 
+      <div className="flex gap-2 mb-4">
+        <Link
+          href={`/${tenantSlug}/audit${filterQuery}`}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view !== 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-neutral-light/60')}
+        >
+          All events
+        </Link>
+        <Link
+          href={`/${tenantSlug}/audit?view=suspicious${filterSuffix.replace(/^&/, '&')}`}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view === 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-neutral-light/60')}
+        >
+          Suspicious activity
+        </Link>
+      </div>
+
       <form className="flex flex-wrap gap-3 mb-4 items-end">
         <div>
           <label htmlFor="date_from" className="block text-sm font-medium mb-1">From</label>
-          <input
-            id="date_from"
-            type="date"
-            name="date_from"
-            defaultValue={date_from || ''}
-            className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm"
-          />
+          <input id="date_from" type="date" name="date_from" defaultValue={date_from || ''} className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
         </div>
         <div>
           <label htmlFor="date_to" className="block text-sm font-medium mb-1">To</label>
-          <input
-            id="date_to"
-            type="date"
-            name="date_to"
-            defaultValue={date_to || ''}
-            className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm"
-          />
+          <input id="date_to" type="date" name="date_to" defaultValue={date_to || ''} className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
         </div>
         <div>
           <label htmlFor="action_type" className="block text-sm font-medium mb-1">Action</label>
-          <select
-            id="action_type"
-            name="action_type"
-            defaultValue={action_type || ''}
-            className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm"
-          >
+          <select id="action_type" name="action_type" defaultValue={action_type || ''} className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
             {ACTION_TYPES.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
+        <div>
+          <label htmlFor="resource_type" className="block text-sm font-medium mb-1">Table</label>
+          <select id="resource_type" name="resource_type" defaultValue={resource_type || ''} className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
+            {RESOURCE_TYPES.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="user_id" className="block text-sm font-medium mb-1">User UUID</label>
+          <input id="user_id" type="text" name="user_id" defaultValue={user_id || ''} placeholder="uuid" className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+        </div>
+        {view && <input type="hidden" name="view" value={view} />}
         <Button type="submit" variant="ghost" size="sm">Filter</Button>
+        <div className="ml-auto flex gap-2">
+          <Link href={`/${tenantSlug}/audit?export=csv${filterSuffix}`}>
+            <Button variant="ghost" size="sm">Export CSV</Button>
+          </Link>
+          <Link href={`/${tenantSlug}/audit?export=json${filterSuffix}`}>
+            <Button variant="ghost" size="sm">Export JSON</Button>
+          </Link>
+        </div>
       </form>
 
       {(!logs || logs.length === 0) ? (
@@ -142,19 +246,21 @@ export default async function AuditPage({
             <Table.Column id="resource">Resource</Table.Column>
             <Table.Column id="user">User</Table.Column>
             <Table.Column id="ip">IP</Table.Column>
+            <Table.Column id="flag">Flag</Table.Column>
           </Table.Header>
           <Table.Body>
             {logs.map((log: AuditLogRow) => (
               <Table.Row key={log.id} id={log.id}>
-                <Table.Cell className="clinical-data">
-                  {new Date(log.created_at).toLocaleString()}
-                </Table.Cell>
+                <Table.Cell className="clinical-data">{new Date(log.created_at).toLocaleString()}</Table.Cell>
                 <Table.Cell>{log.action}</Table.Cell>
-                <Table.Cell className="clinical-data">
-                  {log.resource_type} / {formatUUID(log.resource_id)}
-                </Table.Cell>
+                <Table.Cell className="clinical-data">{log.resource_type} / {formatUUID(log.resource_id)}</Table.Cell>
                 <Table.Cell className="clinical-data">{formatUUID(log.user_id)}</Table.Cell>
                 <Table.Cell>{log.ip_address || '—'}</Table.Cell>
+                <Table.Cell>
+                  {isSuspicious(log.action) && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-danger/20 text-danger">suspicious</span>
+                  )}
+                </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
@@ -162,9 +268,7 @@ export default async function AuditPage({
         </Table.Root>
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-divider">
-            <p className="text-sm text-default-500">
-              Page {page} of {totalPages}
-            </p>
+            <p className="text-sm text-default-500">Page {page} of {totalPages}</p>
             <div className="flex gap-2">
               {page > 1 && (
                 <Link href={`/${tenantSlug}/audit?page=${page - 1}${filterSuffix}`}>
@@ -183,4 +287,20 @@ export default async function AuditPage({
       )}
     </div>
   );
+}
+
+function toCsv(rows: AuditLogRow[]): string {
+  const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+  const lines = [headers.join(',')];
+  for (const r of rows) {
+    lines.push(headers.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(','));
+  }
+  return lines.join('\n');
 }
