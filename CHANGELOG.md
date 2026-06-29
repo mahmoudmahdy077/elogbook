@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **P7.0** — Added CycloneDX SBOM generation to CI (`.github/workflows/sbom.yml`); SBOM is attached to every GitHub release tag (`v*`) and uploaded as a 90-day artifact.
 - **P0.1** — Redacted live Supabase project ID and anon key from committed documentation (`PROJECT_ANALYSIS.md`, `specs/_archive/*`).
 - **P0.2** — Closed open-redirect in `/login` and `/auth/callback` via `safeRelativePath()` (10 unit tests).
 - **P0.3** — Added CSRF (`validateOrigin`), per-user rate-limit, and ownership check (`entry.resident_id === profile.id`) to `/cases/[id]/submit`.
