@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createServerSupabase } from './server';
 
 export type UserRole = 'resident' | 'supervisor' | 'director' | 'institution_admin' | 'admin';
@@ -31,7 +32,7 @@ export interface AuthResult {
   mfaRequired: boolean;
 }
 
-export async function getAuthContext(): Promise<AuthResult> {
+export const getAuthContext = cache(async (): Promise<AuthResult> => {
   const supabase = await createServerSupabase();
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -92,7 +93,7 @@ export async function getAuthContext(): Promise<AuthResult> {
     aal,
     mfaRequired: isMfaRequiredForRole(role) && aal !== 'aal2',
   };
-}
+});
 
 export function canAccessTenant(auth: AuthResult, requestedTenantSlug: string): boolean {
   if (auth.profile.role === 'admin') return true;
