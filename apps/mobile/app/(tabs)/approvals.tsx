@@ -237,6 +237,18 @@ export default function ApprovalsScreen() {
     handleAction(approvalId, entryId, 'reject', trimmed);
   }, [rejectTarget, rejectComment, handleAction]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: ApprovalItem }) => (
+      <ApprovalCard
+        item={item}
+        isProcessing={processingIds.has(item.id)}
+        isOffline={isOffline}
+        onConfirm={confirmAction}
+      />
+    ),
+    [processingIds, isOffline, confirmAction],
+  );
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
@@ -284,14 +296,7 @@ export default function ApprovalsScreen() {
             <Text className="text-slate-400 text-center">No approval requests found.</Text>
           </View>
         }
-        renderItem={useCallback(({ item }: { item: ApprovalItem }) => (
-          <ApprovalCard
-            item={item}
-            isProcessing={processingIds.has(item.id)}
-            isOffline={isOffline}
-            onConfirm={confirmAction}
-          />
-        ), [processingIds, isOffline, confirmAction])}
+        renderItem={renderItem}
       />
 
       <Modal transparent animationType="fade" visible={rejectTarget !== null}>

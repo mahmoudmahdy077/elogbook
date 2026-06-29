@@ -167,6 +167,11 @@ export default function MyCasesScreen() {
     }
   }, []);
 
+  const renderItem = useCallback(
+    ({ item }: { item: CaseData }) => <CaseCard item={item} onPress={handleCaseTap} />,
+    [handleCaseTap],
+  );
+
   if (loading) {
     return (
       <View className="flex-1 bg-backdrop items-center justify-center">
@@ -227,9 +232,7 @@ export default function MyCasesScreen() {
             <Text className="text-slate-400" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
           </View>
         }
-        renderItem={useCallback(({ item }: { item: CaseData }) => (
-          <CaseCard item={item} onPress={handleCaseTap} />
-        ), [handleCaseTap])}
+        renderItem={renderItem}
       />
     </View>
   );
