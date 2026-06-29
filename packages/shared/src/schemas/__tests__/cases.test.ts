@@ -286,6 +286,7 @@ describe('accreditationFrameworkSchema', () => {
   const validFramework = {
     name: 'ACGME Internal Medicine',
     tenant_id: '123e4567-e89b-12d3-a456-426614174000',
+    version: '2.0',
     framework_type: 'acgme',
     milestones: [
       {

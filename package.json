@@ -18,9 +18,10 @@
     "analyze": "ANALYZE=true pnpm build:web",
     "db:migrate": "supabase db push",
     "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --exclude '**/e2e/**'",
+    "test:watch": "vitest --exclude '**/e2e/**'",
+    "test:coverage": "vitest run --coverage --exclude '**/e2e/**'",
+    "test:e2e": "pnpm --filter @elogbook/web test:e2e",
     "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint"
   },
   "devDependencies": {

@@ -9,8 +9,10 @@ function getRows(table: string) {
   for (const f of filters) {
     if (f.table === table) {
       rows = rows.filter((r) => {
-        if (f.filter.op === 'eq') return r[f.filter.col] === f.filter.val;
-        if (f.filter.op === 'in' && Array.isArray(f.filter.val)) return (f.filter.val as unknown[]).includes(r[f.filter.col]);
+        const cell = r[f.filter.col] as unknown;
+        const val = f.filter.val as unknown;
+        if (f.filter.op === 'eq') return cell === val;
+        if (f.filter.op === 'in' && Array.isArray(val)) return (val as unknown[]).includes(cell);
         return true;
       });
     }
@@ -18,37 +20,66 @@ function getRows(table: string) {
   return rows;
 }
 
-function builder(table: string) {
-  const exec = () => {
+interface QueryResult<T = unknown> {
+  data: T;
+  error: null;
+}
+
+type Chain = {
+  select(cols?: string): Chain;
+  insert(rows: unknown): Chain & { error: null };
+  update(vals: Record<string, unknown>): Chain;
+  delete(): Chain;
+  eq(col: string, val: unknown): Chain;
+  in(col: string, vals: unknown[]): Chain;
+  single(): QueryResult;
+  maybeSingle(): QueryResult;
+  then<TResult1 = QueryResult, TResult2 = never>(
+    onfulfilled?: (value: QueryResult) => TResult1 | PromiseLike<TResult1>,
+    onrejected?: (reason: unknown) => TResult2 | PromiseLike<TResult2>,
+  ): Promise<TResult1 | TResult2>;
+};
+
+function builder(table: string): Chain {
+  const exec = (): QueryResult => {
     const rows = getRows(table);
-    const result = { data: rows, error: null };
+    const result: QueryResult = { data: rows, error: null };
     filters.length = 0;
     return result;
   };
-  const chain: Record<string, unknown> = {};
-  chain.select = () => chain;
-  chain.insert = (rows: unknown) => {
-    const arr = Array.isArray(rows) ? rows : [rows];
-    for (const r of arr) tables.set(table, [...(tables.get(table) ?? []), r as Record<string, unknown>]);
-    return { ...chain, error: null };
+  const chain: Chain = {
+    select: () => chain,
+    insert: (rows: unknown) => {
+      const arr = Array.isArray(rows) ? rows : [rows];
+      for (const r of arr) tables.set(table, [...(tables.get(table) ?? []), r as Record<string, unknown>]);
+      return Object.assign({}, chain, { error: null }) as Chain & { error: null };
+    },
+    update: (vals: Record<string, unknown>) => {
+      const rows = tables.get(table) ?? [];
+      tables.set(table, rows.map((r) => ({ ...r, ...vals })));
+      return chain;
+    },
+    delete: () => chain,
+    eq: (col, val) => { filters.push({ table, filter: { op: 'eq', col, val } }); return chain; },
+    in: (col, vals) => { filters.push({ table, filter: { op: 'in', col, val: vals } }); return chain; },
+    single: () => {
+      const rows = getRows(table);
+      filters.length = 0;
+      return { data: rows[0] ?? null, error: null };
+    },
+    maybeSingle: () => {
+      const rows = getRows(table);
+      filters.length = 0;
+      return { data: rows[0] ?? null, error: null };
+    },
+    then: (resolve) => Promise.resolve(exec()).then(resolve),
   };
-  chain.update = (vals: Record<string, unknown>) => {
-    const rows = tables.get(table) ?? [];
-    tables.set(table, rows.map((r) => ({ ...r, ...vals })));
-    return chain;
-  };
-  chain.delete = () => chain;
-  chain.eq = (...a: unknown[]) => { filters.push({ table, filter: { op: 'eq', col: a[0] as string, val: a[1] } }); return chain; };
-  chain.in = (...a: unknown[]) => { filters.push({ table, filter: { op: 'in', col: a[0] as string, val: a[1] } }); return chain; };
-  chain.single = () => { const rows = getRows(table); filters.length = 0; return { data: rows[0] ?? null, error: null }; };
-  chain.maybeSingle = () => { const rows = getRows(table); filters.length = 0; return { data: rows[0] ?? null, error: null }; };
-  chain.then = (resolve: (v: unknown) => void) => resolve(exec());
   return chain;
 }
 
 export function createMockSupabaseClient() {
   return {
-    from: (table: string) => builder(table),
+    from: (table: string): Chain => builder(table),
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u-1' } }, error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: 'jwt', user: { id: 'u-1' } } }, error: null }),

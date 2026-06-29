@@ -69,8 +69,8 @@ function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
     level,
     msg,
     ...(requestId ? { requestId } : {}),
-    ...(typeof window === 'undefined' ? { pid: process?.pid } : {}),
-    ...redact(meta),
+    ...(typeof window === 'undefined' && process?.pid ? { pid: process.pid } : {}),
+    ...(redact(meta) as Record<string, unknown>),
   };
   const line = JSON.stringify(entry);
 
@@ -94,10 +94,11 @@ export const logger = {
   info: (msg: string, meta?: Record<string, unknown>) => emit('info', msg, meta),
   warn: (msg: string, meta?: Record<string, unknown>) => emit('warn', msg, meta),
   error: (msg: string | Error, meta?: Record<string, unknown>) => {
+    const safeMeta = meta ?? {};
     if (msg instanceof Error) {
-      emit('error', msg.message, { ...meta, stack: msg.stack, name: msg.name });
+      emit('error', msg.message, { ...safeMeta, stack: msg.stack, name: msg.name });
     } else {
-      emit('error', msg, meta);
+      emit('error', msg, safeMeta);
     }
   },
 };

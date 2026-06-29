@@ -11,15 +11,17 @@ function getRows(table: string): Record<string, unknown>[] {
   for (const f of filters) {
     if (f.table === table) {
       rows = rows.filter((r) => {
-        if (f.filter.op === 'eq') return r[f.filter.col] === f.filter.val;
-        if (f.filter.op === 'in' && Array.isArray(f.filter.val)) {
-          return (f.filter.val as unknown[]).includes(r[f.filter.col]);
+        const cell = r[f.filter.col] as unknown;
+        const val = f.filter.val as unknown;
+        if (f.filter.op === 'eq') return cell === val;
+        if (f.filter.op === 'in' && Array.isArray(val)) {
+          return (val as unknown[]).includes(cell);
         }
-        if (f.filter.op === 'gte') return r[f.filter.col] >= f.filter.val;
-        if (f.filter.op === 'lte') return r[f.filter.col] <= f.filter.val;
+        if (f.filter.op === 'gte') return (cell as number) >= (val as number);
+        if (f.filter.op === 'lte') return (cell as number) <= (val as number);
         if (f.filter.op === 'is') {
-          if (f.filter.val === null) return r[f.filter.col] === null;
-          return r[f.filter.col] !== null;
+          if (val === null) return cell === null;
+          return cell !== null;
         }
         return true;
       });

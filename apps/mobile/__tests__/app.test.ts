@@ -9,14 +9,14 @@ describe('Mobile test scaffold', () => {
       { id: 'c-2', status: 'pending', tenant_id: 't-1' },
     ]);
     const client = createMockSupabaseClient();
-    const { data } = await client.from('case_entries').select('*').eq('status', 'draft');
-    expect(data).toEqual([{ id: 'c-1', status: 'draft', tenant_id: 't-1' }]);
+    const res = await client.from('case_entries').select('*').eq('status', 'draft');
+    expect(res.data).toEqual([{ id: 'c-1', status: 'draft', tenant_id: 't-1' }]);
   });
 
   it('mock auth client reports a session', async () => {
     const client = createMockSupabaseClient();
-    const { data, error } = await client.auth.getSession();
-    expect(error).toBeNull();
-    expect(data.session.access_token).toBe('jwt');
+    const res = await client.auth.getSession();
+    expect(res.error).toBeNull();
+    expect(res.data.session.access_token).toBe('jwt');
   });
 });
