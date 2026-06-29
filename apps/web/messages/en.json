@@ -1,0 +1,60 @@
+{
+  "common": {
+    "appName": "E-Logbook",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back",
+    "error": "Error",
+    "success": "Success"
+  },
+  "login": {
+    "title": "Sign in to your account",
+    "email": "Email",
+    "password": "Password",
+    "magicLink": "Send Magic Link",
+    "signIn": "Sign In",
+    "signInWithSso": "Sign in with SSO",
+    "magicLinkSent": "Check your email for a magic link!",
+    "institutionSlug": "Institution Slug"
+  },
+  "mfa": {
+    "enrollTitle": "Set up MFA",
+    "verifyTitle": "Verify with MFA",
+    "enrollPrompt": "Scan this URI in your authenticator app, then enter the 6-digit code.",
+    "verifyPrompt": "Enter the 6-digit code from your authenticator app.",
+    "verify": "Verify"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "cases": "Cases",
+    "approvals": "Approvals",
+    "goals": "Goals",
+    "reports": "Reports",
+    "billing": "Billing",
+    "audit": "Audit",
+    "admin": "Admin",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "kpi": {
+      "totalCases": "Total cases",
+      "pendingApprovals": "Pending approvals",
+      "goalsCompleted": "Goals completed",
+      "aiQuota": "AI quota"
+    }
+  },
+  "case": {
+    "title": "Case title",
+    "patientMrn": "Patient MRN",
+    "patientDob": "Patient DOB",
+    "fieldValues": "Clinical data",
+    "submit": "Submit case",
+    "saveDraft": "Save draft"
+  },
+  "languages": {
+    "en": "English",
+    "ar": "العربية"
+  }
+}

@@ -4,6 +4,7 @@ import { APP_NAME } from '@elogbook/shared';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import LocaleSwitcher from './LocaleSwitcher';
 
 type NavLink = {
   href: string;
@@ -114,6 +115,7 @@ export default function Sidebar({
         </nav>
 
         <div className={`mt-auto pt-4 border-t border-border ${collapsed ? 'flex justify-center' : ''}`}>
+          {!collapsed && <LocaleSwitcher current={typeof document !== 'undefined' ? (document.documentElement.lang || 'en') : 'en'} />}
           {collapsed ? (
             <div className="flex flex-col gap-1">
               <button

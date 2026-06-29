@@ -1,0 +1,32 @@
+{
+  "common": {
+    "appName": "E-Logbook",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back"
+  },
+  "login": {
+    "title": "Sign in to your account",
+    "email": "Email",
+    "password": "Password"
+  },
+  "tabs": {
+    "cases": "Cases",
+    "approvals": "Approvals",
+    "goals": "Goals",
+    "profile": "Profile"
+  },
+  "case": {
+    "title": "Case title",
+    "saveDraft": "Save draft",
+    "submit": "Submit case"
+  },
+  "profile": {
+    "language": "Language",
+    "english": "English",
+    "arabic": "العربية",
+    "logout": "Log out"
+  }
+}
