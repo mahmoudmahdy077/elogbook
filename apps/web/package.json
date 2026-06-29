@@ -13,6 +13,7 @@
   "dependencies": {
     "@elogbook/shared": "workspace:*",
     "@heroui/react": "^3.1.0",
+    "@sentry/nextjs": "^10.62.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.43.0",
     "date-fns": "^4.4.0",
