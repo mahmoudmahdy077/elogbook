@@ -92,11 +92,18 @@ export async function removeDraft(entry: CaseEntry): Promise<void> {
   });
 }
 
-export async function updateSyncStatus(entry: CaseEntry, status: string): Promise<void> {
+export async function updateSyncStatus(
+  entry: CaseEntry,
+  status: string,
+  serverId?: string,
+): Promise<void> {
   const db = getDatabase();
   await db.write(async () => {
     await entry.update((e) => {
       e.localSyncStatus = status;
+      if (serverId) {
+        e.serverId = serverId;
+      }
     });
   });
 }

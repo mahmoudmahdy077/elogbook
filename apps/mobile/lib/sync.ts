@@ -208,6 +208,10 @@ class SyncService {
         };
 
         const isNew = draft.localSyncStatus === 'draft';
+        // For an existing-on-server row, target the server-assigned id (not the
+        // local UUID). The server id is captured the first time we successfully
+        // push a new draft and is then re-used for every subsequent update.
+        const targetId = isNew ? draft.id : draft.serverId ?? draft.id;
         let result;
 
         if (isNew) {
@@ -216,13 +220,14 @@ class SyncService {
           result = await supabase
             .from('case_entries')
             .update(casePayload)
-            .eq('id', draft.id)
+            .eq('id', targetId)
             .select('id, updated_at')
             .single();
         }
 
         if (!result.error) {
-          await updateSyncStatus(draft, 'synced');
+          const serverId = isNew ? (result.data as { id?: string } | null)?.id : targetId;
+          await updateSyncStatus(draft, 'synced', serverId);
           this.retryIndex = 0;
           this.retryCount = 0;
         } else {
