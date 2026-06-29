@@ -78,3 +78,4 @@ import_map = "./import_map.json"
 [functions.create-checkout]
 [functions.sso-callback]
 [functions.dispatch-webhook]
+[functions.scim]
