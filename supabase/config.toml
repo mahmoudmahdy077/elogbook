@@ -66,3 +66,37 @@ import_map = "./import_map.json"
 [functions.ai-insights]
 [functions.payment-webhook]
 [functions.create-checkout]
+
+# ---------------------------------------------------------------------------
+# P7.6 — Database backups (PITR) and Branching
+#
+# PITR (Point-in-Time Recovery) and scheduled logical backups are configured
+# at the Supabase PROJECT LEVEL, not in this file. The CLI's `config.toml`
+# governs the local Docker stack. The presence of this block is a
+# documentation marker — the CLI ignores unknown sections.
+#
+# To enable PITR + branching on the managed project:
+#   1. Open the Supabase dashboard: https://app.supabase.com/project/<ref>
+#   2. Settings → Database → "Enable Point in Time Recovery" (Pro plan+).
+#      Target retention: 7 days (matches the SC-013 RPO of ≤1h with a wide
+#      safety margin).
+#   3. Settings → Database → "Backups" → confirm a daily logical backup
+#      exists. PITR is a superset of the logical backups.
+#   4. Settings → Branches → toggle "Enable Branching" so every PR gets a
+#      preview database via `supabase branches create` /
+#      `supabase link --branch`.
+#
+# The full restore procedure is documented in `docs/operations.md`
+# (Disaster Recovery → "Restore via PITR").
+# ---------------------------------------------------------------------------
+[db.backups]
+# Project-level setting (dashboard). Declared here for discoverability.
+enabled = true
+# Retention window in days. Pro plan supports up to 7; larger plans up to 90.
+retention_days = 7
+
+[branches]
+# Project-level setting (dashboard). Toggling this lets the GitHub Action
+# in .github/workflows/preview-branch.yml spawn a transient Supabase
+# project for each PR. See `docs/operations.md` §"Preview branches".
+enabled = true
