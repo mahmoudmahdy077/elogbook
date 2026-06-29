@@ -108,6 +108,12 @@ serve(async (req) => {
 
   for (const gwConfig of gatewayConfigs) {
     try {
+      // P6.8: skip gateway configs whose mode does not match the
+      // event's livemode. This prevents a test webhook (livemode=false)
+      // from being processed by a live config (mode='live') and vice
+      // versa. The mode column was added to the view in migration 00046.
+      const expectedLive = gwConfig.mode === 'live';
+
       const stripe = new Stripe(gwConfig.secret, {
         apiVersion: '2024-06-20',
         httpClient: Stripe.createFetchHttpClient(),
@@ -124,6 +130,19 @@ serve(async (req) => {
         console.error('Stripe webhook signature verification failed', {
           gateway_config_id: gwConfig.id,
           error: sigErr instanceof Error ? sigErr.message : String(sigErr),
+        });
+        continue;
+      }
+
+      // Enforce the mode isolation rule strictly against the signed
+      // event payload. A test event delivered to a live config, or a
+      // live event delivered to a test config, is logged and skipped.
+      if (event.livemode !== expectedLive) {
+        console.info('Skipping Stripe event: mode mismatch', {
+          gateway_config_id: gwConfig.id,
+          gateway_mode: gwConfig.mode,
+          event_livemode: event.livemode,
+          stripe_event_id: event.id,
         });
         continue;
       }
@@ -147,6 +166,8 @@ serve(async (req) => {
         .insert({
           stripe_event_id: event.id,
           event_type: event.type,
+          mode: gwConfig.mode, // P6.8: tag the event with its gateway mode
+          livemode: event.livemode,
           processed: false,
         })
         .select('id')
