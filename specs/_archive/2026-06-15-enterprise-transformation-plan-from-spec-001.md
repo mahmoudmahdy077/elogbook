@@ -2424,8 +2424,8 @@ import_map = "./import_map.json"
          "expo-haptics"
        ],
        "extra": {
-         "supabaseUrl": "https://nuyedxkzaimlzaetbpaw.supabase.co",
-         "supabaseAnonKey": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
+          "supabaseUrl": "<SUPABASE_PROJECT_ID>.supabase.co",
+          "supabaseAnonKey": "<SUPABASE_ANON_KEY>"
        },
        "runtimeVersion": {
          "policy": "appVersion"

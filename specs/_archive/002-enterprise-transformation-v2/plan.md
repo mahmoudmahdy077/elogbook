@@ -838,8 +838,8 @@ const maxCheckouts = 5; // max 5 checkout sessions per minute
 3. Verify that `apps/mobile/lib/supabase.ts` already has a fallback to `process.env.EXPO_PUBLIC_SUPABASE_URL` (it does, line 6)
 4. Ensure `.env` file at `apps/mobile/.env` has:
 ```
-EXPO_PUBLIC_SUPABASE_URL=https://nuyedxkzaimlzaetbpaw.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3
+EXPO_PUBLIC_SUPABASE_URL=<SUPABASE_PROJECT_ID>.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<SUPABASE_ANON_KEY>
 ```
 5. Add `apps/mobile/.env` to `.gitignore` root (verify it's already there — check line ~20)
 6. For EAS builds, configure secrets in the EAS dashboard or use `eas secret:create`

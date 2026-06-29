@@ -553,8 +553,8 @@ supabase functions deploy <name>      # Deploy edge function
 
 `.env.local` (root):
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://nuyedxkzaimlzaetbpaw.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3
+NEXT_PUBLIC_SUPABASE_URL=<SUPABASE_PROJECT_ID>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<SUPABASE_ANON_KEY>
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
