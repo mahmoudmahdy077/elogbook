@@ -7,6 +7,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Core clinical tokens
         backdrop: colors.backdrop.dark,
         surface: 'rgba(15, 23, 42, 0.8)',
         'surface-solid': colors.neutral.dark,
@@ -31,6 +32,63 @@ const config: Config = {
         'amber-glow': colors.warning.glow,
         'emerald-glow': colors.success.glow,
         'crimson-glow': colors.danger.glow,
+
+        // HeroUI semantic color scales (U1.0) — required for HeroUI
+        // components to render with proper colors. Without these,
+        // classes like text-default-500, bg-danger-50, border-divider
+        // produce invisible/no-op output.
+        default: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+        },
+        success: {
+          50: 'rgba(5, 150, 105, 0.1)',
+          100: 'rgba(5, 150, 105, 0.2)',
+          200: 'rgba(5, 150, 105, 0.3)',
+          300: 'rgba(5, 150, 105, 0.4)',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          DEFAULT: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+        },
+        warning: {
+          50: 'rgba(217, 119, 6, 0.1)',
+          100: 'rgba(217, 119, 6, 0.2)',
+          200: 'rgba(217, 119, 6, 0.3)',
+          300: 'rgba(217, 119, 6, 0.4)',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          DEFAULT: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+        },
+        danger: {
+          50: 'rgba(220, 38, 38, 0.1)',
+          100: 'rgba(220, 38, 38, 0.2)',
+          200: 'rgba(220, 38, 38, 0.3)',
+          300: 'rgba(220, 38, 38, 0.4)',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          DEFAULT: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+        },
+        divider: 'rgba(99, 102, 241, 0.12)',
       },
       fontFamily: {
         heading: [fonts.heading],
