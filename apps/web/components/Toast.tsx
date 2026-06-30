@@ -31,8 +31,8 @@ const iconMap: Record<ToastType, string> = {
 };
 
 const bgMap: Record<ToastType, string> = {
-  success: 'bg-emerald-glow/15 border-emerald-400/30 text-emerald-200',
-  error: 'bg-crimson-glow/15 border-red-400/30 text-red-200',
+  success: 'bg-approved/15 border-approved/30 text-approved/80',
+  error: 'bg-rejected/15 border-rejected/30 text-rejected/80',
   info: 'bg-primary-glow/15 border-primary/30 text-teal-200',
 };
 

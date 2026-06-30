@@ -117,7 +117,7 @@ export default function SubscriptionPlans({
               transition={{ duration: 0.3, delay: index * staggerDelay, ease: [0.4, 0, 0.2, 1] }}
               whileHover={{ scale: isCurrent ? 1 : 1.02 }}
               className={`panel p-5 flex flex-col ${
-                isCurrent ? 'ring-2 ring-teal-400 shadow-[0_0_16px_rgba(13,148,136,0.15)]' : ''
+                isCurrent ? 'ring-2 ring-primary shadow-[0_0_16px_rgba(13,148,136,0.15)]' : ''
               }`}
             >
               {isCurrent && (
@@ -135,7 +135,7 @@ export default function SubscriptionPlans({
               <ul className="space-y-2.5 flex-1 text-sm">
                 {features.map((f) => (
                   <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-neutral-light' : 'text-neutral-light/30 line-through'}`}>
-                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-teal-400' : 'text-neutral-light/20'}`}>
+                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-primary' : 'text-neutral-light/20'}`}>
                       {f.included ? '✓' : '✗'}
                     </span>
                     {f.label}
@@ -143,10 +143,10 @@ export default function SubscriptionPlans({
                 ))}
               </ul>
               <button
-                className={`mt-5 w-full py-2.5 rounded-lg text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
+                className={`mt-5 w-full py-2.5 rounded-lg text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   isCurrent
-                    ? 'bg-teal-500/10 text-teal-400 cursor-default'
-                    : 'bg-teal-600 hover:bg-teal-500 text-white'
+                    ? 'bg-primary/10 text-primary cursor-default'
+                    : 'bg-primary-hover hover:bg-primary-hover text-white'
                 } ${loadingPlanId === plan.id ? 'opacity-50' : ''}`}
                 disabled={isCurrent || loadingPlanId !== null}
                 onClick={() => !isCurrent && handleSubscribe(plan.id)}

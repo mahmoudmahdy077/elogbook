@@ -152,7 +152,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         </div>
         {role === 'resident' && (
           isReadOnly ? (
-            <span className="px-4 py-2.5 rounded-lg bg-neutral-700 text-neutral-300 text-sm font-medium cursor-not-allowed" aria-disabled="true">
+            <span className="px-4 py-2.5 rounded-lg bg-neutral-dark text-text-muted text-sm font-medium cursor-not-allowed" aria-disabled="true">
               Logging disabled — renew subscription
             </span>
           ) : (
@@ -256,9 +256,9 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                   description="No cases are currently awaiting your review."
                 />
               ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-[rgba(245,158,11,0.08)] border border-amber-400/20">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-[rgba(245,158,11,0.08)] border border-pending/20">
                   <div className="w-10 h-10 rounded-full bg-[rgba(245,158,11,0.15)] flex items-center justify-center">
-                    <span className="clinical-data text-amber-400 font-bold">{pendingApprovals}</span>
+                    <span className="clinical-data text-pending font-bold">{pendingApprovals}</span>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Cases awaiting review</p>

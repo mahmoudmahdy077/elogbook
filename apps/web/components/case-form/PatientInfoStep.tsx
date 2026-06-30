@@ -55,7 +55,7 @@ export default function PatientInfoStep({
         <>
           <div className="flex items-center gap-3 mb-3">
             <span className="badge-approved text-xs px-2.5 py-1 rounded-full">Safe Harbor Compliant</span>
-            <span className="text-xs text-emerald-400">No PHI stored</span>
+            <span className="text-xs text-approved">No PHI stored</span>
           </div>
           <div className="warning-banner text-xs rounded-lg p-2.5">
             De-identified mode: safe for portfolio logging. No PHI is stored. Patient hash will be computed server-side.

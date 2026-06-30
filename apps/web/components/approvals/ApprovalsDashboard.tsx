@@ -189,13 +189,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="panel p-4 text-center">
-          <p className="text-2xl font-bold text-amber-400 font-heading">
+          <p className="text-2xl font-bold text-pending font-heading">
             <SimpleCounter value={pendingCount} />
           </p>
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">Pending</p>
         </div>
         <div className="panel p-4 text-center">
-          <p className="text-2xl font-bold text-teal-400 font-heading">
+          <p className="text-2xl font-bold text-primary font-heading">
             <SimpleCounter value={(() => {
               const todayUTC = new Date().toISOString().split('T')[0];
               return entries.filter(e => new Date(e.case_date).toISOString().split('T')[0] === todayUTC).length;
@@ -204,7 +204,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">Today</p>
         </div>
         <div className="panel p-4 text-center">
-          <p className="text-2xl font-bold text-indigo-400 font-heading">
+          <p className="text-2xl font-bold text-secondary font-heading">
             <SimpleCounter value={entries.filter(e => {
               const d = new Date(e.created_at).getTime();
               return d > Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -213,7 +213,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">This Week</p>
         </div>
         <div className="panel p-4 text-center">
-          <p className="text-2xl font-bold text-emerald-400 font-heading">
+          <p className="text-2xl font-bold text-approved font-heading">
             <SimpleCounter value={approvalRate} />
             <span className="text-lg">%</span>
           </p>

@@ -60,7 +60,7 @@ export default function ConfirmDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-light/50">Mode</span>
-                  <span className={`font-medium ${isDeidentified ? 'text-amber-400' : 'text-red-400'}`}>
+                  <span className={`font-medium ${isDeidentified ? 'text-pending' : 'text-rejected'}`}>
                     {isDeidentified ? 'De-identified' : 'PII'}
                   </span>
                 </div>

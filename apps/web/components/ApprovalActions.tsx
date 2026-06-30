@@ -55,7 +55,7 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
         rows={2}
       />
       {error && (
-        <p className="text-red-500 text-sm">{error}</p>
+        <p className="text-danger text-sm">{error}</p>
       )}
       <div className="flex gap-3">
         <Button

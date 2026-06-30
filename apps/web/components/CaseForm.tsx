@@ -267,8 +267,8 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="text-center py-8 space-y-5"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-400/10 border border-emerald-400/30">
-            <svg className="w-8 h-8 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-approved/10 border border-approved/30">
+            <svg className="w-8 h-8 text-approved" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
           </div>
