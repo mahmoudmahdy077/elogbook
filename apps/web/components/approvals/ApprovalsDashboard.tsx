@@ -177,8 +177,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <h2
-          className="text-xl font-semibold"
-          style={{ fontFamily: 'var(--font-heading)' }}
+          className="text-xl font-semibold font-heading"
         >
           Pending Approvals
         </h2>

@@ -39,7 +39,7 @@ export default function CaseDetailsStep({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+      <h3 className="text-lg font-semibold font-heading">
         Case Details
       </h3>
 

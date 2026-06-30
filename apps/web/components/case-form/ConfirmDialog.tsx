@@ -44,9 +44,12 @@ export default function ConfirmDialog({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-dialog-title"
             className="panel p-6 max-w-md w-full shadow-xl"
           >
-            <h3 className="text-lg font-semibold font-heading mb-3">Confirm Submission</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold font-heading mb-3">Confirm Submission</h3>
 
             <div className="space-y-3 mb-5 text-sm">
               <p className="text-neutral-light/80">

@@ -54,6 +54,18 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* U5.5: PHI/confidentiality banner. De-identified cases show that
+          the MRN/DOB are intentionally blank; identified cases warn the
+          viewer that the data is sensitive (HIPAA). */}
+      {entry.is_deidentified ? (
+        <div className="bg-pending/10 border border-pending/30 text-pending text-xs rounded-lg p-2.5" role="status">
+          This case is de-identified. Patient MRN and DOB are not stored; a hash is used for matching.
+        </div>
+      ) : (
+        <div className="bg-danger/10 border border-danger/30 text-danger text-xs rounded-lg p-2.5" role="status">
+          <strong>PHI:</strong> This case contains identified patient data. Handle with care per HIPAA guidelines.
+        </div>
+      )}
       <Card>
         <Card.Header className="flex justify-between">
           <div>

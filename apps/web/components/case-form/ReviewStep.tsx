@@ -41,7 +41,7 @@ export default function ReviewStep({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+      <h3 className="text-lg font-semibold font-heading">
         Review
       </h3>
       <p className="text-sm text-neutral-light/60">
@@ -76,17 +76,17 @@ export default function ReviewStep({
           <>
             <div className="flex justify-between py-2">
               <span className="text-sm text-neutral-light/60">Patient MRN</span>
-              <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-mono)' }}>{patientMrn || '-'}</span>
+              <span className="text-sm font-medium clinical-data">{patientMrn || '-'}</span>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-sm text-neutral-light/60">Patient DOB</span>
-              <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-mono)' }}>{patientDob || '-'}</span>
+              <span className="text-sm font-medium clinical-data">{patientDob || '-'}</span>
             </div>
           </>
         )}
         <div className="flex justify-between py-2">
           <span className="text-sm text-neutral-light/60">Case Date</span>
-          <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-mono)' }}>{caseDate || '-'}</span>
+          <span className="text-sm font-medium clinical-data">{caseDate || '-'}</span>
         </div>
         {Object.entries(fieldValues).length > 0 && (
           <div className="py-2">

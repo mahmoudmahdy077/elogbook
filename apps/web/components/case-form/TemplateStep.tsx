@@ -39,7 +39,7 @@ export default function TemplateStep({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h3 className="text-lg font-semibold font-heading">
           Select Case Template
         </h3>
         <HelpPopover>

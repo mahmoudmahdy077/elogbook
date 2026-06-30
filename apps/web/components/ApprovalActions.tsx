@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button, TextArea } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useToast } from './Toast';
 
 interface Props {
   requestId: string;
@@ -15,8 +16,10 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmReject, setConfirmReject] = useState(false);
   const supabase = createClient();
   const router = useRouter();
+  const { show } = useToast();
 
   const handleAction = async (action: 'approve' | 'reject') => {
     setLoading(action);
@@ -42,8 +45,24 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
       return;
     }
 
+    show(
+      action === 'approve' ? 'Case approved successfully' : 'Case rejected',
+      action === 'approve' ? 'success' : 'error',
+    );
     router.refresh();
     setLoading(null);
+    setComment('');
+    setConfirmReject(false);
+  };
+
+  const onRejectClick = () => {
+    // U5.1: irreversible medical-training record — confirm first.
+    if (!confirmReject) {
+      setConfirmReject(true);
+      setError(null);
+      return;
+    }
+    handleAction('reject');
   };
 
   return (
@@ -51,26 +70,32 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
       <TextArea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Add feedback..."
+        placeholder="Add feedback (recommended for reject)..."
         rows={2}
+        aria-label="Comment"
       />
       {error && (
-        <p className="text-danger text-sm">{error}</p>
+        <p className="text-danger text-sm" role="alert">{error}</p>
+      )}
+      {confirmReject && (
+        <p className="text-xs text-pending" role="alert">
+          Click Reject again to confirm. This action is irreversible.
+        </p>
       )}
       <div className="flex gap-3">
         <Button
-          variant="danger-soft"
+          variant={confirmReject ? 'danger' : 'danger-soft'}
           isDisabled={loading !== null}
-          onPress={() => handleAction('reject')}
+          onPress={onRejectClick}
         >
-          Reject
+          {loading === 'reject' ? 'Rejecting…' : confirmReject ? 'Confirm Reject' : 'Reject'}
         </Button>
         <Button
           variant="primary"
           isDisabled={loading !== null}
           onPress={() => handleAction('approve')}
         >
-          Approve
+          {loading === 'approve' ? 'Approving…' : 'Approve'}
         </Button>
       </div>
     </div>
