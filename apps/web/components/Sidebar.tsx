@@ -89,6 +89,21 @@ export default function Sidebar({
           </button>
         </div>
 
+        {!collapsed && (
+          <div className="px-3 mb-3">
+            <input
+              type="search"
+              placeholder="Search cases..."
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary transition-colors"
+              onChange={(e) => {
+                if (e.target.value.length > 2) {
+                  window.location.href = `/${tenantSlug}/cases?q=${encodeURIComponent(e.target.value)}`;
+                }
+              }}
+            />
+          </div>
+        )}
+
         <nav className="flex flex-col gap-0.5 flex-1">
           {visibleLinks.map((link) => {
             const fullHref = `/${tenantSlug}${link.href}`;

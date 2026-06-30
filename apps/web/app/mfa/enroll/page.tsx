@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function MfaEnrollPage() {
   return (
@@ -85,10 +86,16 @@ function MfaEnrollInner() {
         </p>
         {qr ? (
           <div className="space-y-3">
-            <div className="rounded-lg bg-neutral-dark p-3 break-all text-xs font-mono">{qr.uri}</div>
-            <p className="text-xs text-neutral-light/50">
-              Secret (if you cannot scan): <code>{qr.secret}</code>
-            </p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-white p-4 rounded-lg">
+                <QRCodeSVG value={qr.uri} size={200} />
+              </div>
+              <p className="text-xs text-neutral-light/50">Scan with your authenticator app</p>
+              <details className="text-xs text-neutral-light/50 w-full">
+                <summary>Can&apos;t scan? Enter manually</summary>
+                <code className="block mt-2 p-2 bg-neutral-dark rounded text-xs break-all">{qr.secret}</code>
+              </details>
+            </div>
             <input
               type="text"
               inputMode="numeric"
