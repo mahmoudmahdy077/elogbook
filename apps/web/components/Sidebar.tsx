@@ -15,9 +15,11 @@ type NavLink = {
 export default function Sidebar({
   visibleLinks,
   tenantSlug,
+  user,
 }: {
   visibleLinks: NavLink[];
   tenantSlug: string;
+  user?: { name: string; role: string; tenantName: string };
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(() => {

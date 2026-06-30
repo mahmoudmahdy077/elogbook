@@ -58,7 +58,15 @@ export default async function TenantLayout({
 
   return (
     <div className="min-h-screen bg-backdrop flex">
-      <Sidebar visibleLinks={visibleLinks} tenantSlug={tenantSlug} />
+      <Sidebar
+        visibleLinks={visibleLinks}
+        tenantSlug={tenantSlug}
+        user={{
+          name: auth.profile.full_name,
+          role: auth.profile.role,
+          tenantName: auth.tenant.slug,
+        }}
+      />
       <MobileNav visibleLinks={visibleLinks} tenantSlug={tenantSlug} />
       <SubscriptionStatusProvider status={subscriptionStatus} periodEnd={auth.subscription?.current_period_end}>
         <main id="main-content" className="flex-1 overflow-auto pb-16 md:pb-6">
