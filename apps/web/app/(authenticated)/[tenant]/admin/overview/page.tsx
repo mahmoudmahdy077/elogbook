@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import ProgramOverviewCharts from '@/components/ProgramOverviewCharts';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface PendingRow {
   residentId: string;
@@ -38,12 +39,51 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
 
   const tenantId = profile.tenant_id;
 
-  const { data: entries } = await supabase
-    .from('case_entries')
-    .select('id, status, resident_id, created_at, profiles!inner(id, full_name, specialty), case_templates!inner(id, specialty)')
-    .eq('tenant_id', tenantId);
+  const [pendingCount, approvedCount, rejectedCount, draftCount, entriesResult] = await Promise.all([
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'pending')
+      .is('deleted_at', null),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'approved')
+      .is('deleted_at', null),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'rejected')
+      .is('deleted_at', null),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'draft')
+      .is('deleted_at', null),
+    supabase
+      .from('case_entries')
+      .select('id, status, resident_id, created_at, profiles!inner(id, full_name, specialty), case_templates!inner(id, specialty)')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(500),
+  ]);
 
-  const statusCounts: Record<CaseStatus, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
+  if (pendingCount.error) return <ErrorDisplay message={pendingCount.error.message} />;
+  if (approvedCount.error) return <ErrorDisplay message={approvedCount.error.message} />;
+  if (rejectedCount.error) return <ErrorDisplay message={rejectedCount.error.message} />;
+  if (draftCount.error) return <ErrorDisplay message={draftCount.error.message} />;
+  if (entriesResult.error) return <ErrorDisplay message={entriesResult.error.message} />;
+
+  const statusCounts: Record<CaseStatus, number> = {
+    draft: draftCount.count ?? 0,
+    pending: pendingCount.count ?? 0,
+    approved: approvedCount.count ?? 0,
+    rejected: rejectedCount.count ?? 0,
+  };
   const specialtyCounts: Record<string, number> = {};
   const residentMap = new Map<string, { name: string; specialty: string; pending: number; lastActivity: Date }>();
 
@@ -56,10 +96,8 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
     case_templates: { id: string; specialty: string }[];
   }
 
-  for (const entry of (entries ?? []) as EntryRow[]) {
+  for (const entry of (entriesResult.data ?? []) as EntryRow[]) {
     const status = entry.status as CaseStatus;
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-
     const templateSpecialty = entry.case_templates[0]?.specialty ?? 'Unknown';
     specialtyCounts[templateSpecialty] = (specialtyCounts[templateSpecialty] || 0) + 1;
 
@@ -113,7 +151,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-neutral-light/50 border-b border-white/5">
+                <tr className="text-left text-neutral-light/50 border-b border-border">
                   <th className="pb-2 font-medium">Resident Name</th>
                   <th className="pb-2 font-medium">Specialty</th>
                   <th className="pb-2 font-medium text-right">Pending Cases</th>
@@ -122,7 +160,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
               </thead>
               <tbody>
                 {pendingRows.map((row) => (
-                  <tr key={row.residentId} className="border-b border-white/5 last:border-0">
+                  <tr key={row.residentId} className="border-b border-border last:border-0">
                     <td className="py-3">{row.name}</td>
                     <td className="py-3 text-neutral-light/70">{row.specialty}</td>
                     <td className="py-3 text-right clinical-data">{row.pendingCases}</td>

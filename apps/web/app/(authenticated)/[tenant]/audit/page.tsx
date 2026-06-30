@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { Table, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 const PAGE_SIZE = 20;
 
@@ -116,7 +117,7 @@ export default async function AuditPage({
     return (
       <div>
         <h1 className="text-2xl font-bold mb-6">Audit Trail</h1>
-        <p className="text-danger">Failed to load audit logs: {error.message}</p>
+        <ErrorDisplay message={error.message} />
       </div>
     );
   }

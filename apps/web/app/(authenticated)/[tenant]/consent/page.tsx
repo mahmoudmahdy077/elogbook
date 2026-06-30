@@ -2,6 +2,7 @@ import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ConsentRow from './ConsentRow';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 const CONSENT_TYPES = [
   {
@@ -57,12 +58,16 @@ export default async function ConsentPage({
   if (auth.tenant.slug !== tenantSlug) redirect('/login');
 
   const supabase = await createServerSupabase();
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('consent_records')
     .select('consent_type, granted_at, revoked_at')
     .eq('user_id', auth.user.id)
     .eq('tenant_id', auth.profile.tenant_id)
     .order('granted_at', { ascending: false });
+
+  if (recordsError) {
+    return <ErrorDisplay message={recordsError.message} />;
+  }
 
   const latestByType = new Map<string, { granted: boolean; grantedAt: string }>();
   for (const r of (records as ConsentRow[] | null) ?? []) {

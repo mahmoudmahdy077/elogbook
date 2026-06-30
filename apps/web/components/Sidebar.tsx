@@ -47,13 +47,13 @@ export default function Sidebar({
   function renderIcon(icon: { path: string; type: 'fill' | 'stroke' }, className: string) {
     if (icon.type === 'stroke') {
       return (
-        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d={icon.path} />
         </svg>
       );
     }
     return (
-      <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d={icon.path} />
       </svg>
     );
@@ -83,7 +83,7 @@ export default function Sidebar({
             }`}
             aria-label="Collapse sidebar"
           >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M15.79 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L11.832 10l3.938 3.71a.75.75 0 01.02 1.06zM8.29 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L4.332 10l3.938 3.71a.75.75 0 01.02 1.06z" clipRule="evenodd" />
             </svg>
           </button>
@@ -171,7 +171,7 @@ export default function Sidebar({
                 className="p-2 rounded-md hover:bg-neutral-dark/50 transition-colors text-neutral-light/50 hover:text-neutral-light"
                 aria-label="Expand sidebar"
               >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M4.21 14.77a.75.75 0 01.02-1.06L8.168 10 4.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06.02zM11.71 14.77a.75.75 0 01.02-1.06L15.668 10l-3.938-3.71a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06.02z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -181,7 +181,7 @@ export default function Sidebar({
                   className="p-2 rounded-md hover:bg-danger/10 text-danger/60 hover:text-danger transition-colors"
                   aria-label="Sign out"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
                     <path fillRule="evenodd" d="M6 10a.75.75 0 01.75-.75h9.546l-1.048-.943a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 11-1.004-1.114l1.048-.943H6.75A.75.75 0 016 10z" clipRule="evenodd" />
                   </svg>
@@ -207,7 +207,7 @@ export default function Sidebar({
           className="fixed left-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-r-md panel border-l-0 hover:border-primary transition-colors max-md:hidden"
           aria-label="Expand sidebar"
         >
-          <svg className="w-3.5 h-3.5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="w-3.5 h-3.5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06.02z" clipRule="evenodd" />
           </svg>
         </button>

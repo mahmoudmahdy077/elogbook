@@ -60,6 +60,7 @@ export default function SubscriptionPlans({
   currentPlanId,
 }: Props) {
   const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (!plans || plans.length === 0) {
     return (
@@ -70,14 +71,15 @@ export default function SubscriptionPlans({
   }
 
   async function handleSubscribe(planId: string) {
+    setError(null);
     setLoadingPlanId(planId);
     const supabase = createClient();
     try {
       const gateway = gatewayProvider ?? 'stripe';
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const { data, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
         body: { tenant_id: tenantId, plan_id: planId, gateway },
       });
-      if (error) throw error;
+      if (checkoutError) throw checkoutError;
       if (data?.sessionId && publishableKey) {
         interface StripeWindow {
           Stripe?: {
@@ -93,6 +95,7 @@ export default function SubscriptionPlans({
       }
     } catch (err) {
       console.error('Subscribe error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start checkout');
     } finally {
       setLoadingPlanId(null);
     }
@@ -103,6 +106,11 @@ export default function SubscriptionPlans({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-heading font-semibold">Subscription Plans</h2>
       </div>
+      {error && (
+        <div role="alert" className="bg-danger-50 text-danger text-xs rounded-lg p-2.5 border border-danger/20">
+          {error}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {plans.map((plan, index) => {
           const isCurrent = plan.id === currentPlanId;

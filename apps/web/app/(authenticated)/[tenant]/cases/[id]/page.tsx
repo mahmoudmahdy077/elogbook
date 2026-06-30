@@ -2,6 +2,7 @@ import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Chip, Button } from '@heroui/react';
 import { notFound, redirect } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -11,7 +12,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   const supabase = await createServerSupabase();
 
-  const { data: entry } = await supabase
+  const { data: entry, error: entryError } = await supabase
     .from('case_entries')
     .select(`
       *,
@@ -22,17 +23,25 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
     .eq('id', id)
     .single();
 
+  if (entryError) {
+    return <ErrorDisplay message={entryError.message} />;
+  }
+
   if (!entry) notFound();
 
   const isResident = auth.profile.role === 'resident';
   if (isResident && entry.resident_id !== auth.profile.id) notFound();
   if (!isResident && entry.tenant_id !== auth.tenant.id) notFound();
 
-  const { data: approvals } = await supabase
+  const { data: approvals, error: approvalsError } = await supabase
     .from('approval_requests')
     .select('*, profiles(full_name)')
     .eq('entry_id', id)
     .order('requested_at', { ascending: false });
+
+  if (approvalsError) {
+    return <ErrorDisplay message={approvalsError.message} />;
+  }
 
   const statusColor = (s: string) => {
     switch (s) {

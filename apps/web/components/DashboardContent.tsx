@@ -183,7 +183,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {recentCases.length === 0 ? (
             <EmptyState
               icon={
-                <svg className="w-5 h-5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="w-5 h-5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
                 </svg>
               }
@@ -298,27 +298,27 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         <Link href={`/${tenantSlug}/cases`} className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
-          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
           </svg>
           Cases
         </Link>
         {role !== 'resident' && (
           <Link href={`/${tenantSlug}/approvals`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
-            <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
             Approvals
           </Link>
         )}
         <Link href={`/${tenantSlug}/goals`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
-          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
           Goals
         </Link>
         <Link href={`/${tenantSlug}/reports`}             className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">
-          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="w-5 h-5 text-neutral-light/60" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M15.5 2A1.5 1.5 0 0014 3.5v13a1.5 1.5 0 001.5 1.5h1a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0016.5 2h-1zM9.5 6A1.5 1.5 0 008 7.5v9A1.5 1.5 0 009.5 18h1a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0010.5 6h-1zM3.5 10A1.5 1.5 0 002 11.5v5A1.5 1.5 0 003.5 18h1A1.5 1.5 0 006 16.5v-5A1.5 1.5 0 004.5 10h-1z" />
           </svg>
           Reports

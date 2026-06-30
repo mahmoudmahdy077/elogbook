@@ -7,6 +7,7 @@ import UserManager from '@/components/UserManager';
 import AIConfigPanel from '@/components/AIConfigPanel';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 export default async function AdminPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -31,8 +32,13 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     redirect('/login');
   }
 
-  const [{ data: templates }, { data: users }, { data: aiConfigRaw }, { data: paymentConfigRaw }, { data: caseCounts }] =
-    await Promise.all([
+  const [
+    { data: templates, error: templatesError },
+    { data: users, error: usersError },
+    { data: aiConfigRaw, error: aiConfigError },
+    { data: paymentConfigRaw, error: paymentConfigError },
+    { data: caseCounts, error: caseCountsError },
+  ] = await Promise.all([
       supabase
         .from('case_templates')
         .select('*')
@@ -58,6 +64,12 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .select('status', { count: 'exact' })
         .eq('tenant_id', profile.tenant_id),
     ]);
+
+  if (templatesError) return <ErrorDisplay message={templatesError.message} />;
+  if (usersError) return <ErrorDisplay message={usersError.message} />;
+  if (aiConfigError) return <ErrorDisplay message={aiConfigError.message} />;
+  if (paymentConfigError) return <ErrorDisplay message={paymentConfigError.message} />;
+  if (caseCountsError) return <ErrorDisplay message={caseCountsError.message} />;
 
   interface AiConfigRaw {
     encrypted_api_key?: string;

@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Chip } from '@heroui/react';
 import { redirect } from 'next/navigation';
 import SubscriptionPlans from '@/components/SubscriptionPlans';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface SubscriptionPlan {
   name: string;
@@ -17,32 +18,36 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
   const supabase = await createServerSupabase();
 
-  const { data: plans } = await supabase
+  const { data: plans, error: plansError } = await supabase
     .from('subscription_plans')
     .select('*')
     .eq('tenant_type', auth.tenant.tenant_type)
     .order('price_monthly', { ascending: true });
+  if (plansError) return <ErrorDisplay message={plansError.message} />;
 
-  const { data: subscription } = await supabase
+  const { data: subscription, error: subscriptionError } = await supabase
     .from('subscriptions')
     .select('*, plan:subscription_plans(*)')
     .eq('tenant_id', auth.profile.tenant_id)
     .eq('status', 'active')
     .maybeSingle();
+  if (subscriptionError) return <ErrorDisplay message={subscriptionError.message} />;
 
-  const { data: gatewayConfig } = await supabase
+  const { data: gatewayConfig, error: gatewayError } = await supabase
     .from('payment_gateway_config')
     .select('*')
     .eq('tenant_id', auth.profile.tenant_id)
     .eq('is_active', true)
     .maybeSingle();
+  if (gatewayError) return <ErrorDisplay message={gatewayError.message} />;
 
-  const { data: purchases } = await supabase
+  const { data: purchases, error: purchasesError } = await supabase
     .from('one_time_purchases')
     .select('*')
     .eq('resident_id', auth.profile.id)
     .eq('purchase_type', 'ai_report')
     .order('created_at', { ascending: false });
+  if (purchasesError) return <ErrorDisplay message={purchasesError.message} />;
 
   const plan = (subscription as Record<string, unknown> | null)?.plan as SubscriptionPlan | null;
 

@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 export default async function ReportsPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -22,33 +23,39 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
   const tenant = tenants[0];
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
-  const { count: totalCount } = await supabase
+  const { count: totalCount, error: totalError } = await supabase
     .from('case_entries')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', profile.tenant_id);
+  if (totalError) return <ErrorDisplay message={totalError.message} />;
 
-  const { count: approvedCount } = await supabase
+  const { count: approvedCount, error: approvedError } = await supabase
     .from('case_entries')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'approved');
+  if (approvedError) return <ErrorDisplay message={approvedError.message} />;
 
-  const { count: pendingCount } = await supabase
+  const { count: pendingCount, error: pendingError } = await supabase
     .from('case_entries')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'pending');
+  if (pendingError) return <ErrorDisplay message={pendingError.message} />;
 
-  const { count: draftCount } = await supabase
+  const { count: draftCount, error: draftError } = await supabase
     .from('case_entries')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'draft');
+  if (draftError) return <ErrorDisplay message={draftError.message} />;
 
-  const { data: entries } = await supabase
+  const { data: entries, error: entriesError } = await supabase
     .from('case_entries')
     .select('id, status, case_templates!inner(specialty)')
-    .eq('tenant_id', profile.tenant_id);
+    .eq('tenant_id', profile.tenant_id)
+    .limit(1000);
+  if (entriesError) return <ErrorDisplay message={entriesError.message} />;
 
   const specialtyCounts: Record<string, number> = {};
   const statusCounts: Record<string, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };

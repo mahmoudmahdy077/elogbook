@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, ProgressBar } from '@heroui/react';
 import GoalForm from '@/components/GoalForm';
 import EmptyState from '@/components/EmptyState';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface GoalRow {
   id: string;
@@ -31,14 +32,21 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
     goalsQuery = goalsQuery.eq('resident_id', auth.profile.id);
   }
 
-  const { data: goals } = await goalsQuery.order('created_at', { ascending: false });
+  const { data: goals, error: goalsError } = await goalsQuery.order('created_at', { ascending: false });
+
+  if (goalsError) {
+    return <ErrorDisplay message={goalsError.message} />;
+  }
 
   let residents: { id: string; full_name: string }[] = [];
   if (isDirector) {
-    const { data: residentsData } = await supabase
+    const { data: residentsData, error: residentsError } = await supabase
       .from('profiles')
       .select('id, full_name')
       .eq('tenant_id', auth.profile.tenant_id);
+    if (residentsError) {
+      return <ErrorDisplay message={residentsError.message} />;
+    }
     residents = residentsData ?? [];
   }
 

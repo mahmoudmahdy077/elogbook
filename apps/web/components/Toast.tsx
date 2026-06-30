@@ -53,7 +53,7 @@ function ToastContainer({ toasts }: { toasts: ToastItem[] }) {
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md text-sm shadow-lg ${bgMap[t.type]}`}
             style={{ maxWidth: '24rem' }}
           >
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d={iconMap[t.type]} clipRule="evenodd" />
             </svg>
             <span>{t.message}</span>
