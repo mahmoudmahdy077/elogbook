@@ -89,7 +89,7 @@ export default async function CasesPage({
           }}
         />
       ) : (
-        <div className="panel p-4">
+        <div className="panel p-4 overflow-x-auto">
         <Table.Root aria-label="Case entries table" variant="primary">
           <Table.Content>
           <Table.Header>

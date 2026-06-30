@@ -5,6 +5,7 @@ import MobileNav from '@/components/MobileNav';
 import ClientProviders from '@/components/ClientProviders';
 import { SubscriptionStatusProvider } from '@/components/SubscriptionStatusProvider';
 import ReadOnlyBanner from '@/components/ReadOnlyBanner';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 type NavLink = {
   href: string;
@@ -71,8 +72,13 @@ export default async function TenantLayout({
       <SubscriptionStatusProvider status={subscriptionStatus} periodEnd={auth.subscription?.current_period_end}>
         <main id="main-content" className="flex-1 overflow-auto pb-16 md:pb-6">
           <ReadOnlyBanner tenantSlug={tenantSlug} />
-          <div className="p-6">
-            <ClientProviders>{children}</ClientProviders>
+          {/* U2.4 + U2.5: responsive padding (p-3 on phones, p-6 on larger) + content max-width for readability. */}
+          <div className="p-3 sm:p-6">
+            {/* U2.2: Breadcrumbs on sub-pages for navigation context. */}
+            <Breadcrumbs tenantSlug={tenantSlug} />
+            <div className="max-w-7xl mx-auto w-full">
+              <ClientProviders>{children}</ClientProviders>
+            </div>
           </div>
         </main>
       </SubscriptionStatusProvider>
