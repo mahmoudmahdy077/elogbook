@@ -37,11 +37,18 @@ export default async function CasesPage({
   const supabase = await createServerSupabase();
   const offset = (page - 1) * PAGE_SIZE;
 
-  const { data: entries, error, count } = await supabase
+  // U4.4: residents see only their own cases; supervisors+ see all
+  // tenant cases. Previously the page filtered by resident_id for
+  // every role, leaving supervisors with an empty list outside the
+  // approvals queue.
+  const isResident = auth.profile.role === 'resident';
+
+  let casesQuery = supabase
     .from('case_entries')
     .select('id, case_date, patient_mrn, status, case_templates!inner(name, specialty)', { count: 'exact' })
-    .eq('resident_id', auth.profile.id)
-    .eq('tenant_id', auth.profile.tenant_id)
+    .eq('tenant_id', auth.profile.tenant_id);
+  if (isResident) casesQuery = casesQuery.eq('resident_id', auth.profile.id);
+  const { data: entries, error, count } = await casesQuery
     .order('created_at', { ascending: false })
     .range(offset, offset + PAGE_SIZE - 1);
 
