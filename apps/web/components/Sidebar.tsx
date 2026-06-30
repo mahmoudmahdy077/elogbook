@@ -115,6 +115,52 @@ export default function Sidebar({
         </nav>
 
         <div className={`mt-auto pt-4 border-t border-border ${collapsed ? 'flex justify-center' : ''}`}>
+          {/* U1.5: Theme toggle — persists to localStorage, read by the
+              inline script in layout.tsx to avoid hydration flash. */}
+          {collapsed ? (
+            <button
+              onClick={() => {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                  localStorage.setItem('theme', 'light');
+                } else {
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.classList.add('dark');
+                  localStorage.setItem('theme', 'dark');
+                }
+              }}
+              className="p-2 rounded-md hover:bg-neutral-dark/50 transition-colors text-neutral-light/50 hover:text-neutral-light"
+              aria-label="Toggle theme"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                  localStorage.setItem('theme', 'light');
+                } else {
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.classList.add('dark');
+                  localStorage.setItem('theme', 'dark');
+                }
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-neutral-dark/50 hover:text-text-primary transition-colors"
+              aria-label="Toggle theme"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+              <span>Toggle theme</span>
+            </button>
+          )}
           {!collapsed && <LocaleSwitcher current={typeof document !== 'undefined' ? (document.documentElement.lang || 'en') : 'en'} />}
           {collapsed ? (
             <div className="flex flex-col gap-1">
