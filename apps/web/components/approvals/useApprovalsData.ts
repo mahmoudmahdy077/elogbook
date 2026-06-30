@@ -138,8 +138,11 @@ export function useApprovalsData(tenantId: string) {
 
   const pendingCount = entries.length;
   const todayUTC = new Date().toISOString().split('T')[0];
+  // U4.1: 'Today' should mean 'submitted today' (created_at), not
+  // 'procedure dated today' (case_date). Supervisors care about
+  // recent activity, not the procedure date which can be older.
   const todayCount = entries.filter(
-    (e) => new Date(e.case_date).toISOString().split('T')[0] === todayUTC
+    (e) => e.created_at?.startsWith(todayUTC)
   ).length;
   const thisWeekCount = entries.filter((e) => {
     const d = new Date(e.created_at).getTime();

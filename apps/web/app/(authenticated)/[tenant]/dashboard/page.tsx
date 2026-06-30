@@ -55,7 +55,25 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     .select(selectFields)
     .eq('tenant_id', tenantId);
   if (isResident) casesQuery = casesQuery.eq('resident_id', residentId);
-  casesQuery = casesQuery.order('created_at', { ascending: false }).limit(isResident ? 5 : 100);
+  // U4.0: residents see their last 5 cases; director+ also see last 5.
+  casesQuery = casesQuery.order('created_at', { ascending: false }).limit(5);
+
+  // U4.0: directors+ get ACCURATE total counts via count queries,
+  // not client-side tally of a capped fetch (which under-reported for
+  // any tenant with >100 cases).
+  const statsPromise = isResident
+    ? Promise.resolve(null)
+    : Promise.all([
+        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending').is('deleted_at', null),
+        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'approved').is('deleted_at', null),
+        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'rejected').is('deleted_at', null),
+        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'draft').is('deleted_at', null),
+      ]).then(([p, a, r, d]) => ({
+        pending: p.count ?? 0,
+        approved: a.count ?? 0,
+        rejected: r.count ?? 0,
+        draft: d.count ?? 0,
+      }));
 
   const queries: any[] = [
     casesQuery,
@@ -89,13 +107,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const progressResult = results.length > 2 ? results[2] as { data: ProgressRow[] | null } : { data: null };
   const residentsDataResult = results.length > 3 ? results[3] as { data: ResidentProfileRow[] | null } : { data: null };
 
+  // U4.0: Use count-query result for director+; client-side tally only for residents.
   const allCaseRows = casesResult.data ?? [];
-  const stats: Record<CaseStatus, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
-  for (const r of allCaseRows) {
-    if (!['draft', 'pending', 'approved', 'rejected'].includes(r.status)) continue;
-    const s = r.status as CaseStatus;
-    stats[s]++;
-  }
+  const stats: Record<CaseStatus, number> = isResident
+    ? (() => {
+        const acc = { draft: 0, pending: 0, approved: 0, rejected: 0 };
+        for (const r of allCaseRows) {
+          if (!['draft', 'pending', 'approved', 'rejected'].includes(r.status)) continue;
+          const s = r.status as CaseStatus;
+          acc[s]++;
+        }
+        return acc;
+      })()
+    : ((await statsPromise) as { draft: number; pending: number; approved: number; rejected: number });
 
   const recentCases = allCaseRows.slice(0, 5).map((r) => ({
     id: r.id,

@@ -287,7 +287,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         </span>
                         <span className="font-medium">
                           {template?.specialty}
-                          {template?.name ? ` ΓÇô ${template.name}` : ''}
+                          {template?.name ? ` \u2013 ${template.name}` : ''}
                         </span>
                       </div>
                       <div>
