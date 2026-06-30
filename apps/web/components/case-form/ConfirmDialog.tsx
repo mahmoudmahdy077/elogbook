@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@heroui/react';
 
 interface Template {
@@ -27,6 +27,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const reduceMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -34,7 +35,7 @@ export default function ConfirmDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.15 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={onCancel}
         >
@@ -42,7 +43,7 @@ export default function ConfirmDialog({
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { STAGGER_DELAY } from '@elogbook/shared';
 
 type Status = 'draft' | 'pending' | 'approved' | 'rejected';
@@ -27,6 +27,7 @@ const STATUS_LABELS: Record<Status, string> = {
 function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
+  const reduceMotion = useReducedMotion();
   let accumulated = 0;
 
   return (
@@ -52,7 +53,7 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: offset }}
-              transition={{
+              transition={reduceMotion ? { duration: 0 } : {
                 duration: 0.8,
                 delay: index * STAGGER_DELAY + 0.2,
                 ease: 'easeOut',
@@ -83,6 +84,7 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
 
 function BarChart({ data, max }: { data: BarData[]; max: number }) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-3">
@@ -97,7 +99,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
               key={item.specialty}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: index * STAGGER_DELAY + 0.2 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: index * STAGGER_DELAY + 0.2 }}
               className="relative"
               onMouseEnter={() => setHovered(item.specialty)}
               onMouseLeave={() => setHovered(null)}
@@ -111,7 +113,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
                   className="h-full rounded-full bg-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, delay: index * STAGGER_DELAY + 0.3, ease: 'easeOut' }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.6, delay: index * STAGGER_DELAY + 0.3, ease: 'easeOut' }}
                   style={{ boxShadow: isHovered ? '0 0 8px var(--color-primary-glow)' : undefined }}
                 />
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import ApprovalActions from '@/components/ApprovalActions';
 import EmptyState from '@/components/EmptyState';
@@ -63,6 +63,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [supabase] = useState(() => createClient());
   const mountedRef = useRef(true);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     return () => { mountedRef.current = false; };
@@ -247,7 +248,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{
+                  transition={reduceMotion ? { duration: 0 } : {
                     duration: 0.2,
                     ease: 'easeOut',
                   }}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import { useSubscriptionStatus } from '@/components/SubscriptionStatusProvider';
@@ -55,6 +55,7 @@ interface DashboardData {
 
 function KpiRing({ value, max, label, color, delay }: { value: number; max: number; label: string; color: string; delay: number }) {
   const [animatedValue, setAnimatedValue] = useState(0);
+  const reduceMotion = useReducedMotion();
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const progress = max > 0 ? Math.min(value / max, 1) : 0;
@@ -69,7 +70,7 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, delay: delay * 0.001, ease: 'easeOut' }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: delay * 0.001, ease: 'easeOut' }}
       className="panel p-4 flex flex-col items-center gap-2 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
     >
       <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90" role="img" aria-label={`${label}: ${value} of ${max}`}>
@@ -84,7 +85,7 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, delay: delay * 0.001 + 0.2, ease: 'easeOut' }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.8, delay: delay * 0.001 + 0.2, ease: 'easeOut' }}
           style={{ filter: 'drop-shadow(0 0 6px currentColor)' }}
         />
       </svg>
@@ -108,6 +109,7 @@ function StatusBadge({ status }: { status: CaseStatus }) {
 
 function ProgressBar({ current, target, label }: { current: number; target: number; label: string }) {
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const reduceMotion = useReducedMotion();
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
@@ -120,7 +122,7 @@ function ProgressBar({ current, target, label }: { current: number; target: numb
           style={{ background: pct >= 100 ? 'var(--color-emerald-glow)' : 'var(--color-primary)' }}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.6, ease: 'easeOut' }}
         />
       </div>
     </div>
@@ -132,6 +134,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
   const role = profile.role;
   const totalCases = stats.draft + stats.pending + stats.approved + stats.rejected;
   const { isReadOnly } = useSubscriptionStatus();
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-6">
@@ -139,7 +142,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.3 }}
         className="flex items-center justify-between"
       >
         <div>
@@ -176,7 +179,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.3 }}
           className="panel p-4 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
         >
           <h2 className="font-heading font-semibold mb-3 text-[var(--color-text-primary)]">Recent Cases</h2>
@@ -213,7 +216,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         <motion.div
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.4 }}
           className="panel p-4 transition-shadow duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5"
         >
           {/* Resident: Goal Progress */}
@@ -294,7 +297,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.5 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.5 }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         <Link href={`/${tenantSlug}/cases`} className="panel p-3 text-center text-sm transition-all duration-200 hover:shadow-[var(--shadow-primary)] hover:-translate-y-0.5 flex flex-col items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow">

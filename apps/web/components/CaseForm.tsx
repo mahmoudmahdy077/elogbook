@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { caseEntrySchema, GLOBAL_TENANT_ID } from '@elogbook/shared';
 import { useToast } from '@/components/Toast';
@@ -90,6 +90,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   const [submitted, setSubmitted] = useState(false);
   const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
   const toast = useToast();
+  const reduceMotion = useReducedMotion();
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   const fields = selectedTemplate?.fields || [];
@@ -264,7 +265,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.3, ease: 'easeOut' }}
           className="text-center py-8 space-y-5"
         >
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-approved/10 border border-approved/30">
@@ -293,7 +294,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       ) : (
         <>
           <AnimatePresence mode="wait">
-            <motion.div key={step} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: 'easeInOut' }}>
+            <motion.div key={step} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeInOut' }}>
               {step === 0 && (
                 <TemplateStep
                   templates={templates}
