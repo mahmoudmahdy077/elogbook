@@ -552,7 +552,7 @@ git commit -m "feat(ui): replace raw error blocks with ErrorDisplay in admin/con
 
 Run:
 ```bash
-rg --include="*.tsx" "\{error\}" apps/web/ | grep -v ErrorDisplay | grep -v test | grep -v ".stories" | grep -v "__tests__"
+rg -g "*.tsx" "\{error\}" apps/web/ | Select-String -NotMatch "ErrorDisplay|test|__tests__|\.stories"
 ```
 
 Expected output: Only lines inside `ErrorDisplay.tsx` itself (the `{toUserMessage(message)}` and `{message}` lines). If there are matches outside, those need fixing.
