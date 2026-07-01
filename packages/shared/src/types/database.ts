@@ -107,6 +107,19 @@ export interface CaseEntry {
   deleted_at: string | null;
 }
 
+export interface FacultyEvaluation {
+  id: string;
+  tenant_id: string;
+  resident_id: string;
+  evaluator_id: string;
+  evaluation_date: string;
+  clinical_skills: number;
+  professionalism: number;
+  procedures: number;
+  comments: string | null;
+  created_at: string;
+}
+
 export type FrameworkType = 'acgme' | 'scfhs' | 'gmc' | 'canmeds' | 'custom';
 
 export interface AccreditationMapping {
