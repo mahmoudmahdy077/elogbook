@@ -31,7 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {nonce ? (
           <script nonce={nonce}
             dangerouslySetInnerHTML={{
-              __html: `try{var t=localStorage.getItem('theme');document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t==='light'?'light':'dark');}catch(e){}`,
+              __html: `try{var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t)}catch(e){}`,
             }}
           />
         ) : null}
