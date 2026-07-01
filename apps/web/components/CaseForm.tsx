@@ -16,6 +16,28 @@ import CaseDetailsStep from '@/components/case-form/CaseDetailsStep';
 import ReviewStep from '@/components/case-form/ReviewStep';
 import ConfirmDialog from '@/components/case-form/ConfirmDialog';
 
+export interface FormSetters {
+  setSelectedTemplateId: (v: string) => void;
+  setIsDeidentified: (v: boolean) => void;
+  setPatientMrn: (v: string) => void;
+  setPatientDob: (v: string) => void;
+  setPatientAgeYears: (v: string) => void;
+  setCaseDate: (v: string) => void;
+  setFieldValues: (v: Record<string, unknown> | ((prev: Record<string, unknown>) => Record<string, unknown>)) => void;
+  setAccreditationMappings: (v: AccreditationMapping[]) => void;
+}
+
+export function hydrateDuplicateCase(sourceCase: Record<string, unknown>, setters: FormSetters): void {
+  setters.setSelectedTemplateId(sourceCase.template_id as string);
+  setters.setIsDeidentified(sourceCase.is_deidentified as boolean);
+  setters.setPatientMrn('');
+  setters.setPatientDob('');
+  setters.setPatientAgeYears(sourceCase.patient_age_years != null ? String(sourceCase.patient_age_years) : '');
+  setters.setCaseDate(new Date().toISOString().slice(0, 10));
+  setters.setFieldValues((sourceCase.field_values as Record<string, unknown>) || {});
+  setters.setAccreditationMappings((sourceCase.accreditation_mappings as AccreditationMapping[]) || []);
+}
+
 interface CaseFormProps {
   tenantId: string;
   tenantSlug: string;
@@ -164,14 +186,16 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
       if (!sourceCase) return;
 
-      setSelectedTemplateId(sourceCase.template_id as string);
-      setIsDeidentified(sourceCase.is_deidentified as boolean);
-      setPatientMrn('');
-      setPatientDob('');
-      setPatientAgeYears(sourceCase.patient_age_years != null ? String(sourceCase.patient_age_years) : '');
-      setCaseDate(new Date().toISOString().slice(0, 10));
-      setFieldValues((sourceCase.field_values as Record<string, unknown>) || {});
-      setAccreditationMappings((sourceCase.accreditation_mappings as AccreditationMapping[]) || []);
+      hydrateDuplicateCase(sourceCase, {
+        setSelectedTemplateId,
+        setIsDeidentified,
+        setPatientMrn,
+        setPatientDob,
+        setPatientAgeYears,
+        setCaseDate,
+        setFieldValues,
+        setAccreditationMappings,
+      });
     }
 
     loadSourceCase();
