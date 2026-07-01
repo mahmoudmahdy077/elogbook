@@ -76,6 +76,18 @@ export interface TemplateFavorite {
   created_at: string;
 }
 
+export interface DutyPeriod {
+  id: string;
+  tenant_id: string;
+  resident_id: string;
+  shift_date: string;
+  hours_worked: number;
+  shift_type: 'call' | 'clinic' | 'vacation' | 'weekend' | 'regular';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CaseEntry {
   id: string;
   tenant_id: string;
