@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { caseEntrySchema, GLOBAL_TENANT_ID, type AccreditationMapping } from '@elogbook/shared';
 import { useToast } from '@/components/Toast';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { sortTemplates, type TemplateWithMeta } from '@elogbook/shared';
 
 import StepIndicator from '@/components/case-form/StepIndicator';
 import TemplateStep from '@/components/case-form/TemplateStep';
@@ -92,10 +93,11 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const [supabase] = useState(() => createClient());
 
   const [step, setStep] = useState(0);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<TemplateWithMeta[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [accreditationFrameworks, setAccreditationFrameworks] = useState<AccreditationFramework[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [isDeidentified, setIsDeidentified] = useState(false);
   // SECURITY: patientMrn and patientDob are PHI. They MUST NOT be persisted to
@@ -128,9 +130,63 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       ]);
       if (error) {
         setErrors([error.message]);
-      } else {
-        setTemplates([...(tenantTemplates || []), ...(globalTemplates || [])] as Template[]);
+        setLoadingTemplates(false);
+        return;
       }
+      const allTemplates = [...(tenantTemplates || []), ...(globalTemplates || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
+
+      let favIds = new Set<string>();
+      let personalCounts = new Map<string, number>();
+      let tenantCounts = new Map<string, number>();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const [favResult, profileResult] = await Promise.allSettled([
+          supabase.from('template_favorites').select('template_id').eq('user_id', user.id),
+          supabase.from('profiles').select('id').eq('user_id', user.id).single(),
+        ]);
+
+        if (favResult.status === 'fulfilled' && favResult.value.data) {
+          favIds = new Set(favResult.value.data.map((r: { template_id: string }) => r.template_id));
+        }
+
+        if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+          const profileId = (profileResult.value.data as { id: string }).id;
+          const { data: personalData } = await supabase
+            .from('case_entries')
+            .select('template_id')
+            .eq('resident_id', profileId);
+          if (personalData) {
+            personalCounts = new Map(
+              Array.from(
+                personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+                  acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
+                  return acc;
+                }, new Map<string, number>())
+              )
+            );
+          }
+        }
+
+        const { data: tenantEntries } = await supabase
+          .from('case_entries')
+          .select('template_id')
+          .eq('tenant_id', tenantId);
+        if (tenantEntries) {
+          tenantCounts = new Map(
+            Array.from(
+              tenantEntries.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+                acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
+                return acc;
+              }, new Map<string, number>())
+            )
+          );
+        }
+      }
+
+      setFavoriteIds(favIds);
+      const sorted = sortTemplates(allTemplates, favIds, personalCounts, tenantCounts);
+      setTemplates(sorted);
       setLoadingTemplates(false);
     }
     loadTemplates();
@@ -143,6 +199,29 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     }
     loadFrameworks();
   }, [tenantId, supabase]);
+
+  const toggleFavorite = useCallback(async (templateId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (favoriteIds.has(templateId)) {
+      const { error } = await supabase
+        .from('template_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('template_id', templateId);
+      if (error) { setErrors([error.message]); return; }
+      setFavoriteIds((prev) => { const next = new Set(prev); next.delete(templateId); return next; });
+      setTemplates((prev) => prev.map((t) => t.id === templateId ? { ...t, is_favorite: false } : t));
+    } else {
+      const { error } = await supabase
+        .from('template_favorites')
+        .insert({ user_id: user.id, template_id: templateId });
+      if (error) { setErrors([error.message]); return; }
+      setFavoriteIds((prev) => { const next = new Set(prev); next.add(templateId); return next; });
+      setTemplates((prev) => prev.map((t) => t.id === templateId ? { ...t, is_favorite: true } : t));
+    }
+  }, [supabase, favoriteIds]);
 
   useEffect(() => {
     if (!duplicateCaseId && !lastEntry) return;
@@ -382,7 +461,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   templates={templates}
                   selectedTemplateId={selectedTemplateId}
                   onSelect={(id) => { setSelectedTemplateId(id); setFieldValues({}); }}
-                  fieldCount={fields.length}
+                  onToggleFavorite={toggleFavorite}
                 />
               )}
               {step === 1 && (
