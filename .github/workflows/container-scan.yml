@@ -37,7 +37,7 @@ jobs:
       - name: Run Trivy (SARIF)
         # Default severity gate: CRITICAL only (--exit-code 1 --severity CRITICAL).
         # Lower severities are reported in the SARIF + the run summary.
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: elogbook-web:scan
           format: 'sarif'
