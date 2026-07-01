@@ -1,10 +1,11 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CaseForm from '@/components/CaseForm';
 
-export default async function NewCasePage({ params, searchParams }: { params: Promise<{ tenant: string }>, searchParams: Promise<{ duplicateFrom?: string }> }) {
+export default async function NewCasePage({ params, searchParams }: { params: Promise<{ tenant: string }>, searchParams: Promise<{ duplicateFrom?: string; repeatLast?: string }> }) {
   const { tenant: tenantSlug } = await params;
-  const { duplicateFrom } = await searchParams;
+  const { duplicateFrom, repeatLast } = await searchParams;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -45,12 +46,20 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Log New Case</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Log New Case</h1>
+        {!duplicateFrom && !repeatLast && (
+          <Link href={`/${tenantSlug}/cases/new?repeatLast=true`} className="text-sm text-primary hover:text-primary/80 transition-colors">
+            ↻ Repeat last entry
+          </Link>
+        )}
+      </div>
       <CaseForm
         tenantId={profile.tenant_id}
         tenantSlug={tenant.slug}
         initialStatus={initialStatus}
         duplicateCaseId={duplicateFrom}
+        lastEntry={repeatLast === 'true'}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { Card, Chip, Button } from '@heroui/react';
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
@@ -123,6 +124,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
               </Button>
             </form>
           )}
+          <div className="pt-4">
+            <Link href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}>
+              <Button variant="ghost" size="sm">Duplicate</Button>
+            </Link>
+          </div>
         </Card.Content>
       </Card>
 

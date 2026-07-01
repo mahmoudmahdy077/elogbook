@@ -15,6 +15,7 @@ type CaseEntryRow = {
   case_date: string;
   patient_mrn: string | null;
   status: string;
+  resident_id: string;
   case_templates: { name: string; specialty: string } | { name: string; specialty: string }[];
 };
 
@@ -45,7 +46,7 @@ export default async function CasesPage({
 
   let casesQuery = supabase
     .from('case_entries')
-    .select('id, case_date, patient_mrn, status, case_templates!inner(name, specialty)', { count: 'exact' })
+    .select('id, case_date, patient_mrn, status, resident_id, case_templates!inner(name, specialty)', { count: 'exact' })
     .eq('tenant_id', auth.profile.tenant_id);
   if (isResident) casesQuery = casesQuery.eq('resident_id', auth.profile.id);
   const { data: entries, error, count } = await casesQuery
@@ -122,14 +123,16 @@ export default async function CasesPage({
                   </Chip>
                 </Table.Cell>
                 <Table.Cell>
-                  <Link href={`/${tenantSlug}/cases/${entry.id}`}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                    >
-                      View
-                    </Button>
-                  </Link>
+                  <div className="flex gap-1">
+                    <Link href={`/${tenantSlug}/cases/${entry.id}`}>
+                      <Button variant="ghost" size="sm">View</Button>
+                    </Link>
+                    {entry.resident_id === auth.profile.id && (
+                      <Link href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}>
+                        <Button variant="ghost" size="sm">Duplicate</Button>
+                      </Link>
+                    )}
+                  </div>
                 </Table.Cell>
               </Table.Row>
             )})}
