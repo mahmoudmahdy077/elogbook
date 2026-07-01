@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 export default function RetentionForm({ currentDays, tenantId }: { currentDays: number; tenantId: string }) {
   const router = useRouter();
@@ -75,9 +76,7 @@ export default function RetentionForm({ currentDays, tenantId }: { currentDays: 
         <span>Purge now (soft-delete entries older than the new window)</span>
       </label>
 
-      {error && (
-        <div className="danger-banner text-xs rounded-lg p-2.5" role="alert">{error}</div>
-      )}
+      {error && <ErrorDisplay message={error} />}
       {result && (
         <div className="rounded-lg p-2.5 text-xs bg-emerald-900/20 text-emerald-300" role="status">{result}</div>
       )}

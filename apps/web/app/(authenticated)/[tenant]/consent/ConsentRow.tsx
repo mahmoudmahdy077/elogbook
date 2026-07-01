@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { denyConsent as webDenyConsent, grantConsent as webGrantConsent } from '@/lib/analytics';
 
 export default function ConsentRow({
@@ -72,9 +73,7 @@ export default function ConsentRow({
       <div className="flex-1">
         <h3 className="text-sm font-medium">{label}</h3>
         <p className="text-xs text-neutral-light/60 mt-1">{description}</p>
-        {error && (
-          <p className="text-xs text-danger mt-2" role="alert">{error}</p>
-        )}
+        {error && <ErrorDisplay message={error} />}
       </div>
       <button
         onClick={handleToggle}
