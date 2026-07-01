@@ -20,6 +20,12 @@ export const requestContext = {
   getRequestId(): string | undefined {
     return storage.getStore()?.requestId;
   },
+  getTenantId(): string | undefined {
+    return storage.getStore()?.tenantId;
+  },
+  getUserId(): string | undefined {
+    return storage.getStore()?.userId;
+  },
 };
 
 export function newRequestId(): string {
@@ -27,4 +33,21 @@ export function newRequestId(): string {
     return crypto.randomUUID();
   }
   return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Creates a structured log object with request context for correlation.
+ * Use with the logger for audit trails and debugging.
+ */
+export function createLogContext(extra?: Record<string, unknown>): Record<string, unknown> {
+  const ctx = storage.getStore();
+  return {
+    requestId: ctx?.requestId ?? 'unknown',
+    tenantId: ctx?.tenantId,
+    userId: ctx?.userId,
+    route: ctx?.route,
+    method: ctx?.method,
+    timestamp: new Date().toISOString(),
+    ...extra,
+  };
 }

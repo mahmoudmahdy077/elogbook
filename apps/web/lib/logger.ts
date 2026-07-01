@@ -58,9 +58,13 @@ type Level = 'debug' | 'info' | 'warn' | 'error';
 
 function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
   let requestId: string | undefined;
+  let tenantId: string | undefined;
+  let userId: string | undefined;
   try {
     const { requestContext } = require('./request-context') as typeof import('./request-context');
     requestId = requestContext.getRequestId();
+    tenantId = requestContext.getTenantId();
+    userId = requestContext.getUserId();
   } catch {
     /* request-context not available in some bundles */
   }
@@ -69,6 +73,8 @@ function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
     level,
     msg,
     ...(requestId ? { requestId } : {}),
+    ...(tenantId ? { tenantId } : {}),
+    ...(userId ? { userId } : {}),
     ...(typeof window === 'undefined' && process?.pid ? { pid: process.pid } : {}),
     ...(redact(meta) as Record<string, unknown>),
   };
