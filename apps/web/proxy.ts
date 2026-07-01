@@ -6,8 +6,6 @@ const isProd = process.env.NODE_ENV === 'production';
 function generateCsp(nonce: string): string {
   return [
     "default-src 'self'",
-    // P4.7: drop 'unsafe-inline' (rely on nonce + strict-dynamic).
-    // 'unsafe-eval' is dev-only — see also P4.7 note about next.config.js.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? '' : " 'unsafe-eval'"}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
@@ -19,13 +17,11 @@ function generateCsp(nonce: string): string {
   ].join('; ');
 }
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const nonce = crypto.randomUUID();
 
   const response = await updateSession(request);
 
-  // Strict CSP: nonce + strict-dynamic, frame-ancestors 'none'.
-  // HSTS is set in next.config.js for production.
   response.headers.set('Content-Security-Policy', generateCsp(nonce));
   response.headers.set('x-nonce', nonce);
   if (isProd) {
