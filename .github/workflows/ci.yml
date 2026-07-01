@@ -10,7 +10,7 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -24,7 +24,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -37,7 +37,7 @@ jobs:
   validate-migrations:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate migration order
         run: |
           echo "Validating migration file ordering..."
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [typecheck]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -60,7 +60,7 @@ jobs:
     needs: [typecheck, lint, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -73,7 +73,7 @@ jobs:
     name: pnpm audit + license check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:

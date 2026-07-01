@@ -21,7 +21,7 @@ jobs:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
@@ -46,7 +46,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -67,7 +67,7 @@ jobs:
       matrix:
         function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -85,7 +85,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
