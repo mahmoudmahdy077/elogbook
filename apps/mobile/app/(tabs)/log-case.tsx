@@ -23,9 +23,9 @@ import { getDatabase } from '../../lib/db/database';
 import type { CaseEntry } from '../../lib/db/models/CaseEntry';
 import { useHaptics } from '../../lib/haptics';
 import { generatePatientHash } from '../../lib/patient-hash';
-import { caseEntrySchema } from '@elogbook/shared';
+import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
+import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
-import type { CaseTemplate, TemplateField } from '@elogbook/shared';
 import { DateField } from '../../components/DateField';
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -52,6 +52,7 @@ export default function LogCaseScreen() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const templatesRef = useRef(templates);
   templatesRef.current = templates;
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -268,7 +269,7 @@ export default function LogCaseScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('id, tenant_id')
       .eq('user_id', user.id)
       .single();
 
@@ -281,16 +282,83 @@ export default function LogCaseScreen() {
 
     if (error) { setFetchError(true); setLoading(false); return; }
     if (data) {
-      setTemplates(data as CaseTemplate[]);
-      // If we're editing and the template id is already known, jump straight
-      // into the form prefilled with the existing field values.
+      const allTemplates = data as unknown as CaseTemplate[];
+      let favIds = new Set<string>();
+      let personalCounts = new Map<string, number>();
+
+      const { data: favData } = await supabase
+        .from('template_favorites')
+        .select('template_id')
+        .eq('user_id', user.id);
+      if (favData) {
+        favIds = new Set(favData.map((r: { template_id: string }) => r.template_id));
+      }
+
+      const { data: personalData } = await supabase
+        .from('case_entries')
+        .select('template_id')
+        .eq('resident_id', profile.id);
+      if (personalData) {
+        personalCounts = new Map(
+          Array.from(
+            personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+              acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
+              return acc;
+            }, new Map<string, number>())
+          )
+        );
+      }
+
+      setFavoriteIds(favIds);
+      const sorted = sortTemplates(allTemplates, favIds, personalCounts, new Map());
+      setTemplates(sorted as unknown as CaseTemplate[]);
+
       const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
       if (autoSelectId) {
-        const t = (data as CaseTemplate[]).find((x) => x.id === autoSelectId);
+        const t = sorted.find((x) => x.id === autoSelectId);
         if (t) setSelectedTemplate(t);
       }
     }
     setLoading(false);
+  };
+
+  const toggleFavorite = async (templateId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (favoriteIds.has(templateId)) {
+      const { error } = await supabase
+        .from('template_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('template_id', templateId);
+      if (error) { Alert.alert('Error', 'Failed to remove favorite.'); return; }
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(templateId);
+        return next;
+      });
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === templateId ? { ...t, is_favorite: false } as unknown as CaseTemplate : t
+        )
+      );
+    } else {
+      const { error } = await supabase
+        .from('template_favorites')
+        .insert({ user_id: user.id, template_id: templateId });
+      if (error) { Alert.alert('Error', 'Failed to add favorite.'); return; }
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        next.add(templateId);
+        return next;
+      });
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === templateId ? { ...t, is_favorite: true } as unknown as CaseTemplate : t
+        )
+      );
+    }
   };
 
   const selectTemplate = (t: CaseTemplate) => {
@@ -563,23 +631,38 @@ export default function LogCaseScreen() {
     </Modal>
   );
 
-  const renderTemplateCard = useCallback(({ item: t }: { item: CaseTemplate }) => (
-    <TouchableOpacity
-      className="bg-slate-900 border border-indigo-500/15 rounded-xl p-4 active:scale-95 m-1 flex-1"
-      style={{ maxWidth: '48%' }}
-      onPress={() => selectTemplate(t)}
-      accessibilityLabel={`${t.specialty} - ${t.name} template`}
-      accessibilityRole="button"
-    >
-      <Ionicons name={getSpecialtyIcon(t.specialty)} size={28} color={clinicalTokens.colors.primary.DEFAULT} />
-      <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
-        {t.specialty} - {t.name}
-      </Text>
-      <Text className="text-indigo-400 text-xs mt-2 bg-indigo-500/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
-        {t.fields.length} field{t.fields.length !== 1 ? 's' : ''}
-      </Text>
-    </TouchableOpacity>
-  ), [selectTemplate]);
+  const renderTemplateCard = useCallback(({ item: t }: { item: CaseTemplate }) => {
+    const tmpl = t as unknown as TemplateWithMeta;
+    return (
+      <TouchableOpacity
+        className="bg-slate-900 border border-indigo-500/15 rounded-xl p-4 active:scale-95 m-1 flex-1"
+        style={{ maxWidth: '48%' }}
+        onPress={() => selectTemplate(t)}
+        accessibilityLabel={`${t.specialty} - ${t.name} template`}
+        accessibilityRole="button"
+      >
+        <View className="flex-row justify-between items-start">
+          <Ionicons name={getSpecialtyIcon(t.specialty)} size={28} color={clinicalTokens.colors.primary.DEFAULT} />
+          <TouchableOpacity
+            onPress={() => toggleFavorite(t.id)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={tmpl.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+            accessibilityRole="button"
+          >
+            <Text className={tmpl.is_favorite ? 'text-amber-400' : 'text-slate-600'} style={{ fontSize: 18 }}>
+              {tmpl.is_favorite ? '★' : '☆'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+          {t.specialty} - {t.name}
+        </Text>
+        <Text className="text-indigo-400 text-xs mt-2 bg-indigo-500/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
+          {t.fields.length} field{t.fields.length !== 1 ? 's' : ''}
+        </Text>
+      </TouchableOpacity>
+    );
+  }, [selectTemplate, toggleFavorite]);
 
   if (loading) {
     return (
