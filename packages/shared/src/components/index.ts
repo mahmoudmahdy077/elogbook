@@ -13,3 +13,6 @@ export type { GlassPanelProps } from './GlassPanel.web';
 export type { StatusBadgeProps, StatusVariant, BadgeSize } from './StatusBadge.web';
 export type { ProgressRingProps } from './ProgressRing.web';
 export type { ClinicalTextProps, ClinicalTextSize } from './ClinicalText.web';
+export type { FormFieldProps } from './FormField.web';
+export type { FormDividerProps } from './FormDivider.web';
+export type { SpinnerProps } from './Spinner.web';
