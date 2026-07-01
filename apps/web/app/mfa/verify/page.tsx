@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 type Factor = { id: string; type: 'totp' };
 
@@ -92,7 +93,7 @@ function MfaVerifyInner() {
               autoFocus
               className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-neutral-light text-sm"
             />
-            {error && <div className="danger-banner text-xs rounded-lg p-2.5" role="alert">{error}</div>}
+            {error && <ErrorDisplay message={error} />}
             <button
               onClick={handleVerify}
               disabled={code.length < 6 || loading}

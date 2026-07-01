@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { APP_NAME } from '@elogbook/shared';
 import { FormField, FormDivider, Spinner } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 function EyeIcon() {
   return (
@@ -64,8 +65,8 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
       <h2 className="text-lg font-heading font-semibold text-text-primary mb-1">Reset password</h2>
       <p className="text-sm text-text-muted mb-4">Enter your email and we&apos;ll send you a reset link.</p>
       {error && (
-        <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-xl px-3 py-2 mb-4" role="alert">
-          {error}
+        <div className="mb-4">
+          <ErrorDisplay message={error} />
         </div>
       )}
       <button
@@ -244,16 +245,7 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                {error && (
-                  <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-xl px-3 py-2" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div className="flex items-start gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                      </svg>
-                      <span>{error}</span>
-                    </div>
-                  </div>
-                )}
+                {error && <ErrorDisplay message={error} />}
 
                 <button
                   type="submit"
