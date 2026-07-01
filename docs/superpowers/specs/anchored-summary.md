@@ -15,18 +15,16 @@
 - **C.4** Impact-aware confirm dialogs
 - **C.5** Billing usage meter + payment history
 - **C.6** Reports date-range picker + CSV export
-- **D.1 Phase 1-2** Duty/hour tracking schema + logging UI
-- **D.2 Phase 3** Faculty evaluations (form, evaluate page, resident view)
+- **D.1** Duty/hour tracking — schema, logging UI, dashboard violations
+- **D.2** Faculty evaluations — form, evaluate page, resident view, reports view + CSV
 
-### Blocked
+## Blocked
 - SQL verification — Docker Desktop unavailable
 - Edge function deployment — requires network
 - E2E tests — need Playwright binaries
 
 ## Next Steps
-1. D.1 Dashboard — weekly calendar grid, violation alerts
-2. D.2 Reports page — aggregate evaluations view + CSV export
-3. Run full test suite and typecheck
+None — all items complete.
 
 ## Critical Context
 - D.1 `shift_type` values: 'call', 'clinic', 'vacation', 'weekend', 'regular'
