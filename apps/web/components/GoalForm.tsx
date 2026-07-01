@@ -15,6 +15,7 @@ import {
   Input,
 } from '@heroui/react';
 import { programGoalSchema } from '@elogbook/shared';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 
 interface GoalFormProps {
@@ -113,9 +114,7 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
       <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
         <Modal.Header>Create Goal</Modal.Header>
         <Modal.Body>
-          {error && (
-            <div className="text-danger text-sm bg-danger-50 p-2 rounded">{error}</div>
-          )}
+          {error && <ErrorDisplay message={error} />}
           <Select
             selectedKey={residentId || null}
             onSelectionChange={(key) => {

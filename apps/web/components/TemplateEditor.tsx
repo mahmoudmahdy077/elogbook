@@ -13,6 +13,7 @@ import {
   Label,
   Input,
 } from '@heroui/react';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 
 interface TemplateField {
@@ -118,9 +119,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
 
   return (
     <div>
-      {error && (
-        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4">{error}</div>
-      )}
+      {error && <ErrorDisplay message={error} />}
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Existing Templates</h2>

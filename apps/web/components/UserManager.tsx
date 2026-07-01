@@ -15,6 +15,7 @@ import {
   Label,
   Input,
 } from '@heroui/react';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 
 interface Profile {
@@ -132,9 +133,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
 
   return (
     <div>
-      {error && (
-        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4">{error}</div>
-      )}
+      {error && <ErrorDisplay message={error} />}
       {success && (
         <div className="bg-success-50 text-success p-3 rounded-lg text-sm mb-4">{success}</div>
       )}

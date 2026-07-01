@@ -14,6 +14,7 @@ import {
   Input,
 } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 import {
   type AccreditationFramework,
@@ -187,9 +188,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
 
   return (
     <div>
-      {error && (
-        <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm mb-4">{error}</div>
-      )}
+      {error && <ErrorDisplay message={error} />}
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-heading font-semibold">Accreditation Frameworks</h2>

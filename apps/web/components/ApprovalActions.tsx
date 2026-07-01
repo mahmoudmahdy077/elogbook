@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button, TextArea } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { useToast } from './Toast';
 
 interface Props {
@@ -74,9 +75,7 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
         rows={2}
         aria-label="Comment"
       />
-      {error && (
-        <p className="text-danger text-sm" role="alert">{error}</p>
-      )}
+      {error && <ErrorDisplay message={error} />}
       {confirmReject && (
         <p className="text-xs text-pending" role="alert">
           Click Reject again to confirm. This action is irreversible.
