@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import GlassPanel from '../../components/GlassPanel';
+import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
@@ -107,7 +107,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <ActivityIndicator color="#0D9488" size="large" />
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }

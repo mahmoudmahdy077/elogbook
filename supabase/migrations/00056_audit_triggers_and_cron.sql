@@ -16,7 +16,7 @@ DECLARE
     'profiles', 'tenants', 'subscriptions', 'payments',
     'consent_records', 'approval_requests', 'case_attachments',
     'stripe_events', 'resident_ai_toggle',
-    'institutions'
+    'institutions', 'case_templates', 'program_goals'
   ];
   v_excluded_cols TEXT[] := ARRAY['password', 'encrypted_api_key', 'encrypted_secret_key', 'encrypted_webhook_secret', 'api_key_enc', 'secret_key_enc', 'webhook_secret_enc'];
   v_col_list TEXT;
@@ -95,7 +95,7 @@ BEGIN
   -- Supabase project may not have it enabled; the operations runbook
   -- documents the requirement).
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-    -- Unschedule the stale MV-refresh job from 00039 (MV was dropped in 00040).
+    -- Unschedule the stale MV-refresh job from 00039 (MV dropped in 00066).
     PERFORM cron.unschedule('refresh-case-stats-mv');
 
     -- Schedule retention cleanup (daily at 03:00 UTC).

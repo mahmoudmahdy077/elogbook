@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
-import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
+import { clinicalTokens } from '@elogbook/shared';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 import { useSyncInit } from '../lib/sync';
 
@@ -41,9 +41,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             Something went wrong
           </Text>
           <Text style={{ fontSize: 14, color: clinicalTokens.colors.text.muted, textAlign: 'center', marginBottom: 24 }}>
-            {this.state.error.message}
+            An unexpected error occurred. Please try again.
           </Text>
-          <TouchableOpacity onPress={this.reset} style={{ padding: 12, borderRadius: 8, borderWidth: 1, borderColor: clinicalTokens.colors.primary.DEFAULT }}>
+          <TouchableOpacity onPress={this.reset} accessibilityLabel="Try again" accessibilityRole="button" style={{ padding: 12, borderRadius: 8, borderWidth: 1, borderColor: clinicalTokens.colors.primary.DEFAULT }}>
             <Text style={{ color: clinicalTokens.colors.primary.DEFAULT, fontSize: 14, fontWeight: '500' }}>Try again</Text>
           </TouchableOpacity>
         </View>

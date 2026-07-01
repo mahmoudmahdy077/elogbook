@@ -325,6 +325,25 @@ BEGIN
       current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
     );
     RETURN NEW;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes, ip_address)
+    VALUES (
+      OLD.tenant_id,
+      v_user_id,
+      'DELETE',
+      'accreditation_frameworks',
+      OLD.id,
+      jsonb_build_object(
+        'name', OLD.name,
+        'version', OLD.version,
+        'framework_type', OLD.framework_type,
+        'user_agent', v_user_agent,
+        'session_id', v_session_id
+      ),
+      current_setting('request.headers', true)::JSONB ->> 'x-forwarded-for'
+    );
+    RETURN OLD;
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';

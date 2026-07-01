@@ -41,7 +41,7 @@ function MfaVerifyInner() {
       const { data, error: listError } = await supabase.auth.mfa.listFactors();
       if (cancelled) return;
       if (listError) {
-        setError(listError.message);
+        setError('Unable to load security factors. Please refresh and try again.');
         return;
       }
       const totp = data?.totp?.[0];
@@ -60,13 +60,13 @@ function MfaVerifyInner() {
     setLoading(true);
     const { error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
     if (challengeError) {
-      setError(challengeError.message);
+      setError('Failed to start verification. Please try again.');
       setLoading(false);
       return;
     }
     const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, code });
     if (verifyError) {
-      setError(verifyError.message);
+      setError('Invalid verification code. Please check and re-enter.');
       setLoading(false);
       return;
     }

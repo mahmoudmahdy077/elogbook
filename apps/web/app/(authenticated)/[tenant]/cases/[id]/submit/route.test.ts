@@ -38,10 +38,10 @@ vi.mock('@sentry/nextjs', () => ({
 // auth / ownership logic don't need to supply Origin headers. The two
 // CSRF-specific tests override this mock inline.
 // ---------------------------------------------------------------------------
-const mockValidateOrigin = vi.fn(() => null as unknown);
+const mockValidateOrigin = vi.fn<(request: Request, trustedOrigins?: string[]) => unknown>().mockReturnValue(null);
 
 vi.mock('@/lib/csrf', () => ({
-  validateOrigin: (...args: unknown[]) => mockValidateOrigin(...args),
+  validateOrigin: (request: Request, trustedOrigins?: string[]) => mockValidateOrigin(request, trustedOrigins),
   defaultTrustedOrigins: () => ['https://app.elogbook.dev'],
 }));
 
@@ -49,14 +49,14 @@ vi.mock('@/lib/csrf', () => ({
 // Mock @/lib/rate-limit – allow all requests by default; individual tests
 // can override to simulate rate-limit hits.
 // ---------------------------------------------------------------------------
-const mockCheckRateLimit = vi.fn(() => ({ allowed: true, retryAfter: 0 }));
-const mockRateLimitResponse = vi.fn((retryAfter: number) =>
-  new (class { status = 429; async json() { return { error: 'Too many requests', retryAfter }; } })()
+const mockCheckRateLimit = vi.fn<(key: string) => { allowed: boolean; retryAfter: number }>().mockReturnValue({ allowed: true, retryAfter: 0 });
+const mockRateLimitResponse = vi.fn<(retryAfter: number) => { status: number; json(): Promise<{ error: string; retryAfter: number }> }>().mockImplementation((retryAfter: number) =>
+  new (class { status = 429; json() { return Promise.resolve({ error: 'Too many requests', retryAfter }); } })()
 );
 
 vi.mock('@/lib/rate-limit', () => ({
-  checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
-  rateLimitResponse: (...args: unknown[]) => mockRateLimitResponse(...args),
+  checkRateLimit: (key: string) => mockCheckRateLimit(key),
+  rateLimitResponse: (retryAfter: number) => mockRateLimitResponse(retryAfter),
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -198,5 +198,109 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+  });
+
+  it('rejects submission when subscription is past_due', async () => {
+    setTableData('case_entries', [
+      { id: 'c-124', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
+    ]);
+    setTableData('profiles', [
+      { id: 'p-1', user_id: 'u-1', role: 'resident', tenant_id: 't-1' },
+    ]);
+    setTableData('subscriptions', [
+      { tenant_id: 't-1', status: 'past_due' },
+    ]);
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u-1' } },
+      error: null,
+    });
+
+    const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-124/submit', {
+      origin: 'https://app.elogbook.dev',
+    });
+    const params = Promise.resolve({ tenant: 'demo', id: 'c-124' });
+
+    const res = await POST(req, { params });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('Subscription lapsed');
+  });
+
+  it('auto-approves for individual tenant type', async () => {
+    setTableData('case_entries', [
+      { id: 'c-125', tenant_id: 't-2', resident_id: 'p-1', status: 'draft' },
+    ]);
+    setTableData('profiles', [
+      { id: 'p-1', user_id: 'u-1', role: 'resident', tenant_id: 't-2' },
+    ]);
+    setTableData('subscriptions', [
+      { tenant_id: 't-2', status: 'active' },
+    ]);
+    setTableData('tenants', [
+      { id: 't-2', tenant_type: 'individual' },
+    ]);
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u-1' } },
+      error: null,
+    });
+
+    const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-125/submit', {
+      origin: 'https://app.elogbook.dev',
+    });
+    const params = Promise.resolve({ tenant: 'demo', id: 'c-125' });
+
+    const res = await POST(req, { params });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.auto_approved).toBe(true);
+  });
+
+  it('rolls back to draft when approval creation fails', async () => {
+    setTableData('case_entries', [
+      { id: 'c-126', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
+    ]);
+    setTableData('profiles', [
+      { id: 'p-1', user_id: 'u-1', role: 'resident', tenant_id: 't-1' },
+      { id: 'sup-1', role: 'supervisor', tenant_id: 't-1' },
+    ]);
+    setTableData('tenants', [
+      { id: 't-1', tenant_type: 'institution' },
+    ]);
+    setTableData('subscriptions', [
+      { tenant_id: 't-1', status: 'active' },
+    ]);
+    // Make the insert fail by having it return an error
+    const originalFrom = mockSupabase.from;
+    let insertFailed = false;
+    mockSupabase.from = vi.fn((table: string) => {
+      const builder = originalFrom(table);
+      if (table === 'approval_requests') {
+        const originalInsert = builder.insert;
+        builder.insert = ((...args: any[]) => {
+          insertFailed = true;
+          return {
+            then: (resolve: (v: unknown) => void) => resolve({ error: new Error('insert failure') }),
+            error: null,
+          };
+        }) as any;
+      }
+      return builder;
+    });
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u-1' } },
+      error: null,
+    });
+
+    const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-126/submit', {
+      origin: 'https://app.elogbook.dev',
+    });
+    const params = Promise.resolve({ tenant: 'demo', id: 'c-126' });
+
+    const res = await POST(req, { params });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toContain('returned to draft');
+    expect(insertFailed).toBe(true);
   });
 });

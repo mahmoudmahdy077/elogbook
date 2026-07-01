@@ -96,10 +96,14 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  const gatewayConfigs = await getGatewayConfigs(supabase);
+  const { data: gatewayConfigs, error: gwError } = await supabase
+    .from('secret_payment_gateway_config')
+    .select('id, tenant_id, secret_key as secret, webhook_secret, mode')
+    .eq('provider', 'stripe')
+    .eq('is_active', true);
 
-  if (!gatewayConfigs || gatewayConfigs.length === 0) {
-    console.error('No active Stripe gateway configs found');
+  if (gwError || !gatewayConfigs || gatewayConfigs.length === 0) {
+    console.error('No active Stripe gateway configs found', { error: gwError?.message });
     return new Response(
       JSON.stringify({ error: 'No active Stripe gateway configs found' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }

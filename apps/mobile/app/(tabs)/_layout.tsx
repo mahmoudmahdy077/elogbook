@@ -13,7 +13,7 @@ import {
   markBiometricAuthed,
 } from '../../lib/biometric-gate';
 import type { UserRole } from '@elogbook/shared';
-import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
+import { clinicalTokens } from '@elogbook/shared';
 
 export default function TabLayout() {
   useSyncInit();

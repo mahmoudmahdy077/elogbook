@@ -267,7 +267,7 @@ serve(async (req) => {
   }
 
   const { data: aiConfig, error: configError } = await supabase
-    .from('ai_config')
+    .from('secret_ai_config')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -334,7 +334,7 @@ Be concise, supportive, and evidence-based.`;
 
   const provider = aiConfig.provider as string;
   const model = aiConfig.model as string;
-  const apiKey = aiConfig.encrypted_api_key as string;
+  const apiKey = aiConfig.api_key as string;
 
   const queryForCache = query || 'Auto-analysis';
   const queryHash = await computeQueryHash(queryForCache, model, tenantId);

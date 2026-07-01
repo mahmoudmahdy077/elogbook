@@ -1,5 +1,22 @@
 import * as Sentry from '@sentry/nextjs';
 
+const PHI_FIELDS = ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values'];
+
+function scrubPhi<T>(event: T, fields: string[] = PHI_FIELDS): T {
+  if (!event || typeof event !== 'object') return event;
+  for (const key of Object.keys(event as Record<string, unknown>)) {
+    if (fields.includes(key)) {
+      delete (event as Record<string, unknown>)[key];
+    } else {
+      const val = (event as Record<string, unknown>)[key];
+      if (typeof val === 'object' && val !== null) {
+        scrubPhi(val, fields);
+      }
+    }
+  }
+  return event;
+}
+
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const SENTRY_ENV = process.env.NEXT_PUBLIC_SENTRY_ENV ?? process.env.NODE_ENV ?? 'development';
 
@@ -17,11 +34,11 @@ if (SENTRY_DSN) {
     // PHI: never send patient_mrn, patient_dob, patient_hash, field_values
     beforeSendTransaction(event) {
       if (event.request?.cookies) delete event.request.cookies;
-      return event;
+      return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);
     },
     beforeSend(event) {
       if (event.request?.cookies) delete event.request.cookies;
-      return event;
+      return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);
     },
   });
 }

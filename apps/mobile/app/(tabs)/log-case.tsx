@@ -61,6 +61,8 @@ export default function LogCaseScreen() {
   const confirmationTypeRef = useRef<'offline' | 'submitted' | null>(null);
   const editEntryRef = useRef<CaseEntry | null>(null);
   const syncColorMap: Record<string, string> = {
+    // Intentional: sync status indicator colors — these are not UI theme colors
+    // but data-driven mappings from sync state class names to icon colors.
     'text-blue-400': '#60A5FA',
     'text-green-400': '#34D399',
     'text-yellow-400': '#FBBF24',
@@ -491,7 +493,7 @@ export default function LogCaseScreen() {
       accessibilityLabel={`${t.specialty} - ${t.name} template`}
       accessibilityRole="button"
     >
-      <Ionicons name={getSpecialtyIcon(t.specialty)} size={28} color="#0D9488" />
+      <Ionicons name={getSpecialtyIcon(t.specialty)} size={28} color={clinicalTokens.colors.primary.DEFAULT} />
       <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
         {t.specialty} - {t.name}
       </Text>
@@ -533,7 +535,7 @@ export default function LogCaseScreen() {
           }
           ListEmptyComponent={
             <View className="items-center py-16">
-              <Ionicons name="clipboard-outline" size={48} color="#64748B" />
+              <Ionicons name="clipboard-outline" size={48} color={clinicalTokens.colors.text.muted} />
               <Text className="text-gray-400 text-center mt-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
                 {fetchError ? 'Unable to load templates' : 'No templates available. Contact your program director.'}
               </Text>
@@ -559,7 +561,7 @@ export default function LogCaseScreen() {
         {renderSyncBanner()}
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={24} color="#6366F1" />
+            <Ionicons name="arrow-back" size={24} color={clinicalTokens.colors.secondary.DEFAULT} />
           </TouchableOpacity>
           <Text className="text-white text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {selectedTemplate.specialty} - {selectedTemplate.name}
@@ -585,7 +587,7 @@ export default function LogCaseScreen() {
             <>
               <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Age (years)</Text>
               <TextInput
-                className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
+                className="text-white rounded-xl px-4 py-3 border border-indigo-500/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
                 placeholder="Age in years"
                 placeholderTextColor="#666"
                 keyboardType="numeric"
@@ -600,7 +602,7 @@ export default function LogCaseScreen() {
             <>
               <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>MRN</Text>
               <TextInput
-                className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15"
+                className="text-white rounded-xl px-4 py-3 border border-indigo-500/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
                 placeholder="Patient MRN"
                 placeholderTextColor="#666"
                 returnKeyType="next"

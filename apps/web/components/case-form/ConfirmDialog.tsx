@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@heroui/react';
+import { useEffect, useRef } from 'react';
 
 interface Template {
   specialty: string;
@@ -28,6 +29,35 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const reduceMotion = useReducedMotion();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && dialogRef.current) {
+      const firstFocusable = dialogRef.current.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      firstFocusable?.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -40,6 +70,7 @@ export default function ConfirmDialog({
           onClick={onCancel}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}

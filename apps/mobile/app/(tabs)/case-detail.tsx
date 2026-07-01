@@ -16,8 +16,7 @@ import { getDatabase } from '../../lib/db/database';
 import type { CaseEntry } from '../../lib/db/models/CaseEntry';
 import { upsertCaseEntry } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
-import GlassPanel from '../../components/GlassPanel';
-import StatusBadge from '../../components/StatusBadge';
+import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
@@ -213,7 +212,7 @@ export default function CaseDetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <ActivityIndicator color="#0D9488" size="large" />
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }
@@ -379,7 +378,7 @@ export default function CaseDetailScreen() {
               Please provide a reason. The resident will see this message.
             </Text>
             <TextInput
-              className="bg-[#060814] text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]"
+              className="text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
               multiline
               textAlignVertical="top"
               placeholder="Reason for rejection"

@@ -9,6 +9,18 @@
       ],
       "@elogbook/shared": [
         "../../packages/shared/src/index.ts"
+      ],
+      "@elogbook/shared/components/native": [
+        "../../packages/shared/src/components/native.ts"
+      ],
+      "react-native": [
+        "./node_modules/react-native"
+      ],
+      "react-native-svg": [
+        "./node_modules/react-native-svg"
+      ],
+      "@react-native-community/blur": [
+        "./node_modules/@react-native-community/blur"
       ]
     }
   },

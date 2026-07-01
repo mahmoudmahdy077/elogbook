@@ -41,6 +41,10 @@ BEGIN
     RETURN jsonb_build_object('error', 'Insufficient permissions', 'code', 'forbidden');
   END IF;
 
+  IF p_supervisor_id != auth.uid() THEN
+    RETURN jsonb_build_object('error', 'Supervisor ID does not match authenticated user', 'code', 'forbidden');
+  END IF;
+
   SELECT status, tenant_id INTO v_status, v_tenant_id
   FROM case_entries
   WHERE id = p_entry_id
@@ -105,6 +109,10 @@ DECLARE
 BEGIN
   IF get_user_role() NOT IN ('supervisor', 'director', 'institution_admin', 'admin') THEN
     RETURN jsonb_build_object('error', 'Insufficient permissions', 'code', 'forbidden');
+  END IF;
+
+  IF p_supervisor_id != auth.uid() THEN
+    RETURN jsonb_build_object('error', 'Supervisor ID does not match authenticated user', 'code', 'forbidden');
   END IF;
 
   SELECT status, tenant_id INTO v_status, v_tenant_id

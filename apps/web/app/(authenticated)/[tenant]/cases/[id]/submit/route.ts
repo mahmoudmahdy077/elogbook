@@ -92,7 +92,8 @@ async function handleSubmit(
     .from('profiles')
     .select('id')
     .eq('tenant_id', entry.tenant_id)
-    .in('role', ['supervisor', 'director']);
+    .in('role', ['supervisor', 'director'])
+    .limit(50);
 
   if (supervisors && supervisors.length > 0) {
     const { error: approvalError } = await supabase.from('approval_requests').insert(

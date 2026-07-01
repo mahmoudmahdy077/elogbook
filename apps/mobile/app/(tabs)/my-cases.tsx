@@ -7,7 +7,7 @@ import { CaseEntry } from '../../lib/db/models/CaseEntry';
 import { getAllCasesForResident, getConflictedCases } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
 import { supabase } from '../../lib/supabase';
-import StatusBadge from '../../components/StatusBadge';
+import { NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import type { CaseStatus } from '@elogbook/shared';
 
@@ -175,7 +175,7 @@ export default function MyCasesScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-backdrop items-center justify-center">
-        <ActivityIndicator color="#0D9488" size="large" />
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }
@@ -224,7 +224,7 @@ export default function MyCasesScreen() {
         data={filteredCases}
         keyExtractor={(c) => c.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0D9488" />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={clinicalTokens.colors.primary.DEFAULT} />
         }
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         ListEmptyComponent={

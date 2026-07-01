@@ -5,7 +5,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
-import ProgressRing from '../../components/ProgressRing';
+import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
 import { clinicalTokens } from '@elogbook/shared';
 
@@ -227,10 +227,9 @@ export default function DashboardScreen() {
             {goals.map((g) => (
               <ProgressRing
                 key={g.id}
-                percentage={g.target > 0 ? (g.current / g.target) * 100 : 0}
-                specialty={g.title}
-                color="#0D9488"
-                glowColor="#0D9488"
+                value={g.target > 0 ? (g.current / g.target) * 100 : 0}
+                label={g.title}
+                color={clinicalTokens.colors.primary.DEFAULT}
                 size={110}
               />
             ))}

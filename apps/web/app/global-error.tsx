@@ -20,9 +20,9 @@ const GlobalError: NextPage<Props> = ({ err, reset }) => {
               An unexpected error occurred. The error has been reported. Please try refreshing the page.
             </p>
             {err && (
-              <pre style={{ fontSize: '0.75rem', color: '#FCA5A5', backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.5rem', overflow: 'auto' }}>
-                {err.message}
-              </pre>
+              <p style={{ fontSize: '0.75rem', color: '#FCA5A5', backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.5rem' }} role="alert">
+                An unexpected error occurred. Our team has been notified.
+              </p>
             )}
             <button
               onClick={() => reset?.()}

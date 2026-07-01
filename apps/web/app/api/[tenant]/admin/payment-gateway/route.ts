@@ -83,7 +83,8 @@ export async function POST(
       .eq('id', existing.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('payment-gateway error:', error.message);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
   } else {
     const { error } = await adminClient
@@ -91,7 +92,8 @@ export async function POST(
       .insert(payload);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('payment-gateway error:', error.message);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
   }
 

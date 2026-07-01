@@ -14,7 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { aiQuerySchema } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
-import GlassPanel from '../../components/GlassPanel';
+import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 
 const MAX_QUERIES = 20;
 
@@ -83,17 +83,6 @@ export default function AIInsightsScreen() {
   const handleSubmit = useCallback(async () => {
     if (!query.trim() || !canAccess) return;
 
-    const validation = aiQuerySchema.safeParse({
-      query: query.trim(),
-      resident_id: '',
-      tenant_id: '',
-    });
-
-    if (!validation.success) {
-      setError(validation.error.issues[0]?.message ?? 'Invalid query');
-      return;
-    }
-
     setError(null);
     setSubmitting(true);
     setResponse('');
@@ -104,20 +93,30 @@ export default function AIInsightsScreen() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, tenant_id')
         .eq('user_id', user.id)
         .single();
 
-      if (!profile) return;
+      if (profileError || !profile) {
+        setError('Unable to verify your identity. Please try logging in again.');
+        return;
+      }
+
+      const validation = aiQuerySchema.safeParse({
+        query: query.trim(),
+        resident_id: profile.id,
+        tenant_id: profile.tenant_id,
+      });
+
+      if (!validation.success) {
+        setError('Please enter a valid clinical question or reflection.');
+        return;
+      }
 
       const { data, error: rpcError } = await supabase.functions.invoke('ai-insights', {
-        body: {
-          query: query.trim(),
-          resident_id: profile.id,
-          tenant_id: profile.tenant_id,
-        },
+        body: validation.data,
       });
 
       if (rpcError) throw rpcError;
@@ -134,7 +133,7 @@ export default function AIInsightsScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <ActivityIndicator color="#0D9488" size="large" />
+        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
     );
   }

@@ -1,15 +1,8 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { safeRelativePath } from '@/lib/safe-redirect';
-import { Button } from '@heroui/react';
+import { buildSsoCallbackUrl, type SsoLookupResult } from '@/lib/sso';
 import { redirect } from 'next/navigation';
-
-interface SsoLookupResult {
-  id: string;
-  protocol: 'saml' | 'oidc';
-  metadata_url: string | null;
-  discovery_url: string | null;
-  is_active: boolean;
-}
+import { APP_NAME } from '@elogbook/shared';
 
 async function lookupSsoForTenant(tenantSlug: string): Promise<SsoLookupResult | null> {
   const supabase = await createServerSupabase();
@@ -30,20 +23,6 @@ async function lookupSsoForTenant(tenantSlug: string): Promise<SsoLookupResult |
   return cfg as SsoLookupResult;
 }
 
-function buildSsoCallbackUrl(tenantSlug: string, cfg: SsoLookupResult, next: string): string {
-  const params = new URLSearchParams();
-  params.set('tenant', tenantSlug);
-  if (cfg.protocol === 'oidc' && cfg.discovery_url) {
-    params.set('discovery', cfg.discovery_url);
-  }
-  if (cfg.protocol === 'saml' && cfg.metadata_url) {
-    params.set('metadata', cfg.metadata_url);
-  }
-  params.set('next', next);
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  return `${base}/functions/v1/sso-callback?${params.toString()}`;
-}
-
 export default async function SsoPage({
   params,
   searchParams,
@@ -58,35 +37,40 @@ export default async function SsoPage({
 
   if (!tenantSlug) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
-        <form
-          action="/login/sso"
-          method="get"
-          className="w-full max-w-md panel p-8 space-y-4"
-        >
-          <h1 className="text-2xl font-heading font-bold text-center">Sign in with SSO</h1>
-          <p className="text-sm text-neutral-light/60 text-center">
-            Enter your institution slug to continue.
-          </p>
-          <div>
-            <label htmlFor="tenant" className="block text-sm font-medium mb-1.5">
-              Institution Slug
-            </label>
-            <input
-              id="tenant"
-              name="tenant"
-              type="text"
-              required
-              autoFocus
-              placeholder="acme-medical"
-              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-neutral-light placeholder:text-neutral-light/30 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary-glow text-sm"
-            />
+      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-6">
+            <h1 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{APP_NAME}</h1>
+            <p className="text-sm text-text-muted mt-1">Sign in with SSO</p>
           </div>
-          <input type="hidden" name="next" value={next} />
-          <Button type="submit" variant="primary" className="w-full">
-            Continue
-          </Button>
-        </form>
+
+          <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8">
+            <p className="text-sm text-text-muted mb-4">Enter your institution slug to continue.</p>
+            <form action="/login/sso" method="get" className="space-y-4">
+              <div>
+                <label htmlFor="tenant" className="block text-sm font-medium mb-1.5 text-text-primary">
+                  Institution Slug
+                </label>
+                <input
+                  id="tenant"
+                  name="tenant"
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="acme-medical"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-dark border border-border text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-glow/50 text-sm transition-colors"
+                />
+              </div>
+              <input type="hidden" name="next" value={next} />
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
+              >
+                Continue
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     );
   }
@@ -94,19 +78,20 @@ export default async function SsoPage({
   const cfg = await lookupSsoForTenant(tenantSlug);
   if (!cfg) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
-        <div className="w-full max-w-md panel p-8 text-center space-y-3">
-          <h1 className="text-2xl font-heading font-bold">SSO Unavailable</h1>
-          <p className="text-sm text-neutral-light/60">
-            No active SSO configuration was found for <code>{tenantSlug}</code>.
-          </p>
-          <a href="/login" className="text-sm text-primary hover:underline">
-            Back to sign-in
-          </a>
+      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8 text-center space-y-3">
+            <h1 className="text-lg font-heading font-semibold text-text-primary">SSO Unavailable</h1>
+            <p className="text-sm text-text-muted">
+              No active SSO configuration was found for <code className="text-text-primary">{tenantSlug}</code>.
+            </p>
+            <a href="/login" className="inline-block text-sm text-primary hover:underline">Back to sign-in</a>
+          </div>
         </div>
       </div>
     );
   }
 
-  redirect(buildSsoCallbackUrl(tenantSlug, cfg, next));
+   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+   redirect(buildSsoCallbackUrl(supabaseUrl, tenantSlug, cfg, next));
 }

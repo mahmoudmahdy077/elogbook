@@ -43,7 +43,7 @@ function MfaEnrollInner() {
       });
       if (cancelled) return;
       if (enrollError) {
-        setError(enrollError.message);
+        setError('Unable to start MFA enrollment. Please try again.');
         return;
       }
       setQr({
@@ -61,7 +61,7 @@ function MfaEnrollInner() {
     setLoading(true);
     const { error: challengeError } = await supabase.auth.mfa.challenge({ factorId: qr.factorId });
     if (challengeError) {
-      setError(challengeError.message);
+      setError('Failed to start verification. Please try again.');
       setLoading(false);
       return;
     }
@@ -70,7 +70,7 @@ function MfaEnrollInner() {
       code,
     });
     if (verifyError) {
-      setError(verifyError.message);
+      setError('Invalid verification code. Please check and re-enter.');
       setLoading(false);
       return;
     }

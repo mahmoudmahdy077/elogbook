@@ -80,7 +80,7 @@ serve(async (req) => {
   }
 
   const { data: gwConfig, error: gwError } = await supabase
-    .from('payment_gateway_config')
+    .from('secret_payment_gateway_config')
     .select('*')
     .eq('tenant_id', tenantId)
     .single();
@@ -103,7 +103,7 @@ serve(async (req) => {
       );
     }
 
-    const stripe = new Stripe(gwConfig.encrypted_secret_key, {
+    const stripe = new Stripe(gwConfig.secret_key, {
       apiVersion: '2024-06-20',
       httpClient: Stripe.createFetchHttpClient(),
     });

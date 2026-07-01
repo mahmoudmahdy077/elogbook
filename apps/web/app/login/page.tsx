@@ -4,13 +4,107 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { safeRelativePath } from '@/lib/safe-redirect';
 import { APP_NAME } from '@elogbook/shared';
+import { FormField, FormDivider, Spinner } from '@elogbook/shared/components/web';
+import { safeRelativePath } from '@/lib/safe-redirect';
+
+function EyeIcon() {
+  return (
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
+function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => void }) {
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const supabase = createClient();
+
+  const handleReset = async () => {
+    setError('');
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+    });
+    if (resetError) {
+      setError('Unable to send reset email. Please verify your email address.');
+    } else {
+      setSent(true);
+    }
+    setLoading(false);
+  };
+
+  if (sent) {
+    return (
+      <div className="text-center py-4">
+        <h2 className="text-lg font-heading font-semibold text-text-primary mb-2">Check your email</h2>
+        <p className="text-sm text-text-muted">
+          We sent password reset instructions to <strong className="text-text-primary">{email}</strong>.
+        </p>
+        <button onClick={onBack} className="mt-4 text-sm text-primary hover:underline">Back to sign in</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-heading font-semibold text-text-primary mb-1">Reset password</h2>
+      <p className="text-sm text-text-muted mb-4">Enter your email and we&apos;ll send you a reset link.</p>
+      {error && (
+        <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-xl px-3 py-2 mb-4" role="alert">
+          {error}
+        </div>
+      )}
+      <button
+        onClick={handleReset}
+        disabled={loading}
+        className="w-full py-2.5 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        {loading ? 'Sending...' : 'Send reset link'}
+      </button>
+      <button onClick={onBack} className="mt-3 w-full text-sm text-text-muted hover:text-text-primary transition-colors">
+        Back to sign in
+      </button>
+    </div>
+  );
+}
+
+function SuccessState({ email }: { email: string }) {
+  return (
+    <div className="text-center py-6">
+      <div className="w-12 h-12 rounded-full bg-success/15 border border-success/30 text-success flex items-center justify-center mx-auto mb-4">
+        <svg className="w-6 h-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <h2 className="text-lg font-heading font-semibold text-text-primary mb-1">Check your email</h2>
+      <p className="text-sm text-text-muted">
+        We sent a magic link to <strong className="text-text-primary">{email}</strong>.
+      </p>
+      <p className="text-xs text-text-muted mt-3">Click the link in the email to sign in. The link expires in 1 hour.</p>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [sent, setSent] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
@@ -29,7 +123,7 @@ export default function LoginPage() {
       options: { emailRedirectTo: redirectTo },
     });
     if (otpError) {
-      setError(otpError.message);
+      setError('Failed to send verification code. Please try again.');
     } else {
       setSent(true);
     }
@@ -39,12 +133,9 @@ export default function LoginPage() {
   const handlePasswordLogin = async () => {
     setError('');
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
-      setError(authError.message);
+      setError('Invalid email or password. Please try again.');
       setLoading(false);
       return;
     }
@@ -73,34 +164,36 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-8 lg:p-16 landscape:overflow-y-auto landscape:items-start landscape:pt-4">
-      <div className="w-full max-w-sm sm:max-w-md lg:max-w-xl xl:max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-10 lg:mb-12 landscape:mb-3">
-          <div className="inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 xl:w-20 xl:h-20 rounded-2xl bg-primary/15 mb-3 sm:mb-5 lg:mb-6 landscape:hidden">
-            <svg className="w-5 h-5 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
-            </svg>
+  if (showForgot) {
+    return (
+      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8">
+            <ForgotPasswordForm email={email} onBack={() => setShowForgot(false)} />
           </div>
-          <h1 className="text-xl sm:text-3xl lg:text-4xl xl:text-5xl font-heading font-bold text-text-primary landscape:text-lg">
-            {APP_NAME}
-          </h1>
-          <p className="text-xs sm:text-sm lg:text-lg xl:text-xl text-text-muted mt-1 sm:mt-2 lg:mt-3 landscape:text-xs landscape:mt-0">Sign in to your account</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 landscape:overflow-y-auto landscape:items-start landscape:pt-6">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6 landscape:mb-4">
+          <h1 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{APP_NAME}</h1>
+          <p className="text-sm text-text-muted mt-1">Sign in to your account</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-surface-solid border border-border rounded-2xl p-5 sm:p-10 lg:p-12 xl:p-14 landscape:p-4">
+        <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8 landscape:p-4">
           {sent ? (
             <SuccessState email={email} />
           ) : (
-            <div className="space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-10 landscape:space-y-2">
+            <div className="space-y-4 landscape:space-y-3">
               <Link
                 href="/login/sso"
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 sm:py-3 lg:py-3.5 xl:py-4 rounded-xl border border-border bg-neutral-dark/30 text-text-primary font-medium text-sm sm:text-base lg:text-lg xl:text-xl hover:bg-neutral-dark/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow landscape:py-2 landscape:text-xs"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border bg-neutral-dark/30 text-text-primary font-medium text-sm hover:bg-neutral-dark/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow landscape:py-2"
               >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 xl:w-7 xl:h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                   <path d="M2 17l10 5 10-5" />
                   <path d="M2 12l10 5 10-5" />
@@ -108,10 +201,10 @@ export default function LoginPage() {
                 Sign in with SSO
               </Link>
 
-              <Divider label="or continue with email" />
+              <FormDivider label="or continue with email" />
 
-              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5 lg:space-y-6 xl:space-y-7 landscape:space-y-2">
-                <Field
+              <form onSubmit={handleSubmit} className="space-y-3 landscape:space-y-2">
+                <FormField
                   id="email"
                   label="Email"
                   type="email"
@@ -121,23 +214,40 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                 />
-                <Field
+                <FormField
                   id="password"
                   label="Password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={setPassword}
                   placeholder="Enter password"
                   autoComplete="current-password"
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  }
                 />
-                <p className="text-xs sm:text-sm lg:text-base xl:text-lg text-text-muted -mt-1 sm:-mt-2 lg:-mt-3 landscape:-mt-1 landscape:text-\[10px\]">
-                  Leave blank to receive a magic link instead.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-text-muted">Leave blank to receive a magic link.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgot(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
 
                 {error && (
-                  <div className="bg-danger/10 border border-danger/30 text-danger text-sm lg:text-lg xl:text-xl rounded-xl px-3 py-2 sm:px-5 sm:py-3 lg:px-6 lg:py-4 landscape:px-3 landscape:py-1.5 landscape:text-xs" role="alert">
-                    <div className="flex items-start gap-2 lg:gap-3">
-                      <svg className="w-4 h-4 lg:w-6 lg:h-6 xl:w-7 xl:h-7 flex-shrink-0 mt-0.5 landscape:w-3 landscape:h-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-xl px-3 py-2" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                       </svg>
                       <span>{error}</span>
@@ -148,7 +258,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={!email || loading}
-                  className="w-full py-2.5 sm:py-3 lg:py-4 xl:py-5 rounded-xl bg-primary text-white font-medium text-sm sm:text-base lg:text-lg xl:text-xl hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow flex items-center justify-center gap-2 landscape:py-2 landscape:text-xs"
+                  className="w-full py-2.5 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow flex items-center justify-center gap-2 landscape:py-2"
                 >
                   {loading ? <Spinner /> : null}
                   {loading
@@ -162,93 +272,10 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs sm:text-sm lg:text-base xl:text-lg text-text-muted mt-6 sm:mt-8 lg:mt-10 xl:mt-12 landscape:mt-4 landscape:text-\[10px\]">
+        <p className="text-center text-xs text-text-muted mt-6 landscape:mt-4">
           By signing in, you agree to your institution&apos;s data handling policy.
         </p>
       </div>
-    </div>
-  );
-}
-
-function Divider({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3 sm:gap-4 lg:gap-5 text-xs sm:text-sm lg:text-base xl:text-lg text-text-muted landscape:gap-2 landscape:text-\[10px\]">
-      <hr className="flex-1 border-border" />
-      <span className="uppercase tracking-wide whitespace-nowrap">{label}</span>
-      <hr className="flex-1 border-border" />
-    </div>
-  );
-}
-
-function Field({
-  id,
-  label,
-  type,
-  value,
-  onChange,
-  placeholder,
-  autoComplete,
-  required,
-}: {
-  id: string;
-  label: React.ReactNode;
-  type: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  autoComplete?: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-xs sm:text-sm lg:text-lg xl:text-xl font-medium mb-1 sm:mb-2 text-text-primary landscape:text-\[10px\] landscape:mb-0.5">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        required={required}
-        className="w-full px-3 sm:px-4 lg:px-5 xl:px-6 py-2.5 sm:py-3 lg:py-4 xl:py-5 rounded-xl bg-neutral-dark border border-border text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-glow/50 text-sm sm:text-base lg:text-lg xl:text-xl transition-colors landscape:py-2 landscape:text-xs"
-      />
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}
-
-function SuccessState({ email }: { email: string }) {
-  return (
-    <div className="text-center py-4 sm:py-8 lg:py-10 xl:py-12 landscape:py-3">
-      <div className="w-10 h-10 sm:w-14 sm:h-14 lg:w-20 lg:h-20 xl:w-24 xl:h-24 rounded-full bg-success/15 border border-success/30 text-success flex items-center justify-center mx-auto mb-3 sm:mb-5 lg:mb-7 xl:mb-8 landscape:hidden">
-        <svg className="w-5 h-5 sm:w-7 sm:h-7 lg:w-10 lg:h-10 xl:w-12 xl:h-12" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-      </div>
-      <div className="landscape:inline-flex landscape:items-center landscape:gap-2">
-        <svg className="hidden landscape:inline-block w-4 h-4 text-success flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-        <h2 className="text-base sm:text-xl lg:text-2xl xl:text-3xl font-heading font-semibold text-text-primary mb-1 sm:mb-2 lg:mb-3 xl:mb-4 landscape:text-sm landscape:mb-0">Check your email</h2>
-      </div>
-      <p className="text-xs sm:text-sm lg:text-lg xl:text-xl text-text-muted landscape:text-xs">
-        We sent a magic link to{' '}
-        <strong className="text-text-primary font-medium">{email}</strong>.
-      </p>
-      <p className="text-xs sm:text-sm lg:text-base xl:text-lg text-text-muted mt-2 sm:mt-3 lg:mt-4 xl:mt-5 landscape:mt-1 landscape:text-\[10px\]">
-        Click the link in the email to sign in. The link expires in 1 hour.
-      </p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { safeRelativePath } from '@/lib/safe-redirect';
 
@@ -92,7 +93,9 @@ export async function GET(
 
   // Audit the export (defence-in-depth: a privileged user exporting
   // data should leave a trace).
-  await supabase.from('audit_logs').insert({
+  // Use service_role client to bypass RLS (which blocks authenticated INSERTs).
+  const adminClient = createServiceRoleClient();
+  await adminClient.from('audit_logs').insert({
     tenant_id: auth.profile.tenant_id,
     action: 'audit_export',
     resource_type: 'audit',

@@ -63,7 +63,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
               marginBottom: '1.5rem',
             }}
           >
-            {this.state.error.message}
+            An unexpected error occurred. Please try again.
           </p>
           <button
             onClick={this.reset}

@@ -42,6 +42,20 @@ jobs:
         run: |
           echo "Validating migration file ordering..."
           ls -1 supabase/migrations/*.sql | sort -c && echo "Migration order OK"
+      - name: Check for duplicate migration numbers
+        run: |
+          echo "Checking for duplicate migration sequence numbers..."
+          duplicates=$(ls -1 supabase/migrations/*.sql | sed -n 's/.*\/0*\([0-9]*\)_.*/\1/p' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "ERROR: Duplicate migration sequence numbers found:"
+            echo "$duplicates"
+            for num in $duplicates; do
+              echo "  Files with number $num:"
+              ls -1 supabase/migrations/*_*.sql | grep -E "^0*${num}_"
+            done
+            exit 1
+          fi
+          echo "No duplicate migration numbers found"
 
   test:
     runs-on: ubuntu-latest

@@ -13,6 +13,16 @@
       "browser": "./src/browser.ts",
       "default": "./src/index.ts"
     },
+    "./components/web": {
+      "types": "./src/components/web.ts",
+      "react-native": "./src/components/web.ts",
+      "browser": "./src/components/web.ts",
+      "default": "./src/components/web.ts"
+    },
+    "./components/native": {
+      "types": "./src/components/native.ts",
+      "default": "./src/components/native.ts"
+    },
     "./types/database.server": {
       "react-native": "./src/types/database.server.ts",
       "browser": "./src/types/database.server.ts",
