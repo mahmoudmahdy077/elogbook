@@ -41,6 +41,12 @@ interface ResidentSummary {
   approved: number;
 }
 
+interface ViolationRow {
+  resident_id?: string;
+  week_start: string;
+  total_hours: number;
+}
+
 interface DashboardData {
   profile: { id: string; role: Role; full_name: string; specialty: string | null; tenant_id: string };
   tenantSlug: string;
@@ -51,6 +57,8 @@ interface DashboardData {
   pendingApprovals: number;
   totalResidents: number;
   tenantType: 'individual' | 'institution';
+  residentViolations?: ViolationRow[];
+  directorViolations?: ViolationRow[];
 }
 
 function KpiRing({ value, max, label, color, delay }: { value: number; max: number; label: string; color: string; delay: number }) {
@@ -130,7 +138,7 @@ function ProgressBar({ current, target, label }: { current: number; target: numb
 }
 
 export default function Dashboard({ data }: { data: DashboardData }) {
-  const { profile, tenantSlug, stats, recentCases, goals, residents, pendingApprovals, totalResidents, tenantType } = data;
+  const { profile, tenantSlug, stats, recentCases, goals, residents, pendingApprovals, totalResidents, tenantType, residentViolations = [], directorViolations = [] } = data;
   const role = profile.role;
   const totalCases = stats.draft + stats.pending + stats.approved + stats.rejected;
   const { isReadOnly } = useSubscriptionStatus();
@@ -166,13 +174,48 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         )}
       </motion.div>
 
-      {/* KPI Rings */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiRing value={stats.draft} max={totalCases || 1} label="Draft" color="var(--color-neutral-light)" delay={100} />
-        <KpiRing value={stats.pending} max={totalCases || 1} label="Pending" color="var(--color-pending)" delay={200} />
-        <KpiRing value={stats.approved} max={totalCases || 1} label="Approved" color="var(--color-approved)" delay={300} />
-        <KpiRing value={stats.rejected} max={totalCases || 1} label="Rejected" color="var(--color-rejected)" delay={400} />
-      </div>
+{/* KPI Rings */}
+       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+         <KpiRing value={stats.draft} max={totalCases || 1} label="Draft" color="var(--color-neutral-light)" delay={100} />
+         <KpiRing value={stats.pending} max={totalCases || 1} label="Pending" color="var(--color-pending)" delay={200} />
+         <KpiRing value={stats.approved} max={totalCases || 1} label="Approved" color="var(--color-approved)" delay={300} />
+         <KpiRing value={stats.rejected} max={totalCases || 1} label="Rejected" color="var(--color-rejected)" delay={400} />
+       </div>
+
+       {/* Duty Hours Violations */}
+       {(residentViolations.length > 0 || directorViolations.length > 0) && (
+         <motion.div
+           initial={{ opacity: 0, y: 16 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={reduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.4 }}
+           className="panel p-4 border border-rejected/30 bg-[rgba(239,68,68,0.08)]"
+         >
+           <div className="flex items-center gap-2 mb-3">
+             <svg className="w-5 h-5 text-rejected" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+               <path fillRule="evenodd" d="M8.485 2.495a.75.75 0 01.683.405l6.5 12.5a.75.75 0 01-1.268.76l-5.5-10.642-5.5 10.642a.75.75 0 01-1.268-.76l6.5-12.5a.75.75 0 01.683-.405z" clipRule="evenodd" />
+             </svg>
+             <h2 className="font-heading font-semibold text-[var(--color-text-primary)]">Duty Hour Violations</h2>
+           </div>
+           {profile.role === 'resident' && (
+             <div className="space-y-1.5">
+               {residentViolations.map((v) => (
+                 <p key={v.week_start} className="text-xs">
+                   Week of {v.week_start}: <span className="font-medium">{v.total_hours}</span> hours
+                 </p>
+               ))}
+             </div>
+           )}
+           {(profile.role === 'director' || profile.role === 'institution_admin' || profile.role === 'admin') && (
+             <div className="space-y-1.5 max-h-40 overflow-y-auto">
+               {directorViolations.map((v) => (
+                 <p key={`${v.resident_id}-${v.week_start}`} className="text-xs">
+                   {residents.find((r) => r.id === v.resident_id)?.full_name ?? 'Unknown'} — Week of {v.week_start}: <span className="font-medium">{v.total_hours}</span> hours
+                 </p>
+               ))}
+             </div>
+           )}
+         </motion.div>
+       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Cases */}

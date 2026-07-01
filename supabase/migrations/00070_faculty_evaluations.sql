@@ -16,6 +16,12 @@ CREATE TABLE faculty_evaluations (
 CREATE INDEX idx_faculty_evaluations_resident ON faculty_evaluations(resident_id);
 CREATE INDEX idx_faculty_evaluations_tenant ON faculty_evaluations(tenant_id);
 
+ALTER TABLE faculty_evaluations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY faculty_evals_tenant_isolation ON faculty_evaluations
+  FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = resident_id))
+  WITH CHECK (tenant_id = (SELECT tenant_id FROM profiles WHERE id = evaluator_id));
+
 CREATE OR REPLACE VIEW resident_evaluation_averages AS
 SELECT resident_id,
   AVG(clinical_skills) AS avg_clinical,

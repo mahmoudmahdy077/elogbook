@@ -17,13 +17,13 @@ CREATE INDEX idx_duty_periods_resident ON duty_periods(resident_id, shift_date);
 
 -- View for weekly violations (>80 hours/week)
 CREATE OR REPLACE VIEW duty_weekly_violations AS
-SELECT resident_id, week_start, SUM(hours_worked) AS total_hours
+SELECT tenant_id, resident_id, week_start, SUM(hours_worked) AS total_hours
 FROM (
-  SELECT resident_id, shift_date,
+  SELECT tenant_id, resident_id, shift_date,
          DATE_TRUNC('week', shift_date)::DATE AS week_start,
          hours_worked FROM duty_periods
 ) sub
-GROUP BY resident_id, week_start
+GROUP BY tenant_id, resident_id, week_start
 HAVING SUM(hours_worked) > 80;
 
 -- Down migration:

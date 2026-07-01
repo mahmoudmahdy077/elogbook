@@ -42,6 +42,25 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
     buildQuery('draft'),
   ]);
 
+  const { data: evalData, error: evalError } = await supabase
+    .from('faculty_evaluations')
+    .select('resident_id, clinical_skills, professionalism, procedures')
+    .eq('tenant_id', profile.tenant_id);
+  if (evalError) return <ErrorDisplay message={evalError.message} />;
+
+  interface EvalRow {
+    resident_id: string;
+    clinical_skills: number;
+    professionalism: number;
+    procedures: number;
+  }
+  const evalRows = (evalData ?? []) as EvalRow[];
+  const evalStats = {
+    clinical: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.clinical_skills ?? 0), 0) / evalRows.length).toFixed(1) : '0',
+    prof: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.professionalism ?? 0), 0) / evalRows.length).toFixed(1) : '0',
+    proc: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.procedures ?? 0), 0) / evalRows.length).toFixed(1) : '0',
+  };
+
   const buildEntriesQuery = () => {
     let q = supabase
       .from('case_entries')
@@ -211,6 +230,35 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             </div>
           </Card.Content>
         </Card>
+
+        {profile.role !== 'resident' && (
+          <Card className="panel md:col-span-2">
+            <Card.Header>
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-lg font-semibold">Evaluation Averages</h2>
+                <a href={`/api/${tenantSlug}/reports/evaluations.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}>
+                  <Button size="sm" variant="ghost">Export CSV</Button>
+                </a>
+              </div>
+            </Card.Header>
+            <Card.Content>
+              <div className="grid grid-cols-3 gap-4 text-center py-4">
+                <div>
+                  <p className="text-xs text-default-500">Clinical Skills</p>
+                  <p className="text-2xl font-bold">{evalStats.clinical}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-default-500">Professionalism</p>
+                  <p className="text-2xl font-bold">{evalStats.prof}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-default-500">Procedures</p>
+                  <p className="text-2xl font-bold">{evalStats.proc}</p>
+                </div>
+              </div>
+            </Card.Content>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -90,6 +90,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         .select('goal_id, current_count')
         .eq('resident_id', residentId)
     );
+    queries.push(
+      supabase
+        .from('duty_weekly_violations')
+        .select('week_start, total_hours')
+        .eq('resident_id', residentId)
+        .order('week_start', { ascending: false })
+    );
   }
   if (isDirectorPlus) {
     queries.push(
@@ -99,13 +106,27 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         .eq('tenant_id', tenantId)
         .eq('role', 'resident')
     );
+    queries.push(
+      supabase
+        .from('duty_weekly_violations')
+        .select('resident_id, week_start, total_hours')
+        .eq('tenant_id', tenantId)
+        .order('week_start', { ascending: false })
+    );
   }
 
   const results = await Promise.all(queries);
   const casesResult = results[0] as { data: (CaseRow & { resident_id?: string })[] | null };
   const goalResult = results[1] as { data: GoalRow[] | null };
-  const progressResult = results.length > 2 ? results[2] as { data: ProgressRow[] | null } : { data: null };
-  const residentsDataResult = results.length > 3 ? results[3] as { data: ResidentProfileRow[] | null } : { data: null };
+  const residentProgressIdx = isResident ? 2 : undefined;
+  const residentViolationsIdx = isResident ? 3 : undefined;
+  const directorViolationsIdx = isDirectorPlus ? (isResident ? 4 : 3) : undefined;
+  const residentsDataIdx = isDirectorPlus ? (isResident ? 3 : 2) : undefined;
+
+  const progressResult = residentProgressIdx !== undefined ? results[residentProgressIdx] as { data: ProgressRow[] | null } : { data: null };
+  const residentsDataResult = residentsDataIdx !== undefined ? results[residentsDataIdx] as { data: ResidentProfileRow[] | null } : { data: null };
+  const residentViolations = residentViolationsIdx !== undefined ? results[residentViolationsIdx] as { data: { week_start: string; total_hours: number }[] | null } : { data: null };
+  const directorViolations = directorViolationsIdx !== undefined ? results[directorViolationsIdx] as { data: { resident_id: string; week_start: string; total_hours: number }[] | null } : { data: null };
 
   // U4.0: Use count-query result for director+; client-side tally only for residents.
   const allCaseRows = casesResult.data ?? [];
@@ -200,6 +221,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         pendingApprovals,
         totalResidents,
         tenantType: tenant.tenant_type as 'individual' | 'institution',
+        residentViolations: residentViolations.data ?? [],
+        directorViolations: directorViolations.data ?? [],
       }}
     />
   );
