@@ -12,6 +12,7 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 export const metadata: Metadata = {
   title: APP_NAME,
   description: 'Electronic logbook for medical residents',
+  icons: { icon: '/favicon.svg' },
 };
 
 export const viewport: Viewport = {
