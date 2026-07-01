@@ -70,6 +70,12 @@ export interface TemplateField {
   required?: boolean;
 }
 
+export interface TemplateFavorite {
+  user_id: string;
+  template_id: string;
+  created_at: string;
+}
+
 export interface CaseEntry {
   id: string;
   tenant_id: string;
