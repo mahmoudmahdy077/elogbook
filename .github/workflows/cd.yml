@@ -22,20 +22,21 @@ jobs:
       url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v3
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
       - id: deploy
-        uses: vercel/actions/cli@latest
+        uses: amondnet/vercel-action@v42
         with:
-          args: 'deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}'
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
 
   # ----------------------------------------------------------------------
   # Push database migrations
@@ -47,7 +48,7 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v5
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
           version: latest
       - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all
@@ -68,7 +69,7 @@ jobs:
         function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
     steps:
       - uses: actions/checkout@v5
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
           version: latest
       - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -86,13 +87,13 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v3
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
