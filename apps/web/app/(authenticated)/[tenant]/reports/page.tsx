@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
-export default async function ReportsPage({ params }: { params: Promise<{ tenant: string }> }) {
+export default async function ReportsPage({ params, searchParams }: { params: Promise<{ tenant: string }>; searchParams: Promise<{ date_from?: string; date_to?: string }> }) {
   const { tenant: tenantSlug } = await params;
+  const { date_from, date_to } = await searchParams;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -23,38 +24,35 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
   const tenant = tenants[0];
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
-  const { count: totalCount, error: totalError } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', profile.tenant_id);
-  if (totalError) return <ErrorDisplay message={totalError.message} />;
+  const buildQuery = (status?: string) => {
+    let q = supabase
+      .from('case_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', profile.tenant_id);
+    if (status) q = q.eq('status', status);
+    if (date_from) q = q.gte('created_at', date_from);
+    if (date_to) q = q.lte('created_at', date_to);
+    return q;
+  };
 
-  const { count: approvedCount, error: approvedError } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', profile.tenant_id)
-    .eq('status', 'approved');
-  if (approvedError) return <ErrorDisplay message={approvedError.message} />;
+  const [{ count: totalCount }, { count: approvedCount }, { count: pendingCount }, { count: draftCount }] = await Promise.all([
+    buildQuery(),
+    buildQuery('approved'),
+    buildQuery('pending'),
+    buildQuery('draft'),
+  ]);
 
-  const { count: pendingCount, error: pendingError } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', profile.tenant_id)
-    .eq('status', 'pending');
-  if (pendingError) return <ErrorDisplay message={pendingError.message} />;
+  const buildEntriesQuery = () => {
+    let q = supabase
+      .from('case_entries')
+      .select('id, status, case_templates!inner(specialty)')
+      .eq('tenant_id', profile.tenant_id);
+    if (date_from) q = q.gte('created_at', date_from);
+    if (date_to) q = q.lte('created_at', date_to);
+    return q.limit(1000);
+  };
 
-  const { count: draftCount, error: draftError } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', profile.tenant_id)
-    .eq('status', 'draft');
-  if (draftError) return <ErrorDisplay message={draftError.message} />;
-
-  const { data: entries, error: entriesError } = await supabase
-    .from('case_entries')
-    .select('id, status, case_templates!inner(specialty)')
-    .eq('tenant_id', profile.tenant_id)
-    .limit(1000);
+  const { data: entries, error: entriesError } = await buildEntriesQuery();
   if (entriesError) return <ErrorDisplay message={entriesError.message} />;
 
   const specialtyCounts: Record<string, number> = {};
@@ -92,11 +90,31 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-        <a href={`/api/${tenantSlug}/export-pdf`}>
-          <Button variant="primary">
-            Export PDF
-          </Button>
-        </a>
+        <div className="flex gap-2">
+          <form className="flex items-center gap-2" method="GET">
+            <input
+              type="date"
+              name="date_from"
+              defaultValue={date_from || ''}
+              className="px-2 py-1 rounded-lg bg-neutral-dark border border-border text-sm"
+            />
+            <span className="text-xs text-default-500">to</span>
+            <input
+              type="date"
+              name="date_to"
+              defaultValue={date_to || ''}
+              className="px-2 py-1 rounded-lg bg-neutral-dark border border-border text-sm"
+            />
+            <Button type="submit" size="sm" variant="ghost">
+              Filter
+            </Button>
+          </form>
+          <a href={`/api/${tenantSlug}/export-pdf`}>
+            <Button variant="primary">
+              Export PDF
+            </Button>
+          </a>
+        </div>
       </div>
 
       <div className="panel p-5 mb-8">
@@ -137,7 +155,12 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="panel">
           <Card.Header>
-            <h2 className="text-lg font-semibold">Cases by Specialty</h2>
+            <div className="flex items-center justify-between w-full">
+              <h2 className="text-lg font-semibold">Cases by Specialty</h2>
+              <a href={`/api/${tenantSlug}/reports/specialty.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}>
+                <Button size="sm" variant="ghost">Export CSV</Button>
+              </a>
+            </div>
           </Card.Header>
           <Card.Content>
             {Object.keys(specialtyCounts).length === 0 ? (
@@ -167,7 +190,12 @@ export default async function ReportsPage({ params }: { params: Promise<{ tenant
 
         <Card className="panel">
           <Card.Header>
-            <h2 className="text-lg font-semibold">Status Distribution</h2>
+            <div className="flex items-center justify-between w-full">
+              <h2 className="text-lg font-semibold">Status Distribution</h2>
+              <a href={`/api/${tenantSlug}/reports/status.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}>
+                <Button size="sm" variant="ghost">Export CSV</Button>
+              </a>
+            </div>
           </Card.Header>
           <Card.Content>
             <div className="flex items-center justify-center gap-6 py-4">
