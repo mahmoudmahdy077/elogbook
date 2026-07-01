@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
-import path from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  plugins: [tsconfigPaths()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./test-setup.ts'],
@@ -18,11 +19,6 @@ export default defineConfig({
         functions: 40,
         lines: 40,
       },
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './'),
     },
   },
 });

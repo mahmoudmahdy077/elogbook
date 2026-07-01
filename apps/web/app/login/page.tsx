@@ -74,8 +74,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-backdrop flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-sm">
+    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/15 mb-4">
@@ -84,18 +84,18 @@ export default function LoginPage() {
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-heading font-bold text-text-primary mb-1.5">
+          <h1 className="text-2xl font-heading font-bold text-text-primary">
             {APP_NAME}
           </h1>
-          <p className="text-sm text-text-muted">Sign in to your account</p>
+          <p className="text-sm text-text-muted mt-1.5">Sign in to your account</p>
         </div>
 
         {/* Card */}
-        <div className="panel p-6 sm:p-8">
+        <div className="bg-surface-solid border border-border rounded-xl p-6 sm:p-8">
           {sent ? (
             <SuccessState email={email} />
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-5">
               <Link
                 href="/login/sso"
                 className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border bg-neutral-dark/30 text-text-primary font-medium text-sm hover:bg-neutral-dark/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
@@ -110,7 +110,7 @@ export default function LoginPage() {
 
               <Divider label="or continue with email" />
 
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <Field
                   id="email"
                   label="Email"
@@ -123,47 +123,42 @@ export default function LoginPage() {
                 />
                 <Field
                   id="password"
-                  label={
-                    <>
-                      Password{' '}
-                      <span className="text-text-muted font-normal">(optional)</span>
-                    </>
-                  }
+                  label="Password"
                   type="password"
                   value={password}
                   onChange={setPassword}
-                  placeholder="Leave blank for magic link"
+                  placeholder="Enter password"
                   autoComplete="current-password"
                 />
-                <p className="text-xs text-text-muted -mt-2">
-                  Leave password empty to receive a magic link by email.
+                <p className="text-xs text-text-muted -mt-1">
+                  Leave blank to receive a magic link instead.
                 </p>
-              </div>
 
-              {error && (
-                <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-lg px-3 py-2" role="alert">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                    </svg>
-                    <span>{error}</span>
+                {error && (
+                  <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-lg px-3 py-2" role="alert">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                      </svg>
+                      <span>{error}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <button
-                type="submit"
-                disabled={!email || loading}
-                className="w-full py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow flex items-center justify-center gap-2"
-              >
-                {loading ? <Spinner /> : null}
-                {loading
-                  ? 'Signing in...'
-                  : password
-                  ? 'Sign in'
-                  : 'Send magic link'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={!email || loading}
+                  className="w-full py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow flex items-center justify-center gap-2"
+                >
+                  {loading ? <Spinner /> : null}
+                  {loading
+                    ? 'Signing in...'
+                    : password
+                    ? 'Sign in'
+                    : 'Send magic link'}
+                </button>
+              </form>
+            </div>
           )}
         </div>
 

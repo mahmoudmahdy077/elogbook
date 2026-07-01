@@ -1,4 +1,6 @@
 import { defineWorkspace } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import path from 'path';
 
 export default defineWorkspace([
   {
@@ -10,6 +12,7 @@ export default defineWorkspace([
   },
   {
     extends: './apps/web/vitest.config.ts',
+    plugins: [tsconfigPaths({ root: path.resolve(__dirname, './apps/web') })],
     test: {
       name: 'web',
       root: './apps/web',

@@ -2,11 +2,15 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
+  if (csrfError) return csrfError;
+
   const { tenant: tenantSlug } = await params;
 
   const { allowed, retryAfter } = checkRateLimit(`ai-config:${tenantSlug}`);
