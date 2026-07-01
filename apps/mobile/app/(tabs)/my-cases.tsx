@@ -52,6 +52,8 @@ const CaseCard = React.memo(function CaseCard({
     <TouchableOpacity
       className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-3"
       onPress={() => onPress(item)}
+      accessibilityLabel={`${item.template_specialty} - ${item.template_name}`}
+      accessibilityRole="button"
     >
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
@@ -70,6 +72,14 @@ const CaseCard = React.memo(function CaseCard({
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
             <Text className="text-xs text-slate-500" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}
+            className="mt-1"
+            accessibilityLabel="Duplicate this case"
+            accessibilityRole="button"
+          >
+            <Text className="text-teal-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>

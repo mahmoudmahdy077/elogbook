@@ -46,10 +46,12 @@ function getSpecialtyIcon(specialty: string): keyof typeof Ionicons.glyphMap {
 }
 
 export default function LogCaseScreen() {
-  const { editCaseId } = useLocalSearchParams<{ editCaseId?: string }>();
+  const { editCaseId, duplicateCaseId, repeatLastEntry } = useLocalSearchParams<{ editCaseId?: string; duplicateCaseId?: string; repeatLastEntry?: string }>();
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<CaseTemplate | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const templatesRef = useRef(templates);
+  templatesRef.current = templates;
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -148,6 +150,83 @@ export default function LogCaseScreen() {
     })();
   }, [editCaseId]);
 
+  // When the route is opened with `duplicateCaseId`, fetch the source case
+  // and hydrate the form — PHI fields are always cleared, case_date is set to
+  // today, and the submit path uses INSERT (default) rather than UPDATE.
+  useEffect(() => {
+    if (!duplicateCaseId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('case_entries')
+        .select('template_id, is_deidentified, patient_mrn, patient_dob, patient_age_years, case_date, field_values')
+        .eq('id', duplicateCaseId)
+        .single();
+      if (error || !data) {
+        Alert.alert('Source case not found', 'Could not load the case you want to duplicate.');
+        return;
+      }
+      setIsDeidentified(Boolean(data.is_deidentified));
+      setPatientMrn('');
+      setPatientDob('');
+      setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
+      setCaseDate(new Date().toISOString().slice(0, 10));
+      const tmplId = String(data.template_id ?? '');
+      setSelectedTemplateId(tmplId);
+      const fv = typeof data.field_values === 'string'
+        ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
+        : ((data.field_values as Record<string, string>) ?? {});
+      setFieldValues(fv);
+      // If templates are already loaded, auto-select the matching template
+      const t = templatesRef.current.find((x) => x.id === tmplId);
+      if (t) {
+        setSelectedTemplate(t);
+      }
+    })();
+  }, [duplicateCaseId]);
+
+  // When the route is opened with `repeatLastEntry=true`, find the resident's
+  // most recent case and hydrate as a duplicate.
+  useEffect(() => {
+    if (String(repeatLastEntry) !== 'true') return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (!profile) return;
+      const { data, error } = await supabase
+        .from('case_entries')
+        .select('id, template_id, is_deidentified, patient_age_years, field_values')
+        .eq('resident_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) {
+        Alert.alert('No previous entry', 'You have no previous case entries to repeat from.');
+        return;
+      }
+      // Reuse the duplicate hydration for the most recent case
+      setIsDeidentified(Boolean(data.is_deidentified));
+      setPatientMrn('');
+      setPatientDob('');
+      setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
+      setCaseDate(new Date().toISOString().slice(0, 10));
+      const tmplId = String(data.template_id ?? '');
+      setSelectedTemplateId(tmplId);
+      const fv = typeof data.field_values === 'string'
+        ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
+        : ((data.field_values as Record<string, string>) ?? {});
+      setFieldValues(fv);
+      const t = templatesRef.current.find((x) => x.id === tmplId);
+      if (t) {
+        setSelectedTemplate(t);
+      }
+    })();
+  }, [repeatLastEntry]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -205,11 +284,10 @@ export default function LogCaseScreen() {
       setTemplates(data as CaseTemplate[]);
       // If we're editing and the template id is already known, jump straight
       // into the form prefilled with the existing field values.
-      if (editCaseId && selectedTemplateId) {
-        const t = (data as CaseTemplate[]).find((x) => x.id === selectedTemplateId);
-        if (t) {
-          setSelectedTemplate(t);
-        }
+      const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
+      if (autoSelectId) {
+        const t = (data as CaseTemplate[]).find((x) => x.id === autoSelectId);
+        if (t) setSelectedTemplate(t);
       }
     }
     setLoading(false);

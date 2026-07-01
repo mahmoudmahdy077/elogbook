@@ -327,6 +327,15 @@ export default function CaseDetailScreen() {
         </TouchableOpacity>
       )}
 
+      <TouchableOpacity
+        className="bg-slate-800 rounded-xl py-4 items-center mb-3 border border-indigo-500/15"
+        onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
+        accessibilityLabel="Duplicate this case"
+        accessibilityRole="button"
+      >
+        <Text className="text-teal-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
+      </TouchableOpacity>
+
       {canApprove && caseDetail.status === 'pending' && (
         <View className="flex-row gap-3 mb-3">
           <TouchableOpacity
