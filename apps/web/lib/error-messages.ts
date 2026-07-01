@@ -18,12 +18,12 @@ const patterns: [RegExp, string][] = [
   [/RateLimitExceeded/i, 'Too many attempts. Please wait and try again.'],
   // Network
   [/Failed to fetch|NetworkError|Network request failed/i, 'A network error occurred. Check your connection.'],
-  [/timeout|Timeout/i, 'The request timed out. Please try again.'],
-  [/abort|AbortError/i, 'The request was cancelled.'],
+  [/timeout/i, 'The request timed out. Please try again.'],
+  [/abort/i, 'The request was cancelled.'],
 ];
 
 export function toUserMessage(raw: string): string {
-  Sentry.captureMessage(raw);
+  Sentry.captureMessage(raw, 'info');
 
   for (const [regex, message] of patterns) {
     if (regex.test(raw)) return message;
