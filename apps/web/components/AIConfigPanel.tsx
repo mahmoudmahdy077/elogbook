@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import {
   Button,
   TextField,
@@ -122,9 +123,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         <h2 className="text-lg font-semibold">AI Configuration</h2>
       </Card.Header>
       <Card.Content className="gap-4">
-        {error && (
-          <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
-        )}
+        {error && <ErrorDisplay message={error} />}
         {success && (
           <div className="bg-success-50 text-success p-3 rounded-lg text-sm">{success}</div>
         )}

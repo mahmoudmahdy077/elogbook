@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 
 interface SubscriptionPlan {
@@ -106,11 +107,7 @@ export default function SubscriptionPlans({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-heading font-semibold">Subscription Plans</h2>
       </div>
-      {error && (
-        <div role="alert" className="bg-danger-50 text-danger text-xs rounded-lg p-2.5 border border-danger/20">
-          {error}
-        </div>
-      )}
+      {error && <ErrorDisplay message={error} />}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {plans.map((plan, index) => {
           const isCurrent = plan.id === currentPlanId;

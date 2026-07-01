@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ErrorDisplay from '@/components/ErrorDisplay';
 import {
   Card,
   TextArea,
@@ -56,9 +57,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         <h2 className="text-lg font-semibold">AI Case Insights</h2>
       </Card.Header>
       <Card.Content className="gap-4">
-        {error && (
-          <div className="bg-danger-50 text-danger p-3 rounded-lg text-sm">{error}</div>
-        )}
+        {error && <ErrorDisplay message={error} />}
 
         <Label>Ask a question about your cases (optional)</Label>
         <TextArea
