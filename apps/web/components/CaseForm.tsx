@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
-import { caseEntrySchema, GLOBAL_TENANT_ID } from '@elogbook/shared';
+import { caseEntrySchema, GLOBAL_TENANT_ID, type AccreditationMapping } from '@elogbook/shared';
 import { useToast } from '@/components/Toast';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
@@ -20,6 +20,8 @@ interface CaseFormProps {
   tenantId: string;
   tenantSlug: string;
   initialStatus: string;
+  duplicateCaseId?: string;
+  lastEntry?: boolean;
 }
 
 interface TemplateField {
@@ -63,7 +65,7 @@ const stepVariants = {
   exit: { opacity: 0, x: -24 },
 };
 
-export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFormProps) {
+export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicateCaseId, lastEntry }: CaseFormProps) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -82,6 +84,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
   const [patientAgeYears, setPatientAgeYears] = useState('');
   const [caseDate, setCaseDate] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
+  const [accreditationMappings, setAccreditationMappings] = useState<AccreditationMapping[]>([]);
 
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,6 +121,61 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
     }
     loadFrameworks();
   }, [tenantId, supabase]);
+
+  useEffect(() => {
+    if (!duplicateCaseId && !lastEntry) return;
+
+    async function loadSourceCase() {
+      let sourceCase: Record<string, unknown> | null = null;
+
+      if (duplicateCaseId) {
+        const { data, error } = await supabase
+          .from('case_entries')
+          .select('*')
+          .eq('id', duplicateCaseId)
+          .single();
+        if (error || !data) {
+          if (error) setErrors([error.message]);
+          return;
+        }
+        sourceCase = data as unknown as Record<string, unknown>;
+      } else if (lastEntry) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        if (!profile) return;
+
+        const { data, error } = await supabase
+          .from('case_entries')
+          .select('*')
+          .eq('resident_id', profile.id)
+          .in('status', ['pending', 'approved'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error || !data) return;
+        sourceCase = data as unknown as Record<string, unknown>;
+      }
+
+      if (!sourceCase) return;
+
+      setSelectedTemplateId(sourceCase.template_id as string);
+      setIsDeidentified(sourceCase.is_deidentified as boolean);
+      setPatientMrn('');
+      setPatientDob('');
+      setPatientAgeYears(sourceCase.patient_age_years != null ? String(sourceCase.patient_age_years) : '');
+      setCaseDate(new Date().toISOString().slice(0, 10));
+      setFieldValues((sourceCase.field_values as Record<string, unknown>) || {});
+      setAccreditationMappings((sourceCase.accreditation_mappings as AccreditationMapping[]) || []);
+    }
+
+    loadSourceCase();
+  }, [duplicateCaseId, lastEntry, supabase]);
 
   function getFieldKey(f: TemplateField): string {
     return f.key || f.name || '';
@@ -159,7 +217,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
       case_date: caseDate || new Date().toISOString().split('T')[0],
       field_values: fieldValues,
       status: 'draft',
-      accreditation_mappings: [],
+      accreditation_mappings: accreditationMappings,
       is_deidentified: isDeidentified,
     };
     if (isDeidentified) {
@@ -193,14 +251,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
     setErrors([]);
     const parsedAge = Number(patientAgeYears);
     const payload: Record<string, unknown> = isDeidentified
-      ? { template_id: selectedTemplateId, patient_age_years: parsedAge, patient_hash: '', case_date: caseDate, field_values: fieldValues, accreditation_mappings: [], is_deidentified: true as const }
-      : { template_id: selectedTemplateId, patient_mrn: patientMrn, patient_dob: patientDob, case_date: caseDate, field_values: fieldValues, accreditation_mappings: [], is_deidentified: false as const };
+      ? { template_id: selectedTemplateId, patient_age_years: parsedAge, patient_hash: '', case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: true as const }
+      : { template_id: selectedTemplateId, patient_mrn: patientMrn, patient_dob: patientDob, case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: false as const };
     const result = caseEntrySchema.safeParse(payload);
     if (!result.success) { setErrors(result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)); return; }
     setLoading(true);
     const insertData: Record<string, unknown> = {
       tenant_id: tenantId, template_id: selectedTemplateId, case_date: caseDate, field_values: fieldValues,
-      status: initialStatus, accreditation_mappings: [], is_deidentified: isDeidentified,
+      status: initialStatus, accreditation_mappings: accreditationMappings, is_deidentified: isDeidentified,
     };
     if (isDeidentified) {
       const mrnForHash = patientMrn || `temp-${Date.now()}`;
@@ -234,7 +292,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus }: CaseFo
           e.preventDefault();
           setSubmitted(false); setSubmittedCaseId(null); setStep(0); setSelectedTemplateId('');
           setFieldValues({}); setIsDeidentified(false); setPatientMrn(''); setPatientDob('');
-          setPatientAgeYears(''); setCaseDate(''); setErrors([]);
+          setPatientAgeYears(''); setCaseDate(''); setAccreditationMappings([]); setErrors([]);
         }
         return;
       }

@@ -2,8 +2,9 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import CaseForm from '@/components/CaseForm';
 
-export default async function NewCasePage({ params }: { params: Promise<{ tenant: string }> }) {
+export default async function NewCasePage({ params, searchParams }: { params: Promise<{ tenant: string }>, searchParams: Promise<{ duplicateFrom?: string }> }) {
   const { tenant: tenantSlug } = await params;
+  const { duplicateFrom } = await searchParams;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -49,6 +50,7 @@ export default async function NewCasePage({ params }: { params: Promise<{ tenant
         tenantId={profile.tenant_id}
         tenantSlug={tenant.slug}
         initialStatus={initialStatus}
+        duplicateCaseId={duplicateFrom}
       />
     </div>
   );
