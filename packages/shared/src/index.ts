@@ -11,3 +11,4 @@ export * from './constants/app';
 // '@elogbook/shared/components/web' (or /components/native on RN).
 // See ./components/index.ts.
 export * from './components';
+export * from './lib/template-sort';
