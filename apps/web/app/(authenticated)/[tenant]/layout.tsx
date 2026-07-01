@@ -43,6 +43,11 @@ export default async function TenantLayout({
     redirect('/login');
   }
 
+  // P6.1: onboarding guard
+  if (!auth.profile.onboarding_completed) {
+    redirect('/onboarding');
+  }
+
   if (!canAccessTenant(auth, paramTenant)) {
     redirect(`/${auth.tenant.slug}/dashboard`);
   }

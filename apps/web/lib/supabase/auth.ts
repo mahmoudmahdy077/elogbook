@@ -17,6 +17,7 @@ export interface AuthResult {
     role: UserRole;
     full_name: string;
     specialty: string | null;
+    onboarding_completed: boolean;
   };
   tenant: {
     id: string;
@@ -42,7 +43,7 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, tenant_id, role, full_name, specialty')
+    .select('id, tenant_id, role, full_name, specialty, onboarding_completed')
     .eq('user_id', user.id)
     .single();
 
@@ -81,6 +82,7 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
       role,
       full_name: profile.full_name,
       specialty: profile.specialty,
+      onboarding_completed: profile.onboarding_completed ?? false,
     },
     tenant: {
       id: tenant.id,
