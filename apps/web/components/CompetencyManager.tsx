@@ -15,6 +15,7 @@ import {
 } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import ImpactDialog from '@/components/ImpactDialog';
 import { createClient } from '@/lib/supabase/client';
 import {
   type AccreditationFramework,
@@ -62,6 +63,8 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
   const [milestonesJson, setMilestonesJson] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   async function fetchFrameworks() {
     setLoading(true);
@@ -158,27 +161,31 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
     await fetchFrameworks();
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm('Delete this accreditation framework? This action cannot be undone.')) {
-      return;
-    }
+  async function confirmDelete(id: string) {
+    setDeleteTargetId(id);
+    setShowConfirmDialog(true);
+  }
 
-    setDeleting(id);
+  async function doDelete() {
+    if (!deleteTargetId) return;
+    setDeleting(deleteTargetId);
     const supabase = createClient();
     const { error: deleteError } = await supabase
       .from('accreditation_frameworks')
       .delete()
-      .eq('id', id);
+      .eq('id', deleteTargetId);
+
+    setDeleting(null);
+    setShowConfirmDialog(false);
+    setDeleteTargetId(null);
 
     if (deleteError) {
       setError(deleteError.message);
-      setDeleting(null);
       return;
     }
 
-    setDeleting(null);
     setExpandedId(null);
-    setFrameworks((prev) => prev.filter((f) => f.id !== id));
+    setFrameworks((prev) => prev.filter((f) => f.id !== deleteTargetId));
     router.refresh();
   }
 
@@ -319,7 +326,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                     <Button
                       size="sm"
                       variant="danger-soft"
-                      onPress={() => handleDelete(framework.id)}
+                      onPress={() => confirmDelete(framework.id)}
                       isDisabled={deleting === framework.id}
                     >
                       Delete
@@ -390,6 +397,16 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
           })}
         </div>
       )}
+      <ImpactDialog
+        isOpen={showConfirmDialog}
+        title="Delete Framework"
+        message="This will permanently delete this accreditation framework."
+        severity="danger"
+        confirmLabel="Delete"
+        loading={!!deleting}
+        onConfirm={doDelete}
+        onCancel={() => { setShowConfirmDialog(false); setDeleteTargetId(null); }}
+      />
     </div>
   );
 }

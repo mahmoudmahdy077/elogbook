@@ -14,6 +14,7 @@ import {
   Input,
 } from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import ImpactDialog from '@/components/ImpactDialog';
 import { createClient } from '@/lib/supabase/client';
 
 interface TemplateField {
@@ -51,6 +52,10 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
   const [requiredFieldsInput, setRequiredFieldsInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [impactCount, setImpactCount] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function resetForm() {
     setName('');
@@ -105,9 +110,27 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
     overlay.close();
   }
 
-  async function handleDelete(id: string) {
+  async function confirmDelete(id: string) {
     const supabase = createClient();
-    const { error: deleteError } = await supabase.from('case_templates').delete().eq('id', id);
+    const { count } = await supabase
+      .from('case_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('template_id', id)
+      .is('deleted_at', null);
+    setDeletingId(id);
+    setImpactCount(count ?? 0);
+    setShowDeleteDialog(true);
+  }
+
+  async function handleDelete() {
+    if (!deletingId) return;
+    setDeleting(true);
+    const supabase = createClient();
+    const { error: deleteError } = await supabase.from('case_templates').delete().eq('id', deletingId);
+
+    setDeleting(false);
+    setShowDeleteDialog(false);
+    setDeletingId(null);
 
     if (deleteError) {
       setError(deleteError.message);
@@ -155,7 +178,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                   <Button
                     size="sm"
                     variant="danger-soft"
-                    onPress={() => handleDelete(t.id)}
+                    onPress={() => confirmDelete(t.id)}
                   >
                     Delete
                   </Button>
@@ -214,6 +237,18 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
           </Button>
         </Modal.Footer>
       </Modal.Root>
+
+      <ImpactDialog
+        isOpen={showDeleteDialog}
+        title="Delete Template"
+        message="This will permanently delete this template."
+        impact={impactCount > 0 ? `${impactCount} case entr${impactCount === 1 ? 'y' : 'ies'} use${impactCount === 1 ? 's' : ''} this template.` : undefined}
+        severity="danger"
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => { setShowDeleteDialog(false); setDeletingId(null); }}
+      />
     </div>
   );
 }

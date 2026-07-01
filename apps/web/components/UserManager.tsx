@@ -16,6 +16,7 @@ import {
   Input,
 } from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import ImpactDialog from '@/components/ImpactDialog';
 import { createClient } from '@/lib/supabase/client';
 
 interface Profile {
@@ -61,6 +62,8 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ userId: string; newRole: string; userName: string } | null>(null);
 
   function resetForm() {
     setInviteEmail('');
@@ -105,7 +108,8 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     overlay.close();
   }
 
-  async function handleRoleChange(userId: string, newRole: string) {
+  async function doRoleChange() {
+    if (!roleChangeTarget) return;
     setError('');
     setLoading(true);
 
@@ -113,7 +117,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       const res = await fetch(`/api/${tenantId}/admin/assign-role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, role: newRole }),
+        body: JSON.stringify({ user_id: roleChangeTarget.userId, role: roleChangeTarget.newRole }),
       });
 
       if (!res.ok) {
@@ -124,6 +128,8 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       }
 
       router.refresh();
+      setShowRoleDialog(false);
+      setRoleChangeTarget(null);
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {
@@ -131,9 +137,15 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     }
   }
 
+  async function confirmRoleChange(userId: string, newRole: string, userName: string) {
+    setRoleChangeTarget({ userId, newRole, userName });
+    setShowRoleDialog(true);
+  }
+
   return (
-    <div>
-      {error && <ErrorDisplay message={error} />}
+    <>
+      <div>
+        {error && <ErrorDisplay message={error} />}
       {success && (
         <div className="bg-success-50 text-success p-3 rounded-lg text-sm mb-4">{success}</div>
       )}
@@ -164,11 +176,11 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
                     <Select
                       aria-label="Role"
                       selectedKey={u.role}
-                      onSelectionChange={(value) => {
-                        if (value && value !== u.role) {
-                          handleRoleChange(u.id, String(value));
-                        }
-                      }}
+onSelectionChange={(value) => {
+                         if (value && value !== u.role) {
+                           confirmRoleChange(u.id, String(value), u.full_name);
+                         }
+                       }}
                     >
                        <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
                       <Select.Popover>
@@ -249,6 +261,17 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
           </Button>
         </Modal.Footer>
       </Modal.Root>
-    </div>
+        <ImpactDialog
+          isOpen={showRoleDialog}
+          title="Change User Role"
+          message={roleChangeTarget ? `Change ${roleChangeTarget.userName}'s role to ${roleChangeTarget.newRole}?` : ''}
+          severity="warning"
+          confirmLabel="Change Role"
+          loading={loading}
+          onConfirm={doRoleChange}
+          onCancel={() => { setShowRoleDialog(false); setRoleChangeTarget(null); }}
+        />
+      </div>
+    </>
   );
 }
