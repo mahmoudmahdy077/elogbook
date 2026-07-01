@@ -1,5 +1,5 @@
 ## Goal
-- Execute Market Gap Plan Part C (items 1-6 complete) and Part D.
+- Execute Market Gap Plan Part C (items 1-6 complete) and Part D (complete) + Security/Compliance.
 
 ## Constraints & Preferences
 - Docker Desktop not running → no SQL tests or `supabase db reset`
@@ -17,8 +17,12 @@
 - **C.6** Reports date-range picker + CSV export
 - **D.1** Duty/hour tracking — schema, logging UI, dashboard violations
 - **D.2** Faculty evaluations — form, evaluate page, resident view, reports view + CSV
+- **UX P6.1** Onboarding wizard + completion flag
+- **SEC-4.1** CSP headers with report-uri directive
+- **SEC-5.1** Rate limiting middleware (proxy.ts)
+- **SEC-6.1** Audit triggers for goals, templates, profiles
 
-## Blocked
+### Blocked
 - SQL verification — Docker Desktop unavailable
 - Edge function deployment — requires network
 - E2E tests — need Playwright binaries
@@ -27,7 +31,4 @@
 None — all items complete.
 
 ## Critical Context
-- D.1 `shift_type` values: 'call', 'clinic', 'vacation', 'weekend', 'regular'
-- D.1 weekly violation threshold: 80 hours
-- D.2 evaluation scores: 1-5 integer scale
 - All code typechecks and tests pass (102 tests, tsc clean)
