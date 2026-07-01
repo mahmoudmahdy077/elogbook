@@ -49,6 +49,27 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
     .order('created_at', { ascending: false });
   if (purchasesError) return <ErrorDisplay message={purchasesError.message} />;
 
+  const { count: caseCount, error: caseCountError } = await supabase
+    .from('case_entries')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', auth.profile.tenant_id)
+    .is('deleted_at', null);
+  if (caseCountError) return <ErrorDisplay message={caseCountError.message} />;
+
+  const { count: residentCount, error: residentCountError } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', auth.profile.tenant_id);
+  if (residentCountError) return <ErrorDisplay message={residentCountError.message} />;
+
+  const { data: payments, error: paymentsError } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('tenant_id', auth.profile.tenant_id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (paymentsError) return <ErrorDisplay message={paymentsError.message} />;
+
   const plan = (subscription as Record<string, unknown> | null)?.plan as SubscriptionPlan | null;
 
   return (
@@ -82,6 +103,55 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
           </Card.Content>
         </Card>
       )}
+
+      <Card className="panel">
+        <Card.Header>
+          <h2 className="text-lg font-semibold">Usage This Period</h2>
+        </Card.Header>
+        <Card.Content>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-default-500">Cases Logged</p>
+              <p className="text-2xl font-bold">{caseCount ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-sm text-default-500">Team Members</p>
+              <p className="text-2xl font-bold">{residentCount ?? 0}</p>
+            </div>
+          </div>
+        </Card.Content>
+      </Card>
+
+      <Card className="panel">
+        <Card.Header>
+          <h2 className="text-lg font-semibold">Payment History</h2>
+        </Card.Header>
+        <Card.Content>
+          {!payments || payments.length === 0 ? (
+            <p className="text-sm text-default-400">No payments recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((p: { id: string; amount: number; status: string; created_at: string }) => (
+                <div key={p.id} className="flex items-center justify-between border-b border-divider pb-2">
+                  <div>
+                    <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
+                    <p className="text-xs text-default-400 clinical-data">
+                      {new Date(p.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Chip
+                    color={p.status === 'completed' || p.status === 'succeeded' ? 'success' : 'warning'}
+                    variant="soft"
+                    size="sm"
+                  >
+                    {p.status === 'completed' || p.status === 'succeeded' ? 'Paid' : p.status}
+                  </Chip>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card.Content>
+      </Card>
 
       <SubscriptionPlans
         plans={plans ?? []}
