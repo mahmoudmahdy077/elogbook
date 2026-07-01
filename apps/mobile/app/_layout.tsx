@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { clinicalTokens } from '@elogbook/shared/src/constants/design-tokens';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
+import { useSyncInit } from '../lib/sync';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -86,6 +87,9 @@ export default function RootLayout() {
     'GeistMono': require('../assets/fonts/GeistMono-Regular.ttf'),
     'GeistMono-Medium': require('../assets/fonts/GeistMono-Medium.ttf'),
   });
+
+  // Initialize sync service with auth state
+  useSyncInit();
 
   return (
     <ErrorBoundary>

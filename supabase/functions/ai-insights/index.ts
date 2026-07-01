@@ -198,7 +198,7 @@ serve(async (req) => {
 
   const authResult = await authenticate(req);
   if (authResult instanceof Response) return authResult;
-  const { supabase, tenantId, role } = authResult;
+  const { supabase, user, tenantId, role } = authResult;
 
   let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
   try {
@@ -217,6 +217,17 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: 'resident_id is required' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Security: Verify resident_id matches caller OR caller has elevated role
+  // This prevents cross-resident PHI access
+  const callerId = user.id;
+  const elevatedRoles = ['supervisor', 'director', 'institution_admin', 'admin'];
+  if (resident_id !== callerId && !elevatedRoles.includes(role)) {
+    return new Response(
+      JSON.stringify({ error: 'Forbidden - resident_id mismatch' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 
