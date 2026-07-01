@@ -9,7 +9,7 @@
 
 ## Progress
 ### Done (all commits in master)
-- **C.1** Error display standardization  
+- **C.1** Error display standardization
 - **C.2** Duplicate case + repeat last entry
 - **C.3** Template favorites
 - **C.4** Impact-aware confirm dialogs
@@ -21,6 +21,12 @@
 - **SEC-4.1** CSP headers with report-uri directive
 - **SEC-5.1** Rate limiting middleware (proxy.ts)
 - **SEC-6.1** Audit triggers for goals, templates, profiles
-- **BUILD FIX** Tailwind v4 source path for shared components
+- **BUILD FIX** Tailwind v4 source paths + maxWidth collision fix
 
-All code typechecks, builds, and tests pass (102 tests).
+### Blocked
+- SQL verification — Docker Desktop unavailable
+- Edge function deployment — requires network
+- E2E tests — need Playwright binaries
+
+## Critical Context
+- All code typechecks, builds, and tests pass (102 tests)
