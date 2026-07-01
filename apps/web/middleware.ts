@@ -19,7 +19,7 @@ function generateCsp(nonce: string): string {
   ].join('; ');
 }
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const nonce = crypto.randomUUID();
 
   const response = await updateSession(request);
