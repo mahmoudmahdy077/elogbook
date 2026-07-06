@@ -4,9 +4,9 @@
 
 ## 🔴 P0 — Launch Blockers
 
-- [ ] **P0.1** Finish UI redesign across all screens — ApprovalsDashboard, CaseForm, CaseList, AIInsights, Reports, Billing, Admin panels (match Apple Health prototype)
-- [ ] **P0.2** Redesign login page — Apple Health aesthetic, frosted glass, blue accent
-- [ ] **P0.3** Fix mobile duplicate components — delete local ProgressRing, StatusBadge, GlassPanel; switch all imports to `@elogbook/shared`
+- [x] **P0.1** Finish UI redesign across all screens — ApprovalsDashboard, CaseForm, CaseList, AIInsights, Reports, Billing, Admin panels (match Apple Health prototype)
+- [x] **P0.2** Redesign login page — Apple Health aesthetic, frosted glass, blue accent
+- [x] **P0.3** Fix mobile duplicate components — delete local ProgressRing, StatusBadge, GlassPanel; switch all imports to `@elogbook/shared`
 - [ ] **P0.4** Light theme is default — verify dark mode toggle still works, test all screens in both modes
 - [ ] **P0.5** Fix known issues from PROJECT_ANALYSIS.md — HeroUI GlassPanel web import, missing Suspense boundaries in dashboard
 
