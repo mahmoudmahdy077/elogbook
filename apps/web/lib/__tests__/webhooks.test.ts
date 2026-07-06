@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 
 // Shared mock client that tests can configure
 const mockClient = {
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 // We import after the mock is set up
-const { dispatchWebhookEvent } = await import('../webhooks');
+const { dispatchWebhookEvent, testWebhookEndpoint } = await import('../webhooks');
 
 function makeQueryMock(result: { data: unknown; error: null | Error }) {
   return vi.fn().mockReturnValue({
@@ -153,5 +153,120 @@ describe('dispatchWebhookEvent', () => {
     });
 
     expect(result).toEqual([]);
+  });
+
+  it('returns empty array when events field is null (not an array)', async () => {
+    mockClient.from = makeQueryMock({
+      data: [
+        {
+          id: 'wh-3',
+          url: 'https://example.com/hook3',
+          secret: 'secret-3',
+          events: null,
+        },
+      ],
+      error: null,
+    });
+
+    const result = await dispatchWebhookEvent({
+      tenant_id: 'tenant-1',
+      event_type: 'case.submitted',
+      event_id: 'evt-1',
+      data: {},
+    });
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('testWebhookEndpoint', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns success response when endpoint is reachable', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      text: vi.fn().mockResolvedValue('OK'),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await testWebhookEndpoint(
+      'https://example.com/hook-test',
+      'test-secret',
+      'tenant-1',
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.ok).toBe(true);
+
+    // Verify the fetch was called with expected headers
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [, opts] = mockFetch.mock.calls[0];
+    expect(opts.method).toBe('POST');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+    expect(opts.headers['X-E-Logbook-Event']).toBe('test.ping');
+    expect(opts.headers['X-E-Logbook-Signature']).toMatch(/^sha256=/);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('handles network failure gracefully', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+
+    const result = await testWebhookEndpoint(
+      'https://example.com/hook-fail',
+      'secret',
+      'tenant-1',
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.body).toContain('Network error');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('handles non-200 status code', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 500,
+        ok: false,
+        text: vi.fn().mockResolvedValue('Internal Server Error'),
+      }),
+    );
+
+    const result = await testWebhookEndpoint(
+      'https://example.com/hook-500',
+      'secret',
+      'tenant-1',
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(500);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('handles empty/error response body from fetch text', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      text: vi.fn().mockRejectedValue(new Error('Body read error')),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await testWebhookEndpoint(
+      'https://example.com/hook-empty',
+      'secret',
+      'tenant-1',
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.ok).toBe(true);
+    expect(result.body).toBe('');
+
+    vi.unstubAllGlobals();
   });
 });

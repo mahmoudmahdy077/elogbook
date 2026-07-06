@@ -157,14 +157,24 @@ export async function GET(
       tenant: tenant.slug,
     };
 
-    const pdfResponse = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''}`,
-      },
-      body: JSON.stringify(pdfPayload),
-    });
+    let pdfResponse;
+    try {
+      pdfResponse = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''}`,
+        },
+        body: JSON.stringify(pdfPayload),
+      });
+    } catch (_err) {
+      // Edge function unavailable — fall back to inline HTML
+      return generateAuditPdfInline(rows, {
+        tenantName: tenant.slug,
+        startDate,
+        endDate,
+      });
+    }
 
     if (!pdfResponse.ok) {
       // Fallback: render audit log data as a simple inline PDF table
