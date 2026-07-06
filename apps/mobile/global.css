@@ -8,25 +8,25 @@
 @source "./components";
 
 @theme {
-  --color-backdrop: #060814;
-  --color-panel: #0f172a;
-  --color-primary: #0d9488;
-  --color-secondary: #6366f1;
-  --color-amber: #d97706;
-  --color-emerald: #059669;
-  --color-crimson: #dc2626;
-  --color-neutral-light: #e2e8f0;
-  --color-neutral-dark: #0f172a;
+  --color-backdrop: #F2F2F7;
+  --color-panel: #FFFFFF;
+  --color-primary: #007AFF;
+  --color-secondary: #5856D6;
+  --color-amber: #FF9500;
+  --color-emerald: #34C759;
+  --color-crimson: #FF3B30;
+  --color-neutral-light: #E5E5EA;
+  --color-neutral-dark: #F2F2F7;
 
-  --font-heading: "Outfit", sans-serif;
-  --font-body: "Inter", "Plus Jakarta Sans", sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
 }
 
 @layer components {
   .glass-panel-mobile {
-    background-color: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 14px;
   }
 }

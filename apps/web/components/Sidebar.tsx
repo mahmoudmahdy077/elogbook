@@ -4,7 +4,6 @@ import { APP_NAME } from '@elogbook/shared';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import LocaleSwitcher from './LocaleSwitcher';
 
 type NavLink = {
   href: string;
@@ -59,57 +58,58 @@ export default function Sidebar({
     );
   }
 
+  // Group links into sections
+  const mainLinks = visibleLinks.filter(l => ['Dashboard', 'Cases'].includes(l.label));
+  const reviewLinks = visibleLinks.filter(l => ['Approvals', 'Goals'].includes(l.label));
+  const toolLinks = visibleLinks.filter(l => !['Dashboard', 'Cases', 'Approvals', 'Goals'].includes(l.label));
+
   return (
     <>
       <aside
-        className={`panel flex-shrink-0 p-4 flex flex-col transition-all duration-200 max-md:hidden ${
-          collapsed ? 'w-16' : 'w-56'
+        className={`glass-panel flex-shrink-0 p-4 flex flex-col transition-all duration-200 max-md:hidden ${
+          collapsed ? 'w-16' : 'w-60'
         }`}
       >
-        <div className={`mb-6 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {/* Brand */}
+        <div className={`mb-6 flex items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
           <Link
             href={`/${tenantSlug}/dashboard`}
-            className={`font-bold font-heading hover:text-primary transition-colors ${
-              collapsed ? 'text-lg' : 'text-xl'
-            }`}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             aria-label="Go to dashboard"
           >
-            {collapsed ? 'E' : APP_NAME}
+            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              EL
+            </span>
+            {!collapsed && (
+              <span className="font-heading font-semibold text-base text-text-primary tracking-tight">
+                {APP_NAME}
+              </span>
+            )}
           </Link>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className={`p-1.5 rounded-md hover:bg-neutral-dark/50 transition-colors text-neutral-light/50 hover:text-neutral-light ${
-              collapsed ? 'hidden' : ''
-            }`}
-            aria-label="Collapse sidebar"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M15.79 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L11.832 10l3.938 3.71a.75.75 0 01.02 1.06zM8.29 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L4.332 10l3.938 3.71a.75.75 0 01.02 1.06z" clipRule="evenodd" />
-            </svg>
-          </button>
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="ml-auto p-1.5 rounded-lg hover:bg-black/5 transition-colors text-text-muted"
+              aria-label="Collapse sidebar"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M15.79 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L11.832 10l3.938 3.71a.75.75 0 01.02 1.06zM8.29 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L4.332 10l3.938 3.71a.75.75 0 01.02 1.06z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        {!collapsed && (
-          <div className="px-3 mb-3">
-            <input
-              type="search"
-              placeholder="Search cases..."
-              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary transition-colors"
-              onChange={(e) => {
-                if (e.target.value.length > 2) {
-                  window.location.href = `/${tenantSlug}/cases?q=${encodeURIComponent(e.target.value)}`;
-                }
-              }}
-            />
-          </div>
-        )}
-
         <nav className="flex flex-col gap-0.5 flex-1">
-          {visibleLinks.map((link) => {
+          {/* Main section */}
+          {mainLinks.length > 0 && !collapsed && (
+            <div className="text-[0.65rem] font-semibold text-text-muted uppercase tracking-widest px-3 py-2">
+              Main
+            </div>
+          )}
+          {mainLinks.map((link) => {
             const fullHref = `/${tenantSlug}${link.href}`;
             const isActive = pathname === fullHref || pathname.startsWith(fullHref + '/');
             const icon = iconMap[link.label];
-
             return (
               <Link
                 key={link.href}
@@ -117,10 +117,73 @@ export default function Sidebar({
                 title={collapsed ? link.label : undefined}
                 aria-label={link.label}
                 className={
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
-                    ? 'bg-primary/15 text-primary font-medium'
-                    : 'text-neutral-light/60 hover:bg-neutral-dark/50 hover:text-neutral-light') +
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-black/5') +
+                  (collapsed ? ' justify-center' : '')
+                }
+              >
+                {icon && renderIcon(icon, `w-4 h-4 shrink-0`)}
+                {!collapsed && <span>{link.label}</span>}
+              </Link>
+            );
+          })}
+
+          {/* Review section */}
+          {reviewLinks.length > 0 && !collapsed && (
+            <div className="text-[0.65rem] font-semibold text-text-muted uppercase tracking-widest px-3 py-2 mt-2">
+              Review
+            </div>
+          )}
+          {reviewLinks.map((link) => {
+            const fullHref = `/${tenantSlug}${link.href}`;
+            const isActive = pathname === fullHref || pathname.startsWith(fullHref + '/');
+            const icon = iconMap[link.label];
+            return (
+              <Link
+                key={link.href}
+                href={fullHref}
+                title={collapsed ? link.label : undefined}
+                aria-label={link.label}
+                className={
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
+                  (isActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-black/5') +
+                  (collapsed ? ' justify-center' : '')
+                }
+              >
+                {icon && renderIcon(icon, `w-4 h-4 shrink-0`)}
+                {!collapsed && <span>{link.label}</span>}
+                {!collapsed && link.label === 'Approvals' && (
+                  <span className="ml-auto bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">3</span>
+                )}
+              </Link>
+            );
+          })}
+
+          {/* Tools section */}
+          {toolLinks.length > 0 && !collapsed && (
+            <div className="text-[0.65rem] font-semibold text-text-muted uppercase tracking-widest px-3 py-2 mt-2">
+              Tools
+            </div>
+          )}
+          {toolLinks.map((link) => {
+            const fullHref = `/${tenantSlug}${link.href}`;
+            const isActive = pathname === fullHref || pathname.startsWith(fullHref + '/');
+            const icon = iconMap[link.label];
+            return (
+              <Link
+                key={link.href}
+                href={fullHref}
+                title={collapsed ? link.label : undefined}
+                aria-label={link.label}
+                className={
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
+                  (isActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-black/5') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -131,59 +194,25 @@ export default function Sidebar({
           })}
         </nav>
 
-        <div className={`mt-auto pt-4 border-t border-border ${collapsed ? 'flex justify-center' : ''}`}>
-          {/* U1.5: Theme toggle — persists to localStorage, read by the
-              inline script in layout.tsx to avoid hydration flash. */}
-          {collapsed ? (
-            <button
-              onClick={() => {
-                const isDark = document.documentElement.classList.contains('dark');
-                if (isDark) {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.classList.add('light');
-                  localStorage.setItem('theme', 'light');
-                } else {
-                  document.documentElement.classList.remove('light');
-                  document.documentElement.classList.add('dark');
-                  localStorage.setItem('theme', 'dark');
-                }
-              }}
-              className="p-2 rounded-md hover:bg-neutral-dark/50 transition-colors text-neutral-light/50 hover:text-neutral-light"
-              aria-label="Toggle theme"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                const isDark = document.documentElement.classList.contains('dark');
-                if (isDark) {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.classList.add('light');
-                  localStorage.setItem('theme', 'light');
-                } else {
-                  document.documentElement.classList.remove('light');
-                  document.documentElement.classList.add('dark');
-                  localStorage.setItem('theme', 'dark');
-                }
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:bg-neutral-dark/50 hover:text-text-primary transition-colors"
-              aria-label="Toggle theme"
-            >
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
-              <span>Toggle theme</span>
-            </button>
+        {/* Footer — user info + sign out */}
+        <div className={`mt-auto pt-4 border-t border-border ${collapsed ? 'flex flex-col items-center gap-2' : ''}`}>
+          {!collapsed && user && (
+            <div className="flex items-center gap-2.5 px-1 mb-2">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-[#34C759] flex items-center justify-center text-white font-semibold text-[0.6rem] flex-shrink-0">
+                {user.name?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-text-primary truncate">{user.name}</div>
+                <div className="text-[0.65rem] text-text-muted truncate">{user.role} · {user.tenantName}</div>
+              </div>
+            </div>
           )}
-          {!collapsed && <LocaleSwitcher current={typeof document !== 'undefined' ? (document.documentElement.lang || 'en') : 'en'} />}
+
           {collapsed ? (
-            <div className="flex flex-col gap-1">
+            <>
               <button
                 onClick={() => setCollapsed(false)}
-                className="p-2 rounded-md hover:bg-neutral-dark/50 transition-colors text-neutral-light/50 hover:text-neutral-light"
+                className="p-2 rounded-lg hover:bg-black/5 transition-colors text-text-muted"
                 aria-label="Expand sidebar"
               >
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -193,7 +222,7 @@ export default function Sidebar({
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
-                  className="p-2 rounded-md hover:bg-danger/10 text-danger/60 hover:text-danger transition-colors"
+                  className="p-2 rounded-lg hover:bg-danger/10 text-danger/60 hover:text-danger transition-colors"
                   aria-label="Sign out"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -202,7 +231,7 @@ export default function Sidebar({
                   </svg>
                 </button>
               </form>
-            </div>
+            </>
           ) : (
             <form action="/auth/signout" method="post">
               <button
@@ -219,10 +248,10 @@ export default function Sidebar({
       {collapsed && (
         <button
           onClick={() => setCollapsed(false)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-r-md panel border-l-0 hover:border-primary transition-colors max-md:hidden"
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-r-lg panel border-l-0 hover:border-primary transition-colors max-md:hidden"
           aria-label="Expand sidebar"
         >
-          <svg className="w-3.5 h-3.5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="w-3.5 h-3.5 text-text-muted" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06.02z" clipRule="evenodd" />
           </svg>
         </button>

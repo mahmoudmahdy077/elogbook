@@ -1,6 +1,6 @@
-import { View, Text, ViewStyle, TextStyle, Platform } from 'react-native';
 import { clinicalTokens } from '../constants/design-tokens';
 import type { ReactNode } from 'react';
+import { View, Text } from 'react-native';
 
 export type StatusVariant = 'draft' | 'pending' | 'approved' | 'rejected' | 'deidentified';
 export type BadgeSize = 'sm' | 'md';
@@ -9,94 +9,76 @@ export interface StatusBadgeProps {
   status: StatusVariant;
   size?: BadgeSize;
   children?: ReactNode;
-  style?: ViewStyle;
 }
 
-const statusColors: Record<StatusVariant, { bg: string; text: string; glow: string; dot: string; border: string }> = {
+const statusConfig: Record<StatusVariant, { bg: string; text: string; border: string }> = {
   draft: {
-    bg: 'rgba(148, 163, 184, 0.15)',
-    text: clinicalTokens.colors.text.muted,
-    glow: clinicalTokens.shadows.glow(clinicalTokens.colors.text.muted),
-    dot: clinicalTokens.colors.text.muted,
-    border: 'rgba(148, 163, 184, 0.2)',
+    bg: 'rgba(142, 142, 147, 0.12)',
+    text: '#8E8E93',
+    border: 'rgba(142, 142, 147, 0.18)',
   },
   pending: {
-    bg: 'rgba(252, 211, 77, 0.15)',
+    bg: 'rgba(255, 149, 0, 0.12)',
     text: clinicalTokens.colors.pending,
-    glow: clinicalTokens.shadows.pending,
-    dot: clinicalTokens.colors.pending,
-    border: 'rgba(252, 211, 77, 0.3)',
+    border: 'rgba(255, 149, 0, 0.20)',
   },
   approved: {
-    bg: 'rgba(16, 185, 129, 0.15)',
+    bg: 'rgba(52, 199, 89, 0.12)',
     text: clinicalTokens.colors.approved,
-    glow: clinicalTokens.shadows.approved,
-    dot: clinicalTokens.colors.approved,
-    border: 'rgba(16, 185, 129, 0.3)',
+    border: 'rgba(52, 199, 89, 0.20)',
   },
   rejected: {
-    bg: 'rgba(239, 68, 68, 0.15)',
+    bg: 'rgba(255, 59, 48, 0.12)',
     text: clinicalTokens.colors.rejected,
-    glow: clinicalTokens.shadows.rejected,
-    dot: clinicalTokens.colors.rejected,
-    border: 'rgba(239, 68, 68, 0.3)',
+    border: 'rgba(255, 59, 48, 0.20)',
   },
   deidentified: {
-    bg: 'rgba(99, 102, 241, 0.15)',
+    bg: 'rgba(88, 86, 214, 0.12)',
     text: clinicalTokens.colors.secondary.DEFAULT,
-    glow: clinicalTokens.shadows.glow(clinicalTokens.colors.secondary.glow),
-    dot: clinicalTokens.colors.secondary.DEFAULT,
-    border: 'rgba(99, 102, 241, 0.3)',
+    border: 'rgba(88, 86, 214, 0.20)',
   },
 };
 
-const sizeStyles: Record<BadgeSize, { container: ViewStyle; dotSize: number; gap: number; fontSize: number }> = {
-  sm: { container: { paddingHorizontal: 8, paddingVertical: 4 }, dotSize: 6, gap: 4, fontSize: 11 },
-  md: { container: { paddingHorizontal: 12, paddingVertical: 6 }, dotSize: 8, gap: 6, fontSize: 13 },
-};
-
-export function StatusBadge({ status, size = 'md', children, style }: StatusBadgeProps) {
-  const config = statusColors[status];
-  const sizing = sizeStyles[size];
+export function StatusBadge({ status, size = 'md', children }: StatusBadgeProps) {
+  const config = statusConfig[status];
   const label = children || status.charAt(0).toUpperCase() + status.slice(1);
-
-  const containerStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sizing.gap,
-    borderRadius: clinicalTokens.radius.full,
-    backgroundColor: config.bg,
-    borderWidth: 1,
-    borderColor: config.border,
-    ...sizing.container,
-    ...style,
-  };
-
-  if (Platform.OS === 'ios' && config.glow) {
-    containerStyle.shadowColor = config.glow;
-    containerStyle.shadowOffset = { width: 0, height: 0 };
-    containerStyle.shadowRadius = 6;
-    containerStyle.shadowOpacity = 0.5;
-  }
-
-  const dotStyle: ViewStyle = {
-    width: sizing.dotSize,
-    height: sizing.dotSize,
-    borderRadius: sizing.dotSize / 2,
-    backgroundColor: config.dot,
-  };
-
-  const textStyle: TextStyle = {
-    fontSize: sizing.fontSize,
-    fontWeight: '600',
-    color: config.text,
-    fontFamily: clinicalTokens.fonts.body,
-  };
+  const dotSize = size === 'sm' ? 5 : 6;
+  const fontSize = size === 'sm' ? 11 : 12;
+  const px = size === 'sm' ? 6 : 8;
+  const py = size === 'sm' ? 2 : 4;
 
   return (
-    <View style={containerStyle}>
-      <View style={dotStyle} />
-      <Text style={textStyle}>{label}</Text>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: config.bg,
+        borderWidth: 1,
+        borderColor: config.border,
+        borderRadius: 999,
+        paddingHorizontal: px,
+        paddingVertical: py,
+      }}
+    >
+      <View
+        style={{
+          width: dotSize,
+          height: dotSize,
+          borderRadius: dotSize / 2,
+          backgroundColor: config.text,
+        }}
+      />
+      <Text
+        style={{
+          color: config.text,
+          fontSize,
+          fontWeight: '600',
+          letterSpacing: 0.5,
+        }}
+      >
+        {label}
+      </Text>
     </View>
   );
 }

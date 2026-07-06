@@ -14,42 +14,37 @@ export interface StatusBadgeProps {
   style?: CSSProperties;
 }
 
-const statusConfig: Record<StatusVariant, { bg: string; text: string; glow: string; border: string }> = {
+const statusConfig: Record<StatusVariant, { bg: string; text: string; border: string }> = {
   draft: {
-    bg: 'rgba(148, 163, 184, 0.15)',
-    text: clinicalTokens.colors.text.muted,
-    glow: clinicalTokens.shadows.glow(clinicalTokens.colors.text.muted),
-    border: 'rgba(148, 163, 184, 0.3)',
+    bg: 'rgba(142, 142, 147, 0.12)',
+    text: '#8E8E93',
+    border: 'rgba(142, 142, 147, 0.18)',
   },
   pending: {
-    bg: 'rgba(252, 211, 77, 0.15)',
+    bg: 'rgba(255, 149, 0, 0.12)',
     text: clinicalTokens.colors.pending,
-    glow: clinicalTokens.shadows.pending,
-    border: 'rgba(252, 211, 77, 0.3)',
+    border: 'rgba(255, 149, 0, 0.20)',
   },
   approved: {
-    bg: 'rgba(16, 185, 129, 0.15)',
+    bg: 'rgba(52, 199, 89, 0.12)',
     text: clinicalTokens.colors.approved,
-    glow: clinicalTokens.shadows.approved,
-    border: 'rgba(16, 185, 129, 0.3)',
+    border: 'rgba(52, 199, 89, 0.20)',
   },
   rejected: {
-    bg: 'rgba(239, 68, 68, 0.15)',
+    bg: 'rgba(255, 59, 48, 0.12)',
     text: clinicalTokens.colors.rejected,
-    glow: clinicalTokens.shadows.rejected,
-    border: 'rgba(239, 68, 68, 0.3)',
+    border: 'rgba(255, 59, 48, 0.20)',
   },
   deidentified: {
-    bg: 'rgba(99, 102, 241, 0.15)',
+    bg: 'rgba(88, 86, 214, 0.12)',
     text: clinicalTokens.colors.secondary.DEFAULT,
-    glow: clinicalTokens.shadows.glow(clinicalTokens.colors.secondary.glow),
-    border: 'rgba(99, 102, 241, 0.3)',
+    border: 'rgba(88, 86, 214, 0.20)',
   },
 };
 
 const sizeStyles: Record<BadgeSize, string> = {
-  sm: 'px-2 py-0.5 text-xs gap-1',
-  md: 'px-3 py-1 text-sm gap-1.5',
+  sm: 'px-2 py-0.5 text-[0.65rem] gap-1',
+  md: 'px-2.5 py-1 text-[0.7rem] gap-1',
 };
 
 export function StatusBadge({ status, size = 'md', children, className = '', style }: StatusBadgeProps) {
@@ -59,7 +54,7 @@ export function StatusBadge({ status, size = 'md', children, className = '', sty
   return (
     <span
       className={`
-        inline-flex items-center font-medium
+        inline-flex items-center font-semibold tracking-wide
         ${sizeStyles[size]}
         ${className}
       `}
@@ -68,17 +63,15 @@ export function StatusBadge({ status, size = 'md', children, className = '', sty
         color: config.text,
         border: `1px solid ${config.border}`,
         borderRadius: clinicalTokens.radius.full,
-        boxShadow: config.glow,
         ...style,
       }}
     >
       <span
         style={{
-          width: size === 'sm' ? 6 : 8,
-          height: size === 'sm' ? 6 : 8,
+          width: size === 'sm' ? 5 : 6,
+          height: size === 'sm' ? 5 : 6,
           borderRadius: '50%',
           backgroundColor: config.text,
-          boxShadow: config.glow,
           flexShrink: 0,
         }}
       />
