@@ -1,0 +1,33 @@
+name: Security Audit
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/actions/setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run pnpm audit (high severity and above)
+        run: pnpm audit --prod --audit-level=high
+        continue-on-error: true
+      - name: Run npm audit (fallback — covers dev deps too)
+        run: npm audit --audit-level=high
+        continue-on-error: true

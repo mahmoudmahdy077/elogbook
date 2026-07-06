@@ -1,7 +1,7 @@
 import '../global.css';
 
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ToastAndroid, Platform, Alert } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ToastAndroid, Platform, Alert, Linking } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,6 +9,11 @@ import { useFonts } from 'expo-font';
 import { clinicalTokens } from '@elogbook/shared';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 import { useSyncInit } from '../lib/sync';
+import { parseDeepLink, navigateToDeepLink } from '../lib/linking';
+import {
+  registerNotificationHandler,
+  handleColdStartNotification,
+} from '../lib/notification-handler';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -90,6 +95,28 @@ export default function RootLayout() {
 
   // Initialize sync service with auth state
   useSyncInit();
+
+  // ── Deep linking ────────────────────────────────────────────────────────
+  // Listen for incoming URLs while the app is already running (e.g. a user
+  // taps a universal link or custom-scheme link from another app).
+  useEffect(() => {
+    const handler = ({ url }: { url: string }) => {
+      const route = parseDeepLink(url);
+      if (route) navigateToDeepLink(route);
+    };
+
+    const subscription = Linking.addEventListener('url', handler);
+    return () => subscription.remove();
+  }, []);
+
+  // ── Notification navigation ─────────────────────────────────────────────
+  // Register the expo-notifications response listener (user taps a
+  // notification banner) and check for a cold-start notification.
+  useEffect(() => {
+    const unregister = registerNotificationHandler();
+    handleColdStartNotification();
+    return unregister;
+  }, []);
 
   return (
     <ErrorBoundary>

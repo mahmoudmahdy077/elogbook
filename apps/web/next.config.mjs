@@ -1,5 +1,6 @@
 import bundleAnalyzer from '@next/bundle-analyzer';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
@@ -90,4 +91,33 @@ const nextConfig = {
   },
 };
 
-export default withBundleAnalyzer(withNextIntl(nextConfig));
+const sentryBuildOptions = {
+  // Org and project slugs — set via SENTRY_ORG / SENTRY_PROJECT env vars
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // Suppress Sentry build logs in CI unless debugging
+  silent: process.env.SENTRY_SILENT !== 'false',
+  telemetry: false,
+  // P5.4: Source map configuration
+  widenClientFileUpload: true,
+  sourcemaps: {
+    // Upload all JS and map artifacts generated during build
+    assets: ['.next/**/*.js', '.next/**/*.map'],
+    // Delete source maps after upload to prevent exposing source in production
+    deleteSourcemapsAfterUpload: true,
+  },
+  // Automatically instrument server functions, middleware, and app directory
+  webpack: {
+    autoInstrumentServerFunctions: true,
+    autoInstrumentMiddleware: true,
+    autoInstrumentAppDirectory: true,
+  },
+};
+
+const baseExport = withBundleAnalyzer(withNextIntl(nextConfig));
+
+// Only apply Sentry config when a DSN is configured (opt-in per environment)
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(baseExport, sentryBuildOptions)
+  : baseExport;

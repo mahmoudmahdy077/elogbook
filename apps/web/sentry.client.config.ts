@@ -27,9 +27,9 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENV,
-    // P6.3: 10% performance + 100% replay-on-error
-    tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.1'),
-    replaysSessionSampleRate: 0,
+    // P5.4: 20% performance tracing + 10% session replay sampling
+    tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
+    replaysSessionSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE ?? '0.1'),
     replaysOnErrorSampleRate: 1.0,
     // PHI: never send patient_mrn, patient_dob, patient_hash, field_values
     beforeSendTransaction(event) {

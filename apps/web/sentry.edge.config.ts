@@ -18,14 +18,14 @@ function scrubPhi<T>(event: T, fields: string[] = PHI_FIELDS): T {
 }
 
 const SENTRY_DSN = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
-const SENTRY_ENV = process.env.SENTRY_ENV ?? process.env.NODE_ENV ?? 'development';
+const SENTRY_ENV = process.env.SENTRY_ENV ?? (process.env.NODE_ENV ?? 'development');
 
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENV,
-    // P5.4: 20% server-side performance tracing
-    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
+    // P5.4: 10% edge-level performance tracing (lower volume due to high frequency)
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '0.1'),
     beforeSendTransaction(event) {
       if (event.request?.cookies) delete event.request.cookies;
       return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);
