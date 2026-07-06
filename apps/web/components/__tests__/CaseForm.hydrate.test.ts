@@ -1,4 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// Mock supabase client — the test only exercises hydrateDuplicateCase,
+// a pure function that doesn't use supabase, but CaseForm.tsx imports it.
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(),
+}));
+vi.mock('@/components/Toast', () => ({
+  useToast: vi.fn(() => ({ show: vi.fn(), hide: vi.fn() })),
+}));
+vi.mock('@/components/ErrorDisplay', () => ({
+  default: vi.fn(() => null),
+}));
+vi.mock('@/components/case-form/StepIndicator', () => ({ default: vi.fn(() => null) }));
+vi.mock('@/components/case-form/TemplateStep', () => ({ default: vi.fn(() => null) }));
+vi.mock('@/components/case-form/PatientInfoStep', () => ({ default: vi.fn(() => null) }));
+vi.mock('@/components/case-form/CaseDetailsStep', () => ({ default: vi.fn(() => null) }));
+vi.mock('@/components/case-form/ReviewStep', () => ({ default: vi.fn(() => null) }));
+vi.mock('@/components/case-form/ConfirmDialog', () => ({ default: vi.fn(() => null) }));
+
 import { hydrateDuplicateCase } from '../CaseForm';
 
 describe('hydrateDuplicateCase', () => {

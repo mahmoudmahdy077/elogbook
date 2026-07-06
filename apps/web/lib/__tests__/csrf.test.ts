@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { validateOrigin, defaultTrustedOrigins } from '../csrf';
 
 function makeRequest(method: string, headers: Record<string, string> = {}): Request {
@@ -75,5 +75,13 @@ describe('defaultTrustedOrigins', () => {
     const req = new Request('https://my-deploy.example.com/x', { method: 'GET' });
     const origins = defaultTrustedOrigins(req);
     expect(origins).toContain('https://my-deploy.example.com');
+  });
+
+  it('includes NEXT_PUBLIC_SITE_URL when set', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://custom-site.example.com');
+    const req = new Request('https://app.elogbook.dev/x', { method: 'GET' });
+    const origins = defaultTrustedOrigins(req);
+    expect(origins).toContain('https://custom-site.example.com');
+    vi.unstubAllEnvs();
   });
 });

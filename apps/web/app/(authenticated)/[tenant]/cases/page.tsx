@@ -71,7 +71,7 @@ export default async function CasesPage({
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">My Cases</h1>
-          <p className="text-[0.9rem] text-[#8E8E93] mt-1 font-normal">
+          <p className="text-[0.9rem] text-text-muted mt-1 font-normal">
             {count ?? 0} case{(count ?? 0) !== 1 ? 's' : ''} logged
           </p>
         </div>
@@ -88,7 +88,7 @@ export default async function CasesPage({
       {(!entries || entries.length === 0) ? (
         <EmptyState
           icon={
-            <svg className="w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <svg className="w-5 h-5 text-text-muted" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
             </svg>
           }
@@ -103,10 +103,10 @@ export default async function CasesPage({
         <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
           {/* Table Header */}
           <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-black/5 bg-[#F2F2F7]">
-            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">Case</span>
-            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">MRN</span>
-            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">Status</span>
-            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider sr-only">Actions</span>
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Case</span>
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">MRN</span>
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Status</span>
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider sr-only">Actions</span>
           </div>
 
           {/* Table Rows */}
@@ -126,7 +126,7 @@ export default async function CasesPage({
                     >
                       {template?.specialty}{template?.name ? ` — ${template.name}` : ''}
                     </Link>
-                    <p className="text-xs text-[#8E8E93] mt-0.5 sm:hidden">{entry.case_date}</p>
+                    <p className="text-xs text-text-muted mt-0.5 sm:hidden">{entry.case_date}</p>
                   </div>
 
                   {/* MRN */}
@@ -135,13 +135,13 @@ export default async function CasesPage({
                       {entry.patient_mrn || '—'}
                     </span>
                   </div>
-                  <div className="sm:hidden text-xs text-[#8E8E93]">
+                  <div className="sm:hidden text-xs text-text-muted">
                     MRN: {entry.patient_mrn || '—'}
                   </div>
 
                   {/* Status + Date (mobile) */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#8E8E93] sm:hidden">{entry.case_date}</span>
+                    <span className="text-xs text-text-muted sm:hidden">{entry.case_date}</span>
                     <StatusBadge status={statusToVariant(entry.status)} size="sm" />
                   </div>
 
@@ -156,7 +156,7 @@ export default async function CasesPage({
                     {entry.resident_id === auth.profile.id && (
                       <Link
                         href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium text-[#8E8E93] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="px-3 py-1.5 rounded-full text-xs font-medium text-text-muted hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Duplicate
                       </Link>
@@ -172,7 +172,7 @@ export default async function CasesPage({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[#8E8E93]">
+          <p className="text-sm text-text-muted">
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-2">

@@ -15,10 +15,61 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
 const inter = Inter({ subsets: ['latin'], variable: '--font-body' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
+const APP_DESCRIPTION = 'Electronic logbook for medical residents — log procedures, map to accreditation milestones, and receive supervisor verifications securely.';
+const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://elogbook.app';
+
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: 'Electronic logbook for medical residents',
-  icons: { icon: '/favicon.svg' },
+  title: {
+    default: `${APP_NAME} Enterprise`,
+    template: `%s | ${APP_NAME} Enterprise`,
+  },
+  description: APP_DESCRIPTION,
+  icons: { icon: '/favicon.svg', apple: '/favicon.svg' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'E-Logbook',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: APP_URL,
+    siteName: `${APP_NAME} Enterprise`,
+    title: `${APP_NAME} Enterprise — Medical Resident Logbook`,
+    description: APP_DESCRIPTION,
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: `${APP_NAME} Enterprise`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${APP_NAME} Enterprise — Medical Resident Logbook`,
+    description: APP_DESCRIPTION,
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: APP_URL,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 export const viewport: Viewport = {
@@ -36,13 +87,43 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MedicalWebPage',
+    name: `${APP_NAME} Enterprise`,
+    description: APP_DESCRIPTION,
+    url: APP_URL,
+    about: {
+      '@type': 'Thing',
+      name: 'Medical Resident Procedure Logbook',
+      description: 'Electronic logbook for logging clinical procedures, mapping to accreditation milestones, and supervisor verification.',
+    },
+    audience: {
+      '@type': 'Audience',
+      audienceType: 'Medical Residents and Program Administrators',
+    },
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+  };
+
   return (
     <html lang={locale} dir={dir} className={`${outfit.variable} ${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
+        {/* Preconnect hints for critical origins */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://*.supabase.co" />
+        <link rel="dns-prefetch" href="https://*.supabase.co" />
+
         <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="E-Logbook" />
+        <meta name="mobile-web-app-capable" content="yes" />
+
+        {/* Theme FOUC guard — must be inline, non-deferrable */}
         {nonce ? (
           <script nonce={nonce}
             dangerouslySetInnerHTML={{
@@ -50,19 +131,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             }}
           />
         ) : null}
-        {nonce ? (
-          <script nonce={nonce}
-            dangerouslySetInnerHTML={{
-              __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){console.log('SW registered:',r.scope)}).catch(function(e){console.warn('SW registration failed:',e)})})}`,
-            }}
-          />
-        ) : (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){console.log('SW registered:',r.scope)}).catch(function(e){console.warn('SW registration failed:',e)})})}`,
-            }}
-          />
-        )}
+
+        {/* Service worker — defer registration until idle */}
+        <script
+          defer
+          src="/sw-register.js"
+          nonce={nonce || undefined}
+        />
+
+        {/* JSON-LD structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body suppressHydrationWarning>
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg">

@@ -113,7 +113,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
               <p className="text-xl font-bold">
                 {plan?.name ?? 'Unknown Plan'}
               </p>
-              <p className="text-sm text-[#8E8E93]">
+              <p className="text-sm text-text-muted">
                 ${Number(plan?.price_monthly ?? 0).toFixed(2)}/month
               </p>
             </div>
@@ -122,7 +122,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
                 Active
               </span>
               {subscription.current_period_end && (
-                <p className="text-sm text-[#8E8E93] mt-1 clinical-data">
+                <p className="text-sm text-text-muted mt-1 clinical-data">
                   Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
                 </p>
               )}
@@ -135,11 +135,11 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         <h2 className="text-lg font-semibold mb-3">Usage This Period</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-[#8E8E93]">Cases Logged</p>
+            <p className="text-sm text-text-muted">Cases Logged</p>
             <p className="text-2xl font-bold">{caseCount ?? 0}</p>
           </div>
           <div>
-            <p className="text-sm text-[#8E8E93]">Team Members</p>
+            <p className="text-sm text-text-muted">Team Members</p>
             <p className="text-2xl font-bold">{residentCount ?? 0}</p>
           </div>
         </div>
@@ -148,14 +148,14 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
         <h2 className="text-lg font-semibold mb-3">Payment History</h2>
         {!payments || payments.length === 0 ? (
-          <p className="text-sm text-[#8E8E93]">No payments recorded yet.</p>
+          <p className="text-sm text-text-muted">No payments recorded yet.</p>
         ) : (
           <div className="space-y-2">
             {payments.map((p: { id: string; amount: number; status: string; created_at: string }) => (
               <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
                 <div>
                   <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
-                  <p className="text-xs text-[#8E8E93] clinical-data">
+                  <p className="text-xs text-text-muted clinical-data">
                     {new Date(p.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -176,19 +176,19 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
         <h2 className="text-lg font-semibold mb-3">AI Report Credits</h2>
-        <p className="text-sm text-[#8E8E93] mb-4">
+        <p className="text-sm text-text-muted mb-4">
           Generate comprehensive AI analysis reports for your cases. One-time purchase of $4.99 per report.
         </p>
 
         {(!purchases || purchases.length === 0) ? (
-          <p className="text-sm text-[#8E8E93]">No AI report purchases yet.</p>
+          <p className="text-sm text-text-muted">No AI report purchases yet.</p>
         ) : (
           <div className="space-y-2">
             {purchases.map((p: { id: string; purchase_type: string; amount: number; created_at: string; status: string }) => (
               <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
                 <div>
                   <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
-                  <p className="text-xs text-[#8E8E93] clinical-data">
+                  <p className="text-xs text-text-muted clinical-data">
                     {new Date(p.created_at).toLocaleDateString()}
                   </p>
                 </div>

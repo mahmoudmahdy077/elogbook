@@ -38,7 +38,7 @@ export default function ReportsError({
         </h2>
         <p
           className="text-sm mb-6"
-          style={{ color: '#8E8E93' }}
+          style={{ color: '#6D6D73' }}
         >
           We encountered an error while loading reports. Please try again.
         </p>

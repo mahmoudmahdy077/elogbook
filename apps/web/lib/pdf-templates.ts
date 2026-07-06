@@ -135,7 +135,7 @@ function badgeHtml(status: string): string {
     rejected: '#FF3B30',
   };
   const label = status.charAt(0).toUpperCase() + status.slice(1);
-  const color = colors[status.toLowerCase()] ?? '#8E8E93';
+  const color = colors[status.toLowerCase()] ?? '#6D6D73';
   return `<span class="badge" style="color:${color};border:1px solid ${color};">${escapeHtml(label)}</span>`;
 }
 
@@ -148,7 +148,7 @@ const BASE_STYLES = `
       content: "Page " counter(page) " of " counter(pages);
       font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
       font-size: 8pt;
-      color: #8E8E93;
+      color: #6D6D73;
     }
   }
 
@@ -328,7 +328,7 @@ const BASE_STYLES = `
   /* ---- Print utilities ---- */
   .page-break { page-break-before: always; }
   .no-break { page-break-inside: avoid; }
-  .text-muted { color: #8E8E93; }
+  .text-muted { color: #6D6D73; }
   .mt-8 { margin-top: 8pt; }
   .mt-16 { margin-top: 16pt; }
 `;
@@ -500,7 +500,7 @@ export function generateAuditLogPDF(
 
   const tableBody =
     logs.length === 0
-      ? '<tr><td colspan="6" style="text-align:center;color:#8E8E93;padding:20pt;">No audit log entries found.</td></tr>'
+      ? '<tr><td colspan="6" style="text-align:center;color:#6D6D73;padding:20pt;">No audit log entries found.</td></tr>'
       : logs
           .map(
             (l) => `
@@ -606,7 +606,7 @@ export function generateComplianceReportPDF(
       const headers = section.rows.length > 0 ? Object.keys(section.rows[0]!) : [];
       const tableRows =
         section.rows.length === 0
-          ? '<tr><td colspan="99" style="text-align:center;color:#8E8E93;padding:16pt;">No data for this section.</td></tr>'
+          ? '<tr><td colspan="99" style="text-align:center;color:#6D6D73;padding:16pt;">No data for this section.</td></tr>'
           : section.rows
               .map(
                 (r) =>

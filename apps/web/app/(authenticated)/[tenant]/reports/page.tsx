@@ -93,7 +93,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const statusColors: Record<string, string> = {
     approved: 'bg-[#34C759]',
     pending: 'bg-primary',
-    draft: 'bg-[#8E8E93]',
+    draft: 'bg-[#6D6D73]',
     rejected: 'bg-[#FF3B30]',
   };
 
@@ -110,7 +110,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
       <div className="flex items-start justify-between mb-7 flex-wrap gap-4">
         <div>
           <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">Reports &amp; Analytics</h1>
-          <p className="text-[0.9rem] text-[#8E8E93] mt-1">Review case statistics, specialty distribution, and evaluation summaries.</p>
+          <p className="text-[0.9rem] text-text-muted mt-1">Review case statistics, specialty distribution, and evaluation summaries.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <form className="flex items-center gap-2" method="GET">
@@ -120,7 +120,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
               defaultValue={date_from || ''}
               className="px-3 py-2 rounded-full bg-white border border-black/5 text-sm text-[#3C3C43] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
-            <span className="text-xs text-[#8E8E93] font-medium">to</span>
+            <span className="text-xs text-text-muted font-medium">to</span>
             <input
               type="date"
               name="date_to"
@@ -149,25 +149,25 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
           <div className="w-[68px] h-[68px] rounded-full bg-[rgba(142,142,147,0.10)] flex items-center justify-center">
             <span className="text-xl font-semibold text-black tracking-tight">{totalCount ?? 0}</span>
           </div>
-          <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">Total</span>
+          <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Total</span>
         </div>
         <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
           <div className="w-[68px] h-[68px] rounded-full bg-[rgba(52,199,89,0.10)] flex items-center justify-center">
             <span className="text-xl font-semibold text-[#34C759] tracking-tight">{approvedCount ?? 0}</span>
           </div>
-          <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">Approved</span>
+          <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Approved</span>
         </div>
         <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
           <div className="w-[68px] h-[68px] rounded-full bg-[rgba(255,149,0,0.10)] flex items-center justify-center">
             <span className="text-xl font-semibold text-[#FF9500] tracking-tight">{pendingCount ?? 0}</span>
           </div>
-          <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">Pending</span>
+          <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Pending</span>
         </div>
         <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
           <div className="w-[68px] h-[68px] rounded-full bg-[rgba(142,142,147,0.08)] flex items-center justify-center">
-            <span className="text-xl font-semibold text-[#8E8E93] tracking-tight">{draftCount ?? 0}</span>
+            <span className="text-xl font-semibold text-text-muted tracking-tight">{draftCount ?? 0}</span>
           </div>
-          <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">Drafts</span>
+          <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Drafts</span>
         </div>
       </div>
 
@@ -185,7 +185,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             </Link>
           </div>
           {Object.keys(specialtyCounts).length === 0 ? (
-            <p className="text-sm text-[#8E8E93]">No cases logged yet.</p>
+            <p className="text-sm text-text-muted">No cases logged yet.</p>
           ) : (
             <div className="space-y-3">
               {Object.entries(specialtyCounts)
@@ -194,7 +194,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
                   <div key={specialty}>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-[#3C3C43] font-medium truncate pr-2">{specialty}</span>
-                      <span className="text-[#8E8E93] font-medium">{count}</span>
+                      <span className="text-text-muted font-medium">{count}</span>
                     </div>
                     <div className="h-1 rounded-full bg-black/5 overflow-hidden">
                       <div
@@ -223,9 +223,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             {Object.entries(statusCounts).map(([status, count]) => (
               <div key={status} className="flex flex-col items-center gap-1.5">
                 <div
-                  className={`w-6 h-6 rounded-full ${statusColors[status] || 'bg-[#8E8E93]'}`}
+                  className={`w-6 h-6 rounded-full ${statusColors[status] || 'bg-[#6D6D73]'}`}
                 />
-                <span className="text-xs text-[#8E8E93] font-medium">{statusLabels[status]}</span>
+                <span className="text-xs text-text-muted font-medium">{statusLabels[status]}</span>
                 <span className="text-lg font-semibold text-black tracking-[-0.02em]">{count}</span>
               </div>
             ))}
@@ -246,15 +246,15 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             </div>
             <div className="grid grid-cols-3 gap-4 text-center py-4">
               <div>
-                <p className="text-xs text-[#8E8E93] font-medium mb-1">Clinical Skills</p>
+                <p className="text-xs text-text-muted font-medium mb-1">Clinical Skills</p>
                 <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.clinical}</p>
               </div>
               <div>
-                <p className="text-xs text-[#8E8E93] font-medium mb-1">Professionalism</p>
+                <p className="text-xs text-text-muted font-medium mb-1">Professionalism</p>
                 <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.prof}</p>
               </div>
               <div>
-                <p className="text-xs text-[#8E8E93] font-medium mb-1">Procedures</p>
+                <p className="text-xs text-text-muted font-medium mb-1">Procedures</p>
                 <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.proc}</p>
               </div>
             </div>

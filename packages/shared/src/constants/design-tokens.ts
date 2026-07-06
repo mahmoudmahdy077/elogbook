@@ -13,7 +13,7 @@ export const clinicalTokens = {
       glow: 'rgba(0, 122, 255, 0.20)',
       strong: 'rgba(60, 60, 67, 0.18)',
     },
-    text: { primary: '#000000', secondary: '#3C3C43', muted: '#8E8E93', onPrimary: '#FFFFFF' },
+    text: { primary: '#000000', secondary: '#3C3C43', muted: '#6D6D73', onPrimary: '#FFFFFF' },
     pending: '#FF9500',
     approved: '#34C759',
     rejected: '#FF3B30',

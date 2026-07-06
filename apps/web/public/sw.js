@@ -50,7 +50,7 @@ const OFFLINE_FALLBACK = `
       color: white;
     }
     h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-    p { font-size: 15px; color: #8E8E93; line-height: 1.5; }
+    p { font-size: 15px; color: #6D6D73; line-height: 1.5; }
     .retry-btn {
       margin-top: 24px;
       display: inline-block;

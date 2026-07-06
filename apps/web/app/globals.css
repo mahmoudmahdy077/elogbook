@@ -33,7 +33,7 @@
   --color-border-glow: rgba(0, 122, 255, 0.20);
   --color-text-primary: #000000;
   --color-text-secondary: #3C3C43;
-  --color-text-muted: #8E8E93;
+  --color-text-muted: #6D6D73; /* WCAG AA 4.74:1 on #F2F2F7 */
   --color-text-on-primary: #FFFFFF;
   --color-pending: #FF9500;
   --color-approved: #34C759;
@@ -48,7 +48,7 @@
   --color-default-200: #e5e5ea;
   --color-default-300: #d1d1d6;
   --color-default-400: #aeaeb2;
-  --color-default-500: #8e8e93;
+  --color-default-500: #6d6d73;
   --color-default-600: #636366;
   --color-default-700: #48484a;
   --color-default-800: #3a3a3c;
@@ -148,9 +148,9 @@ h1, h2, h3 {
 
 /* Status Badges — flat pills, no glow */
 .badge-draft {
-  background: rgba(142, 142, 147, 0.12);
-  color: #8E8E93;
-  border: 1px solid rgba(142, 142, 147, 0.18);
+  background: rgba(109, 109, 115, 0.12);
+  color: #6D6D73;
+  border: 1px solid rgba(109, 109, 115, 0.18);
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: 0.7rem;
@@ -219,7 +219,7 @@ h1, h2, h3 {
   --color-surface-raised: rgba(44, 44, 46, 0.88);
   --color-text-primary: #FFFFFF;
   --color-text-secondary: rgba(255, 255, 255, 0.70);
-  --color-text-muted: rgba(255, 255, 255, 0.45);
+  --color-text-muted: rgba(255, 255, 255, 0.50); /* WCAG AA 5.34:1 on #000000 */
   --color-border: rgba(255, 255, 255, 0.10);
   --color-border-active: rgba(255, 255, 255, 0.18);
   --color-border-glow: rgba(0, 122, 255, 0.30);
@@ -238,9 +238,9 @@ h1, h2, h3 {
 
 /* Dark mode badge adjustments */
 .dark .badge-draft {
-  background: rgba(142, 142, 147, 0.18);
-  color: rgba(255, 255, 255, 0.60);
-  border-color: rgba(142, 142, 147, 0.25);
+  background: rgba(109, 109, 115, 0.18);
+  color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(109, 109, 115, 0.25);
 }
 
 .dark .badge-pending {
@@ -381,6 +381,7 @@ h1, h2, h3 {
 /* Smooth direction transitions on interactive elements */
 html {
   transition: direction 0ms;
+  scroll-behavior: smooth;
 }
 
 @supports (transition: none) {
@@ -397,4 +398,25 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ==========================================================
+   Accessibility — focus, scroll, skip-to-content
+   ========================================================== */
+
+/* Global focus-visible ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove focus ring for mouse users — keep default button/link browser focus */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Scroll margin for anchor targets so fixed headers don't overlap */
+:target {
+  scroll-margin-top: 80px;
 }

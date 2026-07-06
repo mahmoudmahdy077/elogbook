@@ -305,7 +305,7 @@ describe('GET /api/[tenant]/audit/export', () => {
     // HTML should contain the log data
     const text = await res.text();
     expect(text).toContain('Audit Log Export');
-    expect(text).toContain('log-1');
+    expect(text).toContain('entry-1');
   });
 
   it('applies date range filter when startDate and endDate are provided', async () => {
