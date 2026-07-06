@@ -18,7 +18,7 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ tena
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Pending Approvals</h1>
+      <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans mb-6">Pending Approvals</h1>
       <ApprovalsDashboard tenantId={profile.tenant_id} tenantSlug={tenantSlug} />
     </div>
   );

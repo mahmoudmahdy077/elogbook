@@ -1,6 +1,5 @@
 'use client';
 
-import { Switch, TextField, Label, Input } from '@heroui/react';
 import HelpPopover from '@/components/HelpPopover';
 
 interface PatientInfoStepProps {
@@ -12,6 +11,64 @@ interface PatientInfoStepProps {
   onMrnChange: (value: string) => void;
   onDobChange: (value: string) => void;
   onAgeChange: (value: string) => void;
+}
+
+/* Apple-style toggle switch */
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+        checked ? 'bg-primary' : 'bg-black/15'
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+}
+
+/* Apple-style input field */
+function FormField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  required,
+  ariaLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+  ariaLabel?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-black">
+        {label}
+        {required && <span className="text-danger ml-0.5">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        aria-label={ariaLabel || label}
+        className="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm text-black placeholder:text-[#C7C7CC] transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+      />
+    </div>
+  );
 }
 
 export default function PatientInfoStep({
@@ -27,7 +84,7 @@ export default function PatientInfoStep({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-lg font-semibold font-heading">
+        <h3 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">
           Patient Information
         </h3>
         <HelpPopover>
@@ -40,62 +97,63 @@ export default function PatientInfoStep({
         </HelpPopover>
       </div>
 
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-dark/50 border border-border">
-        <Switch isSelected={isDeidentified} onChange={onIsDeidentifiedChange}>
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-          <Switch.Content>
-            <span className="text-sm font-medium ml-3">De-identify Patient Data</span>
-          </Switch.Content>
-        </Switch>
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.03] border border-black/5">
+        <Toggle
+          checked={isDeidentified}
+          onChange={onIsDeidentifiedChange}
+          label="De-identify Patient Data"
+        />
+        <span className="text-sm font-medium text-black">
+          De-identify Patient Data
+        </span>
       </div>
 
       {isDeidentified ? (
         <>
           <div className="flex items-center gap-3 mb-3">
             <span className="badge-approved text-xs px-2.5 py-1 rounded-full">Safe Harbor Compliant</span>
-            <span className="text-xs text-approved">No PHI stored</span>
+            <span className="text-xs text-approved font-medium">No PHI stored</span>
           </div>
-          <div className="warning-banner text-xs rounded-lg p-2.5">
+          <div className="warning-banner text-xs rounded-xl p-3">
             De-identified mode: safe for portfolio logging. No PHI is stored. Patient hash will be computed server-side.
           </div>
-          <TextField value={patientMrn} onChange={onMrnChange}>
-            <Label>Patient MRN (for reference only — not stored)</Label>
-            <Input placeholder="Enter MRN for local hashing" aria-label="Patient MRN reference" />
-          </TextField>
-          <TextField
-            type="number"
+          <FormField
+            label="Patient MRN (for reference only — not stored)"
+            value={patientMrn}
+            onChange={onMrnChange}
+            placeholder="Enter MRN for local hashing"
+            ariaLabel="Patient MRN reference"
+          />
+          <FormField
+            label="Patient Age (years)"
             value={patientAgeYears}
             onChange={onAgeChange}
-            isRequired
-          >
-            <Label>Patient Age (years)</Label>
-            <Input placeholder="0-150" aria-label="Patient age in years" />
-          </TextField>
+            type="number"
+            placeholder="0-150"
+            required
+            ariaLabel="Patient age in years"
+          />
         </>
       ) : (
         <>
-          <div className="danger-banner text-xs rounded-lg p-2.5">
+          <div className="danger-banner text-xs rounded-xl p-3">
             PII mode: patient MRN and Date of Birth will be stored on the server. Only use this for hospital record-keeping. Ensure compliance with your institution&apos;s data protection policies before submitting.
           </div>
-          <TextField
+          <FormField
+            label="Patient MRN"
             value={patientMrn}
             onChange={onMrnChange}
-            isRequired
-          >
-            <Label>Patient MRN</Label>
-            <Input aria-label="Patient MRN" />
-          </TextField>
-          <TextField
-            type="date"
+            required
+            ariaLabel="Patient MRN"
+          />
+          <FormField
+            label="Patient DOB"
             value={patientDob}
             onChange={onDobChange}
-            isRequired
-          >
-            <Label>Patient DOB</Label>
-            <Input aria-label="Patient date of birth" />
-          </TextField>
+            type="date"
+            required
+            ariaLabel="Patient date of birth"
+          />
         </>
       )}
     </div>

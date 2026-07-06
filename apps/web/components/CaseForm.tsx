@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@heroui/react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { caseEntrySchema, GLOBAL_TENANT_ID, type AccreditationMapping } from '@elogbook/shared';
@@ -429,33 +428,54 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
           transition={reduceMotion ? { duration: 0 } : { duration: 0.3, ease: 'easeOut' }}
           className="text-center py-8 space-y-5"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-approved/10 border border-approved/30">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-50 border border-success/20">
             <svg className="w-8 h-8 text-approved" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-heading font-bold mb-1">Case Logged Successfully</h3>
-            <p className="text-sm text-neutral-light/50">Your case has been saved and is now visible in your logbook.</p>
+            <h3 className="text-xl font-semibold text-black tracking-[-0.03em] font-sans mb-1">
+              Case Logged Successfully
+            </h3>
+            <p className="text-sm text-[#8E8E93]">
+              Your case has been saved and is now visible in your logbook.
+            </p>
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
             {submittedCaseId && (
-              <a href={`/${tenantSlug}/cases/${submittedCaseId}`} className="px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors">
+              <a
+                href={`/${tenantSlug}/cases/${submittedCaseId}`}
+                className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors"
+              >
                 View Case
               </a>
             )}
-            <a href={`/${tenantSlug}/cases`} className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+            <a
+              href={`/${tenantSlug}/cases`}
+              className="rounded-full bg-primary text-white px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+            >
               Go to My Cases
             </a>
           </div>
-          <p className="text-xs text-neutral-light/50 pt-2">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-neutral-dark border border-border text-xs">Enter</kbd> to log another case
+          <p className="text-xs text-[#8E8E93] pt-2">
+            Press{' '}
+            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 border border-black/10 text-xs text-[#3C3C43] font-mono">
+              Enter
+            </kbd>{' '}
+            to log another case
           </p>
         </motion.div>
       ) : (
         <>
           <AnimatePresence mode="wait">
-            <motion.div key={step} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeInOut' }}>
+            <motion.div
+              key={step}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeInOut' }}
+            >
               {step === 0 && (
                 <TemplateStep
                   templates={templates}
@@ -501,16 +521,45 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             </motion.div>
           </AnimatePresence>
 
-          <div className="flex justify-between mt-6 pt-4 border-t border-border">
-            <Button variant="ghost" onPress={handleBack} isDisabled={step === 0}>Back</Button>
+          {/* Navigation */}
+          <div className="flex justify-between mt-6 pt-4 border-t border-black/5">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={step === 0}
+              className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Back
+            </button>
             <div className="flex gap-3">
               {step >= 2 && selectedTemplateId && !submitted && (
-                <Button variant="ghost" onPress={handleSaveDraft} isDisabled={savingDraft}>Save Draft</Button>
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={savingDraft}
+                  className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors disabled:opacity-50"
+                >
+                  {savingDraft ? 'Saving...' : 'Save Draft'}
+                </button>
               )}
               {step < STEPS.length - 1 ? (
-                <Button variant="primary" onPress={handleNext} isDisabled={!canProceed(step)}>Continue</Button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!canProceed(step)}
+                  className="rounded-full bg-primary text-white px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
               ) : (
-                <Button variant="primary" onPress={() => setConfirmSubmit(true)} isDisabled={loading}>Submit Case</Button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmSubmit(true)}
+                  disabled={loading}
+                  className="rounded-full bg-primary text-white px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {loading ? 'Submitting...' : 'Submit Case'}
+                </button>
               )}
             </div>
           </div>

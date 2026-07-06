@@ -2,13 +2,7 @@
 
 import { useState } from 'react';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import {
-  Card,
-  TextArea,
-  Button,
-  Spinner,
-  Label,
-} from '@heroui/react';
+import { Spinner } from '@elogbook/shared/components/web';
 import { createClient } from '@/lib/supabase/client';
 
 interface AIInsightsPanelProps {
@@ -52,40 +46,46 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
   }
 
   return (
-    <Card className="mt-6">
-      <Card.Header>
-        <h2 className="text-lg font-semibold">AI Case Insights</h2>
-      </Card.Header>
-      <Card.Content className="gap-4">
-        {error && <ErrorDisplay message={error} />}
+    <div className="bg-white rounded-2xl border border-black/5 p-5 mt-6">
+      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">AI Case Insights</h2>
 
-        <Label>Ask a question about your cases (optional)</Label>
-        <TextArea
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          rows={2}
-        />
+      {error && (
+        <div className="mb-4">
+          <ErrorDisplay message={error} />
+        </div>
+      )}
 
-        <Button
-          variant="primary"
-          onPress={handleAnalyze}
-          isDisabled={loading}
-        >
-          {query.trim() ? 'Ask AI' : 'Analyze My Cases'}
-        </Button>
+      <label htmlFor="ai-query" className="block text-sm font-medium text-[#3C3C43] mb-1.5">
+        Ask a question about your cases (optional)
+      </label>
+      <textarea
+        id="ai-query"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        rows={2}
+        placeholder="e.g., What patterns do you see in my surgical cases?"
+        className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F2F7] border border-black/5 text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors resize-none mb-4"
+      />
 
-        {loading && (
-          <div className="flex justify-center py-4">
-            <Spinner />
-          </div>
-        )}
+      <button
+        onClick={handleAnalyze}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        {query.trim() ? 'Ask AI' : 'Analyze My Cases'}
+      </button>
 
-        {response && !loading && (
-          <div className="bg-default-50 border border-default-200 rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-            {response}
-          </div>
-        )}
-      </Card.Content>
-    </Card>
+      {loading && (
+        <div className="flex justify-center py-6">
+          <Spinner size={20} />
+        </div>
+      )}
+
+      {response && !loading && (
+        <div className="mt-4 bg-[#F2F2F7] rounded-xl p-4 text-sm text-[#3C3C43] whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto border border-black/5">
+          {response}
+        </div>
+      )}
+    </div>
   );
 }

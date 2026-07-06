@@ -12,12 +12,12 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
         <div key={label} className="flex items-center">
           <div className="flex flex-col items-center">
             <div
-              className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+              className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 ${
                 i < currentStep
-                  ? 'bg-primary text-white'
+                  ? 'bg-approved text-white'
                   : i === currentStep
-                    ? 'bg-primary text-white ring-4 ring-primary-glow'
-                    : 'bg-neutral-dark border border-border text-neutral-light'
+                    ? 'bg-primary text-white'
+                    : 'bg-black/5 text-[#8E8E93] border border-black/10'
               }`}
               role="status"
               aria-label={`${label}${i < currentStep ? ' (completed)' : i === currentStep ? ' (current)' : ''}`}
@@ -27,7 +27,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
                   <path
                     d="M11.5 3.5L5.5 9.5L2.5 6.5"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -38,7 +38,11 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
             </div>
             <span
               className={`text-xs mt-1.5 font-medium ${
-                i <= currentStep ? 'text-primary' : 'text-neutral-light/50'
+                i < currentStep
+                  ? 'text-approved'
+                  : i === currentStep
+                    ? 'text-black'
+                    : 'text-[#8E8E93]'
               }`}
             >
               {label}
@@ -47,7 +51,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
           {i < steps.length - 1 && (
             <div
               className={`w-8 sm:w-16 h-0.5 mx-1 mt-[-1rem] transition-all duration-300 ${
-                i < currentStep ? 'bg-primary' : 'bg-border'
+                i < currentStep ? 'bg-approved' : 'bg-black/10'
               }`}
             />
           )}

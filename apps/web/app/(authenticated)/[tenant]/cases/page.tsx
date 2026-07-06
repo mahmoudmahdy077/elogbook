@@ -1,14 +1,11 @@
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import {
-  Table,
-  Chip,
-  Button,
-} from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import EmptyState from '@/components/EmptyState';
+import { StatusBadge } from '@elogbook/shared/components/web';
+import type { StatusVariant } from '@elogbook/shared/components/web';
 
 type CaseEntryRow = {
   id: string;
@@ -20,6 +17,13 @@ type CaseEntryRow = {
 };
 
 const PAGE_SIZE = 20;
+
+function statusToVariant(status: string): StatusVariant {
+  if (status === 'draft' || status === 'pending' || status === 'approved' || status === 'rejected') {
+    return status;
+  }
+  return 'draft';
+}
 
 export default async function CasesPage({
   params,
@@ -39,9 +43,6 @@ export default async function CasesPage({
   const offset = (page - 1) * PAGE_SIZE;
 
   // U4.4: residents see only their own cases; supervisors+ see all
-  // tenant cases. Previously the page filtered by resident_id for
-  // every role, leaving supervisors with an empty list outside the
-  // approvals queue.
   const isResident = auth.profile.role === 'resident';
 
   let casesQuery = supabase
@@ -56,7 +57,7 @@ export default async function CasesPage({
   if (error) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">My Cases</h1>
+        <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans mb-6">My Cases</h1>
         <ErrorDisplay message={error.message} />
       </div>
     );
@@ -64,28 +65,30 @@ export default async function CasesPage({
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
-  const statusColorMap: Record<string, 'warning' | 'accent' | 'success' | 'danger'> = {
-    draft: 'warning',
-    pending: 'accent',
-    approved: 'success',
-    rejected: 'danger',
-  };
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Cases</h1>
-        <Link href={`/${tenantSlug}/cases/new`}>
-          <Button variant="primary">
-            Log New Case
-          </Button>
+    <div className="space-y-7">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">My Cases</h1>
+          <p className="text-[0.9rem] text-[#8E8E93] mt-1 font-normal">
+            {count ?? 0} case{(count ?? 0) !== 1 ? 's' : ''} logged
+          </p>
+        </div>
+        <Link
+          href={`/${tenantSlug}/cases/new`}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"/></svg>
+          Log New Case
         </Link>
       </div>
 
+      {/* Cases Table */}
       {(!entries || entries.length === 0) ? (
         <EmptyState
           icon={
-            <svg className="w-5 h-5 text-neutral-light/50" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
             </svg>
           }
@@ -97,67 +100,99 @@ export default async function CasesPage({
           }}
         />
       ) : (
-        <div className="panel p-4 overflow-x-auto">
-        <Table.Root aria-label="Case entries table" variant="primary">
-          <Table.Content>
-          <Table.Header>
-            <Table.Column id="date">Date</Table.Column>
-            <Table.Column id="template">Template</Table.Column>
-            <Table.Column id="mrn">MRN</Table.Column>
-            <Table.Column id="status">Status</Table.Column>
-            <Table.Column id="actions">Actions</Table.Column>
-          </Table.Header>
-          <Table.Body>
+        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+          {/* Table Header */}
+          <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-black/5 bg-[#F2F2F7]">
+            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">Case</span>
+            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">MRN</span>
+            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">Status</span>
+            <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider sr-only">Actions</span>
+          </div>
+
+          {/* Table Rows */}
+          <div className="divide-y divide-black/5">
             {entries.map((entry: CaseEntryRow) => {
               const template = Array.isArray(entry.case_templates) ? entry.case_templates[0] : entry.case_templates;
               return (
-              <Table.Row key={entry.id} id={entry.id}>
-                <Table.Cell className="clinical-data">{entry.case_date}</Table.Cell>
-                <Table.Cell>
-                  {template?.specialty} - {template?.name}
-                </Table.Cell>
-                <Table.Cell className="clinical-data">{entry.patient_mrn}</Table.Cell>
-                <Table.Cell>
-                  <Chip color={statusColorMap[entry.status] || 'default'} variant="soft" size="sm">
-                    {entry.status}
-                  </Chip>
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="flex gap-1">
-                    <Link href={`/${tenantSlug}/cases/${entry.id}`}>
-                      <Button variant="ghost" size="sm">View</Button>
+                <div
+                  key={entry.id}
+                  className="sm:grid sm:grid-cols-[2fr_1fr_1fr_auto] gap-4 px-5 py-3.5 flex flex-col hover:bg-black/[0.02] transition-colors"
+                >
+                  {/* Case info */}
+                  <div className="min-w-0">
+                    <Link
+                      href={`/${tenantSlug}/cases/${entry.id}`}
+                      className="text-sm font-medium text-black truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
+                    >
+                      {template?.specialty}{template?.name ? ` — ${template.name}` : ''}
+                    </Link>
+                    <p className="text-xs text-[#8E8E93] mt-0.5 sm:hidden">{entry.case_date}</p>
+                  </div>
+
+                  {/* MRN */}
+                  <div className="sm:flex items-center hidden">
+                    <span className="text-sm text-[#3C3C43] tabular-nums">
+                      {entry.patient_mrn || '—'}
+                    </span>
+                  </div>
+                  <div className="sm:hidden text-xs text-[#8E8E93]">
+                    MRN: {entry.patient_mrn || '—'}
+                  </div>
+
+                  {/* Status + Date (mobile) */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#8E8E93] sm:hidden">{entry.case_date}</span>
+                    <StatusBadge status={statusToVariant(entry.status)} size="sm" />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={`/${tenantSlug}/cases/${entry.id}`}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium text-primary hover:bg-primary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      View
                     </Link>
                     {entry.resident_id === auth.profile.id && (
-                      <Link href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}>
-                        <Button variant="ghost" size="sm">Duplicate</Button>
+                      <Link
+                        href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium text-[#8E8E93] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        Duplicate
                       </Link>
                     )}
                   </div>
-                </Table.Cell>
-              </Table.Row>
-            )})}
-          </Table.Body>
-          </Table.Content>
-        </Table.Root>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-divider">
-            <p className="text-sm text-default-500">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              {page > 1 && (
-                <Link href={`/${tenantSlug}/cases?page=${page - 1}`}>
-                  <Button variant="ghost" size="sm">Previous</Button>
-                </Link>
-              )}
-              {page < totalPages && (
-                <Link href={`/${tenantSlug}/cases?page=${page + 1}`}>
-                  <Button variant="primary" size="sm">Next Page</Button>
-                </Link>
-              )}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-[#8E8E93]">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <Link
+                href={`/${tenantSlug}/cases?page=${page - 1}`}
+                className="px-4 py-2 rounded-full text-sm font-medium text-[#3C3C43] bg-white border border-black/5 hover:bg-black/3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Previous
+              </Link>
+            )}
+            {page < totalPages && (
+              <Link
+                href={`/${tenantSlug}/cases?page=${page + 1}`}
+                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Next Page
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>

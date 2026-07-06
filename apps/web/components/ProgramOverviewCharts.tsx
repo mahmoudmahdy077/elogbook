@@ -24,6 +24,13 @@ const STATUS_LABELS: Record<Status, string> = {
   rejected: 'Rejected',
 };
 
+const STATUS_COLORS: Record<Status, string> = {
+  approved: '#34C759',
+  pending: '#FF9500',
+  draft: '#8E8E93',
+  rejected: '#FF3B30',
+};
+
 function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
@@ -34,10 +41,9 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
     <div className="flex flex-col items-center gap-4">
       <svg width="160" height="160" viewBox="0 0 160 160" className="-rotate-90" role="img" aria-label="Resident completion rates by status">
         <title>Resident completion rates by status</title>
-        <circle cx="80" cy="80" r={radius} fill="none" stroke="var(--color-neutral-dark)" strokeWidth="16" />
+        <circle cx="80" cy="80" r={radius} fill="none" stroke="rgba(60, 60, 67, 0.10)" strokeWidth="16" />
         {data.map((segment, index) => {
           const pct = total > 0 ? segment.count / total : 0;
-          const offset = circumference * (1 - pct);
           const dashOffsetStart = circumference * (1 - accumulated);
           accumulated += pct;
           return (
@@ -52,15 +58,11 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
               strokeLinecap="round"
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset: offset }}
+              animate={{ strokeDashoffset: dashOffsetStart }}
               transition={reduceMotion ? { duration: 0 } : {
                 duration: 0.8,
                 delay: index * STAGGER_DELAY + 0.2,
                 ease: 'easeOut',
-              }}
-              style={{
-                filter: `drop-shadow(0 0 4px ${segment.color})`,
-                strokeDashoffset: dashOffsetStart,
               }}
             />
           );
@@ -71,10 +73,10 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
           <div key={segment.status} className="flex items-center gap-1.5 text-xs">
             <span
               className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: segment.color, boxShadow: `0 0 4px ${segment.color}` }}
+              style={{ backgroundColor: segment.color }}
             />
-            <span className="text-neutral-light/70">{STATUS_LABELS[segment.status]}</span>
-            <span className="font-semibold">{segment.count}</span>
+            <span className="text-[#8E8E93]">{STATUS_LABELS[segment.status]}</span>
+            <span className="font-semibold text-black">{segment.count}</span>
           </div>
         ))}
       </div>
@@ -89,7 +91,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
   return (
     <div className="space-y-3">
       {data.length === 0 ? (
-        <p className="text-sm text-neutral-light/50">No cases logged yet.</p>
+        <p className="text-sm text-[#8E8E93]">No cases logged yet.</p>
       ) : (
         data.map((item, index) => {
           const pct = max > 0 ? (item.count / max) * 100 : 0;
@@ -105,20 +107,19 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
               onMouseLeave={() => setHovered(null)}
             >
               <div className="flex justify-between text-sm mb-1">
-                <span className="truncate pr-2">{item.specialty}</span>
-                <span className="text-neutral-light/60 clinical-data">{item.count}</span>
+                <span className="text-[#3C3C43] font-medium truncate pr-2">{item.specialty}</span>
+                <span className="text-[#8E8E93] clinical-data">{item.count}</span>
               </div>
-              <div className="h-3 rounded-full bg-neutral-dark border border-border overflow-hidden">
+              <div className="h-1 rounded-full bg-black/5 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full bg-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.6, delay: index * STAGGER_DELAY + 0.3, ease: 'easeOut' }}
-                  style={{ boxShadow: isHovered ? '0 0 8px var(--color-primary-glow)' : undefined }}
                 />
               </div>
               {isHovered && (
-                <div className="absolute -top-8 right-0 px-2 py-1 rounded bg-neutral-dark border border-border text-xs z-10">
+                <div className="absolute -top-8 right-0 px-2 py-1 rounded-lg bg-white border border-black/5 text-xs text-[#3C3C43] z-10 shadow-sm">
                   {item.specialty}: {item.count}
                 </div>
               )}
@@ -138,10 +139,10 @@ interface ProgramOverviewChartsProps {
 export default function ProgramOverviewCharts({ statusCounts, specialtyCounts }: ProgramOverviewChartsProps) {
   const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
   const donutData: DonutData[] = [
-    { status: 'approved', count: statusCounts.approved, color: 'var(--color-approved)' },
-    { status: 'pending', count: statusCounts.pending, color: 'var(--color-pending)' },
-    { status: 'draft', count: statusCounts.draft, color: 'var(--color-text-muted)' },
-    { status: 'rejected', count: statusCounts.rejected, color: 'var(--color-rejected)' },
+    { status: 'approved', count: statusCounts.approved, color: STATUS_COLORS.approved },
+    { status: 'pending', count: statusCounts.pending, color: STATUS_COLORS.pending },
+    { status: 'draft', count: statusCounts.draft, color: STATUS_COLORS.draft },
+    { status: 'rejected', count: statusCounts.rejected, color: STATUS_COLORS.rejected },
   ];
 
   const barData = Object.entries(specialtyCounts)
@@ -150,14 +151,14 @@ export default function ProgramOverviewCharts({ statusCounts, specialtyCounts }:
   const maxSpecialty = Math.max(1, ...barData.map((d) => d.count));
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="panel p-5">
-        <h2 className="text-lg font-heading font-semibold mb-4">Completion Rates by Status</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="bg-white rounded-2xl border border-black/5 p-5">
+        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">Completion Rates by Status</h2>
         <DonutChart data={donutData} total={total || 1} />
       </div>
 
-      <div className="panel p-5">
-        <h2 className="text-lg font-heading font-semibold mb-4">Specialty Distribution</h2>
+      <div className="bg-white rounded-2xl border border-black/5 p-5">
+        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">Specialty Distribution</h2>
         <BarChart data={barData} max={maxSpecialty} />
       </div>
     </div>
