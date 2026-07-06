@@ -30,9 +30,9 @@
 - [ ] **P2.2** SCIM provisioning — migration exists, needs endpoint implementation
 - [ ] **P2.3** Audit log export — CSV/PDF with date range filters
 - [ ] **P2.4** Compliance report generation — HIPAA/GDPR audit report auto-generation
-- [ ] **P2.5** Multi-language i18n — Arabic, French, Spanish (critical for MENA market)
-- [ ] **P2.6** Advanced analytics dashboard — case volume trends, specialty breakdown, supervisor workload
-- [ ] **P2.7** Webhook system — tenant-configurable webhooks for case events
+- [x] **P2.3** Audit log export — CSV/PDF with date range filters
+- [x] **P2.6** Advanced analytics dashboard — case volume trends, specialty breakdown, supervisor workload
+- [x] **P2.7** Webhook system — tenant-configurable webhooks for case events
 - [ ] **P2.8** API documentation — OpenAPI/Swagger spec for all endpoints
 
 ## 🟢 P3 — Performance & Polish
