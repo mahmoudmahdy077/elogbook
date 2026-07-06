@@ -1,6 +1,5 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -17,7 +16,6 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmReject, setConfirmReject] = useState(false);
-  const supabase = createClient();
   const router = useRouter();
   const { show } = useToast();
 
@@ -25,34 +23,37 @@ export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
     setLoading(action);
     setError(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setError('You must be logged in to perform this action.');
+    try {
+      const res = await fetch(`/api/${tenant}/approvals/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          entry_id: entryId,
+          comment: comment || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'An error occurred. Please try again.');
+        setLoading(null);
+        return;
+      }
+
+      show(
+        action === 'approve' ? 'Case approved successfully' : 'Case rejected',
+        action === 'approve' ? 'success' : 'error',
+      );
+      router.refresh();
       setLoading(null);
-      return;
-    }
-
-    const rpcName = action === 'approve' ? 'approve_case' : 'reject_case';
-    const { error: rpcError } = await supabase.rpc(rpcName, {
-      p_entry_id: entryId,
-      p_supervisor_id: user.id,
-      p_comment: comment || null,
-    });
-
-    if (rpcError) {
-      setError(rpcError.message || 'An error occurred. Please try again.');
+      setComment('');
+      setConfirmReject(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Please try again.');
       setLoading(null);
-      return;
     }
-
-    show(
-      action === 'approve' ? 'Case approved successfully' : 'Case rejected',
-      action === 'approve' ? 'success' : 'error',
-    );
-    router.refresh();
-    setLoading(null);
-    setComment('');
-    setConfirmReject(false);
   };
 
   const onRejectClick = () => {

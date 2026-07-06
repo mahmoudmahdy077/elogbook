@@ -8,9 +8,17 @@ interface RateLimitEntry {
 const store = new Map<string, RateLimitEntry>();
 
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 30;
 
-export function checkRateLimit(key: string): { allowed: boolean; retryAfter: number } {
+/**
+ * Check if a request for the given key is within the rate limit.
+ *
+ * @param key       Unique identifier (IP, user-ID, or compound).
+ * @param maxRequests Maximum requests allowed within the window (default 30).
+ */
+export function checkRateLimit(
+  key: string,
+  maxRequests: number = 30,
+): { allowed: boolean; retryAfter: number } {
   const now = Date.now();
   const entry = store.get(key);
 
@@ -19,7 +27,7 @@ export function checkRateLimit(key: string): { allowed: boolean; retryAfter: num
     return { allowed: true, retryAfter: 0 };
   }
 
-  if (entry.count >= MAX_REQUESTS) {
+  if (entry.count >= maxRequests) {
     const retryAfter = Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000);
     return { allowed: false, retryAfter };
   }

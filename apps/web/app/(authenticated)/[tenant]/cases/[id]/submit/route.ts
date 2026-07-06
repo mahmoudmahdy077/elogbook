@@ -30,10 +30,27 @@ async function handleSubmit(
   span: Sentry.Span | undefined
 ) {
 
-  const { id } = await params;
+  const { tenant: tenantSlug, id } = params;
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // P1.6: Tenant-slug URL validation — ensure the slug in the URL matches
+  // the authenticated user's tenant before processing the submission.
+  // This is a defense-in-depth check; the middleware also validates tenant
+  // scope for all protected routes.
+  const { data: callerProfile } = await supabase
+    .from('profiles')
+    .select('tenant_id, tenants!inner(slug)')
+    .eq('user_id', user.id)
+    .single();
+
+  if (callerProfile) {
+    const callerTenant = callerProfile.tenants as { slug: string } | null;
+    if (callerTenant && callerTenant.slug !== tenantSlug) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+  }
 
   const { allowed, retryAfter } = checkRateLimit(`cases-submit:${user.id}:${id}`);
   if (!allowed) return rateLimitResponse(retryAfter);

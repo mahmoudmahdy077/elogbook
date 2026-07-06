@@ -1,6 +1,52 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+/**
+ * P1.5: Defense-in-depth CSRF check for state-changing requests
+ * (POST/PUT/DELETE/PATCH) in the middleware layer.
+ *
+ * Returns a 403 response if the Origin (or Referer fallback) does not
+ * match the expected origin. This catches cross-origin requests that
+ * individual route handlers might miss.
+ */
+function csrfGuard(request: NextRequest): NextResponse | null {
+  const method = request.method.toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    return null;
+  }
+
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const requestOrigin = origin ?? (referer ? new URL(referer).origin : null);
+
+  if (!requestOrigin) {
+    return NextResponse.json(
+      { error: 'Origin header required for state-changing requests' },
+      { status: 403 },
+    );
+  }
+
+  // Build the set of expected origins
+  const expectedOrigins = new Set<string>();
+  try {
+    expectedOrigins.add(new URL(request.url).origin);
+  } catch {
+    /* ignore */
+  }
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    expectedOrigins.add(process.env.NEXT_PUBLIC_SITE_URL);
+  }
+
+  if (!expectedOrigins.has(requestOrigin)) {
+    return NextResponse.json(
+      { error: 'Cross-origin state-changing request rejected' },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
+
 function getEnvVars(): { url: string; key: string } | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -39,6 +85,10 @@ export async function updateSession(request: NextRequest) {
   if (!env) {
     return NextResponse.next({ request });
   }
+
+  // P1.5: CSRF guard for state-changing requests (POST/PUT/DELETE/PATCH)
+  const csrfResponse = csrfGuard(request);
+  if (csrfResponse) return csrfResponse;
 
   const { url, key } = env;
 
