@@ -38,7 +38,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com",
               "style-src 'self' 'unsafe-inline'",
-              "font-src 'self' data:",
+              "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://*.posthog.com https://sentry.io",
               "frame-src 'none'",
               "object-src 'none'",

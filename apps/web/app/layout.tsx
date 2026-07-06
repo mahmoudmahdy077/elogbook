@@ -117,8 +117,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Preconnect hints for critical origins */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://*.supabase.co" />
-        <link rel="dns-prefetch" href="https://*.supabase.co" />
+        {/* dns-prefetch for env-specific origins (supabase) helps resolve wildcard domains */}
+        <link rel="dns-prefetch" href="//supabase.co" />
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />

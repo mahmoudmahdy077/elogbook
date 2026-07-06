@@ -118,6 +118,7 @@ export default function Sidebar({
                 href={fullHref}
                 title={collapsed ? link.label : undefined}
                 aria-label={link.label}
+                aria-current={isActive ? 'page' : undefined}
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
@@ -148,6 +149,7 @@ export default function Sidebar({
                 href={fullHref}
                 title={collapsed ? link.label : undefined}
                 aria-label={link.label}
+                aria-current={isActive ? 'page' : undefined}
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
@@ -181,6 +183,7 @@ export default function Sidebar({
                 href={fullHref}
                 title={collapsed ? link.label : undefined}
                 aria-label={link.label}
+                aria-current={isActive ? 'page' : undefined}
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
