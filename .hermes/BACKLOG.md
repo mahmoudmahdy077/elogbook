@@ -37,11 +37,11 @@
 
 ## 🟢 P3 — Performance & Polish
 
-- [ ] **P3.1** Increase test coverage from 66.5% → 85%+
-- [ ] **P3.2** Add Playwright E2E tests for critical paths (login → dashboard → log case → submit)
-- [ ] **P3.3** Lighthouse score: Performance 90+, Accessibility 100, SEO 100
-- [ ] **P3.4** PWA support — offline web access, install prompt
+- [ ] **P3.1** Increase test coverage from 66.5% → 85%+ (timed out 2× — needs separate sprint)
+- [x] **P3.2** Add Playwright E2E tests for critical paths (login → dashboard → log case → submit)
+- [x] **P3.3** Lighthouse score: Performance 90+, Accessibility 100, SEO 100
 - [x] **P3.4** PWA support — manifest.json, service worker, install prompt, offline fallback
+- [ ] **P3.5** Mobile push notifications for approval status changes (timed out — needs separate sprint)
 - [x] **P3.6** PDF export redesign — professional templates with hospital branding (45 tests)
 - [x] **P3.7** Keyboard shortcuts — Cmd+K palette, G+X navigation, J/K, ? help
 
