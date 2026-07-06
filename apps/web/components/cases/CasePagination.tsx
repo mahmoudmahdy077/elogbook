@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@heroui/react';
 import Link from 'next/link';
 
 interface CasePaginationProps {
@@ -14,21 +13,20 @@ export default function CasePagination({ nextCursor, hasMore, tenantSlug, isLoad
   if (!hasMore) {
     return (
       <div className="flex items-center justify-center py-6">
-        <p className="text-sm text-default-500">No more cases</p>
+        <p className="text-sm text-text-muted">No more cases</p>
       </div>
     );
   }
 
   return (
     <div className="flex items-center justify-center py-6">
-      <Link href={`/${tenantSlug}/cases?cursor=${nextCursor}`}>
-        <Button
-          variant="primary"
-          size="md"
-          isDisabled={isLoading}
-        >
-          Load More
-        </Button>
+      <Link
+        href={`/${tenantSlug}/cases?cursor=${nextCursor}`}
+        className={`inline-flex items-center rounded-full bg-primary text-white px-4 py-2.5 text-sm font-medium transition-opacity ${
+          isLoading ? 'opacity-50 pointer-events-none' : 'hover:opacity-90'
+        }`}
+      >
+        Load More
       </Link>
     </div>
   );

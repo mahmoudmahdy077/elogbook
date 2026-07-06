@@ -3,7 +3,6 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DutyHoursChart from '@/components/DutyHoursChart';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import { Button } from '@heroui/react';
 
 export default async function DutyHoursReportPage({ params, searchParams }: { params: Promise<{ tenant: string }>; searchParams: Promise<{ date_from?: string; date_to?: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -38,7 +37,9 @@ export default async function DutyHoursReportPage({ params, searchParams }: { pa
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Duty Hours Report</h1>
         <a href={`/api/${tenantSlug}/reports/duty-hours.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}>
-          <Button variant="ghost" size="sm">Export CSV</Button>
+          <span className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors cursor-pointer">
+            Export CSV
+          </span>
         </a>
       </div>
       <DutyHoursChart periods={periods ?? []} />

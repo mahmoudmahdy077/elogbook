@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Button, TextField, Label, Input, Select, ListBox, ListBoxItem } from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface FacultyEvaluationFormProps {
@@ -45,57 +44,64 @@ export default function FacultyEvaluationForm({ residentId, tenantId, evaluatorI
     <div className="panel p-6 space-y-4">
       {error && <ErrorDisplay message={error} />}
       <div>
-        <label className="block text-sm mb-2">Clinical Skills (1-5)</label>
-        <Select selectedKey={String(clinicalSkills)} onSelectionChange={(k) => setClinicalSkills(Number(k))}>
-          <Select.Trigger aria-label="Clinical skills rating">
-            <Select.Value />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox aria-label="Rating options">
-              {RATING_OPTIONS.map((r) => (
-                <ListBoxItem key={r}>{r}</ListBoxItem>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
+        <label className="block text-sm font-medium text-text-secondary mb-2">Clinical Skills (1-5)</label>
+        <select
+          value={String(clinicalSkills)}
+          onChange={(e) => setClinicalSkills(Number(e.target.value))}
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          aria-label="Clinical skills rating"
+        >
+          {RATING_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
       <div>
-        <label className="block text-sm mb-2">Professionalism (1-5)</label>
-        <Select selectedKey={String(professionalism)} onSelectionChange={(k) => setProfessionalism(Number(k))}>
-          <Select.Trigger aria-label="Professionalism rating">
-            <Select.Value />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox aria-label="Rating options">
-              {RATING_OPTIONS.map((r) => (
-                <ListBoxItem key={r}>{r}</ListBoxItem>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
+        <label className="block text-sm font-medium text-text-secondary mb-2">Professionalism (1-5)</label>
+        <select
+          value={String(professionalism)}
+          onChange={(e) => setProfessionalism(Number(e.target.value))}
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          aria-label="Professionalism rating"
+        >
+          {RATING_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
       <div>
-        <label className="block text-sm mb-2">Procedures (1-5)</label>
-        <Select selectedKey={String(procedures)} onSelectionChange={(k) => setProcedures(Number(k))}>
-          <Select.Trigger aria-label="Procedures rating">
-            <Select.Value />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox aria-label="Rating options">
-              {RATING_OPTIONS.map((r) => (
-                <ListBoxItem key={r}>{r}</ListBoxItem>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
+        <label className="block text-sm font-medium text-text-secondary mb-2">Procedures (1-5)</label>
+        <select
+          value={String(procedures)}
+          onChange={(e) => setProcedures(Number(e.target.value))}
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          aria-label="Procedures rating"
+        >
+          {RATING_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
-      <TextField value={comments} onChange={setComments}>
-        <Label>Comments</Label>
-        <Input placeholder="Optional feedback" />
-      </TextField>
-      <Button onPress={handleSave} isDisabled={saving} variant="primary">
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">Comments</label>
+        <textarea
+          value={comments}
+          onChange={(e) => setComments(e.target.value)}
+          placeholder="Optional feedback"
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          rows={3}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+          saving ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+        }`}
+      >
         Submit Evaluation
-      </Button>
+      </button>
     </div>
   );
 }

@@ -1,12 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Tabs, Card, Button } from '@heroui/react';
-import TemplateEditor from '@/components/TemplateEditor';
-import UserManager from '@/components/UserManager';
-import AIConfigPanel from '@/components/AIConfigPanel';
-import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
-import CompetencyManager from '@/components/CompetencyManager';
+import AdminTabPanel from '@/components/AdminTabPanel';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 export default async function AdminPage({ params }: { params: Promise<{ tenant: string }> }) {
@@ -72,22 +66,49 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
   if (caseCountsError) return <ErrorDisplay message={caseCountsError.message} />;
 
   interface AiConfigRaw {
+    id: string;
+    tenant_id: string;
+    provider: string;
+    model: string;
+    endpoint_url: string | null;
+    is_active: boolean;
     encrypted_api_key?: string;
-    [key: string]: unknown;
   }
 
   interface PaymentConfigRaw {
+    id: string;
+    tenant_id: string;
+    provider: string;
+    publishable_key: string;
+    endpoint_url: string | null;
+    is_active: boolean;
     encrypted_secret_key?: string;
     encrypted_webhook_secret?: string;
-    [key: string]: unknown;
   }
 
   const aiConfig = aiConfigRaw
-    ? { ...aiConfigRaw, has_key: !!(aiConfigRaw as AiConfigRaw).encrypted_api_key, encrypted_api_key: undefined }
+    ? {
+        id: (aiConfigRaw as AiConfigRaw).id,
+        tenant_id: (aiConfigRaw as AiConfigRaw).tenant_id,
+        provider: (aiConfigRaw as AiConfigRaw).provider,
+        model: (aiConfigRaw as AiConfigRaw).model,
+        endpoint_url: (aiConfigRaw as AiConfigRaw).endpoint_url,
+        is_active: (aiConfigRaw as AiConfigRaw).is_active,
+        has_key: !!((aiConfigRaw as AiConfigRaw).encrypted_api_key),
+      }
     : null;
 
   const paymentConfig = paymentConfigRaw
-    ? { ...paymentConfigRaw, has_secret_key: !!(paymentConfigRaw as PaymentConfigRaw).encrypted_secret_key, has_webhook_secret: !!(paymentConfigRaw as PaymentConfigRaw).encrypted_webhook_secret, encrypted_secret_key: undefined, encrypted_webhook_secret: undefined }
+    ? {
+        id: (paymentConfigRaw as PaymentConfigRaw).id,
+        tenant_id: (paymentConfigRaw as PaymentConfigRaw).tenant_id,
+        provider: (paymentConfigRaw as PaymentConfigRaw).provider,
+        publishable_key: (paymentConfigRaw as PaymentConfigRaw).publishable_key,
+        endpoint_url: (paymentConfigRaw as PaymentConfigRaw).endpoint_url,
+        is_active: (paymentConfigRaw as PaymentConfigRaw).is_active,
+        has_secret_key: !!((paymentConfigRaw as PaymentConfigRaw).encrypted_secret_key),
+        has_webhook_secret: !!((paymentConfigRaw as PaymentConfigRaw).encrypted_webhook_secret),
+      }
     : null;
 
   const totalCases = caseCounts?.length ?? 0;
@@ -96,60 +117,17 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
-      <Tabs aria-label="Admin panels">
-        <Tabs.List>
-          <Tabs.Tab id="overview">Overview</Tabs.Tab>
-          <Tabs.Tab id="templates">Case Templates</Tabs.Tab>
-          <Tabs.Tab id="users">Users & Roles</Tabs.Tab>
-          <Tabs.Tab id="ai">AI Config</Tabs.Tab>
-          <Tabs.Tab id="payment">Payment Gateway</Tabs.Tab>
-          <Tabs.Tab id="accreditation">Accreditation</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel id="overview">
-          <Card className="panel p-5">
-            <h2 className="text-lg font-heading font-semibold mb-2">Program Analytics</h2>
-            <p className="text-sm text-neutral-light/60 mb-4">
-              View institution-wide completion rates, pending verifications, and specialty distribution.
-            </p>
-            <div className="flex gap-6 mb-4">
-              <div>
-                <p className="text-xs text-neutral-light/50">Total Cases</p>
-                <p className="text-2xl font-bold font-heading">{totalCases}</p>
-              </div>
-              <div>
-                <p className="text-xs text-amber-400/60">Pending Verification</p>
-                <p className="text-2xl font-bold font-heading text-amber-400">{pendingCases}</p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-light/50">Residents</p>
-                <p className="text-2xl font-bold font-heading">{(users ?? []).length}</p>
-              </div>
-            </div>
-            <Link href={`/${tenantSlug}/admin/overview`}>
-              <Button variant="primary">Open Program Overview</Button>
-            </Link>
-          </Card>
-        </Tabs.Panel>
-        <Tabs.Panel id="templates">
-          <TemplateEditor tenantId={profile.tenant_id} templates={templates ?? []} />
-        </Tabs.Panel>
-        <Tabs.Panel id="users">
-          <UserManager
-            tenantId={profile.tenant_id}
-            users={users ?? []}
-            currentUserRole={profile.role}
-          />
-        </Tabs.Panel>
-        <Tabs.Panel id="ai">
-          <AIConfigPanel tenantId={profile.tenant_id} config={aiConfig} />
-        </Tabs.Panel>
-        <Tabs.Panel id="payment">
-          <PaymentGatewayPanel tenantId={profile.tenant_id} config={paymentConfig} />
-        </Tabs.Panel>
-        <Tabs.Panel id="accreditation">
-          <CompetencyManager tenantId={profile.tenant_id} />
-        </Tabs.Panel>
-      </Tabs>
+      <AdminTabPanel
+        tenantSlug={tenantSlug}
+        tenantId={profile.tenant_id}
+        profileRole={profile.role}
+        templates={templates ?? []}
+        users={users ?? []}
+        aiConfig={aiConfig}
+        paymentConfig={paymentConfig}
+        totalCases={totalCases}
+        pendingCases={pendingCases}
+      />
     </div>
   );
 }

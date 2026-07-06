@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import ProgramOverviewCharts from '@/components/ProgramOverviewCharts';
+import ClientCharts from '@/components/ClientCharts';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface PendingRow {
@@ -141,7 +141,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
         </Link>
       </div>
 
-      <ProgramOverviewCharts statusCounts={statusCounts} specialtyCounts={specialtyCounts} />
+      <ClientCharts statusCounts={statusCounts} specialtyCounts={specialtyCounts} />
 
       <div className="panel p-5 mt-6">
         <h2 className="text-lg font-heading font-semibold mb-4">Pending Verification by Resident</h2>

@@ -1,6 +1,5 @@
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Table, Button } from '@heroui/react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -161,13 +160,13 @@ export default async function AuditPage({
       <div className="flex gap-2 mb-4">
         <Link
           href={`/${tenantSlug}/audit${filterQuery}`}
-          className={'px-3 py-1.5 rounded-md text-sm ' + (view !== 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-neutral-light/60')}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view !== 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-text-muted/60')}
         >
           All events
         </Link>
         <Link
           href={`/${tenantSlug}/audit?view=suspicious${filterSuffix.replace(/^&/, '&')}`}
-          className={'px-3 py-1.5 rounded-md text-sm ' + (view === 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-neutral-light/60')}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view === 'suspicious' ? 'bg-primary/15 text-primary' : 'border border-border text-text-muted/60')}
         >
           Suspicious activity
         </Link>
@@ -203,66 +202,85 @@ export default async function AuditPage({
           <input id="user_id" type="text" name="user_id" defaultValue={user_id || ''} placeholder="uuid" className="px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
         </div>
         {view && <input type="hidden" name="view" value={view} />}
-        <Button type="submit" variant="ghost" size="sm">Filter</Button>
+        <button
+          type="submit"
+          className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+        >
+          Filter
+        </button>
         <div className="ml-auto flex gap-2">
-          <Link href={`/${tenantSlug}/audit?export=csv${filterSuffix}`}>
-            <Button variant="ghost" size="sm">Export CSV</Button>
+          <Link
+            href={`/${tenantSlug}/audit?export=csv${filterSuffix}`}
+            className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+          >
+            Export CSV
           </Link>
-          <Link href={`/${tenantSlug}/audit?export=json${filterSuffix}`}>
-            <Button variant="ghost" size="sm">Export JSON</Button>
+          <Link
+            href={`/${tenantSlug}/audit?export=json${filterSuffix}`}
+            className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+          >
+            Export JSON
           </Link>
         </div>
       </form>
 
       {(!logs || logs.length === 0) ? (
-        <p className="text-default-500">No audit entries found.</p>
+        <p className="text-text-muted">No audit entries found.</p>
       ) : (
         <div className="panel p-4">
-        <Table.Root aria-label="Audit logs table" variant="primary">
-          <Table.Content>
-          <Table.Header>
-            <Table.Column id="date">Date</Table.Column>
-            <Table.Column id="action">Action</Table.Column>
-            <Table.Column id="resource">Resource</Table.Column>
-            <Table.Column id="user">User</Table.Column>
-            <Table.Column id="ip">IP</Table.Column>
-            <Table.Column id="flag">Flag</Table.Column>
-          </Table.Header>
-          <Table.Body>
-            {logs.map((log: AuditLogRow) => (
-              <Table.Row key={log.id} id={log.id}>
-                <Table.Cell className="clinical-data">{new Date(log.created_at).toLocaleString()}</Table.Cell>
-                <Table.Cell>{log.action}</Table.Cell>
-                <Table.Cell className="clinical-data">{log.resource_type} / {formatUUID(log.resource_id)}</Table.Cell>
-                <Table.Cell className="clinical-data">{formatUUID(log.user_id)}</Table.Cell>
-                <Table.Cell>{log.ip_address || '—'}</Table.Cell>
-                <Table.Cell>
-                  {isSuspicious(log.action) && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-danger/20 text-danger">suspicious</span>
-                  )}
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-          </Table.Content>
-        </Table.Root>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-divider">
-            <p className="text-sm text-default-500">Page {page} of {totalPages}</p>
-            <div className="flex gap-2">
-              {page > 1 && (
-                <Link href={`/${tenantSlug}/audit?page=${page - 1}${filterSuffix}`}>
-                  <Button variant="ghost" size="sm">Previous</Button>
-                </Link>
-              )}
-              {page < totalPages && (
-                <Link href={`/${tenantSlug}/audit?page=${page + 1}${filterSuffix}`}>
-                  <Button variant="primary" size="sm">Next Page</Button>
-                </Link>
-              )}
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" aria-label="Audit logs table">
+              <thead>
+                <tr className="border-b border-divider text-left">
+                  <th className="pb-3 font-semibold text-text-muted">Date</th>
+                  <th className="pb-3 font-semibold text-text-muted">Action</th>
+                  <th className="pb-3 font-semibold text-text-muted">Resource</th>
+                  <th className="pb-3 font-semibold text-text-muted">User</th>
+                  <th className="pb-3 font-semibold text-text-muted">IP</th>
+                  <th className="pb-3 font-semibold text-text-muted">Flag</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log: AuditLogRow) => (
+                  <tr key={log.id} className="border-b border-divider">
+                    <td className="py-2.5 clinical-data">{new Date(log.created_at).toLocaleString()}</td>
+                    <td className="py-2.5">{log.action}</td>
+                    <td className="py-2.5 clinical-data">{log.resource_type} / {formatUUID(log.resource_id)}</td>
+                    <td className="py-2.5 clinical-data">{formatUUID(log.user_id)}</td>
+                    <td className="py-2.5">{log.ip_address || '—'}</td>
+                    <td className="py-2.5">
+                      {isSuspicious(log.action) && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-[rgba(255,59,48,0.20)] text-[#FF3B30]">suspicious</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-divider">
+              <p className="text-sm text-text-muted">Page {page} of {totalPages}</p>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Link
+                    href={`/${tenantSlug}/audit?page=${page - 1}${filterSuffix}`}
+                    className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+                  >
+                    Previous
+                  </Link>
+                )}
+                {page < totalPages && (
+                  <Link
+                    href={`/${tenantSlug}/audit?page=${page + 1}${filterSuffix}`}
+                    className="inline-flex items-center rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Next Page
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -273,7 +291,7 @@ function toCsv(rows: AuditLogRow[]): string {
   const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    if (s.includes(',') || s.includes('"') || s.includes('\\n')) {
       return '"' + s.replace(/"/g, '""') + '"';
     }
     return s;
@@ -282,5 +300,5 @@ function toCsv(rows: AuditLogRow[]): string {
   for (const r of rows) {
     lines.push(headers.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(','));
   }
-  return lines.join('\n');
+  return lines.join('\\n');
 }

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { TextField, Select, ListBox, ListBoxItem, Label, Input, Button } from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 const SHIFT_OPTIONS = [
@@ -53,33 +52,61 @@ export default function DutyHoursForm({ residentId, tenantId }: DutyHoursFormPro
   return (
     <div className="panel p-6 space-y-4">
       {error && <ErrorDisplay message={error} />}
-      <TextField value={date} onChange={setDate} isRequired>
-        <Label>Date</Label>
-        <Input type="date" />
-      </TextField>
-      <TextField value={hours} onChange={setHours} isRequired>
-        <Label>Hours Worked</Label>
-        <Input type="number" step="0.25" placeholder="e.g. 8.5" />
-      </TextField>
-      <Select selectedKey={shiftType} onSelectionChange={(k) => setShiftType(String(k))}>
-        <Select.Trigger aria-label="Shift type">
-          <Select.Value />
-        </Select.Trigger>
-        <Select.Popover>
-          <ListBox aria-label="Shift types">
-            {SHIFT_OPTIONS.map((o) => (
-              <ListBoxItem key={o.key}>{o.label}</ListBoxItem>
-            ))}
-          </ListBox>
-        </Select.Popover>
-      </Select>
-      <TextField value={notes} onChange={setNotes}>
-        <Label>Notes</Label>
-        <Input placeholder="Optional notes" />
-      </TextField>
-      <Button onPress={handleSave} isDisabled={saving} variant="primary">
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">Date</label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">Hours Worked</label>
+        <input
+          type="number"
+          step="0.25"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          required
+          placeholder="e.g. 8.5"
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">Shift Type</label>
+        <select
+          value={shiftType}
+          onChange={(e) => setShiftType(e.target.value)}
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          aria-label="Shift type"
+        >
+          {SHIFT_OPTIONS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">Notes</label>
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Optional notes"
+          className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+          saving ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+        }`}
+      >
         Save Duty Hours
-      </Button>
+      </button>
     </div>
   );
 }

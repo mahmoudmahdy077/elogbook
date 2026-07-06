@@ -2,17 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Button,
-  TextField,
-  TextArea,
-  Chip,
-  Table,
-  Modal,
-  useOverlayState,
-  Label,
-  Input,
-} from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import ImpactDialog from '@/components/ImpactDialog';
 import { createClient } from '@/lib/supabase/client';
@@ -44,7 +33,7 @@ interface TemplateEditorProps {
 
 export default function TemplateEditor({ tenantId, templates }: TemplateEditorProps) {
   const router = useRouter();
-  const overlay = useOverlayState({ defaultOpen: false });
+  const [showModal, setShowModal] = useState(false);
 
   const [name, setName] = useState('');
   const [specialty, setSpecialty] = useState('');
@@ -65,7 +54,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
     setError('');
   }
 
-  async function handleCreate(closeModal: () => void) {
+  async function handleCreate() {
     setError('');
 
     if (!name.trim() || !specialty.trim() || !fieldsJson.trim()) {
@@ -107,7 +96,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
     setLoading(false);
     resetForm();
     router.refresh();
-    overlay.close();
+    setShowModal(false);
   }
 
   async function confirmDelete(id: string) {
@@ -146,97 +135,129 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Existing Templates</h2>
-        <Button onPress={overlay.open} variant="primary">
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+        >
           New Template
-        </Button>
+        </button>
       </div>
 
       {templates.length === 0 ? (
-        <p className="text-default-500">No templates created yet.</p>
+        <p className="text-text-muted">No templates created yet.</p>
       ) : (
-        <Table.Root aria-label="Case templates table" variant="primary">
-          <Table.Content>
-          <Table.Header>
-            <Table.Column id="name">Name</Table.Column>
-            <Table.Column id="specialty">Specialty</Table.Column>
-            <Table.Column id="fields">Fields</Table.Column>
-            <Table.Column id="required">Required</Table.Column>
-            <Table.Column id="actions">Actions</Table.Column>
-          </Table.Header>
-          <Table.Body>
-            {templates.map((t) => (
-              <Table.Row key={t.id} id={t.id}>
-                <Table.Cell>{t.name}</Table.Cell>
-                <Table.Cell>
-                  <Chip variant="soft" size="sm" color="accent">
-                    {t.specialty}
-                  </Chip>
-                </Table.Cell>
-                <Table.Cell>{t.fields?.length ?? 0}</Table.Cell>
-                <Table.Cell>{t.required_fields?.length ?? 0}</Table.Cell>
-                <Table.Cell>
-                  <Button
-                    size="sm"
-                    variant="danger-soft"
-                    onPress={() => confirmDelete(t.id)}
-                  >
-                    Delete
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-          </Table.Content>
-        </Table.Root>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Case templates table">
+            <thead>
+              <tr className="border-b border-divider text-left">
+                <th className="pb-3 font-semibold text-text-muted">Name</th>
+                <th className="pb-3 font-semibold text-text-muted">Specialty</th>
+                <th className="pb-3 font-semibold text-text-muted">Fields</th>
+                <th className="pb-3 font-semibold text-text-muted">Required</th>
+                <th className="pb-3 font-semibold text-text-muted">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {templates.map((t) => (
+                <tr key={t.id} className="border-b border-divider">
+                  <td className="py-2.5">{t.name}</td>
+                  <td className="py-2.5">
+                    <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium">
+                      {t.specialty}
+                    </span>
+                  </td>
+                  <td className="py-2.5">{t.fields?.length ?? 0}</td>
+                  <td className="py-2.5">{t.required_fields?.length ?? 0}</td>
+                  <td className="py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(t.id)}
+                      className="rounded-full bg-red-50 text-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
-        <Modal.Header>Create Case Template</Modal.Header>
-        <Modal.Body className="gap-4">
-          <TextField
-            value={name}
-            onChange={setName}
-            isRequired
-          >
-            <Label>Template Name</Label>
-            <Input placeholder="e.g. General Surgery Log" />
-          </TextField>
-          <TextField
-            value={specialty}
-            onChange={setSpecialty}
-            isRequired
-          >
-            <Label>Specialty</Label>
-            <Input placeholder="e.g. Surgery" />
-          </TextField>
-          <Label>Fields JSON</Label>
-          <TextArea
-            value={fieldsJson}
-            onChange={(e) => setFieldsJson(e.target.value)}
-            required
-            rows={6}
-          />
-          <TextField
-            value={requiredFieldsInput}
-            onChange={setRequiredFieldsInput}
-          >
-            <Label>Required Fields (comma-separated)</Label>
-            <Input placeholder="Diagnosis, Procedure" />
-          </TextField>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="ghost" onPress={overlay.close}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onPress={() => handleCreate(overlay.close)}
-            isDisabled={loading}
-          >
-            Create Template
-          </Button>
-        </Modal.Footer>
-      </Modal.Root>
+      {/* Create Template Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+          <div className="panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3 className="text-lg font-semibold mb-4">Create Case Template</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Template Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="e.g. General Surgery Log"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+                <input
+                  type="text"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  required
+                  placeholder="e.g. Surgery"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Fields JSON</label>
+                <textarea
+                  value={fieldsJson}
+                  onChange={(e) => setFieldsJson(e.target.value)}
+                  required
+                  rows={6}
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Required Fields (comma-separated)</label>
+                <input
+                  type="text"
+                  value={requiredFieldsInput}
+                  onChange={(e) => setRequiredFieldsInput(e.target.value)}
+                  placeholder="Diagnosis, Procedure"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); resetForm(); }}
+                className="rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={loading}
+                className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+                  loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                }`}
+              >
+                Create Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ImpactDialog
         isOpen={showDeleteDialog}

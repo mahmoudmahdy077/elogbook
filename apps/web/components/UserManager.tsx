@@ -2,19 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Button,
-  TextField,
-  Select,
-  ListBox,
-  ListBoxItem,
-  Chip,
-  Table,
-  Modal,
-  useOverlayState,
-  Label,
-  Input,
-} from '@heroui/react';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import ImpactDialog from '@/components/ImpactDialog';
 import { createClient } from '@/lib/supabase/client';
@@ -43,17 +30,17 @@ const ROLE_OPTIONS = [
   { key: 'institution_admin', label: 'Institution Admin' },
 ];
 
-const ROLE_COLORS: Record<string, 'accent' | 'warning' | 'danger' | 'success'> = {
-  resident: 'accent',
-  supervisor: 'accent',
-  director: 'warning',
-  institution_admin: 'danger',
-  admin: 'success',
+const ROLE_COLORS: Record<string, string> = {
+  resident: 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]',
+  supervisor: 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]',
+  director: 'bg-[rgba(255,149,0,0.12)] text-[#FF9500]',
+  institution_admin: 'bg-[rgba(255,59,48,0.12)] text-[#FF3B30]',
+  admin: 'bg-[rgba(52,199,89,0.12)] text-[#34C759]',
 };
 
 export default function UserManager({ tenantId, users, currentUserRole }: UserManagerProps) {
   const router = useRouter();
-  const overlay = useOverlayState({ defaultOpen: false });
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
@@ -73,7 +60,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     setError('');
   }
 
-  async function handleInvite(onClose: () => void) {
+  async function handleInvite() {
     setError('');
     setSuccess('');
 
@@ -105,7 +92,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     setSuccess(`Invitation sent to ${inviteEmail}. Role will need to be assigned separately.`);
     resetForm();
     router.refresh();
-    overlay.close();
+    setShowInviteModal(false);
   }
 
   async function doRoleChange() {
@@ -147,120 +134,140 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       <div>
         {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-success-50 text-success p-3 rounded-lg text-sm mb-4">{success}</div>
+        <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm mb-4">{success}</div>
       )}
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Users</h2>
-        <Button onPress={overlay.open} variant="primary">
+        <button
+          type="button"
+          onClick={() => setShowInviteModal(true)}
+          className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+        >
           Invite User
-        </Button>
+        </button>
       </div>
 
       {users.length === 0 ? (
-        <p className="text-default-500">No users found.</p>
+        <p className="text-text-muted">No users found.</p>
       ) : (
-        <Table.Root aria-label="Users table" variant="primary">
-          <Table.Content>
-          <Table.Header>
-            <Table.Column id="name">Name</Table.Column>
-            <Table.Column id="role">Role</Table.Column>
-            <Table.Column id="specialty">Specialty</Table.Column>
-          </Table.Header>
-          <Table.Body>
-            {users.map((u) => (
-              <Table.Row key={u.id} id={u.id}>
-                <Table.Cell>{u.full_name}</Table.Cell>
-                <Table.Cell>
-                  {['institution_admin', 'admin'].includes(currentUserRole) ? (
-                    <Select
-                      aria-label="Role"
-                      selectedKey={u.role}
-onSelectionChange={(value) => {
-                         if (value && value !== u.role) {
-                           confirmRoleChange(u.id, String(value), u.full_name);
-                         }
-                       }}
-                    >
-                       <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
-                      <Select.Popover>
-                        <ListBox aria-label="Select role">
-                          {ROLE_OPTIONS.map((opt) => (
-                            <ListBoxItem key={opt.key} id={opt.key}>{opt.label}</ListBoxItem>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                  ) : (
-                    <Chip variant="soft" size="sm" color={ROLE_COLORS[u.role] || 'default'}>
-                      {u.role}
-                    </Chip>
-                  )}
-                </Table.Cell>
-                <Table.Cell>{u.specialty || '-'}</Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-          </Table.Content>
-        </Table.Root>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Users table">
+            <thead>
+              <tr className="border-b border-divider text-left">
+                <th className="pb-3 font-semibold text-text-muted">Name</th>
+                <th className="pb-3 font-semibold text-text-muted">Role</th>
+                <th className="pb-3 font-semibold text-text-muted">Specialty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} className="border-b border-divider">
+                  <td className="py-2.5">{u.full_name}</td>
+                  <td className="py-2.5">
+                    {['institution_admin', 'admin'].includes(currentUserRole) ? (
+                      <select
+                        value={u.role}
+                        onChange={(e) => {
+                          if (e.target.value !== u.role) {
+                            confirmRoleChange(u.id, e.target.value, u.full_name);
+                          }
+                        }}
+                        aria-label="Role"
+                        className="rounded-lg bg-neutral-dark border border-border px-2 py-1.5 text-sm"
+                      >
+                        {ROLE_OPTIONS.map((opt) => (
+                          <option key={opt.key} value={opt.key}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_COLORS[u.role] || 'bg-default-100 text-text-muted'}`}>
+                        {u.role}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5">{u.specialty || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
-        <Modal.Header>Invite User</Modal.Header>
-        <Modal.Body className="gap-4">
-          <TextField
-            type="email"
-            value={inviteEmail}
-            onChange={setInviteEmail}
-            isRequired
-          >
-            <Label>Email</Label>
-            <Input placeholder="user@example.com" />
-          </TextField>
-          <TextField
-            value={inviteName}
-            onChange={setInviteName}
-            isRequired
-          >
-            <Label>Full Name</Label>
-            <Input placeholder="Full name" />
-          </TextField>
-          <Select
-            selectedKey={inviteRole}
-            onSelectionChange={(value) => {
-              if (value) setInviteRole(String(value));
-            }}
-          >
-            <Select.Trigger aria-label="Select role"><Select.Value /></Select.Trigger>
-            <Select.Popover>
-              <ListBox aria-label="Select role">
-                {ROLE_OPTIONS.map((opt) => (
-                  <ListBoxItem key={opt.key} id={opt.key}>{opt.label}</ListBoxItem>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
-          <TextField
-            value={inviteSpecialty}
-            onChange={setInviteSpecialty}
-          >
-            <Label>Specialty</Label>
-            <Input placeholder="e.g. Cardiology" />
-          </TextField>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="ghost" onPress={overlay.close}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onPress={() => handleInvite(overlay.close)}
-            isDisabled={loading}
-          >
-            Send Invite
-          </Button>
-        </Modal.Footer>
-      </Modal.Root>
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInviteModal(false)}>
+          <div className="panel p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3 className="text-lg font-semibold mb-4">Invite User</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Email</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                  placeholder="user@example.com"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  required
+                  placeholder="Full name"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                  aria-label="Select role"
+                >
+                  {ROLE_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+                <input
+                  type="text"
+                  value={inviteSpecialty}
+                  onChange={(e) => setInviteSpecialty(e.target.value)}
+                  placeholder="e.g. Cardiology"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(false)}
+                className="rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleInvite}
+                disabled={loading}
+                className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+                  loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                }`}
+              >
+                Send Invite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         <ImpactDialog
           isOpen={showRoleDialog}
           title="Change User Role"

@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import CaseForm from '@/components/CaseForm';
+import ClientCaseForm from '@/components/ClientCaseForm';
 
 export default async function NewCasePage({ params, searchParams }: { params: Promise<{ tenant: string }>, searchParams: Promise<{ duplicateFrom?: string; repeatLast?: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -54,7 +54,7 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
           </Link>
         )}
       </div>
-      <CaseForm
+      <ClientCaseForm
         tenantId={profile.tenant_id}
         tenantSlug={tenant.slug}
         initialStatus={initialStatus}

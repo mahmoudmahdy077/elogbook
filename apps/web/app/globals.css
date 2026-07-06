@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
-@source "../../node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}";
 @source "../../../packages/shared/src/**/*.{js,ts,jsx,tsx}";
 
 /* Enable class-based dark mode — activated when .dark is on <html> */

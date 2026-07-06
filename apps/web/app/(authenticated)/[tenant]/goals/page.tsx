@@ -1,6 +1,5 @@
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, ProgressBar } from '@heroui/react';
 import GoalForm from '@/components/GoalForm';
 import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -86,47 +85,54 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
             const isOverdue = new Date(goal.deadline) < new Date() && current < target;
             const isComplete = current >= target;
 
-            let color: 'success' | 'danger' | 'accent' = 'accent';
-            if (isComplete) color = 'success';
-            else if (isOverdue) color = 'danger';
+            let barColor: string;
+            if (isComplete) barColor = 'bg-[#34C759]';
+            else if (isOverdue) barColor = 'bg-[#FF3B30]';
+            else barColor = 'bg-[#007AFF]';
 
             return (
-              <Card key={goal.id} className="panel">
-                <Card.Header>
+              <div key={goal.id} className="panel">
+                <div className="pb-4 border-b border-border">
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">{goal.title}</h3>
                     {isDirector && (
-                      <p className="text-sm text-default-500">
+                      <p className="text-sm text-text-muted">
                         {(goal.profiles)?.full_name}
                       </p>
                     )}
                   </div>
-                </Card.Header>
-                <Card.Content>
+                </div>
+                <div className="pt-4">
                   <div className="flex flex-col gap-2">
                     {goal.specialty && (
-                      <p className="text-sm text-default-500">Specialty: {goal.specialty}</p>
+                      <p className="text-sm text-text-muted">Specialty: {goal.specialty}</p>
                     )}
-                    <p className="text-sm text-default-500 clinical-data">
+                    <p className="text-sm text-text-muted clinical-data">
                       Deadline: {new Date(goal.deadline).toLocaleDateString()}
                     </p>
-                    <div className="flex items-center gap-2 clinical-data">
-                      <ProgressBar value={percentage} color={color} className="flex-1">
-                        <ProgressBar.Output>{current} / {target}</ProgressBar.Output>
-                      </ProgressBar>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 w-full bg-default-200 rounded-full h-2.5">
+                        <div
+                          className={`${barColor} h-2.5 rounded-full transition-all duration-300`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-text-muted clinical-data shrink-0">
+                        {current} / {target}
+                      </span>
                     </div>
                     {isComplete && (
-                      <p className="text-success text-sm font-medium">Goal completed!</p>
+                      <p className="text-[#34C759] text-sm font-medium">Goal completed!</p>
                     )}
                     {isOverdue && (
-                      <p className="text-danger text-sm font-medium">Overdue</p>
+                      <p className="text-[#FF3B30] text-sm font-medium">Overdue</p>
                     )}
                     {goal.description && (
-                      <p className="text-sm text-default-400 mt-1">{goal.description}</p>
+                      <p className="text-sm text-text-muted mt-1">{goal.description}</p>
                     )}
                   </div>
-                </Card.Content>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>

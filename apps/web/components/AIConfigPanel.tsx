@@ -3,17 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import {
-  Button,
-  TextField,
-  Select,
-  ListBox,
-  ListBoxItem,
-  Switch,
-  Card,
-  Label,
-  Input,
-} from '@heroui/react';
 
 interface AIConfigData {
   id: string;
@@ -118,70 +107,92 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
   }
 
   return (
-    <Card>
-      <Card.Header>
+    <div className="panel">
+      <div className="pb-4 border-b border-border">
         <h2 className="text-lg font-semibold">AI Configuration</h2>
-      </Card.Header>
-      <Card.Content className="gap-4">
+      </div>
+      <div className="pt-4 space-y-4">
         {error && <ErrorDisplay message={error} />}
         {success && (
-          <div className="bg-success-50 text-success p-3 rounded-lg text-sm">{success}</div>
+          <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
         )}
 
-        <Select
-          selectedKey={provider}
-          onSelectionChange={(value) => {
-            if (value) setProvider(String(value));
-          }}
-        >
-          <Select.Trigger aria-label="Select AI provider"><Select.Value /></Select.Trigger>
-          <Select.Popover>
-            <ListBox aria-label="Select AI provider">
-              {PROVIDERS.map((p) => (
-                <ListBoxItem key={p.key} id={p.key}>{p.label}</ListBoxItem>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
-
-        <TextField
-          value={model}
-          onChange={setModel}
-          isRequired
-        >
-          <Label>Model</Label>
-          <Input placeholder={DEFAULT_MODELS[provider] ?? 'Enter model name'} />
-        </TextField>
-
-        <TextField
-          type="password"
-          value={apiKey}
-          onChange={setApiKey}
-        >
-          <Label>API Key</Label>
-          <Input placeholder={config?.has_key ? 'sk-•••••••• (leave blank to keep existing)' : 'Enter API key'} />
-        </TextField>
-
-        {provider === 'custom' && (
-          <TextField
-            value={endpointUrl}
-            onChange={setEndpointUrl}
+        <div>
+          <label className="text-sm font-medium text-text-secondary block mb-1">AI Provider</label>
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+            aria-label="Select AI provider"
           >
-            <Label>Endpoint URL</Label>
-            <Input placeholder="https://api.example.com/v1" />
-          </TextField>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Switch isSelected={isActive} onChange={setIsActive}>
-            Enable AI Insights
-          </Switch>
+            {PROVIDERS.map((p) => (
+              <option key={p.key} value={p.key}>{p.label}</option>
+            ))}
+          </select>
         </div>
 
-        <Button variant="primary" onPress={handleSave} isDisabled={loading}>
+        <div>
+          <label className="text-sm font-medium text-text-secondary block mb-1">Model</label>
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            required
+            placeholder={DEFAULT_MODELS[provider] ?? 'Enter model name'}
+            className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-text-secondary block mb-1">API Key</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={config?.has_key ? 'sk-•••••••• (leave blank to keep existing)' : 'Enter API key'}
+            className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+          />
+        </div>
+
+        {provider === 'custom' && (
+          <div>
+            <label className="text-sm font-medium text-text-secondary block mb-1">Endpoint URL</label>
+            <input
+              type="text"
+              value={endpointUrl}
+              onChange={(e) => setEndpointUrl(e.target.value)}
+              placeholder="https://api.example.com/v1"
+              className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+            />
+          </div>
+        )}
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-6 bg-default-300 rounded-full peer-checked:bg-primary transition-colors relative">
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
+            </div>
+          </div>
+          <span className="text-sm font-medium text-text-secondary">Enable AI Insights</span>
+        </label>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={loading}
+          className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+            loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+          }`}
+        >
           Save Configuration
-        </Button>
-      </Card.Content>
-    </Card>
+        </button>
+      </div>
+    </div>
   );
 }

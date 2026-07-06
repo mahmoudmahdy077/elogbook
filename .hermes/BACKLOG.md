@@ -12,13 +12,13 @@
 
 ## 🟠 P1 — Production Readiness
 
-- [ ] **P1.1** Fix `duty_periods` RLS — `WITH CHECK (true)` bypasses tenant isolation for write operations (see RLS_AUDIT.md)
-- [ ] **P1.2** Fix `duty_weekly_violations` view — add `security_invoker = true` to enforce RLS on base tables (see RLS_AUDIT.md)
-- [ ] **P1.3** Fix `faculty_evaluations` RLS — asymmetric USING/WITH CHECK allows cross-tenant resident assignment (see RLS_AUDIT.md)
-- [ ] **P1.4** Add rate limiting to approve/reject RPCs (currently browser-callable, no rate limit)
-- [ ] **P1.5** Add CSRF protection to all mutation endpoints
-- [ ] **P1.6** Tenant-slug URL validation on submit route
-- [ ] **P1.7** API response time optimization — add missing indexes, query plan analysis
+- [x] **P1.1** Fix `duty_periods` RLS — `WITH CHECK (true)` bypasses tenant isolation for write operations (see RLS_AUDIT.md)
+- [x] **P1.2** Fix `duty_weekly_violations` view — add `security_invoker = true` to enforce RLS on base tables (see RLS_AUDIT.md)
+- [x] **P1.3** Fix `faculty_evaluations` RLS — asymmetric USING/WITH CHECK allows cross-tenant resident assignment (see RLS_AUDIT.md)
+- [x] **P1.4** Add rate limiting to approve/reject RPCs (currently browser-callable, no rate limit)
+- [x] **P1.5** Add CSRF protection to all mutation endpoints
+- [x] **P1.6** Tenant-slug URL validation on submit route
+- [x] **P1.7** Add missing database indexes for query performance (partial, covering, compound — 16 new indexes)
 - [ ] **P1.8** Bundle size optimization — lazy load heavy components, code splitting
 - [ ] **P1.9** Image optimization — next/image for all static assets
 - [ ] **P1.10** Error boundary coverage — ensure every route has proper error boundaries

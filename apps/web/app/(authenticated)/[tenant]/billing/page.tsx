@@ -1,8 +1,7 @@
 import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { Card, Chip } from '@heroui/react';
 import { redirect } from 'next/navigation';
-import SubscriptionPlans from '@/components/SubscriptionPlans';
+import ClientSubscriptionPlans from '@/components/ClientSubscriptionPlans';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface SubscriptionPlan {
@@ -72,88 +71,102 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
   const plan = (subscription as Record<string, unknown> | null)?.plan as SubscriptionPlan | null;
 
+  function StatusBadge({ status }: { status: string }) {
+    const isSuccess = status === 'completed' || status === 'succeeded';
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          isSuccess
+            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+        }`}
+      >
+        {isSuccess ? 'Paid' : status}
+      </span>
+    );
+  }
+
+  function PurchaseBadge({ status }: { status: string }) {
+    const isDelivered = status === 'completed';
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          isDelivered
+            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+        }`}
+      >
+        {isDelivered ? 'Delivered' : 'Pending'}
+      </span>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Billing & Subscription</h1>
+      <h1 className="text-2xl font-bold">Billing &amp; Subscription</h1>
 
       {subscription && (
-        <Card className="panel">
-          <Card.Header>
-            <h2 className="text-lg font-semibold">Current Plan</h2>
-          </Card.Header>
-          <Card.Content>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-bold">
-                  {plan?.name ?? 'Unknown Plan'}
-                </p>
-                <p className="text-default-500">
-                  ${Number(plan?.price_monthly ?? 0).toFixed(2)}/month
-                </p>
-              </div>
-              <div className="text-right">
-                <Chip color="success" variant="soft" size="sm">Active</Chip>
-                {subscription.current_period_end && (
-                  <p className="text-sm text-default-500 mt-1 clinical-data">
-                    Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
-      )}
-
-      <Card className="panel">
-        <Card.Header>
-          <h2 className="text-lg font-semibold">Usage This Period</h2>
-        </Card.Header>
-        <Card.Content>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+          <h2 className="text-lg font-semibold mb-3">Current Plan</h2>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-default-500">Cases Logged</p>
-              <p className="text-2xl font-bold">{caseCount ?? 0}</p>
+              <p className="text-xl font-bold">
+                {plan?.name ?? 'Unknown Plan'}
+              </p>
+              <p className="text-sm text-[#8E8E93]">
+                ${Number(plan?.price_monthly ?? 0).toFixed(2)}/month
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-default-500">Team Members</p>
-              <p className="text-2xl font-bold">{residentCount ?? 0}</p>
+            <div className="text-right">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                Active
+              </span>
+              {subscription.current_period_end && (
+                <p className="text-sm text-[#8E8E93] mt-1 clinical-data">
+                  Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
+                </p>
+              )}
             </div>
           </div>
-        </Card.Content>
-      </Card>
+        </div>
+      )}
 
-      <Card className="panel">
-        <Card.Header>
-          <h2 className="text-lg font-semibold">Payment History</h2>
-        </Card.Header>
-        <Card.Content>
-          {!payments || payments.length === 0 ? (
-            <p className="text-sm text-default-400">No payments recorded yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {payments.map((p: { id: string; amount: number; status: string; created_at: string }) => (
-                <div key={p.id} className="flex items-center justify-between border-b border-divider pb-2">
-                  <div>
-                    <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
-                    <p className="text-xs text-default-400 clinical-data">
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Chip
-                    color={p.status === 'completed' || p.status === 'succeeded' ? 'success' : 'warning'}
-                    variant="soft"
-                    size="sm"
-                  >
-                    {p.status === 'completed' || p.status === 'succeeded' ? 'Paid' : p.status}
-                  </Chip>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+        <h2 className="text-lg font-semibold mb-3">Usage This Period</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-[#8E8E93]">Cases Logged</p>
+            <p className="text-2xl font-bold">{caseCount ?? 0}</p>
+          </div>
+          <div>
+            <p className="text-sm text-[#8E8E93]">Team Members</p>
+            <p className="text-2xl font-bold">{residentCount ?? 0}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+        <h2 className="text-lg font-semibold mb-3">Payment History</h2>
+        {!payments || payments.length === 0 ? (
+          <p className="text-sm text-[#8E8E93]">No payments recorded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {payments.map((p: { id: string; amount: number; status: string; created_at: string }) => (
+              <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                <div>
+                  <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
+                  <p className="text-xs text-[#8E8E93] clinical-data">
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card.Content>
-      </Card>
+                <StatusBadge status={p.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <SubscriptionPlans
+      <ClientSubscriptionPlans
         plans={plans ?? []}
         tenantId={auth.profile.tenant_id}
         gatewayProvider={gatewayConfig?.provider ?? null}
@@ -161,40 +174,30 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         currentPlanId={subscription?.plan_id ?? null}
       />
 
-      <Card className="panel">
-        <Card.Header>
-          <h2 className="text-lg font-semibold">AI Report Credits</h2>
-        </Card.Header>
-        <Card.Content>
-          <p className="text-sm text-default-500 mb-4">
-            Generate comprehensive AI analysis reports for your cases. One-time purchase of $4.99 per report.
-          </p>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+        <h2 className="text-lg font-semibold mb-3">AI Report Credits</h2>
+        <p className="text-sm text-[#8E8E93] mb-4">
+          Generate comprehensive AI analysis reports for your cases. One-time purchase of $4.99 per report.
+        </p>
 
-          {(!purchases || purchases.length === 0) ? (
-            <p className="text-sm text-default-400">No AI report purchases yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {purchases.map((p: { id: string; purchase_type: string; amount: number; created_at: string; status: string }) => (
-                <div key={p.id} className="flex items-center justify-between border-b border-divider pb-2">
-                  <div>
-                    <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
-                    <p className="text-xs text-default-400 clinical-data">
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Chip
-                    color={p.status === 'completed' ? 'success' : 'warning'}
-                    variant="soft"
-                    size="sm"
-                  >
-                    {p.status === 'completed' ? 'Delivered' : 'Pending'}
-                  </Chip>
+        {(!purchases || purchases.length === 0) ? (
+          <p className="text-sm text-[#8E8E93]">No AI report purchases yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {purchases.map((p: { id: string; purchase_type: string; amount: number; created_at: string; status: string }) => (
+              <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                <div>
+                  <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
+                  <p className="text-xs text-[#8E8E93] clinical-data">
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card.Content>
-      </Card>
+                <PurchaseBadge status={p.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

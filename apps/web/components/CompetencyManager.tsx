@@ -2,17 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Button,
-  TextField,
-  TextArea,
-  Select,
-  ListBox,
-  ListBoxItem,
-  Chip,
-  Label,
-  Input,
-} from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import ImpactDialog from '@/components/ImpactDialog';
@@ -199,9 +188,13 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-heading font-semibold">Accreditation Frameworks</h2>
-        <Button variant="primary" onPress={handleToggleForm}>
+        <button
+          type="button"
+          onClick={handleToggleForm}
+          className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+        >
           {showForm ? 'Cancel' : 'New Framework'}
-        </Button>
+        </button>
       </div>
 
       <AnimatePresence>
@@ -217,64 +210,73 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
             <div className="panel p-6 space-y-4">
               <h3 className="text-base font-semibold">Create Accreditation Framework</h3>
 
-              <TextField
-                value={name}
-                onChange={setName}
-                isRequired
-              >
-                <Label>Name</Label>
-                <Input placeholder="e.g. ACGME General Surgery Milestones" />
-              </TextField>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="e.g. ACGME General Surgery Milestones"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
 
-              <TextField
-                value={version}
-                onChange={setVersion}
-              >
-                <Label>Version</Label>
-                <Input placeholder="1.0" />
-              </TextField>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Version</label>
+                <input
+                  type="text"
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  placeholder="1.0"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
 
-              <Select
-                selectedKey={frameworkType}
-                onSelectionChange={(val) => {
-                  if (val) setFrameworkType(String(val) as FrameworkType);
-                }}
-              >
-                <Select.Trigger aria-label="Select framework type">
-                  <Select.Value />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox aria-label="Select framework type">
-                    {FRAMEWORK_TYPE_OPTIONS.map((opt) => (
-                      <ListBoxItem id={opt.key} key={opt.key}>
-                        {opt.label}
-                      </ListBoxItem>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Framework Type</label>
+                <select
+                  value={frameworkType}
+                  onChange={(e) => setFrameworkType(e.target.value as FrameworkType)}
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                  aria-label="Select framework type"
+                >
+                  {FRAMEWORK_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
 
-              <Label>Milestones (JSON)</Label>
-              <TextArea
+              <label className="text-sm font-medium text-text-secondary block mb-1">Milestones (JSON)</label>
+              <textarea
                 value={milestonesJson}
                 onChange={(e) => setMilestonesJson(e.target.value)}
                 required
                 rows={8}
+                className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm font-mono"
               />
 
               <div className="flex gap-2 justify-end">
-                <Button
-                  variant="ghost"
-                  onPress={() => {
+                <button
+                  type="button"
+                  onClick={() => {
                     resetForm();
                     setShowForm(false);
                   }}
+                  className="rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
                 >
                   Cancel
-                </Button>
-                <Button variant="primary" onPress={handleCreate} isDisabled={saving}>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={saving}
+                  className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+                    saving ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                  }`}
+                >
                   Create Framework
-                </Button>
+                </button>
               </div>
             </div>
           </motion.div>
@@ -283,12 +285,12 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
 
       {loading ? (
         <div className="panel p-8 text-center">
-          <p className="text-default-500">Loading frameworks...</p>
+          <p className="text-text-muted">Loading frameworks...</p>
         </div>
       ) : frameworks.length === 0 ? (
         <div className="panel p-8 text-center">
-          <p className="text-default-500">No accreditation frameworks yet.</p>
-          <p className="text-sm text-default-400 mt-1">
+          <p className="text-text-muted">No accreditation frameworks yet.</p>
+          <p className="text-sm text-text-muted mt-1">
             Create a framework to begin mapping competencies.
           </p>
         </div>
@@ -311,11 +313,11 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                     <div>
                       <h3 className="font-semibold">{framework.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <Chip variant="soft" size="sm" color="accent">
+                        <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium">
                           {framework.framework_type.toUpperCase()}
-                        </Chip>
-                        <span className="text-xs text-default-400">v{framework.version}</span>
-                        <span className="text-xs text-default-400">
+                        </span>
+                        <span className="text-xs text-text-muted">v{framework.version}</span>
+                        <span className="text-xs text-text-muted">
                           {milestoneCount} milestone{milestoneCount !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -323,14 +325,14 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                   </button>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="danger-soft"
-                      onPress={() => confirmDelete(framework.id)}
-                      isDisabled={deleting === framework.id}
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(framework.id)}
+                      disabled={deleting === framework.id}
+                      className="rounded-full bg-red-50 text-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors disabled:opacity-50"
                     >
                       Delete
-                    </Button>
+                    </button>
                     <svg
                       className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                       fill="none"
@@ -365,12 +367,12 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                                 key={m.code}
                                 className="flex items-start gap-3 p-2.5 rounded-lg bg-neutral-dark/30"
                               >
-                                <Chip variant="soft" size="sm" color="accent">
+                                <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium shrink-0">
                                   {m.code}
-                                </Chip>
+                                </span>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm">{m.description}</p>
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-default-400">
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-text-muted">
                                     <span>{m.competency_area}</span>
                                     <span>&middot;</span>
                                     <span>Target: {m.target_minimum}</span>
@@ -386,7 +388,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-default-400">No milestones defined.</p>
+                          <p className="text-sm text-text-muted">No milestones defined.</p>
                         )}
                       </div>
                     </motion.div>

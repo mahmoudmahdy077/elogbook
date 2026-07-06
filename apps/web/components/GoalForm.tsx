@@ -2,18 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Modal,
-  Button,
-  TextField,
-  TextArea,
-  Select,
-  ListBox,
-  ListBoxItem,
-  useOverlayState,
-  Label,
-  Input,
-} from '@heroui/react';
 import { programGoalSchema } from '@elogbook/shared';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
@@ -26,7 +14,7 @@ interface GoalFormProps {
 
 export default function GoalForm({ tenantId, directorId, residents }: GoalFormProps) {
   const router = useRouter();
-  const overlay = useOverlayState({ defaultOpen: false });
+  const [showModal, setShowModal] = useState(false);
 
   const [residentId, setResidentId] = useState('');
   const [title, setTitle] = useState('');
@@ -47,7 +35,7 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     setError('');
   }
 
-  async function handleSubmit(onClose: () => void) {
+  async function handleSubmit() {
     setError('');
 
     const result = programGoalSchema.safeParse({
@@ -105,85 +93,122 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     setLoading(false);
     resetForm();
     router.refresh();
-    overlay.close();
+    setShowModal(false);
   }
 
   return (
     <>
-      <Button onPress={overlay.open} variant="primary">New Goal</Button>
-      <Modal.Root isOpen={overlay.isOpen} onOpenChange={overlay.setOpen}>
-        <Modal.Header>Create Goal</Modal.Header>
-        <Modal.Body>
-          {error && <ErrorDisplay message={error} />}
-          <Select
-            selectedKey={residentId || null}
-            onSelectionChange={(key) => {
-              if (key) setResidentId(String(key));
-            }}
-            isRequired
-          >
-            <Label>Resident</Label>
-            <Select.Trigger>
-              <Select.Value />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox aria-label="Select resident">
-                {residents.map((r) => (
-                  <ListBoxItem key={r.id} id={r.id}>{r.full_name}</ListBoxItem>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
-          <TextField
-            value={title}
-            onChange={setTitle}
-            isRequired
-          >
-            <Label>Title</Label>
-            <Input placeholder="e.g. Complete 50 appendectomies" />
-          </TextField>
-          <TextField
-            type="number"
-            value={targetCount}
-            onChange={setTargetCount}
-            isRequired
-          >
-            <Label>Target Count</Label>
-            <Input placeholder="50" />
-          </TextField>
-          <TextField
-            value={specialty}
-            onChange={setSpecialty}
-          >
-            <Label>Specialty</Label>
-            <Input placeholder="e.g. General Surgery" />
-          </TextField>
-          <TextField
-            type="date"
-            value={deadline}
-            onChange={setDeadline}
-            isRequired
-          >
-            <Label>Deadline</Label>
-            <Input />
-          </TextField>
-          <Label>Description</Label>
-          <TextArea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="ghost" onPress={overlay.close}>Cancel</Button>
-          <Button
-            variant="primary"
-            onPress={() => handleSubmit(overlay.close)}
-            isDisabled={loading}
-          >
-            Create
-          </Button>
-        </Modal.Footer>
-      </Modal.Root>
+      <button
+        type="button"
+        onClick={() => setShowModal(true)}
+        className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        New Goal
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+          <div className="panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3 className="text-lg font-semibold mb-4">Create Goal</h3>
+
+            {error && <ErrorDisplay message={error} />}
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Resident</label>
+                <select
+                  value={residentId}
+                  onChange={(e) => setResidentId(e.target.value)}
+                  required
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                  aria-label="Select resident"
+                >
+                  <option value="">Select a resident...</option>
+                  {residents.map((r) => (
+                    <option key={r.id} value={r.id}>{r.full_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  placeholder="e.g. Complete 50 appendectomies"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Target Count</label>
+                <input
+                  type="number"
+                  value={targetCount}
+                  onChange={(e) => setTargetCount(e.target.value)}
+                  required
+                  placeholder="50"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+                <input
+                  type="text"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  placeholder="e.g. General Surgery"
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Deadline</label>
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  required
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); resetForm(); }}
+                className="rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className={`rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium transition-opacity ${
+                  loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                }`}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
