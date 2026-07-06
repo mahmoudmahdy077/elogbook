@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
@@ -132,6 +133,16 @@ async function handleSubmit(
       }, { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
   }
+
+  // Fire webhook event after successful case submission
+  dispatchWebhookEvent({
+    tenant_id: entry.tenant_id,
+    event_type: 'case.submitted',
+    event_id: id,
+    data: { entry_id: id, resident_id: entry.resident_id },
+  }).catch((err) => {
+    console.error('[webhooks] Submit dispatch error:', err);
+  });
 
   return NextResponse.json({ success: true });
 }

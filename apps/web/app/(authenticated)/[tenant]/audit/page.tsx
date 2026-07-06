@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import AuditExportUI from '@/components/AuditExportUI';
 
 const PAGE_SIZE = 20;
 
@@ -121,19 +122,14 @@ export default async function AuditPage({
     );
   }
 
-  // CSV / JSON export is handled by a separate route handler at
-  // /[tenant]/audit/export/route.ts. The page no longer returns
-  // a Response — Next 16 requires pages to return ReactNode only.
+  // Legacy export URL redirect — forward to the API route.
   if (exportFormat === 'csv' || exportFormat === 'json') {
-    redirect(`/${tenantSlug}/audit/export?${new URLSearchParams({
-      ...(date_from ? { date_from } : {}),
-      ...(date_to ? { date_to } : {}),
-      ...(action_type ? { action_type } : {}),
-      ...(resource_type ? { resource_type } : {}),
-      ...(user_id ? { user_id } : {}),
-      ...(view ? { view } : {}),
-      format: exportFormat,
-    }).toString()}`);
+    const apiParams = new URLSearchParams({
+      format: exportFormat === 'json' ? 'csv' : exportFormat,
+      ...(date_from ? { startDate: date_from } : {}),
+      ...(date_to ? { endDate: date_to } : {}),
+    });
+    redirect(`/api/${tenantSlug}/audit/export?${apiParams.toString()}`);
   }
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
@@ -208,19 +204,12 @@ export default async function AuditPage({
         >
           Filter
         </button>
-        <div className="ml-auto flex gap-2">
-          <Link
-            href={`/${tenantSlug}/audit?export=csv${filterSuffix}`}
-            className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
-          >
-            Export CSV
-          </Link>
-          <Link
-            href={`/${tenantSlug}/audit?export=json${filterSuffix}`}
-            className="inline-flex items-center rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
-          >
-            Export JSON
-          </Link>
+        <div className="ml-auto">
+          <AuditExportUI
+            tenantSlug={tenantSlug}
+            dateFrom={date_from || ''}
+            dateTo={date_to || ''}
+          />
         </div>
       </form>
 
@@ -285,20 +274,4 @@ export default async function AuditPage({
       )}
     </div>
   );
-}
-
-function toCsv(rows: AuditLogRow[]): string {
-  const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\\n')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  };
-  const lines = [headers.join(',')];
-  for (const r of rows) {
-    lines.push(headers.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(','));
-  }
-  return lines.join('\\n');
 }

@@ -19,10 +19,10 @@
 - [x] **P1.5** Add CSRF protection to all mutation endpoints
 - [x] **P1.6** Tenant-slug URL validation on submit route
 - [x] **P1.7** Add missing database indexes for query performance (partial, covering, compound — 16 new indexes)
-- [ ] **P1.8** Bundle size optimization — lazy load heavy components, code splitting
-- [ ] **P1.9** Image optimization — next/image for all static assets
-- [ ] **P1.10** Error boundary coverage — ensure every route has proper error boundaries
-- [ ] **P1.11** Loading states — skeleton screens for every data-fetching route
+- [x] **P1.8** Bundle size optimization — lazy load heavy components, code splitting
+- [x] **P1.9** Image optimization — next/image for all static assets
+- [x] **P1.10** Error boundary coverage — ensure every route has proper error boundaries
+- [x] **P1.11** Loading states — skeleton screens for every data-fetching route
 
 ## 🟡 P2 — Enterprise Features
 

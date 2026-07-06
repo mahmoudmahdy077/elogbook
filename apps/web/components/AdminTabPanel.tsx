@@ -47,6 +47,7 @@ const TABS = [
   { id: 'users', label: 'Users & Roles' },
   { id: 'ai', label: 'AI Config' },
   { id: 'payment', label: 'Payment Gateway' },
+  { id: 'webhooks', label: 'Webhooks' },
   { id: 'accreditation', label: 'Accreditation' },
 ] as const;
 
@@ -133,6 +134,22 @@ export default function AdminTabPanel({
 
       {activeTab === 'payment' && (
         <PaymentGatewayPanel tenantId={tenantId} config={paymentConfig} />
+      )}
+
+      {activeTab === 'webhooks' && (
+        <div className="panel p-5">
+          <h2 className="text-lg font-heading font-semibold mb-2">Webhook Configuration</h2>
+          <p className="text-sm text-text-muted/60 mb-4">
+            Configure HTTP callbacks to receive real-time case event notifications
+            (submitted, approved, rejected, etc.).
+          </p>
+          <Link
+            href={`/${tenantSlug}/admin/webhooks`}
+            className="inline-flex items-center rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Manage Webhooks
+          </Link>
+        </div>
       )}
 
       {activeTab === 'accreditation' && (

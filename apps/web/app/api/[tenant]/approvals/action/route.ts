@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 const ALLOWED_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
 
@@ -119,6 +120,16 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  // Fire webhook event after successful approval/rejection
+  dispatchWebhookEvent({
+    tenant_id: profile.tenant_id,
+    event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
+    event_id: entry_id,
+    data: { entry_id, comment: comment || null, acted_by: user.id },
+  }).catch((err) => {
+    console.error('[webhooks] Approval dispatch error:', err);
+  });
 
   return NextResponse.json({ success: true, action });
 }
