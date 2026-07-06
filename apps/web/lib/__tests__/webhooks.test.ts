@@ -37,6 +37,9 @@ function makeQueryMock(result: { data: unknown; error: null | Error }) {
         eq: vi.fn().mockResolvedValue(result),
       }),
     }),
+    insert: vi.fn().mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }),
   });
 }
 

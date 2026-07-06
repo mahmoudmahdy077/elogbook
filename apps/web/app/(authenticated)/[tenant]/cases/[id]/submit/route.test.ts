@@ -59,6 +59,15 @@ vi.mock('@/lib/rate-limit', () => ({
   rateLimitResponse: (retryAfter: number) => mockRateLimitResponse(retryAfter),
 }));
 
+// ---------------------------------------------------------------------------
+// Mock @/lib/webhooks – the route fires a best-effort webhook event after
+// successful submission; make it a no-op in tests so module resolution does
+// not fail.
+// ---------------------------------------------------------------------------
+vi.mock('@/lib/webhooks', () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@/lib/supabase/server', () => ({
   createServerSupabase: () => Promise.resolve(mockSupabase),
 }));
