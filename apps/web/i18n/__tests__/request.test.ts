@@ -22,8 +22,8 @@ describe('i18n locale integrity (P6.2)', () => {
   const en = JSON.parse(readFileSync(resolve(messagesDir, 'en.json'), 'utf8'));
   const ar = JSON.parse(readFileSync(resolve(messagesDir, 'ar.json'), 'utf8'));
 
-  it('exposes en + ar as the supported locales', () => {
-    expect(locales).toEqual(['en', 'ar']);
+  it('exposes en + ar + fr as the supported locales', () => {
+    expect(locales).toEqual(['en', 'ar', 'fr']);
   });
 
   it('defaults to en', () => {
@@ -38,6 +38,10 @@ describe('i18n locale integrity (P6.2)', () => {
     expect(isRtl('en')).toBe(false);
   });
 
+  it('flags fr as LTR', () => {
+    expect(isRtl('fr')).toBe(false);
+  });
+
   it('ar.json has every key from en.json (no missing translations)', () => {
     const enKeys = new Set(flattenKeys(en));
     const arKeys = new Set(flattenKeys(ar));
@@ -48,6 +52,17 @@ describe('i18n locale integrity (P6.2)', () => {
     expect(missing, `Missing Arabic keys: ${missing.join(', ')}`).toEqual([]);
   });
 
+  it('fr.json has every key from en.json (no missing translations)', () => {
+    const fr = JSON.parse(readFileSync(resolve(messagesDir, 'fr.json'), 'utf8'));
+    const enKeys = new Set(flattenKeys(en));
+    const frKeys = new Set(flattenKeys(fr));
+    const missing: string[] = [];
+    for (const k of enKeys) {
+      if (!frKeys.has(k)) missing.push(k);
+    }
+    expect(missing, `Missing French keys: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('ar.json has no extra keys that en.json does not', () => {
     const enKeys = new Set(flattenKeys(en));
     const arKeys = new Set(flattenKeys(ar));
@@ -56,6 +71,17 @@ describe('i18n locale integrity (P6.2)', () => {
       if (!enKeys.has(k)) extra.push(k);
     }
     expect(extra, `Extra Arabic keys: ${extra.join(', ')}`).toEqual([]);
+  });
+
+  it('fr.json has no extra keys that en.json does not', () => {
+    const fr = JSON.parse(readFileSync(resolve(messagesDir, 'fr.json'), 'utf8'));
+    const enKeys = new Set(flattenKeys(en));
+    const frKeys = new Set(flattenKeys(fr));
+    const extra: string[] = [];
+    for (const k of frKeys) {
+      if (!enKeys.has(k)) extra.push(k);
+    }
+    expect(extra, `Extra French keys: ${extra.join(', ')}`).toEqual([]);
   });
 
   it('Arabic values are non-empty strings', () => {

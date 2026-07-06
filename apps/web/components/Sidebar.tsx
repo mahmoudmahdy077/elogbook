@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import LocaleSwitcher from '@/components/LocaleSwitcher';
 
 type NavLink = {
   href: string;
@@ -235,16 +236,19 @@ export default function Sidebar({
               </form>
             </>
           ) : (
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <form action="/auth/signout" method="post" className="flex-1">
-              <button
-                type="submit"
-                className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-              >
-                Sign Out
-              </button>
-            </form>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <form action="/auth/signout" method="post" className="flex-1">
+                <button
+                  type="submit"
+                  className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+                >
+                  Sign Out
+                </button>
+              </form>
+              </div>
+              <LocaleSwitcher />
             </div>
           )}
         </div>

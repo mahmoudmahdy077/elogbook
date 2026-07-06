@@ -1,0 +1,2311 @@
+openapi: "3.0.3"
+info:
+  title: E-Logbook Enterprise API
+  description: |
+    API for the E-Logbook Enterprise platform — a medical resident case-logging
+    and faculty evaluation system with multi-tenant support, SSO, AI-powered
+    educational insights, payment integration, and SCIM user provisioning.
+
+    ## Authentication
+    Most endpoints require JWT authentication via Supabase Auth. Pass the access
+    token as a Bearer token in the `Authorization` header. Public endpoints
+    (health, SSO check) do not require authentication.
+
+    Edge Functions use Supabase's built-in JWT verification through the
+    shared `authenticate()` helper.
+  version: "1.0.0"
+  contact:
+    name: E-Logbook Support
+    url: https://elogbook.dev
+servers:
+  - url: https://app.elogbook.dev
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://{tenant}.elogbook.dev
+    description: Tenant-specific subdomain
+    variables:
+      tenant:
+        default: demo
+        description: Tenant slug
+
+# ============================================================================
+# Components
+# ============================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT access token
+    ServiceRole:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase service_role key (admin operations)
+
+  schemas:
+    # --------------- Common ---------------
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+      required: [error]
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+    # --------------- Health ---------------
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+        database:
+          type: string
+          enum: [reachable, unreachable]
+        durationMs:
+          type: integer
+        error:
+          type: string
+
+    # --------------- SSO Check ---------------
+    SsoCheckResponse:
+      type: object
+      properties:
+        available:
+          type: boolean
+        protocol:
+          type: string
+          enum: [saml, oidc]
+        error:
+          type: string
+
+    # --------------- AI Config ---------------
+    AiConfigRequest:
+      type: object
+      required: [model]
+      properties:
+        provider:
+          type: string
+          enum: [openai, openrouter, anthropic, azure, custom]
+          description: AI provider name
+        model:
+          type: string
+          description: Model identifier (e.g., gpt-4, claude-3-opus)
+        is_active:
+          type: boolean
+          default: false
+        endpoint_url:
+          type: string
+          format: uri
+          description: Custom endpoint URL (for Azure/custom providers)
+        api_key:
+          type: string
+          description: API key for the provider (required for new configs)
+    AiConfigResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        has_key:
+          type: boolean
+
+    # --------------- Assign Role ---------------
+    AssignRoleRequest:
+      type: object
+      required: [user_id, role]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Profile ID of the target user
+        role:
+          type: string
+          enum: [resident, supervisor, director, institution_admin, admin]
+    AssignRoleResponse:
+      $ref: '#/components/schemas/Success'
+
+    # --------------- Payment Gateway ---------------
+    PaymentGatewayRequest:
+      type: object
+      required: [publishable_key]
+      properties:
+        provider:
+          type: string
+          enum: [stripe]
+          default: stripe
+        publishable_key:
+          type: string
+        is_active:
+          type: boolean
+          default: false
+        endpoint_url:
+          type: string
+          format: uri
+        secret_key:
+          type: string
+        webhook_secret:
+          type: string
+    PaymentGatewayResponse:
+      $ref: '#/components/schemas/Success'
+
+    # --------------- SSO Config ---------------
+    SsoConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        protocol:
+          type: string
+          enum: [saml, oidc]
+        metadata_url:
+          type: string
+          format: uri
+        discovery_url:
+          type: string
+          format: uri
+        idp_entity_id:
+          type: string
+        client_id:
+          type: string
+        default_role:
+          type: string
+          default: resident
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SsoConfigCreateRequest:
+      type: object
+      required: [protocol]
+      properties:
+        protocol:
+          type: string
+          enum: [saml, oidc]
+        metadata_url:
+          type: string
+          format: uri
+          description: Required for SAML
+        discovery_url:
+          type: string
+          format: uri
+          description: Required for OIDC
+        idp_entity_id:
+          type: string
+        idp_certificate:
+          type: string
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        default_role:
+          type: string
+          enum: [resident, supervisor, director, institution_admin]
+        is_active:
+          type: boolean
+          default: true
+    SsoConfigUpdateRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        protocol:
+          type: string
+          enum: [saml, oidc]
+        metadata_url:
+          type: string
+          format: uri
+        discovery_url:
+          type: string
+          format: uri
+        idp_entity_id:
+          type: string
+        idp_certificate:
+          type: string
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        default_role:
+          type: string
+          enum: [resident, supervisor, director, institution_admin]
+        is_active:
+          type: boolean
+    SsoConfigListResponse:
+      type: object
+      properties:
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SsoConfig'
+    SsoConfigCreateResponse:
+      type: object
+      properties:
+        config:
+          $ref: '#/components/schemas/SsoConfig'
+
+    # --------------- Webhooks ---------------
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+            enum: [case.created, case.updated, case.submitted, case.approved, case.rejected, case.deleted]
+        is_active:
+          type: boolean
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_sent:
+          type: string
+          format: date-time
+          nullable: true
+        last_status:
+          type: integer
+          nullable: true
+        last_succeeded:
+          type: boolean
+          nullable: true
+    WebhookCreateRequest:
+      type: object
+      required: [url, events, secret]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Webhook endpoint URL (HTTPS required in production)
+        events:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [case.created, case.updated, case.submitted, case.approved, case.rejected, case.deleted]
+        secret:
+          type: string
+          minLength: 8
+          description: Shared secret for HMAC-SHA256 signature
+        description:
+          type: string
+        is_active:
+          type: boolean
+          default: true
+    WebhookUpdateRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        secret:
+          type: string
+          minLength: 8
+        description:
+          type: string
+        is_active:
+          type: boolean
+    WebhookListResponse:
+      type: object
+      properties:
+        webhooks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+    WebhookCreateResponse:
+      type: object
+      properties:
+        webhook:
+          $ref: '#/components/schemas/Webhook'
+    WebhookTestRequest:
+      type: object
+      required: [webhook_id]
+      properties:
+        webhook_id:
+          type: string
+          format: uuid
+
+    # --------------- Approval Actions ---------------
+    ApprovalActionRequest:
+      type: object
+      required: [action, entry_id]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        entry_id:
+          type: string
+          format: uuid
+          description: ID of the case entry to approve/reject
+        comment:
+          type: string
+          nullable: true
+    ApprovalActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        action:
+          type: string
+          enum: [approve, reject]
+
+    # --------------- Audit Export ---------------
+    AuditExportParams:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date
+          description: Inclusive lower bound
+        endDate:
+          type: string
+          format: date
+          description: Inclusive upper bound
+        format:
+          type: string
+          enum: [csv, pdf]
+          default: csv
+
+    # --------------- Compliance Export ---------------
+    ComplianceExportParams:
+      type: object
+      required: [section]
+      properties:
+        section:
+          type: string
+          enum: [data-access, phi-inventory, consent, retention]
+        format:
+          type: string
+          enum: [csv, pdf]
+          default: csv
+
+    # --------------- Reports ---------------
+    ReportCSVParams:
+      type: object
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+
+    # --------------- AI Insights ---------------
+    AiInsightsRequest:
+      type: object
+      required: [resident_id]
+      properties:
+        resident_id:
+          type: string
+          format: uuid
+          description: Profile ID of the resident
+        query:
+          type: string
+          maxLength: 1000
+          description: Educational reflection query
+        stream:
+          type: boolean
+          default: false
+        is_deidentified:
+          type: boolean
+          const: true
+          description: Must be true — PHI cannot be sent to external AI
+    AiInsightsResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          description: AI-generated educational insight
+        tokens_used:
+          type: integer
+          nullable: true
+        disclaimer_rendered:
+          type: boolean
+        safety_flags:
+          type: array
+          items:
+            type: string
+        model:
+          type: string
+        cached:
+          type: boolean
+
+    # --------------- Generate PDF ---------------
+    GeneratePdfRequest:
+      type: object
+      required: [case_ids, resident_name, tenant]
+      properties:
+        case_ids:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: uuid
+          description: IDs of approved case entries to include
+        resident_name:
+          type: string
+        tenant:
+          type: string
+          description: Tenant slug
+
+    # --------------- Payment Webhook ---------------
+    StripeEvent:
+      type: object
+      properties:
+        received:
+          type: boolean
+        duplicate:
+          type: boolean
+
+    # --------------- Dispatch Webhook ---------------
+    DispatchWebhookRequest:
+      type: object
+      required: [tenant_id, event_type, event_id]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        event_id:
+          type: string
+        data:
+          type: object
+          description: Arbitrary event payload
+    DispatchWebhookResponse:
+      type: object
+      properties:
+        delivered:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              webhook_id:
+                type: string
+                format: uuid
+              status:
+                type: integer
+              ok:
+                type: boolean
+
+    # --------------- SCIM ---------------
+    ScimUser:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: [urn:ietf:params:scim:schemas:core:2.0:User]
+        id:
+          type: string
+        userName:
+          type: string
+        name:
+          type: object
+          properties:
+            givenName:
+              type: string
+              nullable: true
+            familyName:
+              type: string
+              nullable: true
+        emails:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              primary:
+                type: boolean
+        active:
+          type: boolean
+        meta:
+          type: object
+          properties:
+            resourceType:
+              type: string
+            created:
+              type: string
+            lastModified:
+              type: string
+    ScimListResponse:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        totalResults:
+          type: integer
+        Resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScimUser'
+    ScimError:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        scimType:
+          type: string
+
+    # --------------- Create Checkout ---------------
+    CreateCheckoutRequest:
+      type: object
+      required: [plan_id]
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        gateway:
+          type: string
+          default: stripe
+    CreateCheckoutResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: Stripe Checkout Session ID
+
+    # --------------- List Invoices ---------------
+    ListInvoicesParams:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          description: Stripe customer ID
+
+    # --------------- SSO Callback ---------------
+    SsoCallbackParams:
+      type: object
+      required: [tenant, protocol]
+      properties:
+        tenant:
+          type: string
+          description: Tenant slug
+        protocol:
+          type: string
+          enum: [saml, oidc]
+        metadata:
+          type: string
+        discovery:
+          type: string
+        next:
+          type: string
+          description: Redirect path after authentication
+
+    # --------------- RPC Common ---------------
+    RpcSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+    RpcError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+# ============================================================================
+# Paths — Next.js API Routes
+# ============================================================================
+paths:
+  # ============= System =============
+  /api/health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: |
+        Returns the current health status of the application, including
+        database connectivity. Does not require authentication.
+      tags: [System]
+      responses:
+        "200":
+          description: Application is healthy or degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ============= CSP =============
+  /api/csp-violation:
+    post:
+      operationId: reportCspViolation
+      summary: Report CSP violation
+      description: |
+        Endpoint for Content Security Policy violation reports.
+        Logs violations server-side. Does not require authentication.
+      tags: [System]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: CSP violation report (standard csp-report format)
+      responses:
+        "204":
+          description: Violation reported (no content)
+
+  # ============= SSO Check =============
+  /api/sso/check:
+    get:
+      operationId: ssoCheck
+      summary: Check SSO availability
+      description: |
+        Public endpoint to check whether a tenant has SSO configured.
+        Used by the login page to show/hide the "SSO Login" button.
+      tags: [Authentication]
+      parameters:
+        - name: tenant
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+      responses:
+        "200":
+          description: SSO availability status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoCheckResponse'
+        "400":
+          description: Missing tenant slug
+        "404":
+          description: Tenant not found
+        "500":
+          description: Server configuration error
+
+  # ============= AI Config =============
+  /api/{tenant}/admin/ai-config:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Tenant slug
+    post:
+      operationId: upsertAiConfig
+      summary: Create or update AI provider configuration
+      description: |
+        Configure (create or update) the AI provider settings for a tenant.
+        Requires institution_admin or admin role. CSRF protected.
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiConfigRequest'
+      responses:
+        "200":
+          description: Configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiConfigResponse'
+        "400":
+          description: Validation error (missing model, etc.)
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions or tenant mismatch
+        "429":
+          description: Rate limited
+        "500":
+          description: Internal server error
+    put:
+      operationId: updateAiConfig
+      summary: Update AI provider configuration (alias for POST)
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiConfigRequest'
+      responses:
+        "200":
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiConfigResponse'
+
+  # ============= Assign Role =============
+  /api/{tenant}/admin/assign-role:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: assignRole
+      summary: Assign a role to a user within the tenant
+      description: |
+        Updates a user's role. Requires institution_admin or admin role.
+        Also updates the user's app_metadata in Supabase Auth.
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        "200":
+          description: Role assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignRoleResponse'
+        "400":
+          description: Missing or invalid fields
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Target user not found
+        "429":
+          description: Rate limited
+
+  # ============= Payment Gateway =============
+  /api/{tenant}/admin/payment-gateway:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: upsertPaymentGateway
+      summary: Create or update payment gateway configuration
+      description: |
+        Configure Stripe payment gateway for a tenant. Keys are encrypted
+        at rest. Requires institution_admin or admin role.
+      tags: [Admin, Billing]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentGatewayRequest'
+      responses:
+        "200":
+          description: Gateway configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentGatewayResponse'
+        "400":
+          description: Missing publishable key
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "429":
+          description: Rate limited
+    put:
+      operationId: updatePaymentGateway
+      summary: Update payment gateway configuration (alias for POST)
+      tags: [Admin, Billing]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentGatewayRequest'
+      responses:
+        "200":
+          description: Gateway configuration updated
+
+  # ============= SSO Config =============
+  /api/{tenant}/admin/sso:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listSsoConfigs
+      summary: List SSO configurations
+      description: |
+        Returns all SSO configurations for the tenant. Requires director,
+        institution_admin, or admin role.
+      tags: [Admin, Authentication]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: SSO config list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoConfigListResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+    post:
+      operationId: createSsoConfig
+      summary: Create an SSO configuration
+      description: |
+        Creates a new SAML or OIDC SSO configuration for the tenant.
+        Max 1 config per protocol per tenant. Requires institution_admin
+        or admin role.
+      tags: [Admin, Authentication]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoConfigCreateRequest'
+      responses:
+        "201":
+          description: SSO config created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoConfigCreateResponse'
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "409":
+          description: A config for this protocol already exists
+        "429":
+          description: Rate limited
+    put:
+      operationId: updateSsoConfig
+      summary: Update an SSO configuration
+      tags: [Admin, Authentication]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoConfigUpdateRequest'
+      responses:
+        "200":
+          description: SSO config updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Config not found
+    delete:
+      operationId: deleteSsoConfig
+      summary: Delete an SSO configuration
+      tags: [Admin, Authentication]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: SSO config ID to delete
+      responses:
+        "200":
+          description: SSO config deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Missing config ID
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Config not found
+
+  # ============= Webhooks =============
+  /api/{tenant}/admin/webhooks:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listWebhooks
+      summary: List webhooks
+      description: |
+        Returns all webhook configurations for the tenant, with latest
+        delivery status. Requires director, institution_admin, or admin role.
+      tags: [Admin, Webhooks]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Webhook list with delivery status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+    post:
+      operationId: createWebhook
+      summary: Create a webhook
+      description: |
+        Creates a new webhook that fires on case events. Max 10 webhooks
+        per tenant. Requires institution_admin or admin role.
+      tags: [Admin, Webhooks]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCreateRequest'
+      responses:
+        "201":
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookCreateResponse'
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "429":
+          description: Rate limited
+    put:
+      operationId: updateWebhook
+      summary: Update a webhook
+      tags: [Admin, Webhooks]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookUpdateRequest'
+      responses:
+        "200":
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Webhook not found
+    delete:
+      operationId: deleteWebhook
+      summary: Delete a webhook
+      tags: [Admin, Webhooks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Webhook ID to delete
+      responses:
+        "200":
+          description: Webhook deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "400":
+          description: Missing webhook ID
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Webhook not found
+
+  # ============= Webhook Test =============
+  /api/{tenant}/admin/webhooks/test:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: testWebhook
+      summary: Test a webhook endpoint
+      description: |
+        Sends a test payload to a webhook URL to verify connectivity.
+        Rate limited to 5 requests per minute per user.
+      tags: [Admin, Webhooks]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookTestRequest'
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Result of the test delivery
+        "400":
+          description: Missing webhook_id
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Webhook not found
+        "429":
+          description: Rate limited
+
+  # ============= Approval Actions =============
+  /api/{tenant}/approvals/action:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: approvalAction
+      summary: Approve or reject a case entry
+      description: |
+        Server-side approval endpoint that calls the `approve_case` or
+        `reject_case` RPC with CSRF and rate-limit enforcement.
+        Dispatches webhook events on success. Requires supervisor,
+        director, institution_admin, or admin role.
+      tags: [Approvals]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalActionRequest'
+      responses:
+        "200":
+          description: Action processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalActionResponse'
+        "400":
+          description: Invalid action or missing fields
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions or tenant mismatch
+        "404":
+          description: Entry not found
+        "429":
+          description: Rate limited
+        "500":
+          description: RPC error
+
+  # ============= Audit Export =============
+  /api/{tenant}/audit/export:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportAuditLogs
+      summary: Export audit logs
+      description: |
+        Exports audit logs as CSV or PDF with optional date range filter.
+        Respects tenant isolation. Requires director, institution_admin,
+        or admin role. Rate limited to 10 requests per minute.
+      tags: [Compliance]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Inclusive lower bound
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Inclusive upper bound
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, pdf]
+            default: csv
+      responses:
+        "200":
+          description: Exported file (CSV or PDF)
+          content:
+            text/csv:
+              schema:
+                type: string
+                description: CSV file download
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+                description: PDF file download
+        "400":
+          description: Invalid format
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "429":
+          description: Rate limited
+
+  # ============= Compliance Export =============
+  /api/{tenant}/compliance/export:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportComplianceReport
+      summary: Export compliance report
+      description: |
+        Exports compliance data (data-access, PHI inventory, consent
+        records, or retention status) as CSV or HTML. Requires director,
+        institution_admin, or admin role. Rate limited to 10 requests
+        per minute.
+      tags: [Compliance]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: section
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [data-access, phi-inventory, consent, retention]
+          description: Compliance section to export
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, pdf]
+            default: csv
+      responses:
+        "200":
+          description: Compliance export file
+          content:
+            text/csv:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: Invalid section or format
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "429":
+          description: Rate limited
+
+  # ============= Export PDF =============
+  /api/{tenant}/export-pdf:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportCasePdf
+      summary: Export approved cases as PDF
+      description: |
+        Generates a PDF report of the current user's approved cases by
+        calling the `generate-pdf` edge function. Rate limited.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: PDF report
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "403":
+          description: Tenant mismatch
+        "404":
+          description: No approved cases to export
+        "429":
+          description: Rate limited
+        "502":
+          description: Edge function error
+        "504":
+          description: PDF generation timed out
+
+  # ============= Reports: Duty Hours CSV =============
+  /api/{tenant}/reports/duty-hours.csv:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportDutyHoursCsv
+      summary: Export duty hours as CSV
+      description: |
+        Exports duty period records as a CSV file. Residents see their
+        own records only; higher roles see all records for the tenant.
+        Supports optional date filtering.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Query error
+        "401":
+          description: Unauthorized
+
+  # ============= Reports: Evaluations CSV =============
+  /api/{tenant}/reports/evaluations.csv:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportEvaluationsCsv
+      summary: Export faculty evaluations as CSV
+      description: |
+        Exports faculty evaluation records as CSV. Residents cannot
+        access this endpoint. Supports optional date filtering.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Query error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (residents cannot access)
+
+  # ============= Reports: Specialty CSV =============
+  /api/{tenant}/reports/specialty.csv:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportSpecialtyCsv
+      summary: Export specialty distribution as CSV
+      description: |
+        Exports case distribution by specialty as a CSV file.
+        Supports optional date filtering.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Query error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Invalid tenant
+
+  # ============= Reports: Status CSV =============
+  /api/{tenant}/reports/status.csv:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: exportStatusCsv
+      summary: Export case status distribution as CSV
+      description: |
+        Exports case counts by status (draft, pending, approved, rejected)
+        as a CSV file. Supports optional date filtering.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Query error
+        "401":
+          description: Unauthorized
+        "403":
+          description: Invalid tenant
+
+# ============================================================================
+# Paths — Supabase Edge Functions
+# ============================================================================
+  /functions/v1/ai-insights:
+    post:
+      operationId: aiInsights
+      summary: Generate AI-powered educational insights
+      description: |
+        Analyzes de-identified case entries to provide educational
+        insights for medical residents. Supports multiple AI providers
+        (OpenAI, Anthropic, OpenRouter, Azure, custom). Results are cached
+        in-memory for 5 minutes.
+
+        **Safety constraints:**
+        - All data must be de-identified (`is_deidentified: true`)
+        - The function blocks medical diagnosis, prescription, and prognosis
+        - A mandatory disclaimer is appended to every response
+        - Rate limited to 20 queries per minute per resident
+      tags: [Edge Functions, AI]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiInsightsRequest'
+      responses:
+        "200":
+          description: AI insight generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiInsightsResponse'
+        "400":
+          description: Invalid request or missing fields
+        "401":
+          description: Invalid or missing auth token
+        "403":
+          description: AI not enabled, quota exceeded, or PHI detected
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: AI provider error
+
+  /functions/v1/generate-pdf:
+    post:
+      operationId: generatePdf
+      summary: Generate PDF case report
+      description: |
+        Generates a PDF document containing approved case entries for a
+        resident. Uses pdf-lib to create a professional report with
+        case dates and template details. Rate limited to 10 PDFs per
+        minute per user.
+      tags: [Edge Functions, Reports]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePdfRequest'
+      responses:
+        "200":
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid request (missing fields, too many cases)
+        "401":
+          description: Unauthorized
+        "404":
+          description: No valid cases found
+        "429":
+          description: Too many PDF requests
+        "500":
+          description: Failed to generate PDF
+
+  /functions/v1/payment-webhook:
+    post:
+      operationId: paymentWebhook
+      summary: Stripe payment webhook handler
+      description: |
+        Processes incoming Stripe webhook events. Verifies signatures
+        using per-tenant webhook secrets. Handles:
+        - `checkout.session.completed` — activates subscriptions
+        - `customer.subscription.deleted` — marks subscriptions canceled
+        - `invoice.paid` — updates subscription periods
+
+        Supports mode isolation (test vs live events matched to
+        the correct gateway config). Deduplication via `stripe_events`
+        table.
+      tags: [Edge Functions, Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw Stripe webhook payload
+      responses:
+        "200":
+          description: Event received and processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripeEvent'
+        "400":
+          description: Missing signature or no active gateway config
+        "500":
+          description: Server configuration error
+
+  /functions/v1/dispatch-webhook:
+    post:
+      operationId: dispatchWebhook
+      summary: Dispatch tenant webhook events
+      description: |
+        Internal function invoked by database triggers. Looks up all
+        active webhooks for a tenant matching the event type, signs the
+        payload with HMAC-SHA256, and POSTs to each endpoint. Records
+        delivery results in `tenant_webhook_deliveries`.
+      tags: [Edge Functions, Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchWebhookRequest'
+      responses:
+        "200":
+          description: Events dispatched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchWebhookResponse'
+        "400":
+          description: Missing required fields
+        "405":
+          description: Method not allowed (POST required)
+        "500":
+          description: Server error
+
+  /functions/v1/sso-callback:
+    get:
+      operationId: ssoCallback
+      summary: SSO callback broker (SAML/OIDC)
+      description: |
+        Initiates SSO flow by redirecting the browser to the configured
+        IdP's authorize URL. Validates the tenant has an active SSO
+        config before redirecting. Supports SAML and OIDC protocols.
+      tags: [Edge Functions, Authentication]
+      parameters:
+        - name: tenant
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tenant slug
+        - name: protocol
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [saml, oidc]
+        - name: metadata
+          in: query
+          schema:
+            type: string
+        - name: discovery
+          in: query
+          schema:
+            type: string
+        - name: next
+          in: query
+          schema:
+            type: string
+          description: Post-auth redirect path
+      responses:
+        "302":
+          description: Redirect to IdP authorize URL
+        "400":
+          description: Missing or invalid parameters
+        "404":
+          description: Tenant or SSO config not found
+        "500":
+          description: Server misconfiguration
+
+  /functions/v1/scim:
+    get:
+      operationId: scimListUsers
+      summary: SCIM list users
+      description: |
+        Lists all users for the authenticated tenant. Returns SCIM 2.0
+        ListResponse format. Requires a valid SCIM bearer token.
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: SCIM user list
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimListResponse'
+        "401":
+          description: Invalid or missing bearer token
+        "500":
+          description: Server error
+    post:
+      operationId: scimCreateUser
+      summary: SCIM create user
+      description: |
+        Creates a new user via the `invite_user` RPC. Sends an invite
+        email and creates the profile. Requires a valid SCIM bearer token.
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              properties:
+                schemas:
+                  type: array
+                  items:
+                    type: string
+                userName:
+                  type: string
+                  format: email
+                name:
+                  type: object
+                  properties:
+                    givenName:
+                      type: string
+                    familyName:
+                      type: string
+                role:
+                  type: string
+                  enum: [resident, supervisor, director, admin, institution_admin]
+                active:
+                  type: boolean
+      responses:
+        "201":
+          description: User created
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
+  /functions/v1/scim/v2/Users:
+    get:
+      operationId: scimListUsersV2
+      summary: SCIM v2 list users
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: SCIM user list
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimListResponse'
+    post:
+      operationId: scimCreateUserV2
+      summary: SCIM v2 create user
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: User created
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+
+  /functions/v1/scim/v2/Users/{id}:
+    get:
+      operationId: scimGetUser
+      summary: SCIM get user by ID
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: SCIM user
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        "404":
+          description: User not found
+    patch:
+      operationId: scimPatchUser
+      summary: SCIM update user (partial)
+      description: |
+        Updates user role or active state. Accepts role mapping from
+        SCIM roles to E-Logbook roles.
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                active:
+                  type: boolean
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        "404":
+          description: User not found
+    delete:
+      operationId: scimDeleteUser
+      summary: SCIM soft-delete user
+      description: |
+        Soft-disables a user by setting `disabled_at`. Returns 204
+        on success.
+      tags: [Edge Functions, SCIM]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: User soft-disabled (no content)
+
+  /functions/v1/create-checkout:
+    post:
+      operationId: createCheckoutSession
+      summary: Create Stripe checkout session
+      description: |
+        Creates a Stripe Checkout Session for a subscription plan.
+        Requires director, institution_admin, or admin role. Rate
+        limited to 5 requests per minute per tenant.
+      tags: [Edge Functions, Billing]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutResponse'
+        "400":
+          description: Invalid request or gateway not configured
+        "401":
+          description: Unauthorized
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Plan not found
+        "429":
+          description: Rate limited
+        "500":
+          description: Failed to create session
+
+  /functions/v1/list-invoices:
+    get:
+      operationId: listInvoices
+      summary: List Stripe invoices
+      description: |
+        Lists recent invoices for a customer from Stripe.
+        Requires authentication with a valid JWT.
+      tags: [Edge Functions, Billing]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: customer_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stripe customer ID
+      responses:
+        "200":
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      description: Stripe invoice object
+        "400":
+          description: Missing customer_id
+        "401":
+          description: Unauthorized
+        "404":
+          description: User not found
+        "405":
+          description: Method not allowed
+
+# ============================================================================
+# Database RPCs (Supabase)
+# ============================================================================
+x-rpcs:
+  - name: approve_case
+    summary: Approve a case entry
+    description: |
+      Sets a case entry status to 'approved' and creates an approval
+      record. Requires supervisor, director, institution_admin, or admin
+      role. Tenant-scoped — caller must belong to the same tenant as the case.
+    params:
+      - name: p_entry_id
+        type: uuid
+        required: true
+        description: ID of the case entry to approve
+      - name: p_supervisor_id
+        type: uuid
+        required: true
+        description: Supervisor's auth user ID
+      - name: p_comment
+        type: text
+        required: false
+        default: null
+        description: Optional approval comment
+    returns:
+      type: jsonb
+      properties:
+        success:
+          type: boolean
+        entry_id:
+          type: uuid
+        approval_id:
+          type: uuid
+        status:
+          type: string
+          enum: [approved]
+        error:
+          type: string
+        code:
+          type: string
+    grant: authenticated
+
+  - name: reject_case
+    summary: Reject a case entry
+    description: |
+      Sets a case entry status to 'rejected' and creates a rejection
+      record. Requires supervisor, director, institution_admin, or admin
+      role. Tenant-scoped.
+    params:
+      - name: p_entry_id
+        type: uuid
+        required: true
+      - name: p_supervisor_id
+        type: uuid
+        required: true
+      - name: p_comment
+        type: text
+        required: false
+        default: null
+    returns:
+      type: jsonb
+      properties:
+        success:
+          type: boolean
+        entry_id:
+          type: uuid
+        approval_id:
+          type: uuid
+        status:
+          type: string
+          enum: [rejected]
+    grant: authenticated
+
+  - name: get_case_stats
+    summary: Get case statistics
+    description: |
+      Returns aggregated case statistics (counts by status, specialty,
+      month) for a tenant. Optionally filtered by resident. Role-aware:
+      residents can only query their own stats.
+    params:
+      - name: p_tenant_id
+        type: uuid
+        required: true
+        description: Tenant ID
+      - name: p_resident_id
+        type: uuid
+        required: false
+        default: null
+        description: Optional resident filter
+    returns:
+      type: jsonb
+      properties:
+        pending:
+          type: integer
+        approved:
+          type: integer
+        rejected:
+          type: integer
+        draft:
+          type: integer
+        total:
+          type: integer
+        error:
+          type: string
+    grant: authenticated
+
+  - name: check_rate_limit
+    summary: Atomic rate-limit check and increment
+    description: |
+      Atomically checks and increments a rate-limit counter. Creates or
+      resets the window if expired. Used by API routes and edge functions.
+    params:
+      - name: p_key
+        type: text
+        required: true
+        description: Rate limit key (e.g., `action:tenant_id` or `pdf:user_id`)
+      - name: p_max
+        type: integer
+        required: false
+        default: 30
+        description: Maximum requests in the window
+      - name: p_window_seconds
+        type: integer
+        required: false
+        default: 60
+        description: Time window in seconds
+    returns:
+      type: jsonb
+      properties:
+        allowed:
+          type: boolean
+        count:
+          type: integer
+        limit:
+          type: integer
+        retry_after:
+          type: integer
+    grant: authenticated, service_role
+
+  - name: consume_ai_quota
+    summary: Atomic AI quota consumption
+    description: |
+      Atomically checks and increments AI query quota for a resident.
+      Prevents race conditions where two concurrent requests both pass
+      the quota check. Only the function can mutate `quota_used`.
+    params:
+      - name: p_resident_id
+        type: uuid
+        required: true
+      - name: p_count
+        type: integer
+        required: false
+        default: 1
+    returns:
+      type: jsonb
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        quota_used:
+          type: integer
+        quota_limit:
+          type: integer
+    grant: authenticated
+
+  - name: grant_ai_quota
+    summary: Grant AI quota (admin only)
+    description: |
+      Resets or top-ups AI query quota for a resident. Only director,
+      institution_admin, or admin can call this.
+    params:
+      - name: p_resident_id
+        type: uuid
+        required: true
+      - name: p_new_limit
+        type: integer
+        required: true
+      - name: p_reset
+        type: boolean
+        required: false
+        default: true
+        description: Whether to reset used count to 0
+    returns:
+      type: jsonb
+    grant: authenticated
+
+  - name: store_tenant_webhook
+    summary: Create or update a webhook with encrypted secret
+    description: |
+      Inserts or updates a tenant webhook, encrypting the secret via
+      pgp_sym_encrypt. Requires institution_admin or admin role.
+      Max 10 webhooks per tenant.
+    params:
+      - name: p_url
+        type: text
+        required: true
+      - name: p_events
+        type: text[]
+        required: true
+      - name: p_secret
+        type: text
+        required: true
+      - name: p_description
+        type: text
+        required: false
+        default: null
+      - name: p_is_active
+        type: boolean
+        required: false
+        default: true
+      - name: p_webhook_id
+        type: uuid
+        required: false
+        default: null
+        description: Set to update an existing webhook
+    returns:
+      type: jsonb
+    grant: authenticated
+
+  - name: hash_patient_mrn
+    summary: Hash a patient MRN
+    description: |
+      Returns a SHA-256 hash of the patient MRN using a per-tenant salt.
+      Used to store de-identified patient references.
+    params:
+      - name: p_mrn
+        type: text
+        required: true
+      - name: p_tenant_id
+        type: uuid
+        required: true
+    returns:
+      type: text
+      description: Hex-encoded SHA-256 hash
+    grant: authenticated
+
+  - name: calculate_age_at_procedure
+    summary: Calculate patient age at procedure date
+    description: |
+      Computes the patient's age in whole years at the date of a procedure.
+    params:
+      - name: p_dob
+        type: date
+        required: true
+      - name: p_procedure_date
+        type: date
+        required: true
+    returns:
+      type: integer
+    grant: authenticated
+
+  - name: get_tenant_id
+    summary: Get current tenant ID from JWT
+    description: |
+      Returns the tenant_id from the caller's JWT app_metadata. Used
+      extensively in RLS policies and other RPCs.
+    returns:
+      type: uuid
+    grant: authenticated
+
+  - name: get_user_role
+    summary: Get current user role from JWT
+    description: |
+      Returns the user_role from the caller's JWT app_metadata.
+    returns:
+      type: text
+    grant: authenticated
+
+  - name: hash_scim_token
+    summary: Hash a SCIM bearer token
+    description: |
+      Returns SHA-256 hash of a SCIM provisioning token for secure storage.
+    params:
+      - name: p_token
+        type: text
+        required: true
+    returns:
+      type: text
+    grant: service_role
+
+  - name: decrypt_with_version
+    summary: Decrypt a value with a specific key version
+    params:
+      - name: p_encrypted
+        type: bytea
+        required: true
+      - name: p_version
+        type: integer
+        required: true
+    returns:
+      type: text
+    grant: service_role
+
+  - name: rotate_encryption_key
+    summary: Rotate encryption key (re-encrypt all values)
+    params:
+      - name: p_old_version
+        type: integer
+        required: true
+      - name: p_new_version
+        type: integer
+        required: true
+    returns:
+      type: jsonb
+    grant: service_role
+
+  - name: rotate_mrn_salt
+    summary: Rotate MRN hashing salt for a tenant
+    params:
+      - name: p_tenant_id
+        type: uuid
+        required: true
+    returns:
+      type: jsonb
+    grant: authenticated
+
+x-database-triggers:
+  - name: enforce_case_status_transition
+    summary: Enforce valid case status transitions
+    description: |
+      BEFORE UPDATE trigger on `case_entries` that ensures only valid
+      status transitions are allowed (e.g., draft → pending, pending →
+      approved/rejected).
+  - name: block_lapsed_tenant_submit
+    summary: Block case submission for lapsed subscriptions
+    description: |
+      BEFORE INSERT trigger on `case_entries` that prevents residents
+      in institutions with lapsed subscriptions from submitting cases.
+  - name: reject_audit_mutation
+    summary: Prevent direct mutation of audit_logs
+    description: |
+      BEFORE trigger that prevents direct INSERT/UPDATE/DELETE on the
+      `audit_logs` table. Audit entries are append-only.
+  - name: handle_new_user
+    summary: Create profile on user signup
+    description: |
+      AFTER INSERT trigger on `auth.users` that creates a corresponding
+      profile entry in the `profiles` table.
+  - name: audit_config_change
+    summary: Audit config table changes
+    description: |
+      AFTER trigger on configuration tables that logs changes to the
+      audit trail.

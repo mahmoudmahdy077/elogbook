@@ -26,11 +26,11 @@
 
 ## 🟡 P2 — Enterprise Features
 
-- [ ] **P2.1** SSO integration (SAML/OIDC) — currently has migration scaffolding, needs implementation
+- [x] **P2.1** SSO integration (SAML/OIDC) — admin UI + login wiring + API
 - [ ] **P2.2** SCIM provisioning — migration exists, needs endpoint implementation
-- [ ] **P2.3** Audit log export — CSV/PDF with date range filters
-- [ ] **P2.4** Compliance report generation — HIPAA/GDPR audit report auto-generation
 - [x] **P2.3** Audit log export — CSV/PDF with date range filters
+- [x] **P2.4** Compliance report generation — HIPAA/GDPR data access, PHI inventory, consent tracking, export
+- [ ] **P2.5** Multi-language i18n — Arabic, French, Spanish (critical for MENA market)
 - [x] **P2.6** Advanced analytics dashboard — case volume trends, specialty breakdown, supervisor workload
 - [x] **P2.7** Webhook system — tenant-configurable webhooks for case events
 - [ ] **P2.8** API documentation — OpenAPI/Swagger spec for all endpoints

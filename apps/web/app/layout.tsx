@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
 import { Outfit, Inter, Geist_Mono } from 'next/font/google';
 import { APP_NAME } from '@elogbook/shared';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -28,9 +30,11 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
   const nonce = headersList.get('x-nonce') ?? '';
+  const locale = await getLocale();
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <html lang="en" className={`${outfit.variable} ${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang={locale} dir={dir} className={`${outfit.variable} ${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         {nonce ? (
           <script nonce={nonce}
@@ -45,9 +49,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to content
         </a>
         <ErrorBoundary>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <NextIntlClientProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </NextIntlClientProvider>
         </ErrorBoundary>
       </body>
     </html>
