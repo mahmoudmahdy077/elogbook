@@ -5,7 +5,10 @@ import { NextIntlClientProvider } from 'next-intl';
 import { Outfit, Inter, Geist_Mono } from 'next/font/google';
 import { APP_NAME } from '@elogbook/shared';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import InstallPrompt from '@/components/InstallPrompt';
 import { ToastProvider } from '@/components/Toast';
+import { KeyboardShortcutsProvider } from '@/lib/shortcuts';
+import ShortcutsRenderer from '@/components/ShortcutsRenderer';
 import './globals.css';
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-heading' });
@@ -36,6 +39,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={dir} className={`${outfit.variable} ${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="E-Logbook" />
         {nonce ? (
           <script nonce={nonce}
             dangerouslySetInnerHTML={{
@@ -43,6 +50,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             }}
           />
         ) : null}
+        {nonce ? (
+          <script nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){console.log('SW registered:',r.scope)}).catch(function(e){console.warn('SW registration failed:',e)})})}`,
+            }}
+          />
+        ) : (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){console.log('SW registered:',r.scope)}).catch(function(e){console.warn('SW registration failed:',e)})})}`,
+            }}
+          />
+        )}
       </head>
       <body suppressHydrationWarning>
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg">
@@ -51,8 +71,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ErrorBoundary>
           <NextIntlClientProvider>
             <ToastProvider>
-              {children}
+              <KeyboardShortcutsProvider>
+                {children}
+                <ShortcutsRenderer />
+              </KeyboardShortcutsProvider>
             </ToastProvider>
+            <InstallPrompt />
           </NextIntlClientProvider>
         </ErrorBoundary>
       </body>
