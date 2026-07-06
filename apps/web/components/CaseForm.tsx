@@ -434,7 +434,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-black tracking-[-0.03em] font-sans mb-1">
+            <h3 className="text-xl font-semibold text-text-primary tracking-[-0.03em] font-sans mb-1">
               Case Logged Successfully
             </h3>
             <p className="text-sm text-[#8E8E93]">
@@ -445,7 +445,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             {submittedCaseId && (
               <a
                 href={`/${tenantSlug}/cases/${submittedCaseId}`}
-                className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors"
+                className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               >
                 View Case
               </a>
@@ -459,7 +459,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
           </div>
           <p className="text-xs text-[#8E8E93] pt-2">
             Press{' '}
-            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 border border-black/10 text-xs text-[#3C3C43] font-mono">
+            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-xs text-[#3C3C43] dark:text-text-secondary font-mono">
               Enter
             </kbd>{' '}
             to log another case
@@ -522,12 +522,12 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
           </AnimatePresence>
 
           {/* Navigation */}
-          <div className="flex justify-between mt-6 pt-4 border-t border-black/5">
+          <div className="flex justify-between mt-6 pt-4 border-t border-border">
             <button
               type="button"
               onClick={handleBack}
               disabled={step === 0}
-              className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Back
             </button>
@@ -537,7 +537,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={savingDraft}
-                  className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors disabled:opacity-50"
+                  className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
                   {savingDraft ? 'Saving...' : 'Save Draft'}
                 </button>

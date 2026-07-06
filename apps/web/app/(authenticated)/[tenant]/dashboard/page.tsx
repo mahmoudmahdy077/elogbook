@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DashboardContent from '@/components/DashboardContent';
+import CardSkeleton from '@/components/CardSkeleton';
 
 type CaseStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
@@ -204,26 +206,50 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   }
 
   return (
-    <DashboardContent
-      data={{
-        profile: {
-          id: profile.id,
-          role: profile.role,
-          full_name: profile.full_name,
-          specialty: profile.specialty,
-          tenant_id: profile.tenant_id,
-        },
-        tenantSlug,
-        stats,
-        recentCases,
-        goals,
-        residents,
-        pendingApprovals,
-        totalResidents,
-        tenantType: tenant.tenant_type as 'individual' | 'institution',
-        residentViolations: residentViolations.data ?? [],
-        directorViolations: directorViolations.data ?? [],
-      }}
-    />
+    <Suspense
+      fallback={
+        <div className="space-y-7 p-6">
+          {/* KPI rings skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+          {/* Main content skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+          {/* Quick links skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <DashboardContent
+        data={{
+          profile: {
+            id: profile.id,
+            role: profile.role,
+            full_name: profile.full_name,
+            specialty: profile.specialty,
+            tenant_id: profile.tenant_id,
+          },
+          tenantSlug,
+          stats,
+          recentCases,
+          goals,
+          residents,
+          pendingApprovals,
+          totalResidents,
+          tenantType: tenant.tenant_type as 'individual' | 'institution',
+          residentViolations: residentViolations.data ?? [],
+          directorViolations: directorViolations.data ?? [],
+        }}
+      />
+    </Suspense>
   );
 }

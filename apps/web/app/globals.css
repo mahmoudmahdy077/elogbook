@@ -3,6 +3,9 @@
 @source "../../node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}";
 @source "../../../packages/shared/src/**/*.{js,ts,jsx,tsx}";
 
+/* Enable class-based dark mode — activated when .dark is on <html> */
+@variant dark (&:where(.dark, .dark *));
+
 /* === Apple Health-Inspired Design Tokens ===
    Light theme by default. Frosted glass surfaces.
    Zero glow effects, zero drop shadows.
@@ -220,11 +223,69 @@ h1, h2, h3 {
   --color-text-muted: rgba(255, 255, 255, 0.45);
   --color-border: rgba(255, 255, 255, 0.10);
   --color-border-active: rgba(255, 255, 255, 0.18);
+  --color-border-glow: rgba(0, 122, 255, 0.30);
   --color-neutral-light: rgba(255, 255, 255, 0.60);
   --color-neutral-dark: #1C1C1E;
   --color-neutral-darker: #2C2C2E;
+  --color-primary-glow: rgba(0, 122, 255, 0.15);
+  --color-secondary-glow: rgba(88, 86, 214, 0.15);
+  --color-amber-glow: rgba(255, 149, 0, 0.12);
+  --color-emerald-glow: rgba(52, 199, 89, 0.12);
+  --color-crimson-glow: rgba(255, 59, 48, 0.12);
+  --color-divider: rgba(255, 255, 255, 0.08);
   --glass-bg: rgba(28, 28, 30, 0.72);
   --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Dark mode badge adjustments */
+.dark .badge-draft {
+  background: rgba(142, 142, 147, 0.18);
+  color: rgba(255, 255, 255, 0.60);
+  border-color: rgba(142, 142, 147, 0.25);
+}
+
+.dark .badge-pending {
+  background: rgba(255, 149, 0, 0.18);
+  color: #FF9F0A;
+  border-color: rgba(255, 149, 0, 0.28);
+}
+
+.dark .badge-approved {
+  background: rgba(52, 199, 89, 0.18);
+  color: #30D158;
+  border-color: rgba(52, 199, 89, 0.28);
+}
+
+.dark .badge-rejected {
+  background: rgba(255, 59, 48, 0.18);
+  color: #FF453A;
+  border-color: rgba(255, 59, 48, 0.28);
+}
+
+/* Dark mode banner adjustments */
+.dark .warning-banner {
+  background: rgba(255, 149, 0, 0.12);
+  border-color: rgba(255, 149, 0, 0.25);
+  color: #FF9F0A;
+}
+
+.dark .danger-banner {
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.25);
+  color: #FF453A;
+}
+
+/* Dark mode panel adjustments */
+.dark .panel {
+  background: var(--color-surface-solid);
+  border-color: var(--color-border);
+}
+
+/* Dark mode kbd element */
+.dark kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.70);
 }
 
 @media (prefers-reduced-motion: reduce) {

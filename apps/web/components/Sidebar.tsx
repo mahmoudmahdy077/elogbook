@@ -4,6 +4,7 @@ import { APP_NAME } from '@elogbook/shared';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import ThemeToggle from '@/components/ThemeToggle';
 
 type NavLink = {
   href: string;
@@ -89,7 +90,7 @@ export default function Sidebar({
           {!collapsed && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="ml-auto p-1.5 rounded-lg hover:bg-black/5 transition-colors text-text-muted"
+              className={`ml-auto p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-text-muted`}
               aria-label="Collapse sidebar"
             >
               <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -120,7 +121,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5') +
+                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -150,7 +151,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5') +
+                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -183,7 +184,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5') +
+                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -210,9 +211,10 @@ export default function Sidebar({
 
           {collapsed ? (
             <>
+              <ThemeToggle />
               <button
                 onClick={() => setCollapsed(false)}
-                className="p-2 rounded-lg hover:bg-black/5 transition-colors text-text-muted"
+                className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-text-muted"
                 aria-label="Expand sidebar"
               >
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -233,7 +235,9 @@ export default function Sidebar({
               </form>
             </>
           ) : (
-            <form action="/auth/signout" method="post">
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <form action="/auth/signout" method="post" className="flex-1">
               <button
                 type="submit"
                 className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
@@ -241,6 +245,7 @@ export default function Sidebar({
                 Sign Out
               </button>
             </form>
+            </div>
           )}
         </div>
       </aside>

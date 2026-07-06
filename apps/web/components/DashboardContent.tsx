@@ -83,7 +83,7 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: delay * 0.001, ease: 'easeOut' }}
-      className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5"
+      className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5"
     >
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" role="img" aria-label={`${label}: ${value} of ${max}`}>
@@ -102,7 +102,7 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xl font-semibold text-black tracking-tight font-sans">{animatedValue}</span>
+          <span className="text-xl font-semibold text-text-primary tracking-tight font-sans">{animatedValue}</span>
         </div>
       </div>
       <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">{label}</span>
@@ -120,7 +120,7 @@ function ProgressBar({ current, target, label }: { current: number; target: numb
         <span className="text-[#3C3C43] font-medium truncate">{label}</span>
         <span className="text-[#8E8E93] font-medium">{current} of {target}</span>
       </div>
-      <div className="h-1 rounded-full bg-black/5 overflow-hidden">
+      <div className="h-1 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
         <motion.div
           className="h-full rounded-full bg-primary"
           initial={{ width: 0 }}
@@ -159,7 +159,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         className="flex items-start justify-between"
       >
         <div>
-          <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">
+          <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em] font-sans">
             Welcome, {profile.full_name.split(' ')[0]}
           </h1>
           <p className="text-[0.9rem] text-[#8E8E93] mt-1 font-normal">
@@ -168,7 +168,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         </div>
         {role === 'resident' && (
           isReadOnly ? (
-            <span className="px-4 py-2.5 rounded-full bg-black/5 text-[#8E8E93] text-sm font-medium cursor-not-allowed" aria-disabled="true">
+            <span className="px-4 py-2.5 rounded-full bg-black/5 dark:bg-white/5 text-[#8E8E93] text-sm font-medium cursor-not-allowed" aria-disabled="true">
               Logging disabled — renew subscription
             </span>
           ) : (
@@ -200,7 +200,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             <svg className="w-5 h-5 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M8.485 2.495a.75.75 0 01.683.405l6.5 12.5a.75.75 0 01-1.268.76l-5.5-10.642-5.5 10.642a.75.75 0 01-1.268-.76l6.5-12.5a.75.75 0 01.683-.405z" clipRule="evenodd" />
             </svg>
-            <h2 className="font-semibold text-black text-sm">Duty Hour Violations</h2>
+            <h2 className="font-semibold text-text-primary text-sm">Duty Hour Violations</h2>
           </div>
           {profile.role === 'resident' && (
             <div className="space-y-1">
@@ -230,10 +230,10 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.2 }}
-          className="bg-white rounded-2xl border border-black/5 p-5"
+          className="bg-surface-solid rounded-2xl border border-border p-5"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Recent Cases</h2>
+            <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Recent Cases</h2>
             {recentCases.length > 0 && (
               <Link href={`/${tenantSlug}/cases`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                 View All
@@ -257,10 +257,10 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                 <Link
                   key={c.id}
                   href={`/${tenantSlug}/cases/${c.id}`}
-                  className={`flex items-center justify-between py-2.5 -mx-5 px-5 hover:bg-primary/5 transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}
+                  className={`flex items-center justify-between py-2.5 -mx-5 px-5 hover:bg-primary/5 transition-colors ${i > 0 ? 'border-t border-border' : ''}`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-black truncate">{c.template_specialty} — {c.template_name}</p>
+                    <p className="text-sm font-medium text-text-primary truncate">{c.template_specialty} — {c.template_name}</p>
                     <p className="text-xs text-[#8E8E93] mt-0.5">{formatRelativeDate(c.case_date)}</p>
                   </div>
                   <StatusBadge status={c.status} size="sm" />
@@ -275,13 +275,13 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.25 }}
-          className="bg-white rounded-2xl border border-black/5 p-5"
+          className="bg-surface-solid rounded-2xl border border-border p-5"
         >
           {/* Resident: Goal Progress */}
           {role === 'resident' && (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Goal Progress</h2>
+                <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Goal Progress</h2>
                 {goals.length > 0 && (
                   <Link href={`/${tenantSlug}/goals`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                     All Goals
@@ -308,7 +308,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {(role === 'supervisor' || role === 'director' || role === 'institution_admin' || role === 'admin') && (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Pending Approvals</h2>
+                <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Pending Approvals</h2>
                 {pendingApprovals > 0 && (
                   <Link href={`/${tenantSlug}/approvals`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                     Review All
@@ -321,7 +321,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,149,0,0.08)]">
                   <span className="text-2xl font-semibold text-[#FF9500] tracking-tight">{pendingApprovals}</span>
                   <div>
-                    <p className="text-sm font-medium text-black">Cases awaiting review</p>
+                    <p className="text-sm font-medium text-text-primary">Cases awaiting review</p>
                     <p className="text-xs text-[#8E8E93] mt-0.5">Review and approve or reject</p>
                   </div>
                 </div>
@@ -331,16 +331,16 @@ export default function Dashboard({ data }: { data: DashboardData }) {
 
           {/* Director+/Admin: Resident Overview */}
           {(role === 'director' || role === 'institution_admin' || role === 'admin') && tenantType === 'institution' && (
-            <div className="mt-5 pt-4 border-t border-black/5">
+            <div className="mt-5 pt-4 border-t border-border">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-black">Resident Overview</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Resident Overview</h3>
                 <span className="text-xs text-[#8E8E93]">{totalResidents} residents</span>
               </div>
               <div className="space-y-1 max-h-44 overflow-y-auto">
                 {residents.slice(0, 8).map((r) => (
-                  <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-1 rounded-lg hover:bg-black/3">
+                  <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-1 rounded-lg hover:bg-black/3 dark:hover:bg-white/3">
                     <div className="truncate flex-1">
-                      <span className="font-medium text-black">{r.full_name}</span>
+                      <span className="font-medium text-text-primary">{r.full_name}</span>
                       <span className="text-[#8E8E93] ml-1">{r.specialty || ''}</span>
                     </div>
                     <span className="text-[#8E8E93] font-medium">{r.approved}/{r.total_cases}</span>
@@ -359,27 +359,27 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.35 }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
-        <Link href={`/${tenantSlug}/cases`} className="bg-white rounded-2xl border border-black/5 p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
+        <Link href={`/${tenantSlug}/cases`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
           <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5z"/>
           </svg>
           <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Cases</span>
         </Link>
         {role !== 'resident' && (
-          <Link href={`/${tenantSlug}/approvals`} className="bg-white rounded-2xl border border-black/5 p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
+          <Link href={`/${tenantSlug}/approvals`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
             <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"/>
             </svg>
             <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Approvals</span>
           </Link>
         )}
-        <Link href={`/${tenantSlug}/goals`} className="bg-white rounded-2xl border border-black/5 p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
+        <Link href={`/${tenantSlug}/goals`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
           <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/>
           </svg>
           <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Goals</span>
         </Link>
-        <Link href={`/${tenantSlug}/reports`} className="bg-white rounded-2xl border border-black/5 p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
+        <Link href={`/${tenantSlug}/reports`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
           <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M15.5 2A1.5 1.5 0 0014 3.5v13a1.5 1.5 0 001.5 1.5h1a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0016.5 2h-1zM9.5 6A1.5 1.5 0 008 7.5v9A1.5 1.5 0 009.5 18h1a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0010.5 6h-1zM3.5 10A1.5 1.5 0 002 11.5v5A1.5 1.5 0 003.5 18h1A1.5 1.5 0 006 16.5v-5A1.5 1.5 0 004.5 10h-1z"/>
           </svg>

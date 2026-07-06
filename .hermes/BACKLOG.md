@@ -7,19 +7,22 @@
 - [x] **P0.1** Finish UI redesign across all screens — ApprovalsDashboard, CaseForm, CaseList, AIInsights, Reports, Billing, Admin panels (match Apple Health prototype)
 - [x] **P0.2** Redesign login page — Apple Health aesthetic, frosted glass, blue accent
 - [x] **P0.3** Fix mobile duplicate components — delete local ProgressRing, StatusBadge, GlassPanel; switch all imports to `@elogbook/shared`
-- [ ] **P0.4** Light theme is default — verify dark mode toggle still works, test all screens in both modes
-- [ ] **P0.5** Fix known issues from PROJECT_ANALYSIS.md — HeroUI GlassPanel web import, missing Suspense boundaries in dashboard
+- [x] **P0.4** Light theme is default — verify dark mode toggle still works, test all screens in both modes
+- [x] **P0.5** Fix known issues from PROJECT_ANALYSIS.md — HeroUI GlassPanel web import, missing Suspense boundaries in dashboard
 
 ## 🟠 P1 — Production Readiness
 
-- [ ] **P1.1** Add rate limiting to approve/reject RPCs (currently browser-callable, no rate limit)
-- [ ] **P1.2** Add CSRF protection to all mutation endpoints
-- [ ] **P1.3** Tenant-slug URL validation on submit route
-- [ ] **P1.4** API response time optimization — add missing indexes, query plan analysis
-- [ ] **P1.5** Bundle size optimization — lazy load heavy components, code splitting
-- [ ] **P1.6** Image optimization — next/image for all static assets
-- [ ] **P1.7** Error boundary coverage — ensure every route has proper error boundaries
-- [ ] **P1.8** Loading states — skeleton screens for every data-fetching route
+- [ ] **P1.1** Fix `duty_periods` RLS — `WITH CHECK (true)` bypasses tenant isolation for write operations (see RLS_AUDIT.md)
+- [ ] **P1.2** Fix `duty_weekly_violations` view — add `security_invoker = true` to enforce RLS on base tables (see RLS_AUDIT.md)
+- [ ] **P1.3** Fix `faculty_evaluations` RLS — asymmetric USING/WITH CHECK allows cross-tenant resident assignment (see RLS_AUDIT.md)
+- [ ] **P1.4** Add rate limiting to approve/reject RPCs (currently browser-callable, no rate limit)
+- [ ] **P1.5** Add CSRF protection to all mutation endpoints
+- [ ] **P1.6** Tenant-slug URL validation on submit route
+- [ ] **P1.7** API response time optimization — add missing indexes, query plan analysis
+- [ ] **P1.8** Bundle size optimization — lazy load heavy components, code splitting
+- [ ] **P1.9** Image optimization — next/image for all static assets
+- [ ] **P1.10** Error boundary coverage — ensure every route has proper error boundaries
+- [ ] **P1.11** Loading states — skeleton screens for every data-fetching route
 
 ## 🟡 P2 — Enterprise Features
 
