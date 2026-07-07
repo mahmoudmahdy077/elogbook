@@ -84,8 +84,12 @@
       ]
     ],
     "extra": {
+      "eas": {
+        "projectId": "<your-eas-project-id>"
+      },
       "supabaseUrl": "",
-      "supabaseAnonKey": ""
+      "supabaseAnonKey": "",
+      "sentryDsn": ""
     },
     "runtimeVersion": {
       "policy": "appVersion"

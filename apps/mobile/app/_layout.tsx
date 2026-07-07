@@ -1,8 +1,18 @@
 import '../global.css';
 
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ToastAndroid, Platform, Alert, Linking } from 'react-native';
-import { Stack } from 'expo-router';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ToastAndroid,
+  Platform,
+  Alert,
+  Linking,
+  AppState,
+  type AppStateStatus,
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -14,6 +24,12 @@ import {
   registerNotificationHandler,
   handleColdStartNotification,
 } from '../lib/notification-handler';
+import { useAuthGuard } from '../lib/auth-guard';
+import {
+  getEffectiveSkipWindow,
+  clearBiometricAuthCache,
+} from '../lib/biometric-auth';
+import { BiometricGate } from '../components/BiometricGate';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -93,6 +109,65 @@ export default function RootLayout() {
     'GeistMono-Medium': require('../assets/fonts/GeistMono-Medium.ttf'),
   });
 
+  // ── Auth state ────────────────────────────────────────────────────────────
+  const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
+  const router = useRouter();
+
+  // ── Biometric gate ─────────────────────────────────────────────────────────
+  const [showBiometricGate, setShowBiometricGate] = useState(false);
+  const lastBackgroundTime = useRef<number | null>(null);
+  const skipWindowRef = useRef(30);
+
+  // Load the effective skip window once on mount
+  useEffect(() => {
+    (async () => {
+      skipWindowRef.current = await getEffectiveSkipWindow();
+    })();
+  }, []);
+
+  // AppState listener: detect foreground transitions and trigger biometric gate
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        lastBackgroundTime.current = Date.now();
+      } else if (nextState === 'active') {
+        // App came to foreground — check if gate is needed
+        const bgTime = lastBackgroundTime.current;
+        lastBackgroundTime.current = null;
+
+        if (bgTime !== null && isAuthenticated) {
+          const elapsed = (Date.now() - bgTime) / 1000;
+          if (elapsed >= skipWindowRef.current) {
+            // Clear the in-memory session cache so the gate re-prompts
+            clearBiometricAuthCache();
+            setShowBiometricGate(true);
+          }
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
+  }, [isAuthenticated]);
+
+  // When auth state resolves to unauthenticated, hide the gate
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setShowBiometricGate(false);
+    }
+  }, [authLoading, isAuthenticated]);
+
+  // ── Gate callbacks ─────────────────────────────────────────────────────────
+  const handleBiometricAuthed = useCallback(() => {
+    setShowBiometricGate(false);
+  }, []);
+
+  const handleBiometricFallback = useCallback(() => {
+    setShowBiometricGate(false);
+    // Navigate to login screen for full passcode auth
+    router.replace('/login');
+  }, [router]);
+
   // Initialize sync service with auth state
   useSyncInit();
 
@@ -127,6 +202,14 @@ export default function RootLayout() {
             <Stack.Screen name="login" />
             <Stack.Screen name="(tabs)" />
           </Stack>
+          {/* Biometric re-auth gate overlays the entire app */}
+          {!authLoading && (
+            <BiometricGate
+              visible={showBiometricGate}
+              onAuthenticated={handleBiometricAuthed}
+              onFallbackToPasscode={handleBiometricFallback}
+            />
+          )}
         </ScreenshotAwareLayout>
       </SafeAreaProvider>
     </ErrorBoundary>

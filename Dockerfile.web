@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1
+# Build context: monorepo root
+# Build:  docker build -t elogbook-web -f Dockerfile.web .
+# Run:    docker run -p 3000:3000 --env-file .env elogbook-web
+
+# ─── Stage 1: Base ────────────────────────────────────────────
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# ─── Stage 2: Dependencies ────────────────────────────────────
+FROM base AS deps
+WORKDIR /app
+
+# Copy dependency manifests (leveraging Docker cache)
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/supabase/package.json ./packages/supabase/ 2>/dev/null || true
+
+RUN pnpm install --frozen-lockfile
+
+# ─── Stage 3: Build ───────────────────────────────────────────
+FROM base AS builder
+WORKDIR /app
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules 2>/dev/null || true
+COPY --from=deps /app/packages/supabase/node_modules ./packages/supabase/node_modules 2>/dev/null || true
+
+# Copy source code
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages ./packages
+COPY apps/web ./apps/web
+
+# Build the web application (Next.js standalone output)
+RUN pnpm --filter @elogbook/web build
+
+# ─── Stage 4: Production runner ───────────────────────────────
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Use non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy built artifacts from builder
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+USER nextjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "apps/web/server.js"]
