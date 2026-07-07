@@ -29,8 +29,8 @@ export async function sendPushNotification(
   }
 
   const messages = tokens
-    .filter((t) => t.token?.startsWith('ExponentPushToken'))
-    .map((t) => ({
+    .filter((t: { token?: string }) => t.token?.startsWith('ExponentPushToken'))
+    .map((t: { token?: string }) => ({
       to: t.token,
       sound: 'default' as const,
       title,
