@@ -50,16 +50,16 @@
 - [ ] **P4.1** Sync all mobile screens with new Apple Health design
 - [ ] **P4.2** Offline sync reliability — test WatermelonDB→Supabase sync edge cases
 - [ ] **P4.3** Mobile deep linking — open case from notification
-- [ ] **P4.4** Biometric auth — FaceID/TouchID for quick re-auth
+- [x] **P4.4** Biometric auth — FaceID/TouchID gate with SecureStore, AppState integration
 - [ ] **P4.5** Mobile widget — today's case count on home screen
 
 ## ⚪ P5 — DevOps & Infra
 
-- [ ] **P5.1** CI/CD pipeline — GitHub Actions: typecheck, lint, test, build on every PR
+- [x] **P5.1** CI/CD pipeline — GitHub Actions: typecheck, lint, test, build on every PR
 - [ ] **P5.2** Staging environment — deploy previews for PRs
-- [ ] **P5.3** Production deployment — Vercel (web) + EAS (mobile) setup
+- [x] **P5.3** Production deployment — Vercel (web) + EAS (mobile) setup
 - [ ] **P5.4** Monitoring — Sentry error tracking, performance monitoring
-- [ ] **P5.5** Database backups — automated Supabase backup schedule
+- [x] **P5.5** Database backups — automated Supabase backup schedule
 - [ ] **P5.6** Load testing — verify 1000+ concurrent users
 
 ---
