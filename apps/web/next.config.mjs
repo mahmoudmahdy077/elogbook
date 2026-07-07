@@ -13,6 +13,8 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   transpilePackages: ['@elogbook/shared'],
+  // Use webpack instead of Turbopack for Vercel compatibility
+  turbopack: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
