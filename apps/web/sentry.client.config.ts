@@ -31,6 +31,8 @@ if (SENTRY_DSN) {
     tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
     replaysSessionSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE ?? '0.1'),
     replaysOnErrorSampleRate: 1.0,
+    // P5.4: Auto-instrument page loads, navigation, and client-side interactions
+    integrations: [Sentry.browserTracingIntegration()],
     // PHI: never send patient_mrn, patient_dob, patient_hash, field_values
     beforeSendTransaction(event) {
       if (event.request?.cookies) delete event.request.cookies;

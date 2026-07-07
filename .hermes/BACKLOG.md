@@ -49,9 +49,9 @@
 
 - [ ] **P4.1** Sync all mobile screens with new Apple Health design
 - [ ] **P4.2** Offline sync reliability — test WatermelonDB→Supabase sync edge cases
-- [ ] **P4.3** Mobile deep linking — open case from notification
+- [x] **P4.3** Mobile deep linking — open case from notification
 - [x] **P4.4** Biometric auth — FaceID/TouchID gate with SecureStore, AppState integration
-- [ ] **P4.5** Mobile widget — today's case count on home screen
+- [x] **P4.5** Mobile widget — today's case count on home screen
 
 ## ⚪ P5 — DevOps & Infra
 

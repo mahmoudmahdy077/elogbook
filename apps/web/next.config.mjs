@@ -98,6 +98,8 @@ const sentryBuildOptions = {
   authToken: process.env.SENTRY_AUTH_TOKEN,
   // Suppress Sentry build logs in CI unless debugging
   silent: process.env.SENTRY_SILENT !== 'false',
+  // Suppress Sentry client-side logger output in production
+  disableLogger: true,
   telemetry: false,
   // P5.4: Source map configuration
   widenClientFileUpload: true,
