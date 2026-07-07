@@ -31,3 +31,4 @@ coverage/
 # Supabase CLI local state (project ref, pooler URLs, etc.)
 supabase/.temp/
 *.temp/
+.vercel
