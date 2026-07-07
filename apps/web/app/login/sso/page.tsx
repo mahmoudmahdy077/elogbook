@@ -37,18 +37,18 @@ export default async function SsoPage({
 
   if (!tenantSlug) {
     return (
-      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-6">
-            <h1 className="text-xl sm:text-2xl font-heading font-bold text-text-primary">{APP_NAME}</h1>
-            <p className="text-sm text-text-muted mt-1">Sign in with SSO</p>
+            <h1 className="text-xl sm:text-2xl font-heading font-bold text-black">{APP_NAME}</h1>
+            <p className="text-sm text-[#8E8E93] mt-1">Sign in with SSO</p>
           </div>
 
-          <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8">
-            <p className="text-sm text-text-muted mb-4">Enter your institution slug to continue.</p>
+          <div className="bg-white border border-black/5 rounded-2xl p-6 sm:p-8">
+            <p className="text-sm text-[#8E8E93] mb-4">Enter your institution slug to continue.</p>
             <form action="/login/sso" method="get" className="space-y-4">
               <div>
-                <label htmlFor="tenant" className="block text-sm font-medium mb-1.5 text-text-primary">
+                <label htmlFor="tenant" className="block text-sm font-medium mb-1.5 text-black">
                   Institution Slug
                 </label>
                 <input
@@ -58,13 +58,13 @@ export default async function SsoPage({
                   required
                   autoFocus
                   placeholder="acme-medical"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-dark border border-border text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-glow/50 text-sm transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
                 />
               </div>
               <input type="hidden" name="next" value={next} />
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
+                className="w-full py-3 rounded-full bg-[#007AFF] text-white font-medium text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,122,255,0.2)]"
               >
                 Continue
               </button>
@@ -78,14 +78,14 @@ export default async function SsoPage({
   const cfg = await lookupSsoForTenant(tenantSlug);
   if (!cfg) {
     return (
-      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
-          <div className="bg-surface-solid border border-border rounded-2xl p-6 sm:p-8 text-center space-y-3">
-            <h1 className="text-lg font-heading font-semibold text-text-primary">SSO Unavailable</h1>
-            <p className="text-sm text-text-muted">
-              No active SSO configuration was found for <code className="text-text-primary">{tenantSlug}</code>.
+          <div className="bg-white border border-black/5 rounded-2xl p-6 sm:p-8 text-center space-y-3">
+            <h1 className="text-lg font-heading font-semibold text-black">SSO Unavailable</h1>
+            <p className="text-sm text-[#8E8E93]">
+              No active SSO configuration was found for <code className="text-black">{tenantSlug}</code>.
             </p>
-            <a href="/login" className="inline-block text-sm text-primary hover:underline">Back to sign-in</a>
+            <a href="/login" className="inline-block text-sm text-[#007AFF] hover:underline">Back to sign-in</a>
           </div>
         </div>
       </div>
