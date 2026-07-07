@@ -26,13 +26,13 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     // P5.4: Report caught errors to Sentry with component stack trace and route context
     Sentry.captureException(error, {
-      captureContext: {
-        contexts: {
-          react: {
-            componentStack: errorInfo.componentStack ?? undefined,
-          },
-          url: typeof window !== 'undefined' ? window.location.href : undefined,
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack ?? undefined,
         },
+      },
+      tags: {
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
       },
     });
   }
