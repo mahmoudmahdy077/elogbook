@@ -99,14 +99,6 @@ const config: Config = {
         sans: [fonts.body],
         mono: [fonts.mono],
       },
-      spacing: {
-        xs: `${spacing.xs}px`,
-        sm: `${spacing.sm}px`,
-        md: `${spacing.md}px`,
-        lg: `${spacing.lg}px`,
-        xl: `${spacing.xl}px`,
-        '2xl': `${spacing['2xl']}px`,
-      },
       maxWidth: {
         xs: '20rem',
         sm: '28rem',
