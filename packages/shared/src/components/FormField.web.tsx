@@ -42,7 +42,7 @@ export function FormField({
           placeholder={placeholder}
           autoComplete={autoComplete}
           required={required}
-          className={`w-full px-3.5 py-2.5 rounded-xl bg-neutral-dark border border-border text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-glow/50 text-sm transition-colors ${rightElement ? 'pr-10' : ''} ${inputClassName}`}
+          className={`w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors ${rightElement ? 'pr-11' : ''} ${inputClassName}`}
           {...props}
         />
         {rightElement && (

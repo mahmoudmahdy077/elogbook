@@ -191,9 +191,9 @@ export default function LoginPage() {
 
   if (showForgot) {
     return (
-      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl border border-black/5 p-6 sm:p-8">
+      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8">
+        <div className="w-full max-w-sm sm:max-w-md">
+          <div className="bg-white rounded-2xl border border-black/5 p-6 sm:p-8 md:p-10">
             <ForgotPasswordForm email={email} onBack={() => setShowForgot(false)} />
           </div>
         </div>
@@ -202,27 +202,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 landscape:overflow-y-auto landscape:items-start landscape:pt-6">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6 landscape:mb-4">
-          <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">{APP_NAME}</h1>
-          <p className="text-sm text-[#8E8E93] mt-1">Sign in to your account</p>
+    <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
+      <div className="w-full max-w-sm sm:max-w-md">
+        <div className="text-center mb-8 sm:mb-10">
+          <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-black tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
+          <p className="text-sm sm:text-base text-[#8E8E93] mt-2">Sign in to your account</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-black/5 p-6 sm:p-8 landscape:p-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/5 p-6 sm:p-8 md:p-10 shadow-sm">
           {sent ? (
             <SuccessState email={email} />
           ) : (
-            <div className="space-y-4 landscape:space-y-3">
+            <div className="space-y-5 sm:space-y-6">
               {ssoChecking ? (
-                <div className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-full border border-black/5 bg-[#F2F2F7] text-black/40 font-medium text-sm landscape:py-2 cursor-wait">
+                <div className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full border border-black/5 bg-[#F2F2F7] text-black/40 font-medium text-sm cursor-wait">
                   <Spinner />
                   Checking SSO…
                 </div>
               ) : ssoAvailable?.available ? (
                 <Link
                   href={`/login/sso?tenant=${new URLSearchParams(window.location.search).get('tenant') ?? ''}`}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary landscape:py-2"
+                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -234,7 +234,7 @@ export default function LoginPage() {
               ) : (
                 <Link
                   href="/login/sso"
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-full border border-black/5 bg-[#F2F2F7] text-black font-medium text-sm hover:bg-[#E5E5EA] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary landscape:py-2"
+                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full border border-black/5 bg-[#F2F2F7] text-black font-medium text-sm hover:bg-[#E5E5EA] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -247,7 +247,7 @@ export default function LoginPage() {
 
               <FormDivider label="or continue with email" />
 
-              <form onSubmit={handleSubmit} className="space-y-3 landscape:space-y-2">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <FormField
                   id="email"
                   label="Email"
@@ -293,7 +293,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={!email || loading}
-                  className="w-full py-2.5 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center justify-center gap-2 landscape:py-2"
+                  className="w-full py-3 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center justify-center gap-2"
                 >
                   {loading ? <Spinner /> : null}
                   {loading
@@ -307,7 +307,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-[#8E8E93] mt-6 landscape:mt-4">
+        <p className="text-center text-xs text-[#8E8E93] mt-6 sm:mt-8">
           By signing in, you agree to your institution&apos;s data handling policy.
         </p>
       </div>
