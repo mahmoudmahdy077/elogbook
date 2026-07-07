@@ -32,7 +32,7 @@ export async function GET(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = (profile.tenants as { slug: string }[])[0];
+  const tenant = profile.tenants as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -87,7 +87,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = (profile.tenants as { slug: string }[])[0];
+  const tenant = profile.tenants as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -207,7 +207,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = (profile.tenants as { slug: string }[])[0];
+  const tenant = profile.tenants as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -334,7 +334,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = (profile.tenants as { slug: string }[])[0];
+  const tenant = profile.tenants as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }

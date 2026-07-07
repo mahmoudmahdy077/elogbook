@@ -19,8 +19,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
 
   if (!profile) redirect('/login');
 
-  const tenants = profile.tenants as { slug: string; tenant_type: string }[];
-  const tenant = tenants[0];
+  const tenant = profile.tenants as { slug: string; tenant_type: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   const buildQuery = (status?: string) => {

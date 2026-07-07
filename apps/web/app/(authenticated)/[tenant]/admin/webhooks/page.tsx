@@ -24,8 +24,7 @@ export default async function AdminWebhooksPage({
 
   if (!profile) redirect('/login');
 
-  const tenants = profile.tenants as { slug: string }[];
-  const tenant = tenants[0];
+  const tenant = profile.tenants as { slug: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   if (!['director', 'institution_admin', 'admin'].includes(profile.role)) {
