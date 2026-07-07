@@ -99,14 +99,6 @@ const config: Config = {
         sans: [fonts.body],
         mono: [fonts.mono],
       },
-      maxWidth: {
-        xs: '20rem',
-        sm: '28rem',
-        md: '48rem',
-        lg: '64rem',
-        xl: '80rem',
-        '2xl': '96rem',
-      },
       borderRadius: {
         sm: `${radius.sm}px`,
         md: `${radius.md}px`,
