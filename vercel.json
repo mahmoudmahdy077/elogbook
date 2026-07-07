@@ -46,7 +46,14 @@
   ],
 
   "github": {
-    "silent": true,
-    "autoJobCancelation": true
+    "silent": false,
+    "autoJobCancelation": true,
+    "previews": true
+  },
+
+  "preview": {
+    "minimumInstance": 0,
+    "maximumInstance": 1,
+    "regions": ["iad1"]
   }
 }

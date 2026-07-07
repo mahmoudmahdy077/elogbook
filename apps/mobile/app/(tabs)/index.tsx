@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl, AppState } from 'react-native';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
@@ -8,6 +8,9 @@ import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
 import { clinicalTokens } from '@elogbook/shared';
+import { CaseCountWidget } from '../../components/CaseCountWidget';
+import { fetchTodayStats } from '../../lib/today-stats';
+import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
   draft: number;
@@ -25,8 +28,10 @@ interface GoalData {
 
 export default function DashboardScreen() {
   const [stats, setStats] = useState<Stats>({ draft: 0, pending: 0, approved: 0 });
+  const [todayStats, setTodayStats] = useState<TodayStats>({ total: 0, pending: 0, approved: 0, rejected: 0, draft: 0 });
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
 
@@ -44,12 +49,19 @@ export default function DashboardScreen() {
       }
     });
 
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        loadData();
+      }
+    });
+
     updateLastSyncLabel();
     const interval = setInterval(updateLastSyncLabel, 60000);
 
     return () => {
       netUnsub();
       syncUnsub();
+      appStateSub.remove();
       clearInterval(interval);
     };
   }, []);
@@ -134,8 +146,18 @@ export default function DashboardScreen() {
       }
     }
 
+    // Fetch today's stats for the widget
+    const todayStatsResult = await fetchTodayStats();
+    setTodayStats(todayStatsResult);
+
     setLoading(false);
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, []);
 
   if (loading) {
     return (
@@ -146,7 +168,17 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-backdrop px-4 pt-4">
+    <ScrollView
+      className="flex-1 bg-backdrop px-4 pt-4"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={clinicalTokens.colors.primary.DEFAULT}
+          colors={[clinicalTokens.colors.primary.DEFAULT]}
+        />
+      }
+    >
       <View className="flex-row justify-between items-center mb-2">
         <Text className="text-white text-2xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>Dashboard</Text>
         <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
@@ -159,6 +191,9 @@ export default function DashboardScreen() {
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
         </View>
       )}
+
+      {/* Today's case count widget */}
+      {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
 
       <View className="flex-row gap-3 mb-6">
         <View

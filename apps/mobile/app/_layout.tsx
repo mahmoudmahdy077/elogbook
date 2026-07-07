@@ -20,10 +20,7 @@ import { clinicalTokens } from '@elogbook/shared';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 import { useSyncInit } from '../lib/sync';
 import { parseDeepLink, navigateToDeepLink } from '../lib/linking';
-import {
-  registerNotificationHandler,
-  handleColdStartNotification,
-} from '../lib/notification-handler';
+import { useNotificationNavigation } from '../hooks/useNotificationNavigation';
 import { useAuthGuard } from '../lib/auth-guard';
 import {
   getEffectiveSkipWindow,
@@ -185,13 +182,9 @@ export default function RootLayout() {
   }, []);
 
   // ── Notification navigation ─────────────────────────────────────────────
-  // Register the expo-notifications response listener (user taps a
-  // notification banner) and check for a cold-start notification.
-  useEffect(() => {
-    const unregister = registerNotificationHandler();
-    handleColdStartNotification();
-    return unregister;
-  }, []);
+  // React hook that listens for notification taps and cold-start
+  // notifications, routing to the correct screen based on the payload.
+  useNotificationNavigation();
 
   return (
     <ErrorBoundary>

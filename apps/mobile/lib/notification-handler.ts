@@ -30,6 +30,7 @@ interface NotificationPayload {
     | 'case.rejected'
     | 'case.commented'
     | 'approval.requested'
+    | 'approval.pending'
     | 'new.rejection'
     | 'deep.link';
   caseId?: string;
@@ -58,6 +59,7 @@ function payloadToDeepLink(
       }
       return { pathname: '/(tabs)/my-cases' as any };
 
+    case 'approval.pending':
     case 'approval.requested':
       return { pathname: '/(tabs)/approvals' as any };
 
