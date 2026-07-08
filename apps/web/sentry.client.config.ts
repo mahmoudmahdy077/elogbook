@@ -31,6 +31,13 @@ if (SENTRY_DSN) {
     tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
     replaysSessionSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE ?? '0.1'),
     replaysOnErrorSampleRate: 1.0,
+    // M4: Deny sensitive routes from Sentry error reporting
+    denyUrls: [
+      /\/api\/auth\//i,
+      /\/admin\//i,
+      /\/login/i,
+      /\/auth\/callback/i,
+    ],
     // P5.4: Auto-instrument page loads, navigation, and client-side interactions
     integrations: [Sentry.browserTracingIntegration()],
     // PHI: never send patient_mrn, patient_dob, patient_hash, field_values

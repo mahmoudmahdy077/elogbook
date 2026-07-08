@@ -10,10 +10,18 @@ const store = new Map<string, RateLimitEntry>();
 const WINDOW_MS = 60_000;
 
 /**
- * Check if a request for the given key is within the rate limit.
+ * In-memory sliding window rate limiter (single-instance).
  *
- * @param key       Unique identifier (IP, user-ID, or compound).
- * @param maxRequests Maximum requests allowed within the window (default 30).
+ * ⚠️ For multi-instance deployments (Vercel, multiple serverless functions),
+ *    use the Redis-backed version instead:
+ *
+ *    1. Set env vars: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
+ *       (Upstash free tier: https://console.upstash.com/redis)
+ *    2. Change imports from '@/lib/rate-limit' to '@/lib/rate-limit-redis'
+ *    3. Await the async `checkRateLimit()` calls — signature is identical
+ *
+ *    The Redis version automatically falls back to local in-memory if
+ *    Redis is unreachable, so the migration is safe to deploy incrementally.
  */
 export function checkRateLimit(
   key: string,

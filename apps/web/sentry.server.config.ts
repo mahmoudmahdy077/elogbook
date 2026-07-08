@@ -26,6 +26,13 @@ if (SENTRY_DSN) {
     environment: SENTRY_ENV,
     // P5.4: 20% server-side performance tracing
     tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
+    // M4: Deny sensitive routes from Sentry error reporting
+    denyUrls: [
+      /\/api\/auth\//i,
+      /\/admin\//i,
+      /\/login/i,
+      /\/auth\/callback/i,
+    ],
     beforeSendTransaction(event) {
       if (event.request?.cookies) delete event.request.cookies;
       return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);

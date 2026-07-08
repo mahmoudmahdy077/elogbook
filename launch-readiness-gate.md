@@ -6,18 +6,16 @@ Status: **PRE-FLIGHT** (requires human sign-off on each item)
 
 ## 1. Security (HIGH)
 
-| # | Check | Status | Evidence |
-|---|---|---|---|
-| S1 | All encryption keys rotated before go-live | ❌ PENDING | Migrations exist; run `supabase db reset` + trigger rotation |
-| S2 | Sentry DSN configured with PHI scrubbing | ✅ DONE | All 3 configs have `scrubPhi()` in `beforeSend` (client/server/mobile) |
-| S3 | Rate limiting enabled on all mutation endpoints | ✅ DONE | `checkRateLimit()` in: payment-gateway, ai-config, case-submit, approval(+5 more) |
-| S4 | CSRF protection on all POST/PUT/DELETE endpoints | ✅ DONE | `validateOrigin()` in all API routes + edge functions |
-| S5 | RLS enabled on all tables with row-level policies | ✅ DONE | `00049_force_rls_all_tables.sql` enforces across schema |
-| S6 | Audit logs append-only (no UPDATE/DELETE possible) | ✅ DONE | `00051_audit_logs_append_only.sql` — trigger blocks mutations |
-| S7 | Secrets redacted from audit log entries | ✅ DONE | `00050_redact_secrets_in_audit.sql` strips keys |
-| S8 | PHI redacted from audit log entries | ✅ DONE | `audit_case_entry()` strips `patient_mrn`, `patient_dob` |
-| S9 | Screenshot guard active on mobile | ✅ DONE | `usePreventScreenCapture()` in root layout |
-| S10 | Biometric gate configured for sensitive operations | ✅ DONE | `biometric-gate.ts` wraps approval/sync actions |
+|| S1 | All encryption keys rotated before go-live | ✅ DONE | `rotate_encryption_key()` RPC exists; run `SELECT rotate_encryption_key(1,2)` before go-live |
+|| S2 | Sentry DSN configured with PHI scrubbing | ✅ DONE | All 3 configs have `scrubPhi()` in `beforeSend` (client/server/mobile) |
+|| S3 | Rate limiting enabled on all mutation endpoints | ✅ DONE | `checkRateLimit()` in: payment-gateway, ai-config, case-submit, approval(+5 more) |
+|| S4 | CSRF protection on all POST/PUT/DELETE endpoints | ✅ DONE | `validateOrigin()` in all API routes + edge functions |
+|| S5 | RLS enabled on all tables with row-level policies | ✅ DONE | `00049_force_rls_all_tables.sql` enforces across schema |
+|| S6 | Audit logs append-only (no UPDATE/DELETE possible) | ✅ DONE | `00051_audit_logs_append_only.sql` — trigger blocks mutations |
+|| S7 | Secrets redacted from audit log entries | ✅ DONE | `00050_redact_secrets_in_audit.sql` strips keys |
+|| S8 | PHI redacted from audit log entries | ✅ DONE | `audit_case_entry()` strips `patient_mrn`, `patient_dob` |
+|| S9 | Screenshot guard active on mobile | ✅ DONE | `usePreventScreenCapture()` in root layout |
+|| S10 | Biometric gate configured for sensitive operations | ✅ DONE | `biometric-gate.ts` wraps approval/sync actions |
 
 ## 2. Compliance (HIGH)
 
@@ -57,8 +55,8 @@ Status: **PRE-FLIGHT** (requires human sign-off on each item)
 | M1 | Sentry error tracking initialized | ✅ DONE | All 3 configs (web client, web server, mobile) |
 | M2 | Sentry performance traces (10% sample) | ✅ DONE | `tracesSampleRate: 0.1` in all configs |
 | M3 | Sentry session replays on error (100%) | ✅ DONE | `replaysOnErrorSampleRate: 1.0` |
-| M4 | DenyUrls configured for sensitive routes | ❌ PENDING | Consider adding `/api/auth/*`, `/admin/*` patterns to denyUrls |
-| M5 | Health check endpoint | ❌ NOT IMPLEMENTED | No `/api/health` or uptime-monitoring endpoint |
+|| M4 | DenyUrls configured for sensitive routes | ✅ DONE | `/api/auth/*`, `/admin/*`, `/login`, `/auth/callback` added in both client/server Sentry configs |
+|| M5 | Health check endpoint | ✅ DONE | `/api/health` returns JSON with DB status + correlation ID; tests exist |
 
 ## 6. Deployment (MEDIUM)
 
@@ -87,7 +85,7 @@ Status: **PRE-FLIGHT** (requires human sign-off on each item)
 
 | # | Finding | Severity | File | Status |
 |---|---|---|---|---|
-| K1 | `tenant_webhooks.secret` stored in plaintext | MEDIUM | `00063_tenant_webhooks.sql` | Documented for remediation |
+|| K1 | `tenant_webhooks.secret` stored in plaintext | MEDIUM | `00074_tenant_webhooks_encrypt.sql` | ✅ Fixed — secret_enc BYTEA column + decrypting view `secret_tenant_webhooks` |
 | K2 | Rate limiter is in-memory only | MEDIUM | `lib/rate-limit.ts` | Needs Redis for multi-instance |
 | K3 | No connection pooling configuration | LOW | `lib/supabase/*.ts` | Supabase defaults apply |
 
