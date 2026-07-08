@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getAuthContext } from '@/lib/supabase/auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -6,27 +7,18 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 export default async function ReportsPage({ params, searchParams }: { params: Promise<{ tenant: string }>; searchParams: Promise<{ date_from?: string; date_to?: string }> }) {
   const { tenant: tenantSlug } = await params;
   const { date_from, date_to } = await searchParams;
+  const auth = await getAuthContext();
+  if (auth.tenant.slug !== tenantSlug) redirect('/login');
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = auth.tenant.id;
+  const isResident = auth.profile.role === 'resident';
 
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, user_id, role, tenant_id, tenants!inner(slug, tenant_type)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) redirect('/login');
-
-  const tenant = profile.tenants as { slug: string; tenant_type: string };
-  if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
-
+  // Report queries
   const buildQuery = (status?: string) => {
     let q = supabase
       .from('case_entries')
       .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', profile.tenant_id);
+      .eq('tenant_id', tenantId);
     if (status) q = q.eq('status', status);
     if (date_from) q = q.gte('created_at', date_from);
     if (date_to) q = q.lte('created_at', date_to);
@@ -43,7 +35,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const { data: evalData, error: evalError } = await supabase
     .from('faculty_evaluations')
     .select('resident_id, clinical_skills, professionalism, procedures')
-    .eq('tenant_id', profile.tenant_id);
+    .eq('tenant_id', tenantId);
   if (evalError) return <ErrorDisplay message={evalError.message} />;
 
   interface EvalRow {
@@ -63,7 +55,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
     let q = supabase
       .from('case_entries')
       .select('id, status, case_templates!inner(specialty)')
-      .eq('tenant_id', profile.tenant_id);
+      .eq('tenant_id', tenantId);
     if (date_from) q = q.gte('created_at', date_from);
     if (date_to) q = q.lte('created_at', date_to);
     return q.limit(1000);
@@ -232,7 +224,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
 
         {/* Evaluation Averages — only for non-residents */}
-        {profile.role !== 'resident' && (
+        {!isResident && (
           <div className="bg-white rounded-2xl border border-black/5 p-5 md:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Evaluation Averages</h2>

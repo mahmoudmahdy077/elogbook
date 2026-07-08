@@ -122,28 +122,40 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const fields = selectedTemplate?.fields || [];
 
   useEffect(() => {
-    async function loadTemplates() {
-      const [{ data: tenantTemplates, error }, { data: globalTemplates }] = await Promise.all([
+    let cancelled = false;
+
+    async function loadAllData() {
+      // Phase 1: Templates (parallel — tenant + global)
+      const [tenantTemplatesRes, globalTemplatesRes] = await Promise.all([
         supabase.from('case_templates').select('*').eq('tenant_id', tenantId),
         supabase.from('case_templates').select('*').eq('tenant_id', GLOBAL_TENANT_ID),
       ]);
-      if (error) {
-        setErrors([error.message]);
+      if (cancelled) return;
+
+      if (tenantTemplatesRes.error) {
+        setErrors([tenantTemplatesRes.error.message]);
         setLoadingTemplates(false);
         return;
       }
-      const allTemplates = [...(tenantTemplates || []), ...(globalTemplates || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
+      const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
+
+      // Phase 2: User-dependent data (parallel with getUser)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
 
       let favIds = new Set<string>();
       let personalCounts = new Map<string, number>();
       let tenantCounts = new Map<string, number>();
+      let frameworks: AccreditationFramework[] = [];
 
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const [favResult, profileResult] = await Promise.allSettled([
+        const [favResult, profileResult, tenantEntriesResult, frameworkResult] = await Promise.allSettled([
           supabase.from('template_favorites').select('template_id').eq('user_id', user.id),
           supabase.from('profiles').select('id').eq('user_id', user.id).single(),
+          supabase.from('case_entries').select('template_id').eq('tenant_id', tenantId),
+          supabase.from('accreditation_frameworks').select('*').eq('tenant_id', tenantId),
         ]);
+        if (cancelled) return;
 
         if (favResult.status === 'fulfilled' && favResult.value.data) {
           favIds = new Set(favResult.value.data.map((r: { template_id: string }) => r.template_id));
@@ -167,36 +179,32 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
           }
         }
 
-        const { data: tenantEntries } = await supabase
-          .from('case_entries')
-          .select('template_id')
-          .eq('tenant_id', tenantId);
-        if (tenantEntries) {
+        if (tenantEntriesResult.status === 'fulfilled' && tenantEntriesResult.value.data) {
           tenantCounts = new Map(
             Array.from(
-              tenantEntries.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+              tenantEntriesResult.value.data.reduce((acc: Map<string, number>, r: { template_id: string }) => {
                 acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
                 return acc;
               }, new Map<string, number>())
             )
           );
         }
+
+        if (frameworkResult.status === 'fulfilled' && frameworkResult.value.data) {
+          frameworks = frameworkResult.value.data as AccreditationFramework[];
+        }
       }
 
+      if (cancelled) return;
       setFavoriteIds(favIds);
+      setAccreditationFrameworks(frameworks);
       const sorted = sortTemplates(allTemplates, favIds, personalCounts, tenantCounts);
       setTemplates(sorted);
       setLoadingTemplates(false);
     }
-    loadTemplates();
-  }, [tenantId, supabase]);
 
-  useEffect(() => {
-    async function loadFrameworks() {
-      const { data } = await supabase.from('accreditation_frameworks').select('*').eq('tenant_id', tenantId);
-      if (data) setAccreditationFrameworks(data as AccreditationFramework[]);
-    }
-    loadFrameworks();
+    loadAllData();
+    return () => { cancelled = true; };
   }, [tenantId, supabase]);
 
   const toggleFavorite = useCallback(async (templateId: string) => {

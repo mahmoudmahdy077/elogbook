@@ -120,15 +120,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const results = await Promise.all(queries);
   const casesResult = results[0] as { data: (CaseRow & { resident_id?: string })[] | null };
   const goalResult = results[1] as { data: GoalRow[] | null };
-  const residentProgressIdx = isResident ? 2 : undefined;
-  const residentViolationsIdx = isResident ? 3 : undefined;
-  const directorViolationsIdx = isDirectorPlus ? (isResident ? 4 : 3) : undefined;
-  const residentsDataIdx = isDirectorPlus ? (isResident ? 3 : 2) : undefined;
 
-  const progressResult = residentProgressIdx !== undefined ? results[residentProgressIdx] as { data: ProgressRow[] | null } : { data: null };
-  const residentsDataResult = residentsDataIdx !== undefined ? results[residentsDataIdx] as { data: ResidentProfileRow[] | null } : { data: null };
-  const residentViolations = residentViolationsIdx !== undefined ? results[residentViolationsIdx] as { data: { week_start: string; total_hours: number }[] | null } : { data: null };
-  const directorViolations = directorViolationsIdx !== undefined ? results[directorViolationsIdx] as { data: { resident_id: string; week_start: string; total_hours: number }[] | null } : { data: null };
+  // Named destructuring — replaces brittle index math (4 variants)
+  // queries layout: [cases, goals, ...rest] where rest is role-dependent
+  const rest = results.slice(2);
+  const goalProgressRes = isResident && rest[0] as { data: ProgressRow[] | null };
+  const residentViolationRes = isResident && rest[isResident ? 1 : 0] as { data: { week_start: string; total_hours: number }[] | null };
+  const residentsDataRes = isDirectorPlus && rest[isResident ? 2 : 0] as { data: ResidentProfileRow[] | null };
+  const directorViolationRes = isDirectorPlus && rest[isResident ? 3 : 1] as { data: { resident_id: string; week_start: string; total_hours: number }[] | null };
+
+  const progressResult = goalProgressRes || { data: null };
+  const residentsDataResult = residentsDataRes || { data: null };
+  const residentViolations = residentViolationRes || { data: null };
+  const directorViolations = directorViolationRes || { data: null };
 
   // U4.0: Use count-query result for director+; client-side tally only for residents.
   const allCaseRows = casesResult.data ?? [];
