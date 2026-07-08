@@ -147,7 +147,35 @@ rule: ONLY for transient overlays (modals, dialogs) — NOT for data-dense cards
 
 ---
 
-## 6. MOBILE APP REFERENCE (full: apps/mobile/REFERENCE.md — 1,513 lines)
+## 6. WEB APP REFERENCE
+
+### Components & Admin Pages — `apps/web/REFERENCE.md` (133 lines)
+**62+ component files and 8 admin pages documented**, including:
+- DashboardContent, CaseForm (5 sub-components), ApprovalsDashboard, AIInsightsPanel, SubscriptionPlans, ProgramOverviewCharts
+- All skeleton components, toast, sidebar, mobile nav, error boundary, empty state
+- Admin: SSO, webhooks, SCIM, retention, AI config, payment gateway
+- **17 tables queried**, **2 RPCs** used (`hash_patient_mrn`, `set_data_retention`)
+- **10 REST API endpoints** consumed from admin pages
+
+### Lib & API Routes — `apps/web/LIB_AND_API_REFERENCE.md` (160 lines)
+**20+ lib files and 14 API routes documented**, including:
+- Supabase clients (client/server/admin/auth/middleware)
+- Utilities (pagination, csrf, rate-limit, rate-limit-redis, request-context, logger, safe-redirect, error-messages, analytics, webhooks, performance)
+- Edge middleware (`proxy.ts`) — CSP, rate limiting, security headers
+- Sentry configs (client/server/edge) — PHI scrubbing, denyUrls, performance tracing
+- All 14 API routes with auth/rate-limit/CSRF/query patterns
+
+### Routes & Pages — `PAGE_ANALYSIS.md` (351 lines) + `DATA_FETCH_REFERENCE.md` (592 lines)
+- Root layouts, login page, auth callback, authenticated layout
+- Dashboard + case management pages: loading/empty/error states, data fetches
+- Approvals, goals, reports, billing pages
+- All authorization checks, redirect logic, env vars
+
+---
+
+## 7. MOBILE APP REFERENCE (full: apps/mobile/REFERENCE.md — 1,513 lines)
+
+### Key Coverage
 
 | Area | Files | Key Details |
 |------|-------|-------------|
@@ -173,7 +201,7 @@ rule: ONLY for transient overlays (modals, dialogs) — NOT for data-dense cards
 
 ---
 
-## 7. DATABASE / SUPABASE REFERENCE (full: supabase/DATABASE_DOCUMENTATION.md — 1,170 lines)
+## 8. DATABASE / SUPABASE REFERENCE (full: supabase/DATABASE_DOCUMENTATION.md — 1,170 lines)
 
 ### 33 Tables Fully Documented
 institutions, tenants, profiles, case_templates, case_entries, case_attachments, approval_requests, audit_logs, program_goals, goal_progress, subscription_plans, subscriptions, payments, one_time_purchases, ai_config, resident_ai_toggle, ai_query_logs, payment_gateway_config, accreditation_frameworks, attachment_signatures, institution_billing, consent_records, ai_response_cache, stripe_events, consent_types, storage_quotas, key_rotation_log, tenant_webhooks, tenant_webhook_deliveries, scim_tokens, compliance_reports, template_favorites, faculty_evaluations
@@ -230,7 +258,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 8. SECURITY ARCHITECTURE
+## 9. SECURITY ARCHITECTURE
 
 ### Database-Level
 - **33 tables** with FORCE ROW LEVEL SECURITY enabled
@@ -262,7 +290,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 9. COMPLIANCE FRAMEWORKS
+## 10. COMPLIANCE FRAMEWORKS
 
 ### Supported Regions
 | Region | Code | Frameworks |
@@ -288,7 +316,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 10. EDGE CASES & ERROR HANDLING
+## 11. EDGE CASES & ERROR HANDLING
 
 ### Case Entry State Machine
 | Transition | Guard | Who |
@@ -320,7 +348,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 11. API REFERENCE (OpenAPI — 2311-line spec in docs/openapi.yaml)
+## 12. API REFERENCE (OpenAPI — 2311-line spec in docs/openapi.yaml)
 
 ### Edge Functions
 | Function | Endpoint | Auth | Provider |
@@ -352,7 +380,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 12. COMPETITIVE LANDSCAPE
+## 13. COMPETITIVE LANDSCAPE
 
 Full analysis at `docs/competitive-analysis.md` (348 lines, ~30KB). 10 competitors analyzed.
 
@@ -366,9 +394,7 @@ See `docs/competitive-analysis.md` for the full capability matrix, strategic opp
 
 ---
 
-## 13. CI/CD PIPELINE
-
-### GitHub Actions Workflows
+## 15. CI/CD PIPELINE
 | Workflow | Trigger | Jobs |
 |----------|---------|------|
 | CI | PR + push to main | typecheck → lint → test (284 tests) → build-web (30 routes) |
@@ -379,7 +405,7 @@ See `docs/competitive-analysis.md` for the full capability matrix, strategic opp
 
 ---
 
-## 14. KNOWN GAPS & NEXT STEPS
+## 16. KNOWN GAPS & NEXT STEPS
 
 ### Pending Configuration (needs credentials)
 1. **UPSTASH_REDIS_REST_URL** + **UPSTASH_REDIS_REST_TOKEN** — activates Redis-backed rate limiter (currently in-memory with auto-fallback)
