@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { safeRelativePath } from '@/lib/safe-redirect';
 
 export const runtime = 'nodejs';
@@ -65,7 +65,7 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { allowed, retryAfter } = checkRateLimit(`audit-export:${auth.user.id}`);
+  const { allowed, retryAfter } = await checkRateLimit(`audit-export:${auth.user.id}`);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const supabase = await createServerSupabase();

@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import type { UserRole } from '@/lib/supabase/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -29,7 +29,7 @@ export async function GET(
     request.headers.get('x-real-ip') ||
     'unknown';
 
-  const { allowed, retryAfter } = checkRateLimit(`compliance-export:${ip}`, 10);
+  const { allowed, retryAfter } = await checkRateLimit(`compliance-export:${ip}`, 10);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   // ---- Auth ----

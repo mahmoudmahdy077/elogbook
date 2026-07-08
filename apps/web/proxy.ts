@@ -1,6 +1,6 @@
 import { updateSession } from '@/lib/supabase/middleware';
 import type { NextRequest } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -25,19 +25,19 @@ export default async function proxy(request: NextRequest) {
 
   // Rate limiting for auth endpoints
   if (pathname.startsWith('/auth/callback') && request.method === 'POST') {
-    const { allowed, retryAfter } = checkRateLimit(`auth-cb:${ip}`);
+    const { allowed, retryAfter } = await checkRateLimit(`auth-cb:${ip}`);
     if (!allowed) return rateLimitResponse(retryAfter);
   }
 
   // Rate limiting for login
   if (pathname === '/login' && request.method === 'POST') {
-    const { allowed, retryAfter } = checkRateLimit(`login:${ip}`);
+    const { allowed, retryAfter } = await checkRateLimit(`login:${ip}`);
     if (!allowed) return rateLimitResponse(retryAfter);
   }
 
   // Rate limiting for unauthenticated API routes
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
-    const { allowed, retryAfter } = checkRateLimit(`api:${ip}`);
+    const { allowed, retryAfter } = await checkRateLimit(`api:${ip}`);
     if (!allowed) return rateLimitResponse(retryAfter);
   }
 

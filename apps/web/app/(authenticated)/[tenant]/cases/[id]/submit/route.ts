@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { NextResponse } from 'next/server';
@@ -53,7 +53,7 @@ async function handleSubmit(
     }
   }
 
-  const { allowed, retryAfter } = checkRateLimit(`cases-submit:${user.id}:${id}`);
+  const { allowed, retryAfter } = await checkRateLimit(`cases-submit:${user.id}:${id}`);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const { data: entry } = await supabase

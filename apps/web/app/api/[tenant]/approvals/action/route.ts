@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 
@@ -28,7 +28,7 @@ export async function POST(
     request.headers.get('x-real-ip') ||
     'unknown';
 
-  const { allowed, retryAfter } = checkRateLimit(`approve-action:${ip}`, 20);
+  const { allowed, retryAfter } = await checkRateLimit(`approve-action:${ip}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   // ---- Auth ----

@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 
 const ALLOWED_PROTOCOLS = ['saml', 'oidc'] as const;
@@ -68,7 +68,7 @@ export async function POST(
 
   const { tenant: tenantSlug } = await params;
 
-  const { allowed, retryAfter } = checkRateLimit(`sso:${tenantSlug}`);
+  const { allowed, retryAfter } = await checkRateLimit(`sso:${tenantSlug}`);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const supabase = await createServerSupabase();

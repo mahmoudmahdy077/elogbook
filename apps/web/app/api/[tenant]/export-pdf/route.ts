@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { allowed, retryAfter } = checkRateLimit(`export-pdf:${user.id}`);
+  const { allowed, retryAfter } = await checkRateLimit(`export-pdf:${user.id}`);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const { data: profile } = await supabase

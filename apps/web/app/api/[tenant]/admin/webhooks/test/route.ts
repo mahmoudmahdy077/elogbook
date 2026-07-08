@@ -2,7 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { testWebhookEndpoint } from '@/lib/webhooks';
 import { NextResponse } from 'next/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 
 export async function POST(
@@ -20,7 +20,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { allowed, retryAfter } = checkRateLimit(`webhook-test:${user.id}`, 5);
+  const { allowed, retryAfter } = await checkRateLimit(`webhook-test:${user.id}`, 5);
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const { data: profile } = await supabase
