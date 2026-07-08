@@ -352,7 +352,21 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 12. CI/CD PIPELINE
+## 12. COMPETITIVE LANDSCAPE
+
+Full analysis at `docs/competitive-analysis.md` (348 lines, ~30KB). 10 competitors analyzed.
+
+### Key Findings
+- **E-Logbook wins on**: offline-first mobile, AI clinical insights, multi-provider AI, compliance infrastructure (PHI redaction, append-only audit, pgcrypto encryption, SCIM, SAML/OIDC SSO)
+- **Top gaps to close**: rotation scheduling/calendar (ties directors to New Innovations), ACGME Milestones sub-competency granularity (22 competencies × 5 levels with EPA mapping), Mini-CEX/DOPS/CBD evaluation forms
+- **Biggest threat**: New Innovations has ~80% US GME market share with high switching costs
+- **Best opportunity**: AI is a first-mover territory — zero competitors have any AI capability
+
+See `docs/competitive-analysis.md` for the full capability matrix, strategic opportunity matrix, threat assessment, and prioritized recommendations.
+
+---
+
+## 13. CI/CD PIPELINE
 
 ### GitHub Actions Workflows
 | Workflow | Trigger | Jobs |
@@ -365,7 +379,7 @@ Each table documented with: columns/types/defaults, PK/FK constraints, indexes, 
 
 ---
 
-## 13. KNOWN GAPS & NEXT STEPS
+## 14. KNOWN GAPS & NEXT STEPS
 
 ### Pending Configuration (needs credentials)
 1. **UPSTASH_REDIS_REST_URL** + **UPSTASH_REDIS_REST_TOKEN** — activates Redis-backed rate limiter (currently in-memory with auto-fallback)
