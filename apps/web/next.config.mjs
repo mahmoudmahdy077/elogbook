@@ -13,6 +13,9 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   transpilePackages: ['@elogbook/shared'],
+  experimental: {
+    optimizePackageImports: ['@heroui/react', 'framer-motion', '@sentry/nextjs'],
+  },
   // Use webpack instead of Turbopack for Vercel compatibility
   turbopack: false,
   images: {

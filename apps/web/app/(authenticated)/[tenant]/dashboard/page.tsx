@@ -7,13 +7,6 @@ import CardSkeleton from '@/components/CardSkeleton';
 
 type CaseStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
-interface CaseRow {
-  id: string;
-  case_date: string;
-  status: string;
-  case_templates: { name: string; specialty: string };
-}
-
 interface GoalRow {
   id: string;
   title: string;
@@ -33,6 +26,19 @@ interface ResidentProfileRow {
   specialty: string | null;
 }
 
+interface DashboardRpcResult {
+  stats: Record<CaseStatus, number>;
+  recent_cases: {
+    id: string;
+    case_date: string;
+    status: CaseStatus;
+    template_name: string;
+    template_specialty: string;
+  }[];
+  pending_approvals: number;
+  total_residents: number;
+}
+
 export default async function DashboardPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
   const auth = await getAuthContext();
@@ -48,37 +54,26 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const isResident = role === 'resident';
   const isDirectorPlus = role === 'director' || role === 'institution_admin' || role === 'admin';
 
-  const selectFields = isDirectorPlus
-    ? 'id, case_date, status, resident_id, case_templates!inner(name, specialty)'
-    : 'id, case_date, status, case_templates!inner(name, specialty)';
+  // ── Single RPC replaces 5+ separate queries ────────────────────────
+  const { data: rpcData, error: rpcError } = await supabase
+    .rpc('get_dashboard_data', {
+      p_tenant_id: tenantId,
+      p_resident_id: residentId,
+      p_role: role,
+    });
 
-  let casesQuery = supabase
-    .from('case_entries')
-    .select(selectFields)
-    .eq('tenant_id', tenantId);
-  if (isResident) casesQuery = casesQuery.eq('resident_id', residentId);
-  // U4.0: residents see their last 5 cases; director+ also see last 5.
-  casesQuery = casesQuery.order('created_at', { ascending: false }).limit(5);
+  if (rpcError) {
+    throw new Error(`Dashboard RPC failed: ${rpcError.message}`);
+  }
 
-  // U4.0: directors+ get ACCURATE total counts via count queries,
-  // not client-side tally of a capped fetch (which under-reported for
-  // any tenant with >100 cases).
-  const statsPromise = isResident
-    ? Promise.resolve(null)
-    : Promise.all([
-        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending').is('deleted_at', null),
-        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'approved').is('deleted_at', null),
-        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'rejected').is('deleted_at', null),
-        supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'draft').is('deleted_at', null),
-      ]).then(([p, a, r, d]) => ({
-        pending: p.count ?? 0,
-        approved: a.count ?? 0,
-        rejected: r.count ?? 0,
-        draft: d.count ?? 0,
-      }));
+  const dashboard = rpcData as unknown as DashboardRpcResult;
+  const stats = dashboard.stats;
+  const recentCases = dashboard.recent_cases ?? [];
+  const pendingApprovals = dashboard.pending_approvals ?? 0;
+  const totalResidents = dashboard.total_residents ?? 0;
 
+  // ── Remaining queries (not covered by RPC) ──────────────────────────
   const queries: any[] = [
-    casesQuery,
     supabase
       .from('program_goals')
       .select('id, title, target_count, deadline, specialty')
@@ -90,14 +85,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
       supabase
         .from('goal_progress')
         .select('goal_id, current_count')
-        .eq('resident_id', residentId)
+        .eq('resident_id', residentId),
     );
     queries.push(
       supabase
         .from('duty_weekly_violations')
         .select('week_start, total_hours')
         .eq('resident_id', residentId)
-        .order('week_start', { ascending: false })
+        .order('week_start', { ascending: false }),
     );
   }
   if (isDirectorPlus) {
@@ -106,24 +101,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         .from('profiles')
         .select('id, full_name, specialty')
         .eq('tenant_id', tenantId)
-        .eq('role', 'resident')
+        .eq('role', 'resident'),
     );
     queries.push(
       supabase
         .from('duty_weekly_violations')
         .select('resident_id, week_start, total_hours')
         .eq('tenant_id', tenantId)
-        .order('week_start', { ascending: false })
+        .order('week_start', { ascending: false }),
     );
   }
 
   const results = await Promise.all(queries);
-  const casesResult = results[0] as { data: (CaseRow & { resident_id?: string })[] | null };
-  const goalResult = results[1] as { data: GoalRow[] | null };
+  const goalResult = results[0] as { data: GoalRow[] | null };
 
-  // Named destructuring — replaces brittle index math (4 variants)
-  // queries layout: [cases, goals, ...rest] where rest is role-dependent
-  const rest = results.slice(2);
+  // Named destructuring — replaces brittle index math
+  const rest = results.slice(1);
   const goalProgressRes = isResident && rest[0] as { data: ProgressRow[] | null };
   const residentViolationRes = isResident && rest[isResident ? 1 : 0] as { data: { week_start: string; total_hours: number }[] | null };
   const residentsDataRes = isDirectorPlus && rest[isResident ? 2 : 0] as { data: ResidentProfileRow[] | null };
@@ -133,28 +126,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const residentsDataResult = residentsDataRes || { data: null };
   const residentViolations = residentViolationRes || { data: null };
   const directorViolations = directorViolationRes || { data: null };
-
-  // U4.0: Use count-query result for director+; client-side tally only for residents.
-  const allCaseRows = casesResult.data ?? [];
-  const stats: Record<CaseStatus, number> = isResident
-    ? (() => {
-        const acc = { draft: 0, pending: 0, approved: 0, rejected: 0 };
-        for (const r of allCaseRows) {
-          if (!['draft', 'pending', 'approved', 'rejected'].includes(r.status)) continue;
-          const s = r.status as CaseStatus;
-          acc[s]++;
-        }
-        return acc;
-      })()
-    : ((await statsPromise) as { draft: number; pending: number; approved: number; rejected: number });
-
-  const recentCases = allCaseRows.slice(0, 5).map((r) => ({
-    id: r.id,
-    case_date: r.case_date,
-    status: r.status as CaseStatus,
-    template_name: r.case_templates?.name || '',
-    template_specialty: r.case_templates?.specialty || '',
-  }));
 
   const goalRows = goalResult.data ?? [];
   const goalProgressMap: Record<string, number> = {};
@@ -174,27 +145,26 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     specialty: g.specialty,
   }));
 
-  const pendingApprovals = isResident
-    ? 0
-    : stats.pending;
-
   let residents: { id: string; full_name: string; specialty: string | null; total_cases: number; approved: number }[] = [];
-  let totalResidents = 0;
+  let total_cases_by_resident: Record<string, number> = {};
+  let approved_by_resident: Record<string, number> = {};
 
   if (isDirectorPlus) {
     const residentProfiles = residentsDataResult.data;
 
-    totalResidents = (residentProfiles || []).length;
-
     if (residentProfiles && residentProfiles.length > 0) {
-      const totalByResident: Record<string, number> = {};
-      const approvedByResident: Record<string, number> = {};
+      // Fetch per-resident case counts for the overview table
+      const { data: residentCaseCounts } = await supabase
+        .from('case_entries')
+        .select('resident_id, status')
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null);
 
-      for (const c of allCaseRows) {
-        if (c.resident_id) {
-          totalByResident[c.resident_id] = (totalByResident[c.resident_id] || 0) + 1;
+      if (residentCaseCounts) {
+        for (const c of residentCaseCounts) {
+          total_cases_by_resident[c.resident_id] = (total_cases_by_resident[c.resident_id] || 0) + 1;
           if (c.status === 'approved') {
-            approvedByResident[c.resident_id] = (approvedByResident[c.resident_id] || 0) + 1;
+            approved_by_resident[c.resident_id] = (approved_by_resident[c.resident_id] || 0) + 1;
           }
         }
       }
@@ -203,8 +173,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         id: rp.id,
         full_name: rp.full_name,
         specialty: rp.specialty,
-        total_cases: totalByResident[rp.id] || 0,
-        approved: approvedByResident[rp.id] || 0,
+        total_cases: total_cases_by_resident[rp.id] || 0,
+        approved: approved_by_resident[rp.id] || 0,
       }));
     }
   }

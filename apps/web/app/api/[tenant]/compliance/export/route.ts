@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import type { UserRole } from '@/lib/supabase/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
 
@@ -99,22 +100,42 @@ export async function GET(
   // ---- Format response ----
   if (format === 'csv') {
     const csv = toCsv(rows);
+    const bodyBuffer = Buffer.from(csv);
+    const etag = crypto.createHash('sha256').update(csv).digest('hex') + '-csv';
+
+    // Check If-None-Match
+    const ifNoneMatch = request.headers.get('if-none-match');
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new Response(null, { status: 304 });
+    }
+
     return new Response(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}.csv"`,
+        'ETag': etag,
       },
     });
   }
 
   // PDF → HTML fallback (same pattern as audit export)
   const html = toHtml(title, rows, tenant.slug);
+  const htmlBuffer = Buffer.from(html);
+  const htmlEtag = crypto.createHash('sha256').update(html).digest('hex') + '-html';
+
+  // Check If-None-Match
+  const ifNoneMatchHtml = request.headers.get('if-none-match');
+  if (ifNoneMatchHtml && ifNoneMatchHtml === htmlEtag) {
+    return new Response(null, { status: 304 });
+  }
+
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}.html"`,
       'X-Export-Format': 'html',
       'X-Export-Note': 'PDF generation unavailable; downloaded as HTML for browser print-to-PDF',
+      'ETag': htmlEtag,
     },
   });
 }
