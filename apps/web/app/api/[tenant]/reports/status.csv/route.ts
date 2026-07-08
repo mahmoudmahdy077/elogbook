@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const rl = await checkRateLimit(`csv-export:${ip}`, 10);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
+
   const { searchParams } = new URL(request.url);
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';

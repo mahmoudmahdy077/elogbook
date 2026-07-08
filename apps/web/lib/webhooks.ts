@@ -33,9 +33,8 @@ export type WebhookEventType =
 
 /**
  * Dispatch a webhook event to all active webhooks for the tenant that
- * subscribe to this event type. This is async and best-effort — it
- * awaits the HTTP calls so the caller can trust the delivery was
- * attempted, but it does NOT retry on failure.
+ * subscribe to this event type. Includes retry: failed deliveries are
+ * recorded in the webhook_retry_queue for retry by application-level logic.
  *
  * @returns Array of dispatch results (webhook_id, ok, status)
  */
@@ -110,7 +109,7 @@ export async function dispatchWebhookEvent(
     }
 
     // Record delivery attempt
-    await supabase.from('tenant_webhook_deliveries').insert({
+    const { data: delivery } = await supabase.from('tenant_webhook_deliveries').insert({
       webhook_id: wh.id,
       tenant_id,
       event_type,
@@ -121,7 +120,17 @@ export async function dispatchWebhookEvent(
       attempted_at: startedAt,
       completed_at: new Date().toISOString(),
       succeeded: ok,
-    }).maybeSingle();
+    }).select('id').maybeSingle();
+
+    // On failure: enqueue retry
+    if (!ok && delivery) {
+      await supabase.from('webhook_retry_queue').insert({
+        delivery_id: delivery.id,
+        next_attempt_at: new Date(Date.now() + 60000).toISOString(), // 1min first retry
+        attempt_count: 0,
+        max_attempts: 3,
+      }).maybeSingle();
+    }
 
     results.push({ webhook_id: wh.id, ok, status });
   }
