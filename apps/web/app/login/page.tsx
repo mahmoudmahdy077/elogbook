@@ -204,9 +204,22 @@ export default function LoginPage() {
   return (
     <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
       <div className="w-full max-w-sm sm:max-w-md">
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-black tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
           <p className="text-sm sm:text-base text-[#8E8E93] mt-2">Sign in to your account</p>
+        </div>
+
+        {/* Demo credentials banner */}
+        <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
+          <p className="text-xs font-semibold text-[#34C759] mb-1.5">🔐 Demo Accounts</p>
+          <div className="space-y-0.5">
+            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">resident@demo.com</code> — resident</p>
+            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
+            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">director@demo.com</code> — director</p>
+            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
+            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+          </div>
+          <p className="text-[11px] text-[#34C759]/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
         </div>
 
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/5 p-6 sm:p-8 md:p-10 shadow-sm">
