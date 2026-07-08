@@ -60,7 +60,7 @@ export default function NotificationBell({
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: any) => {
           const newNotif = payload.new as Notification;
           setNotifications((prev) => [newNotif, ...prev]);
           setUnreadCount((prev) => prev + 1);
@@ -74,7 +74,7 @@ export default function NotificationBell({
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: any) => {
           const updated = payload.new as Notification;
           setNotifications((prev) =>
             prev.map((n) => (n.id === updated.id ? updated : n))

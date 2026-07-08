@@ -27,7 +27,7 @@ export default function OnboardingWizard({
   initialSpecialty,
 }: OnboardingWizardProps) {
   const router = useRouter();
-  const { addToast } = useToast();
+  const toast = useToast();
   const supabase = createClient();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -71,27 +71,27 @@ export default function OnboardingWizard({
     setSubmitting(true);
     try {
       await saveProfile(profileName, specialty);
-      addToast('Onboarding complete! Welcome to Elogbook.', 'success');
+      toast.show('Onboarding complete! Welcome to Elogbook.', 'success');
       router.push(`/${tenantSlug}/dashboard`);
     } catch (err) {
-      addToast('Failed to save profile. Please try again.', 'error');
+      toast.show('Failed to save profile. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
-  }, [saveProfile, profileName, specialty, addToast, router, tenantSlug]);
+  }, [saveProfile, profileName, specialty, toast, router, tenantSlug]);
 
   const handleSetGoals = useCallback(async () => {
     setSubmitting(true);
     try {
       await saveProfile(profileName, specialty);
-      addToast('Onboarding complete!', 'success');
+      toast.show('Onboarding complete!', 'success');
       router.push(`/${tenantSlug}/goals`);
     } catch (err) {
-      addToast('Failed to save profile. Please try again.', 'error');
+      toast.show('Failed to save profile. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
-  }, [saveProfile, profileName, specialty, addToast, router, tenantSlug]);
+  }, [saveProfile, profileName, specialty, toast, router, tenantSlug]);
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 

@@ -73,7 +73,7 @@ export default async function RotationsPage({
   }
 
   // Fetch shifts for the visible rotations
-  const rotationIds = (rotations ?? []).map((r) => r.id);
+  const rotationIds = (rotations ?? []).map((r: any) => r.id);
   let shifts: ShiftRow[] = [];
   if (rotationIds.length > 0) {
     const { data: shiftData } = await supabase
@@ -99,12 +99,9 @@ export default async function RotationsPage({
   return (
     <RotationCalendar
       rotations={rotationRows}
-      shifts={shifts}
       residents={residents}
       tenantSlug={tenantSlug}
-      tenantId={tenantId}
-      currentUserId={auth.profile.id}
-      role={auth.profile.role}
+      canEdit={role === 'director' || role === 'institution_admin' || role === 'admin'}
       selectedResidentId={residentFilter ?? null}
     />
   );
