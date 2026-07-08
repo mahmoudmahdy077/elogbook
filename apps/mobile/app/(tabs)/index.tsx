@@ -181,7 +181,7 @@ export default function DashboardScreen() {
     >
       <View className="flex-row justify-between items-center mb-2">
         <Text className="text-white text-2xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>Dashboard</Text>
-        <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
+        <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
           Last synced: {lastSyncAgo}
         </Text>
       </View>
@@ -197,19 +197,19 @@ export default function DashboardScreen() {
 
       <View className="flex-row gap-3 mb-6">
         <View
-          className="flex-1 bg-slate-900 rounded-xl p-4 border border-indigo-500/15"
+          className="flex-1 bg-white rounded-xl p-4 border border-[#007AFF]/15"
           accessible
           accessibilityLabel={`${stats.draft} drafts`}
         >
           <AccessibleText
-            className="text-slate-400 text-3xl"
+            className="text-gray-500 text-3xl"
             accessibilityLabel={`${stats.draft} drafts`}
             style={{ fontFamily: clinicalTokens.fonts.mono }}
           >
             {stats.draft}
           </AccessibleText>
           <AccessibleText
-            className="text-slate-500 mt-1 text-xs"
+            className="text-gray-400 mt-1 text-xs"
             style={{ fontFamily: clinicalTokens.fonts.body }}
           >
             Drafts
@@ -269,7 +269,7 @@ export default function DashboardScreen() {
               />
             ))}
           </View>
-          <View className="mt-3 bg-slate-900 rounded-xl p-4 border border-indigo-500/15">
+          <View className="mt-3 bg-white rounded-xl p-4 border border-[#007AFF]/15">
           <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
           </Text>

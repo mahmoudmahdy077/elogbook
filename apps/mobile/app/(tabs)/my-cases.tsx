@@ -50,7 +50,7 @@ const CaseCard = React.memo(function CaseCard({
 }) {
   return (
     <TouchableOpacity
-      className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-3"
+      className="bg-white rounded-xl p-4 border border-[#007AFF]/15 mb-3"
       onPress={() => onPress(item)}
       accessibilityLabel={`${item.template_specialty} - ${item.template_name}`}
       accessibilityRole="button"
@@ -60,17 +60,17 @@ const CaseCard = React.memo(function CaseCard({
           <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {item.template_specialty} - {item.template_name}
           </Text>
-          <Text className="text-slate-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-gray-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
-          <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
         </View>
         <View className="flex-col items-end gap-1">
           <StatusBadge status={item.status} />
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
-            <Text className="text-xs text-slate-500" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+            <Text className="text-xs text-gray-400" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}
@@ -218,11 +218,11 @@ export default function MyCasesScreen() {
               className={`rounded-full px-4 py-1.5 mr-2 border ${
                 filter === chip.key
                   ? 'bg-teal-600 border-teal-500'
-                  : 'bg-slate-900 border-indigo-500/15'
+                  : 'bg-white border-[#007AFF]/15'
               }`}
               onPress={() => setFilter(chip.key)}
             >
-              <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-slate-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
                 {chip.label}
               </Text>
             </TouchableOpacity>
@@ -238,8 +238,8 @@ export default function MyCasesScreen() {
         }
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         ListEmptyComponent={
-          <View className="bg-slate-900 rounded-xl p-6 border border-indigo-500/15 items-center">
-            <Text className="text-slate-400" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
+          <View className="bg-white rounded-xl p-6 border border-[#007AFF]/15 items-center">
+            <Text className="text-gray-500" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
           </View>
         }
         renderItem={renderItem}

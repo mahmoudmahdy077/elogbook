@@ -113,7 +113,7 @@ export default function TabLayout() {
           Locked
         </Text>
         <Text
-          className="text-slate-400 text-sm mt-2 mb-6 text-center"
+          className="text-gray-500 text-sm mt-2 mb-6 text-center"
           style={{ fontFamily: clinicalTokens.fonts.body }}
         >
           {biometricError ? `Authentication required (${biometricError})` : 'Authenticate to view your cases'}

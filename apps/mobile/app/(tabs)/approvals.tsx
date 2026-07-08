@@ -44,14 +44,14 @@ const ApprovalCard = React.memo(function ApprovalCard({
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
           <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{item.resident_name}</Text>
-          <Text className="text-indigo-400 text-xs mt-0.5" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#007AFF] text-xs mt-0.5" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.specialty}
           </Text>
-          <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
           {item.comment && (
-            <Text className="text-slate-400 text-xs mt-1" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.body }}>
+            <Text className="text-gray-500 text-xs mt-1" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.body }}>
               {item.comment}
             </Text>
           )}
@@ -60,7 +60,7 @@ const ApprovalCard = React.memo(function ApprovalCard({
       </View>
 
       {isPending && (
-        <View className="flex-row gap-3 mt-3 pt-3 border-t border-slate-700/50">
+        <View className="flex-row gap-3 mt-3 pt-3 border-t border-gray-300/50">
           <TouchableOpacity
             className="flex-1 bg-emerald-600/20 rounded-lg py-2.5 items-center border border-emerald-500/40"
             onPress={() => onConfirm(item.id, item.entry_id, 'approve')}
@@ -259,7 +259,7 @@ export default function ApprovalsScreen() {
   if (role && role !== 'supervisor' && role !== 'director' && role !== 'admin') {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-slate-400 text-center">
+        <Text className="text-gray-500 text-center">
           You do not have permission to view approvals.
         </Text>
       </View>
@@ -278,7 +278,7 @@ export default function ApprovalsScreen() {
 
       <View className="px-4 pt-4 pb-2">
         <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Approvals</Text>
-        <Text className="text-slate-500 text-xs mb-3" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-400 text-xs mb-3" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           {approvals.filter((a) => a.status === 'pending').length} pending
         </Text>
       </View>
@@ -292,7 +292,7 @@ export default function ApprovalsScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         ListEmptyComponent={
           <View className="items-center py-16">
-            <Text className="text-slate-400 text-center">No approval requests found.</Text>
+            <Text className="text-gray-500 text-center">No approval requests found.</Text>
           </View>
         }
         renderItem={renderItem}
@@ -301,17 +301,17 @@ export default function ApprovalsScreen() {
       <Modal transparent animationType="fade" visible={rejectTarget !== null}>
         <View className="flex-1 items-center justify-center bg-black/60 px-6">
           <View
-            className="w-full rounded-2xl p-6 border border-indigo-500/15"
+            className="w-full rounded-2xl p-6 border border-[#007AFF]/15"
             style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}
           >
             <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               Reject Case
             </Text>
-            <Text className="text-slate-400 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
+            <Text className="text-gray-500 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
               Please provide a reason. The resident will see this message.
             </Text>
             <TextInput
-              className="text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+              className="text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
               multiline
               textAlignVertical="top"
               placeholder="Reason for rejection"
@@ -322,12 +322,12 @@ export default function ApprovalsScreen() {
             />
             <View className="flex-row gap-3 mt-4">
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-slate-800"
+                className="flex-1 rounded-lg py-3 items-center bg-gray-200"
                 onPress={() => { setRejectTarget(null); setRejectComment(''); }}
                 accessibilityLabel="Cancel rejection"
                 accessibilityRole="button"
               >
-                <Text className="text-slate-300" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
+                <Text className="text-gray-900" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 rounded-lg py-3 items-center bg-red-600"

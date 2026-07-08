@@ -115,7 +115,7 @@ export default function ProfileScreen() {
   if (loadError || !profile) {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-slate-400 mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Unable to load profile.</Text>
+        <Text className="text-gray-500 mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Unable to load profile.</Text>
         <TouchableOpacity
           className="bg-teal-600 px-6 py-2 rounded-lg"
           onPress={loadProfile}
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
           <Text className="text-white text-3xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{initial}</Text>
         </View>
         <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{profile.full_name}</Text>
-        <Text className="text-slate-400 mt-1" style={{ fontFamily: clinicalTokens.fonts.body }}>{titleCase(profile.role)}</Text>
+        <Text className="text-gray-500 mt-1" style={{ fontFamily: clinicalTokens.fonts.body }}>{titleCase(profile.role)}</Text>
         {profile.specialty && (
           <Text className="text-teal-400 mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {profile.specialty}
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
 
       {(plan || subscriptionStatus) && (
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Subscription</Text>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Subscription</Text>
           {plan && (
             <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{plan.name}</Text>
           )}
@@ -166,37 +166,37 @@ export default function ProfileScreen() {
             </Text>
           )}
           <TouchableOpacity
-            className="mt-3 bg-indigo-600/20 rounded-lg py-2.5 items-center border border-indigo-500/40"
+            className="mt-3 bg-blue-100/50 rounded-lg py-2.5 items-center border border-blue-500/40"
             onPress={() => {
               Alert.alert('Coming Soon', 'Subscription management will be available in a future update.');
             }}
             accessibilityLabel="Manage subscription"
             accessibilityRole="button"
           >
-            <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
+            <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
           </TouchableOpacity>
         </GlassPanel>
       )}
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Account</Text>
-        <View className="flex-row justify-between py-2 border-b border-slate-700/30">
-          <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Role</Text>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Account</Text>
+        <View className="flex-row justify-between py-2 border-b border-gray-200/50">
+          <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Role</Text>
           <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {titleCase(profile.role)}
           </Text>
         </View>
         {profile.specialty && (
-          <View className="flex-row justify-between py-2 border-b border-slate-700/30">
-            <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Specialty</Text>
+          <View className="flex-row justify-between py-2 border-b border-gray-200/50">
+            <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Specialty</Text>
             <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {profile.specialty}
             </Text>
           </View>
         )}
         <View className="flex-row justify-between py-2">
-          <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>ID</Text>
-          <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>ID</Text>
+          <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {profile.id.slice(0, 8)}...
           </Text>
         </View>

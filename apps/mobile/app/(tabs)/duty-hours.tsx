@@ -68,7 +68,7 @@ export default function DutyHoursScreen() {
     <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
       <Text className="text-white text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
 
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-slate-800 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
+      <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-gray-200 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
         <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.body }}>{date.toLocaleDateString()}</Text>
       </TouchableOpacity>
 
@@ -85,7 +85,7 @@ export default function DutyHoursScreen() {
       )}
 
       <TextInput
-        className="bg-slate-900 text-white rounded-xl px-4 py-3 mb-3 border border-indigo-500/15"
+        className="bg-white text-white rounded-xl px-4 py-3 mb-3 border border-[#007AFF]/15"
         placeholder="Hours (e.g., 8.5)"
         placeholderTextColor="#666"
         value={hours}
@@ -98,18 +98,18 @@ export default function DutyHoursScreen() {
         {SHIFT_TYPES.map((t) => (
           <TouchableOpacity
             key={t.key}
-            className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-teal-600 border-teal-500' : 'bg-slate-800 border-indigo-500/15'}`}
+            className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-teal-600 border-teal-500' : 'bg-gray-200 border-[#007AFF]/15'}`}
             onPress={() => setShiftType(t.key)}
             accessibilityLabel={t.label}
             accessibilityRole="button"
           >
-            <Text className={shiftType === t.key ? 'text-white' : 'text-slate-300'} style={{ fontFamily: clinicalTokens.fonts.body }}>{t.label}</Text>
+            <Text className={shiftType === t.key ? 'text-white' : 'text-gray-900'} style={{ fontFamily: clinicalTokens.fonts.body }}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <TextInput
-        className="bg-slate-900 text-white rounded-xl px-4 py-3 mb-4 border border-indigo-500/15"
+        className="bg-white text-white rounded-xl px-4 py-3 mb-4 border border-[#007AFF]/15"
         placeholder="Notes (optional)"
         placeholderTextColor="#666"
         value={notes}

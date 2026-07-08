@@ -543,7 +543,7 @@ export default function LogCaseScreen() {
                 className={`rounded-lg px-3 py-2 border ${
                   value === opt
                     ? 'bg-teal-600 border-teal-500'
-                    : 'bg-slate-800 border-slate-700'
+                    : 'bg-gray-200 border-gray-300'
                 }`}
                 onPress={() => { setFieldValue(field.key, opt); haptics.selection(); }}
                 accessibilityLabel={opt}
@@ -562,7 +562,7 @@ export default function LogCaseScreen() {
         <View key={field.key} className="mb-4">
           <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <TextInput
-            className="bg-slate-900 text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]"
+            className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
             multiline
             textAlignVertical="top"
             returnKeyType="next"
@@ -580,7 +580,7 @@ export default function LogCaseScreen() {
       <View key={field.key} className="mb-4">
         <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
         <TextInput
-          className="bg-slate-900 text-white rounded-xl px-4 py-3 border border-indigo-500/15"
+          className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15"
           placeholder={field.label}
           placeholderTextColor="#666"
           returnKeyType="next"
@@ -614,7 +614,7 @@ export default function LogCaseScreen() {
   const renderConfirmation = () => (
     <Modal transparent animationType="fade" visible={showConfirmation}>
       <View className="flex-1 items-center justify-center bg-black/60">
-        <View className="bg-slate-900 rounded-2xl p-8 items-center border border-indigo-500/15 mx-8" style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}>
+        <View className="bg-white rounded-2xl p-8 items-center border border-[#007AFF]/15 mx-8" style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}>
           <Ionicons
             name={confirmationSuccess ? 'checkmark-circle' : 'cloud-done-outline'}
             size={64}
@@ -635,7 +635,7 @@ export default function LogCaseScreen() {
     const tmpl = t as unknown as TemplateWithMeta;
     return (
       <TouchableOpacity
-        className="bg-slate-900 border border-indigo-500/15 rounded-xl p-4 active:scale-95 m-1 flex-1"
+        className="bg-white border border-[#007AFF]/15 rounded-xl p-4 active:scale-95 m-1 flex-1"
         style={{ maxWidth: '48%' }}
         onPress={() => selectTemplate(t)}
         accessibilityLabel={`${t.specialty} - ${t.name} template`}
@@ -649,7 +649,7 @@ export default function LogCaseScreen() {
             accessibilityLabel={tmpl.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
             accessibilityRole="button"
           >
-            <Text className={tmpl.is_favorite ? 'text-amber-400' : 'text-slate-600'} style={{ fontSize: 18 }}>
+            <Text className={tmpl.is_favorite ? 'text-amber-400' : 'text-gray-600'} style={{ fontSize: 18 }}>
               {tmpl.is_favorite ? '★' : '☆'}
             </Text>
           </TouchableOpacity>
@@ -657,7 +657,7 @@ export default function LogCaseScreen() {
         <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
           {t.specialty} - {t.name}
         </Text>
-        <Text className="text-indigo-400 text-xs mt-2 bg-indigo-500/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
+        <Text className="text-[#007AFF] text-xs mt-2 bg-[#007AFF]/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
           {t.fields.length} field{t.fields.length !== 1 ? 's' : ''}
         </Text>
       </TouchableOpacity>
@@ -670,10 +670,10 @@ export default function LogCaseScreen() {
         <Text className="text-white text-2xl mb-6" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
-            <View key={i} className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
-              <View className="bg-slate-800 rounded-full w-8 h-8" />
-              <View className="bg-slate-800 rounded h-3 mt-3 w-3/4" />
-              <View className="bg-slate-800 rounded h-3 mt-2 w-1/2" />
+            <View key={i} className="bg-white rounded-xl p-4 border border-[#007AFF]/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
+              <View className="bg-gray-200 rounded-full w-8 h-8" />
+              <View className="bg-gray-200 rounded h-3 mt-3 w-3/4" />
+              <View className="bg-gray-200 rounded h-3 mt-2 w-1/2" />
             </View>
           ))}
         </View>
@@ -701,7 +701,7 @@ export default function LogCaseScreen() {
                 {fetchError ? 'Unable to load templates' : 'No templates available. Contact your program director.'}
               </Text>
                 {fetchError && (
-                  <TouchableOpacity className="mt-4 bg-indigo-600 px-6 py-2 rounded-lg" onPress={loadTemplates} accessibilityLabel="Retry loading templates" accessibilityRole="button">
+                  <TouchableOpacity className="mt-4 bg-[#007AFF] px-6 py-2 rounded-lg" onPress={loadTemplates} accessibilityLabel="Retry loading templates" accessibilityRole="button">
                     <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Retry</Text>
                   </TouchableOpacity>
                 )}
@@ -728,7 +728,7 @@ export default function LogCaseScreen() {
             {selectedTemplate.specialty} - {selectedTemplate.name}
           </Text>
           <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
-            <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
+            <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
           </TouchableOpacity>
         </View>
 
@@ -743,12 +743,12 @@ export default function LogCaseScreen() {
           />
         </View>
 
-        <View className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-6">
+        <View className="bg-white rounded-xl p-4 border border-[#007AFF]/15 mb-6">
           {isDeidentified ? (
             <>
               <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Age (years)</Text>
               <TextInput
-                className="text-white rounded-xl px-4 py-3 border border-indigo-500/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+                className="text-white rounded-xl px-4 py-3 border border-[#007AFF]/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
                 placeholder="Age in years"
                 placeholderTextColor="#666"
                 keyboardType="numeric"
@@ -763,7 +763,7 @@ export default function LogCaseScreen() {
             <>
               <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>MRN</Text>
               <TextInput
-                className="text-white rounded-xl px-4 py-3 border border-indigo-500/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+                className="text-white rounded-xl px-4 py-3 border border-[#007AFF]/15" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
                 placeholder="Patient MRN"
                 placeholderTextColor="#666"
                 returnKeyType="next"
@@ -795,7 +795,7 @@ export default function LogCaseScreen() {
           </View>
         </View>
 
-        <View className="bg-slate-900 rounded-xl p-4 border border-indigo-500/15 mb-6">
+        <View className="bg-white rounded-xl p-4 border border-[#007AFF]/15 mb-6">
           {selectedTemplate.fields.map(renderField)}
         </View>
       </ScrollView>
@@ -807,7 +807,7 @@ export default function LogCaseScreen() {
           </Text>
         </View>
       )}
-      <View className="absolute bottom-0 left-0 right-0 p-4 border-t border-indigo-500/15" style={{ backgroundColor: 'rgba(6,8,20,0.9)', paddingBottom: Math.max(16, Platform.OS === 'ios' ? 34 : 16) }}>
+      <View className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#007AFF]/15" style={{ backgroundColor: 'rgba(6,8,20,0.9)', paddingBottom: Math.max(16, Platform.OS === 'ios' ? 34 : 16) }}>
         <TouchableOpacity
           className={`bg-teal-600 rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
           onPress={handleSubmit}

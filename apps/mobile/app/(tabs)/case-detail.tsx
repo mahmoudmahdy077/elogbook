@@ -220,7 +220,7 @@ export default function CaseDetailScreen() {
   if (!caseDetail) {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-slate-400">Case not found.</Text>
+        <Text className="text-gray-500">Case not found.</Text>
         <TouchableOpacity
           className="mt-4 bg-teal-600 px-6 py-2 rounded-lg"
           onPress={() => router.back()}
@@ -247,7 +247,7 @@ export default function CaseDetailScreen() {
       <View className="flex-row justify-between items-start mb-4">
         <View className="flex-1 mr-3">
           <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
-          <Text className="text-indigo-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {caseDetail.template_name}
           </Text>
         </View>
@@ -255,22 +255,22 @@ export default function CaseDetailScreen() {
       </View>
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
         {caseDetail.is_deidentified ? (
           <View>
-            <Text className="text-slate-300 text-sm" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-gray-900 text-sm" style={{ fontFamily: 'Geist Mono' }}>
               Age: {caseDetail.patient_age_years ?? '—'}
             </Text>
-            <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
               Hash: {caseDetail.patient_hash?.slice(0, 12) ?? '—'}
             </Text>
           </View>
         ) : (
           <View>
-            <Text className="text-slate-300 text-sm" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-gray-900 text-sm" style={{ fontFamily: 'Geist Mono' }}>
               MRN: {caseDetail.patient_mrn ?? '—'}
             </Text>
-            <Text className="text-slate-500 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
+            <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: 'Geist Mono' }}>
               DOB: {caseDetail.patient_dob ?? '—'}
             </Text>
           </View>
@@ -278,30 +278,30 @@ export default function CaseDetailScreen() {
       </GlassPanel>
 
       <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
-        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
+        <Text className="text-gray-900 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Date: {caseDetail.case_date}
         </Text>
-        <Text className="text-slate-300 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-900 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Resident: {caseDetail.resident_name}
         </Text>
-        <Text className="text-slate-500 text-xs mt-2" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-400 text-xs mt-2" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Created: {new Date(caseDetail.created_at).toLocaleString()}
         </Text>
-        <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Updated: {new Date(caseDetail.updated_at).toLocaleString()}
         </Text>
       </GlassPanel>
 
       {Object.keys(caseDetail.field_values).length > 0 && (
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
           {Object.entries(caseDetail.field_values).map(([key, value]) => (
-            <View key={key} className="flex-row justify-between py-1 border-b border-slate-700/30">
-              <Text className="text-slate-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            <View key={key} className="flex-row justify-between py-1 border-b border-gray-200/50">
+              <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
                 {key}
               </Text>
-              <Text className="text-slate-200 text-sm flex-1 text-right ml-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+              <Text className="text-gray-200 text-sm flex-1 text-right ml-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
                 {String(value ?? '—')}
               </Text>
             </View>
@@ -312,13 +312,13 @@ export default function CaseDetailScreen() {
       {caseDetail.status === 'rejected' && caseDetail.rejection_comment && (
         <GlassPanel style={{ marginBottom: 12 }}>
           <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
-          <Text className="text-slate-300 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
+          <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
         </GlassPanel>
       )}
 
       {canEdit && (
         <TouchableOpacity
-          className="bg-indigo-600 rounded-xl py-4 items-center mb-3"
+          className="bg-[#007AFF] rounded-xl py-4 items-center mb-3"
           onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
           accessibilityLabel="Edit this case"
           accessibilityRole="button"
@@ -328,7 +328,7 @@ export default function CaseDetailScreen() {
       )}
 
       <TouchableOpacity
-        className="bg-slate-800 rounded-xl py-4 items-center mb-3 border border-indigo-500/15"
+        className="bg-gray-200 rounded-xl py-4 items-center mb-3 border border-[#007AFF]/15"
         onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
         accessibilityLabel="Duplicate this case"
         accessibilityRole="button"
@@ -377,17 +377,17 @@ export default function CaseDetailScreen() {
       <Modal transparent animationType="fade" visible={rejectModalOpen}>
         <View className="flex-1 items-center justify-center bg-black/60 px-6">
           <View
-            className="w-full rounded-2xl p-6 border border-indigo-500/15"
+            className="w-full rounded-2xl p-6 border border-[#007AFF]/15"
             style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}
           >
             <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               Reject Case
             </Text>
-            <Text className="text-slate-400 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
+            <Text className="text-gray-500 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
               Please provide a reason. The resident will see this message.
             </Text>
             <TextInput
-              className="text-white rounded-xl px-4 py-3 border border-indigo-500/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+              className="text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
               multiline
               textAlignVertical="top"
               placeholder="Reason for rejection"
@@ -398,12 +398,12 @@ export default function CaseDetailScreen() {
             />
             <View className="flex-row gap-3 mt-4">
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-slate-800"
+                className="flex-1 rounded-lg py-3 items-center bg-gray-200"
                 onPress={() => { setRejectModalOpen(false); setRejectComment(''); }}
                 accessibilityLabel="Cancel rejection"
                 accessibilityRole="button"
               >
-                <Text className="text-slate-300" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
+                <Text className="text-gray-900" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 rounded-lg py-3 items-center bg-red-600"

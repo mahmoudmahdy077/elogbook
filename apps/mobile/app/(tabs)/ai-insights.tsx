@@ -141,7 +141,7 @@ export default function AIInsightsScreen() {
   if (!canAccess) {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-slate-400 text-center">
+        <Text className="text-gray-500 text-center">
           AI Insights is available for residents and directors only.
         </Text>
       </View>
@@ -156,7 +156,7 @@ export default function AIInsightsScreen() {
     >
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
         <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
-        <Text className="text-slate-500 text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <Text className="text-gray-400 text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           {quotaUsed} of {MAX_QUERIES} queries used today
         </Text>
 
@@ -175,7 +175,7 @@ export default function AIInsightsScreen() {
         </View>
 
         <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
             Ask a clinical question
           </Text>
           <TextInput
@@ -195,11 +195,11 @@ export default function AIInsightsScreen() {
             accessibilityLabel="AI clinical reflection query"
           />
           <View className="flex-row justify-between items-center mt-2">
-            <Text className="text-slate-500 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {query.length}/500
             </Text>
             <TouchableOpacity
-              className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-teal-600' : 'bg-slate-700'}`}
+              className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-teal-600' : 'bg-gray-400'}`}
               onPress={handleSubmit}
               disabled={submitting || quotaRemaining <= 0}
               accessibilityLabel="Submit AI query"
@@ -208,7 +208,7 @@ export default function AIInsightsScreen() {
               {submitting ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-slate-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
                   Ask
                 </Text>
               )}
@@ -224,8 +224,8 @@ export default function AIInsightsScreen() {
 
         {response ? (
           <GlassPanel style={{ marginBottom: 12 }}>
-            <Text className="text-indigo-400 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Response</Text>
-            <Text className="text-slate-200 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            <Text className="text-[#007AFF] text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Response</Text>
+            <Text className="text-gray-200 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
               {response}
             </Text>
           </GlassPanel>
@@ -233,7 +233,7 @@ export default function AIInsightsScreen() {
 
         {quotaRemaining <= 0 && !response && (
           <View className="items-center py-8">
-            <Text className="text-slate-400 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
+            <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
               You have reached your daily query limit. Insights will reset tomorrow.
             </Text>
           </View>
