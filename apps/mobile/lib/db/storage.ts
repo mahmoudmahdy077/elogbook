@@ -477,14 +477,14 @@ async function batchUpsertGeneric<T extends Model>(
       const match = existingMap.get(id) as T | undefined;
 
       if (match) {
-        return match.prepareUpdate((record: Record<string, unknown>) => {
-          applyUpdate(record as unknown as T, serverData);
+        return match.prepareUpdate((record: any) => {
+          applyUpdate(record as T, serverData);
         });
       }
 
-      return db.get<T>(tableName).prepareCreate((record: Record<string, unknown>) => {
-        (record as unknown as { id: string }).id = String(serverData.id);
-        applyCreate(record as unknown as T, serverData);
+      return db.get<T>(tableName).prepareCreate((record: any) => {
+        record.id = String(serverData.id);
+        applyCreate(record as T, serverData);
       });
     });
 
