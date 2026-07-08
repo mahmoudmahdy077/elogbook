@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'case_entries',
@@ -111,6 +111,19 @@ export const schema = appSchema({
         { name: 'author_id', type: 'string' },
         { name: 'body', type: 'string' },
         { name: 'parent_id', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'shifts',
+      columns: [
+        { name: 'tenant_id', type: 'string' },
+        { name: 'resident_id', type: 'string' },
+        { name: 'shift_date', type: 'string' },
+        { name: 'hours_worked', type: 'number' },
+        { name: 'shift_type', type: 'string' },
+        { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

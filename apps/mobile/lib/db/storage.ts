@@ -1,9 +1,14 @@
-import { Q } from '@nozbe/watermelondb';
+import { Q, Model } from '@nozbe/watermelondb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDatabase } from './database';
 import { CaseEntry } from './models/CaseEntry';
 import { CaseTemplate } from './models/CaseTemplate';
 import { ProgramGoal } from './models/ProgramGoal';
+import { Rotation } from './models/Rotation';
+import { Milestone } from './models/Milestone';
+import { EvaluationForm } from './models/EvaluationForm';
+import { Comment } from './models/Comment';
+import { Shift } from './models/Shift';
 import type { CaseStatus } from '@elogbook/shared';
 
 // Safely parse dates — Supabase returns ISO string timestamps,
@@ -449,4 +454,189 @@ export async function getPreference(key: string): Promise<string | null> {
 
 export async function setPreference(key: string, value: string): Promise<void> {
   await AsyncStorage.setItem(key, value);
+}
+
+// ── Batch upsert helpers for sync pull ──────────────────────────────────
+
+async function batchUpsertGeneric<T extends Model>(
+  tableName: string,
+  serverDataList: Record<string, unknown>[],
+  applyCreate: (record: T, data: Record<string, unknown>) => void,
+  applyUpdate: (record: T, data: Record<string, unknown>) => void,
+): Promise<void> {
+  const db = getDatabase();
+  const ids = serverDataList.map((s) => String(s.id)).filter(Boolean);
+  const existingRecords = ids.length > 0
+    ? await db.get<T>(tableName).query(Q.where('id', Q.oneOf(ids))).fetch()
+    : [];
+  const existingMap = new Map(existingRecords.map((r) => [r.id, r]));
+
+  await db.write(async () => {
+    const batch = serverDataList.map((serverData) => {
+      const id = String(serverData.id);
+      const match = existingMap.get(id) as T | undefined;
+
+      if (match) {
+        return match.prepareUpdate((record: Record<string, unknown>) => {
+          applyUpdate(record as unknown as T, serverData);
+        });
+      }
+
+      return db.get<T>(tableName).prepareCreate((record: Record<string, unknown>) => {
+        (record as unknown as { id: string }).id = String(serverData.id);
+        applyCreate(record as unknown as T, serverData);
+      });
+    });
+
+    if (batch.length > 0) {
+      await db.batch(...batch);
+    }
+  });
+}
+
+export async function batchUpsertRotations(serverDataList: Record<string, unknown>[]): Promise<void> {
+  return batchUpsertGeneric<Rotation>('rotations', serverDataList,
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? '');
+      r.residentId = String(d.resident_id ?? '');
+      r.title = String(d.title ?? '');
+      r.specialty = d.specialty != null ? String(d.specialty) : null;
+      r.startDate = String(d.start_date ?? '');
+      r.endDate = String(d.end_date ?? '');
+      r.site = d.site != null ? String(d.site) : null;
+      r.supervisorId = d.supervisor_id != null ? String(d.supervisor_id) : null;
+      r.status = String(d.status ?? 'active');
+      r.notes = d.notes != null ? String(d.notes) : null;
+      r.createdAt = d.created_at ? parseDate(d.created_at) : new Date();
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? r.tenantId);
+      r.residentId = String(d.resident_id ?? r.residentId);
+      r.title = String(d.title ?? r.title);
+      r.specialty = d.specialty != null ? String(d.specialty) : r.specialty;
+      r.startDate = String(d.start_date ?? r.startDate);
+      r.endDate = String(d.end_date ?? r.endDate);
+      r.site = d.site != null ? String(d.site) : r.site;
+      r.supervisorId = d.supervisor_id != null ? String(d.supervisor_id) : r.supervisorId;
+      r.status = String(d.status ?? r.status);
+      r.notes = d.notes != null ? String(d.notes) : r.notes;
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+  );
+}
+
+export async function batchUpsertMilestones(serverDataList: Record<string, unknown>[]): Promise<void> {
+  return batchUpsertGeneric<Milestone>('milestones', serverDataList,
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? '');
+      r.residentId = String(d.resident_id ?? '');
+      r.competencyArea = String(d.competency_area ?? '');
+      r.subCompetency = String(d.sub_competency ?? '');
+      r.level = Number(d.level ?? 0);
+      r.assessorId = d.assessor_id != null ? String(d.assessor_id) : null;
+      r.assessmentDate = String(d.assessment_date ?? '');
+      r.evidenceEntryId = d.evidence_entry_id != null ? String(d.evidence_entry_id) : null;
+      r.comments = d.comments != null ? String(d.comments) : null;
+      r.createdAt = d.created_at ? parseDate(d.created_at) : new Date();
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? r.tenantId);
+      r.residentId = String(d.resident_id ?? r.residentId);
+      r.competencyArea = String(d.competency_area ?? r.competencyArea);
+      r.subCompetency = String(d.sub_competency ?? r.subCompetency);
+      r.level = Number(d.level ?? r.level);
+      r.assessorId = d.assessor_id != null ? String(d.assessor_id) : r.assessorId;
+      r.assessmentDate = String(d.assessment_date ?? r.assessmentDate);
+      r.evidenceEntryId = d.evidence_entry_id != null ? String(d.evidence_entry_id) : r.evidenceEntryId;
+      r.comments = d.comments != null ? String(d.comments) : r.comments;
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+  );
+}
+
+export async function batchUpsertEvaluationForms(serverDataList: Record<string, unknown>[]): Promise<void> {
+  return batchUpsertGeneric<EvaluationForm>('evaluation_forms', serverDataList,
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? '');
+      r.residentId = String(d.resident_id ?? '');
+      r.evaluatorId = String(d.evaluator_id ?? '');
+      r.formType = String(d.form_type ?? '');
+      r.encounterDate = d.encounter_date != null ? String(d.encounter_date) : null;
+      r.setting = d.setting != null ? String(d.setting) : null;
+      r.patientContext = d.patient_context != null ? String(d.patient_context) : null;
+      r.ratings = readJsonField(d.ratings, {});
+      r.overallScore = d.overall_score != null ? Number(d.overall_score) : null;
+      r.feedback = d.feedback != null ? String(d.feedback) : null;
+      r.actionPlan = d.action_plan != null ? String(d.action_plan) : null;
+      r.status = String(d.status ?? 'draft');
+      r.createdAt = d.created_at ? parseDate(d.created_at) : new Date();
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? r.tenantId);
+      r.residentId = String(d.resident_id ?? r.residentId);
+      r.evaluatorId = String(d.evaluator_id ?? r.evaluatorId);
+      r.formType = String(d.form_type ?? r.formType);
+      r.encounterDate = d.encounter_date != null ? String(d.encounter_date) : r.encounterDate;
+      r.setting = d.setting != null ? String(d.setting) : r.setting;
+      r.patientContext = d.patient_context != null ? String(d.patient_context) : r.patientContext;
+      r.ratings = readJsonField(d.ratings, r.ratings);
+      r.overallScore = d.overall_score != null ? Number(d.overall_score) : r.overallScore;
+      r.feedback = d.feedback != null ? String(d.feedback) : r.feedback;
+      r.actionPlan = d.action_plan != null ? String(d.action_plan) : r.actionPlan;
+      r.status = String(d.status ?? r.status);
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+  );
+}
+
+export async function batchUpsertComments(serverDataList: Record<string, unknown>[]): Promise<void> {
+  return batchUpsertGeneric<Comment>('comments', serverDataList,
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? '');
+      r.entryId = d.entry_id != null ? String(d.entry_id) : null;
+      r.evaluationId = d.evaluation_id != null ? String(d.evaluation_id) : null;
+      r.authorId = String(d.author_id ?? '');
+      r.body = String(d.body ?? '');
+      r.parentId = d.parent_id != null ? String(d.parent_id) : null;
+      r.createdAt = d.created_at ? parseDate(d.created_at) : new Date();
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+    (r, d) => {
+      r.tenantId = String(d.tenant_id ?? r.tenantId);
+      r.entryId = d.entry_id != null ? String(d.entry_id) : r.entryId;
+      r.evaluationId = d.evaluation_id != null ? String(d.evaluation_id) : r.evaluationId;
+      r.authorId = String(d.author_id ?? r.authorId);
+      r.body = String(d.body ?? r.body);
+      r.parentId = d.parent_id != null ? String(d.parent_id) : r.parentId;
+      r.updatedAt = d.updated_at ? parseDate(d.updated_at) : new Date();
+    },
+  );
+}
+
+export const MAX_LOCAL_CASES = 500;
+
+export async function pruneOldestCaseEntries(): Promise<number> {
+  const db = getDatabase();
+  const all = await db.get<CaseEntry>('case_entries')
+    .query(
+      Q.and(
+        Q.where('_status', Q.notEq('deleted')),
+        Q.where('local_sync_status', 'synced'),
+      ),
+      Q.sortBy('updated_at', Q.asc),
+    )
+    .fetch();
+
+  if (all.length <= MAX_LOCAL_CASES) return 0;
+
+  const toDelete = all.slice(0, all.length - MAX_LOCAL_CASES);
+  await db.write(async () => {
+    for (const entry of toDelete) {
+      await entry.markAsDeleted();
+    }
+  });
+  return toDelete.length;
 }

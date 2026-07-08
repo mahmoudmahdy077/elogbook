@@ -13,6 +13,12 @@ import {
   batchUpsertCaseEntries,
   batchUpsertTemplates,
   batchUpsertGoals,
+  batchUpsertRotations,
+  batchUpsertMilestones,
+  batchUpsertEvaluationForms,
+  batchUpsertComments,
+  pruneOldestCaseEntries,
+  MAX_LOCAL_CASES,
   getLastSyncTimestamp,
   setLastSyncTimestamp,
 } from './db/storage';
@@ -194,6 +200,88 @@ class SyncService {
 
     if (programGoals) {
       await batchUpsertGoals(programGoals as Record<string, unknown>[]);
+    }
+  }
+
+  async pullRotations(tenantId: string) {
+    const { data, error } = await supabase
+      .from('rotations')
+      .select('*')
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('Pull rotations error:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      await batchUpsertRotations(data as Record<string, unknown>[]);
+    }
+  }
+
+  async pullMilestones(tenantId: string) {
+    const { data, error } = await supabase
+      .from('milestones')
+      .select('*')
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('Pull milestones error:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      await batchUpsertMilestones(data as Record<string, unknown>[]);
+    }
+  }
+
+  async pullEvaluations(tenantId: string) {
+    const { data, error } = await supabase
+      .from('evaluation_forms')
+      .select('*')
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('Pull evaluations error:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      await batchUpsertEvaluationForms(data as Record<string, unknown>[]);
+    }
+  }
+
+  async pullComments(tenantId: string) {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('Pull comments error:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      await batchUpsertComments(data as Record<string, unknown>[]);
+    }
+  }
+
+  async pullAllData(tenantId: string) {
+    await Promise.all([
+      this.pullCases(tenantId),
+      this.pullTemplates(tenantId),
+      this.pullGoals(tenantId),
+      this.pullRotations(tenantId),
+      this.pullMilestones(tenantId),
+      this.pullEvaluations(tenantId),
+      this.pullComments(tenantId),
+    ]);
+
+    // Prune oldest synced entries when local cache exceeds limit
+    const pruned = await pruneOldestCaseEntries();
+    if (pruned > 0) {
+      console.log(`Pruned ${pruned} oldest synced case entries (max ${MAX_LOCAL_CASES})`);
     }
   }
 
@@ -381,11 +469,7 @@ class SyncService {
 
     this.setStatus('syncing');
     try {
-      await Promise.all([
-        this.pullCases(tid),
-        this.pullTemplates(tid),
-        this.pullGoals(tid),
-      ]);
+      await this.pullAllData(tid);
       await this.pushCases();
       await this.handleConflicts();
       this.setStatus('synced');

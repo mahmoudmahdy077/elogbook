@@ -202,6 +202,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="rotations"
+        options={{
+          title: 'Rotations',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="case-detail"
         options={{
           href: null,

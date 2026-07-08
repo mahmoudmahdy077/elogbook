@@ -5,9 +5,14 @@ import { migrations } from './migrations';
 import { CaseEntry } from './models/CaseEntry';
 import { CaseTemplate } from './models/CaseTemplate';
 import { ProgramGoal } from './models/ProgramGoal';
+import { Rotation } from './models/Rotation';
+import { Milestone } from './models/Milestone';
+import { EvaluationForm } from './models/EvaluationForm';
+import { Comment } from './models/Comment';
+import { Shift } from './models/Shift';
 import { getOrCreateDbEncryptionKey } from './encryption-key';
 
-const modelClasses = [CaseEntry, CaseTemplate, ProgramGoal];
+const modelClasses = [CaseEntry, CaseTemplate, ProgramGoal, Rotation, Milestone, EvaluationForm, Comment, Shift];
 
 let _database: Database | null = null;
 let _dbKey: string | null = null;
