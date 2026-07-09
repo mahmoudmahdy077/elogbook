@@ -3,7 +3,7 @@ name: Deploy Web
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [master, main]
 
 concurrency:
   group: deploy-web-${{ github.ref }}
