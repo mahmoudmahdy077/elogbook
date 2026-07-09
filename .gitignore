@@ -4,6 +4,13 @@ dist/
 .expo/
 .env
 .env.local
+.env.development
+.env.production
+.env.test
+
+# Allow template
+!.env.example
+
 .superpowers/
 
 # Universal
