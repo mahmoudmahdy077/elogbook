@@ -72,6 +72,11 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerSupabase: () => Promise.resolve(mockSupabase),
 }));
 
+vi.mock('@/lib/rate-limit-redis', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfter: 0 }),
+  rateLimitResponse: vi.fn().mockReturnValue(new Response(null, { status: 429 })),
+}));
+
 import { POST } from './route';
 
 function makePostRequest(url: string, headers: Record<string, string> = {}): Request {

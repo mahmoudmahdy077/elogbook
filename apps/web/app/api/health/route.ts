@@ -5,13 +5,13 @@ import { newRequestId, requestContext } from '@/lib/request-context';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const EDGE_FUNCTION_HEALTH_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/_health`
-  : null;
-
 export async function GET(request: Request) {
   const incoming = request.headers.get('x-request-id');
   const requestId = incoming && /^[\w-]{1,128}$/.test(incoming) ? incoming : newRequestId();
+
+  const edgeFunctionHealthUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/_health`
+    : null;
 
   return requestContext.run({ requestId, route: '/api/health', method: 'GET' }, async () => {
     const start = Date.now();
@@ -44,9 +44,9 @@ export async function GET(request: Request) {
       }
 
       // ── Edge Functions check ───────────────────────────────────────
-      if (EDGE_FUNCTION_HEALTH_URL) {
+      if (edgeFunctionHealthUrl) {
         try {
-          const edgeResp = await fetch(EDGE_FUNCTION_HEALTH_URL, {
+          const edgeResp = await fetch(edgeFunctionHealthUrl, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             signal: AbortSignal.timeout(5_000),

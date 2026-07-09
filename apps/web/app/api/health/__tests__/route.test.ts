@@ -22,11 +22,12 @@ vi.mock('next/server', () => {
 // Mock @/lib/supabase/server
 const mockDbLimit = vi.fn();
 const mockDbSelect = vi.fn().mockReturnValue({ limit: mockDbLimit });
+const mockGetUser = vi.fn().mockResolvedValue({ data: { user: null }, error: null });
 const mockSupabase = {
   from: vi.fn(() => ({
     select: mockDbSelect,
   })),
-  auth: { getUser: vi.fn() },
+  auth: { getUser: mockGetUser },
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -46,6 +47,11 @@ const { GET } = await import('../route');
 describe('GET /api/health', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('returns 200 with status ok when database is reachable', async () => {
@@ -53,11 +59,11 @@ describe('GET /api/health', () => {
 
     const req = new Request('http://app.elogbook.dev/api/health');
     const res = await GET(req);
+    const body = await res.json();
 
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.status).toBe('ok');
-    expect(body.database).toBe('reachable');
+    expect(body.status).toBe('healthy');
+    expect(body.checks?.database).toBe('reachable');
     expect(typeof body.durationMs).toBe('number');
   });
 
@@ -70,7 +76,7 @@ describe('GET /api/health', () => {
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.status).toBe('degraded');
-    expect(body.database).toBe('unreachable');
+    expect(body.checks?.database).toContain('unreachable');
   });
 
   it('returns 503 with status error when an exception is thrown', async () => {
@@ -103,5 +109,6 @@ describe('GET /api/health', () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
+    expect(res.headers.get('X-Request-Id')).toBe('client-trace-456');
   });
 });

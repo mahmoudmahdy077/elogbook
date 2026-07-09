@@ -37,7 +37,7 @@ const mockCheckRateLimit = vi.fn<(key: string) => { allowed: boolean; retryAfter
 const mockRateLimitResponse = vi.fn<(retryAfter: number) => { status: number; json(): Promise<{ error: string; retryAfter: number }> }>().mockImplementation(
   (retryAfter: number) => new (class { status = 429; json() { return Promise.resolve({ error: 'Too many requests', retryAfter }); } })(),
 );
-vi.mock('@/lib/rate-limit', () => ({
+vi.mock('@/lib/rate-limit-redis', () => ({
   checkRateLimit: (key: string) => mockCheckRateLimit(key),
   rateLimitResponse: (retryAfter: number) => mockRateLimitResponse(retryAfter),
 }));
