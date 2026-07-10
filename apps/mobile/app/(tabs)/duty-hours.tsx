@@ -47,7 +47,7 @@ export default function DutyHoursScreen() {
 
     const { error } = await supabase.from('duty_periods').insert({
       tenant_id: profile.tenant_id,
-      resident_id: (profile as { id: string }).id,
+      resident_id: (profile as unknown as { id: string }).id,
       shift_date: date.toISOString().slice(0, 10),
       hours_worked: Number(hours),
       shift_type: shiftType,

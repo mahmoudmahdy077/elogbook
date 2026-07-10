@@ -146,8 +146,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   }));
 
   let residents: { id: string; full_name: string; specialty: string | null; total_cases: number; approved: number }[] = [];
-  let total_cases_by_resident: Record<string, number> = {};
-  let approved_by_resident: Record<string, number> = {};
+  const total_cases_by_resident: Record<string, number> = {};
+  const approved_by_resident: Record<string, number> = {};
 
   if (isDirectorPlus) {
     const residentProfiles = residentsDataResult.data;

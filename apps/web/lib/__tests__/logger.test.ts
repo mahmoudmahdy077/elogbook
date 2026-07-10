@@ -105,7 +105,7 @@ describe('logger PHI redactor', () => {
 
   it('replaces deeply nested PHI values with [REDACTED] at depth limit', () => {
     // Build a deeply nested object at depth 9
-    let obj: Record<string, unknown> = { a: 1 };
+    const obj: Record<string, unknown> = { a: 1 };
     let current: Record<string, unknown> = obj;
     for (let i = 0; i < 9; i++) {
       current.next = { a: 1 };

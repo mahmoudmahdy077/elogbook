@@ -108,7 +108,7 @@ export default async function MilestonesPage({
   const typedEpaMappings = (epaMappings ?? []) as EpaMappingRow[];
 
   // Fetch current level assessments if a resident is selected or viewing own
-  let currentLevels: Record<string, number> = {};
+  const currentLevels: Record<string, number> = {};
   const targetId = isResident
     ? auth.profile.id
     : residentFilter || auth.profile.id;

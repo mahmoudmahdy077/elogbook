@@ -63,7 +63,7 @@ function parseEnv(env: Record<string, string | undefined>) {
       console.error(`[env] Missing required variables: ${missing.join(', ')}`);
     }
     // Return partial with defaults where possible instead of crashing
-    return result.data as z.infer<typeof envSchema>;
+    return result.data as unknown as z.infer<typeof envSchema>;
   }
   return result.data;
 }

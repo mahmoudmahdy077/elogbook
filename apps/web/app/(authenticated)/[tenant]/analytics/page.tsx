@@ -132,7 +132,7 @@ export default async function AnalyticsPage({
   }
 
   // Fetch supervisor names
-  let supervisorNames = new Map<string, string>();
+  const supervisorNames = new Map<string, string>();
   if (supervisorIds.size > 0) {
     const { data: profiles } = await supabase
       .from('profiles')

@@ -79,7 +79,7 @@ function ProgressRing({
   const fontSize = size * 0.24;
 
   return (
-    <Svg.default.Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <Svg.Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {/* Background track */}
       <SvgCircle
         cx={center}
@@ -115,7 +115,7 @@ function ProgressRing({
       >
         {Math.round(percentage)}%
       </SvgText>
-    </Svg.default.Svg>
+    </Svg.Svg>
   );
 }
 
