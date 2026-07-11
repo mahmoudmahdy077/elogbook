@@ -12,8 +12,8 @@
 
 ## Phase: Lint Cleanup
 
-- [ ] Fix remaining 4 ESLint errors in web (jsx/global unknown properties, e2e hooks rule)
-- [ ] Fix remaining 1 ESLint error in mobile (unescaped entity)
+- [x] Fix remaining 4 ESLint errors in web (jsx/global unknown properties, e2e hooks rule)
+- [x] Fix remaining 1 ESLint error in mobile (unescaped entity)
 - [ ] Address 109+68 warnings (prefer type annotations over `any`, unused vars)
 
 ## Phase: Apple Health Redesign — Visual Polish
