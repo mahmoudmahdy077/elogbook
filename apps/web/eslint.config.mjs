@@ -38,6 +38,7 @@ export default [
       'react/prop-types': 'off',
       'react-hooks/exhaustive-deps': 'warn',
       'react-hooks/rules-of-hooks': 'error',
+      'react/no-unknown-property': ['error', { ignore: ['jsx', 'global'] }],
       'jsx-a11y/label-has-associated-control': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
@@ -49,6 +50,12 @@ export default [
     files: ['*.config.{js,mjs,cjs}'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    files: ['e2e/**/*.ts', 'e2e/**/*.tsx'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
     },
   },
   {

@@ -29,7 +29,7 @@ export function CaseCountWidget({ stats, dailyGoal = 10 }: CaseCountWidgetProps)
         style={styles.header}
         accessibilityRole="header"
       >
-        Today's Cases
+        Today&apos;s Cases
       </Text>
 
       <View style={styles.body}>
