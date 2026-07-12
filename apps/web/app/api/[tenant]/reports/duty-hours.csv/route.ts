@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';
   const pathParts = request.nextUrl.pathname.split('/');
-  const tenantSlug = pathParts[2];
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();

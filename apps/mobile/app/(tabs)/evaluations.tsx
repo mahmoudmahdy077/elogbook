@@ -30,12 +30,6 @@ interface ResidentData {
   full_name: string;
 }
 
-interface FormTypeGroup {
-  type: string;
-  count: number;
-  evaluations: EvaluationData[];
-}
-
 // ── Evaluation Card ──────────────────────────────────────────────────
 
 function EvaluationCard({
@@ -140,7 +134,6 @@ function NewEvaluationSheet({
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [residents, setResidents] = useState<ResidentData[]>([]);
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [encounterDate, setEncounterDate] = useState(
     new Date().toISOString().slice(0, 10),
   );

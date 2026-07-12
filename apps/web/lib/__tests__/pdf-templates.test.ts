@@ -19,12 +19,6 @@ function isValidHtml(html: string): boolean {
   );
 }
 
-function extractText(html: string, tag: string): string[] {
-  const regex = new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`, 'gi');
-  const matches = [...html.matchAll(regex)];
-  return matches.map((m) => m[1]!.trim()).filter(Boolean);
-}
-
 // ---------------------------------------------------------------------------
 //  Fixtures
 // ---------------------------------------------------------------------------

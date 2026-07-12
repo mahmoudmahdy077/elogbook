@@ -100,7 +100,6 @@ export async function GET(
   // ---- Format response ----
   if (format === 'csv') {
     const csv = toCsv(rows);
-    const bodyBuffer = Buffer.from(csv);
     const etag = crypto.createHash('sha256').update(csv).digest('hex') + '-csv';
 
     // Check If-None-Match
@@ -120,7 +119,6 @@ export async function GET(
 
   // PDF → HTML fallback (same pattern as audit export)
   const html = toHtml(title, rows, tenant.slug);
-  const htmlBuffer = Buffer.from(html);
   const htmlEtag = crypto.createHash('sha256').update(html).digest('hex') + '-html';
 
   // Check If-None-Match

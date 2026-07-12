@@ -16,7 +16,6 @@ interface Profile {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fullName, setFullName] = useState('');

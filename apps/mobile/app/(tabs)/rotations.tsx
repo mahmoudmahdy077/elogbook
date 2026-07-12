@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Modal,
-  Dimensions,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
@@ -39,14 +38,6 @@ interface RotationData {
 
 function getRotationColor(index: number): string {
   return ROTATION_COLORS[index % ROTATION_COLORS.length];
-}
-
-function isSameDay(d1: Date, d2: Date): boolean {
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
 }
 
 function isDateInRange(date: Date, startStr: string, endStr: string): boolean {

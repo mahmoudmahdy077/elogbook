@@ -28,6 +28,16 @@ import {
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
 
+// Font asset imports — loaded statically instead of using require()
+import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
+import OutfitBold from '../assets/fonts/Outfit-Bold.ttf';
+import OutfitSemiBold from '../assets/fonts/Outfit-SemiBold.ttf';
+import InterRegular from '../assets/fonts/Inter-Regular.ttf';
+import InterMedium from '../assets/fonts/Inter-Medium.ttf';
+import InterSemiBold from '../assets/fonts/Inter-SemiBold.ttf';
+import GeistMonoRegular from '../assets/fonts/GeistMono-Regular.ttf';
+import GeistMonoMedium from '../assets/fonts/GeistMono-Medium.ttf';
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
@@ -95,15 +105,15 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    'Outfit': require('../assets/fonts/Outfit-Regular.ttf'),
-    'Outfit-Bold': require('../assets/fonts/Outfit-Bold.ttf'),
-    'Outfit-SemiBold': require('../assets/fonts/Outfit-SemiBold.ttf'),
-    'Inter': require('../assets/fonts/Inter-Regular.ttf'),
-    'Inter-Medium': require('../assets/fonts/Inter-Medium.ttf'),
-    'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
-    'GeistMono': require('../assets/fonts/GeistMono-Regular.ttf'),
-    'GeistMono-Medium': require('../assets/fonts/GeistMono-Medium.ttf'),
+  useFonts({
+    'Outfit': OutfitRegular,
+    'Outfit-Bold': OutfitBold,
+    'Outfit-SemiBold': OutfitSemiBold,
+    'Inter': InterRegular,
+    'Inter-Medium': InterMedium,
+    'Inter-SemiBold': InterSemiBold,
+    'GeistMono': GeistMonoRegular,
+    'GeistMono-Medium': GeistMonoMedium,
   });
 
   // ── Auth state ────────────────────────────────────────────────────────────

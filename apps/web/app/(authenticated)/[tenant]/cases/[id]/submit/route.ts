@@ -28,7 +28,7 @@ export async function POST(
 async function handleSubmit(
   request: Request,
   params: { tenant: string; id: string },
-  span: Sentry.Span | undefined
+  _span: Sentry.Span | undefined
 ) {
 
   const { tenant: tenantSlug, id } = params;

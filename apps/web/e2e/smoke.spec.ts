@@ -18,7 +18,6 @@ test.describe('App smoke', () => {
 
   test('login form is a real form with submit', async ({ page }) => {
     await page.goto('/login');
-    const form = page.locator('form');
     const button = page.getByRole('button', { name: /Sign In|Send Magic Link/ });
     // Even if the form element isn't a <form>, the button must exist
     await expect(button).toBeVisible();

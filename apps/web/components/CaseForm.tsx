@@ -46,16 +46,7 @@ interface CaseFormProps {
   lastEntry?: boolean;
 }
 
-interface TemplateField {
-  key?: string;
-  name?: string;
-  label: string;
-  type: string;
-  options?: string[];
-  required?: boolean;
-}
-
-interface Template {
+interface CaseFormProps {
   id: string;
   tenant_id: string;
   specialty: string;
@@ -94,8 +85,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState<TemplateWithMeta[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [accreditationFrameworks, setAccreditationFrameworks] = useState<AccreditationFramework[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [isDeidentified, setIsDeidentified] = useState(false);
@@ -119,7 +108,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const reduceMotion = useReducedMotion();
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
-  const fields = selectedTemplate?.fields || [];
 
   useEffect(() => {
     let cancelled = false;

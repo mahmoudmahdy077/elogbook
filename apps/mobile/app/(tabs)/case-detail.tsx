@@ -111,14 +111,14 @@ export default function CaseDetailScreen() {
         .single();
 
       if (entry) {
-        const rejectionRequest = (entry as any).approval_requests?.find(
-          (r: any) => r.status === 'rejected'
+        const rejectionRequest = (entry as Record<string, unknown>).approval_requests?.find(
+          (r: Record<string, unknown>) => r.status === 'rejected'
         );
         setCaseDetail({
           id: entry.id,
-          resident_name: (entry as any).profiles?.full_name ?? 'Unknown',
-          specialty: (entry as any).case_templates?.specialty ?? '',
-          template_name: (entry as any).case_templates?.name ?? '',
+          resident_name: (entry as Record<string, unknown>).profiles?.full_name ?? 'Unknown',
+          specialty: (entry as Record<string, unknown>).case_templates?.specialty ?? '',
+          template_name: (entry as Record<string, unknown>).case_templates?.name ?? '',
           case_date: entry.case_date,
           status: entry.status as CaseStatus,
           is_deidentified: entry.is_deidentified,

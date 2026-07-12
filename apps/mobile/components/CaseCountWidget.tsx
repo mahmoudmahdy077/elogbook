@@ -4,8 +4,8 @@ import * as Svg from 'react-native-svg';
 import { clinicalTokens } from '@elogbook/shared';
 import type { TodayStats } from '../lib/today-stats';
 
-const SvgCircle = Svg.Circle as any;
-const SvgText = Svg.Text as any;
+const SvgCircle = Svg.Circle as unknown;
+const SvgText = Svg.Text as unknown;
 
 export interface CaseCountWidgetProps {
   stats: TodayStats;

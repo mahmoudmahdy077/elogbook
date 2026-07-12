@@ -142,8 +142,6 @@ export default function TabLayout() {
   }
 
   const showLogCase = role === 'resident';
-  const showApprovals = role === 'supervisor' || role === 'director' || role === 'admin';
-  const showAIInsights = role === 'resident' || role === 'director' || role === 'admin';
 
   return (
     <ScreenErrorBoundary screenName="Tabs">

@@ -77,17 +77,6 @@ function makePostRequest(url: string, headers: Record<string, string> = {}, body
   });
 }
 
-function makeQueryMock(result: unknown) {
-  return vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue(result),
-        maybeSingle: vi.fn().mockResolvedValue(result),
-      }),
-    }),
-  });
-}
-
 describe('POST /api/[tenant]/approvals/action', () => {
   const params = Promise.resolve({ tenant: 'demo' });
 

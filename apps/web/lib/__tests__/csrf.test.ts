@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { validateOrigin, defaultTrustedOrigins } from '../csrf';
 
 function makeRequest(method: string, headers: Record<string, string> = {}): Request {

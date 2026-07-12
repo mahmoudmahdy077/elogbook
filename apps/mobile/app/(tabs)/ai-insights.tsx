@@ -123,7 +123,7 @@ export default function AIInsightsScreen() {
 
       setResponse(data?.response ?? data?.text ?? JSON.stringify(data));
       setQuotaUsed((prev) => prev + 1);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err?.message ?? 'Failed to get AI insights. Please try again.');
     } finally {
       setSubmitting(false);

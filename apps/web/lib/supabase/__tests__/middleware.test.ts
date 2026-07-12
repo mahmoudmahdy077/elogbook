@@ -61,13 +61,15 @@ vi.mock('@sentry/nextjs', () => ({
   startSpan: (_ctx: unknown, fn: (span: unknown) => unknown) => fn({ setAttribute: vi.fn() }),
 }));
 
+import type { NextRequest } from 'next/server';
+
 const { updateSession } = await import('../middleware');
 
 function makeNextRequest(url: string, opts: {
   method?: string;
   headers?: Record<string, string>;
   cookies?: Record<string, string>;
-} = {}) {
+} = {}): NextRequest {
   const headers = new Headers(opts.headers || {});
   const cookies = opts.cookies || {};
 
@@ -97,7 +99,8 @@ function makeNextRequest(url: string, opts: {
         this._cookies[name] = value;
       },
     },
-  };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
 }
 
 describe('updateSession - CSRF guard', () => {
@@ -118,7 +121,7 @@ describe('updateSession - CSRF guard', () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
     const req = makeNextRequest('https://app.elogbook.dev/demo/dashboard', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     // Should pass through (not 403)
     expect(res.status).not.toBe(403);
   });
@@ -128,7 +131,7 @@ describe('updateSession - CSRF guard', () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
     const req = makeNextRequest('https://app.elogbook.dev/api/health', { method: 'OPTIONS' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).not.toBe(403);
   });
 
@@ -137,7 +140,7 @@ describe('updateSession - CSRF guard', () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
     const req = makeNextRequest('https://app.elogbook.dev/demo/approvals/action', { method: 'POST' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error).toContain('Origin');
@@ -151,7 +154,7 @@ describe('updateSession - CSRF guard', () => {
       method: 'POST',
       headers: { origin: 'https://evil.com' },
     });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error).toContain('Cross-origin');
@@ -165,7 +168,7 @@ describe('updateSession - CSRF guard', () => {
       method: 'POST',
       headers: { origin: 'https://app.elogbook.dev' },
     });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     // Should pass CSRF and reach auth check (which will redirect to login)
     expect(res.status).toBe(307); // redirect to login because no user
     const location = res.headers.get('Location');
@@ -177,7 +180,7 @@ describe('updateSession - CSRF guard', () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
     const req = makeNextRequest('https://app.elogbook.dev/demo/approvals/action', { method: 'DELETE' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(403);
   });
 
@@ -189,7 +192,7 @@ describe('updateSession - CSRF guard', () => {
       method: 'PUT',
       headers: { origin: 'https://attacker.com' },
     });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(403);
   });
 });
@@ -205,7 +208,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     mockServerClientAuth.getUser.mockResolvedValue({ data: { user: null }, error: new Error('Not authenticated') });
 
     const req = makeNextRequest('https://app.elogbook.dev/demo/dashboard', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(307);
     const location = res.headers.get('Location');
     expect(location).toContain('/login');
@@ -233,7 +236,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     });
 
     const req = makeNextRequest('https://app.elogbook.dev/wrong-tenant/dashboard', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(307);
     const location = res.headers.get('Location');
     expect(location).toContain('/real-tenant/dashboard');
@@ -260,7 +263,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     });
 
     const req = makeNextRequest('https://app.elogbook.dev/real-tenant/dashboard', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     // Should pass through — not a redirect
     expect(res.status).not.toBe(307);
   });
@@ -269,7 +272,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     mockServerClientAuth.getUser.mockResolvedValue({ data: { user: null }, error: new Error('Not authenticated') });
 
     const req = makeNextRequest('https://app.elogbook.dev/', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     // Home page is public — should pass through
     expect(res.status).not.toBe(307);
   });
@@ -295,7 +298,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     });
 
     const req = makeNextRequest('https://app.elogbook.dev/login', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(307);
     const location = res.headers.get('Location');
     expect(location).toContain('/my-tenant/dashboard');
@@ -306,7 +309,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     const req = makeNextRequest('https://app.elogbook.dev/demo/dashboard', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     // Should pass through without CSRF check or auth
     expect(res.status).toBe(200);
   });
@@ -325,7 +328,7 @@ describe('updateSession - auth & tenant slug matching', () => {
     });
 
     const req = makeNextRequest('https://app.elogbook.dev/login', { method: 'GET' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(307);
     const location = res.headers.get('Location');
     expect(location).toContain('/default/dashboard');
@@ -340,7 +343,7 @@ describe('updateSession - pass-through when no env vars', () => {
     // State-changing POST without origin should be rejected by CSRF guard,
     // but without env vars, the middleware should pass through entirely.
     const req = makeNextRequest('https://app.elogbook.dev/demo/approvals/action', { method: 'POST' });
-    const res = await updateSession(req as any);
+    const res = await updateSession(req);
     expect(res.status).toBe(200);
   });
 });

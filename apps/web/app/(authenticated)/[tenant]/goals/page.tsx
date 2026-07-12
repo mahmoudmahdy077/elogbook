@@ -1,4 +1,4 @@
-import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
+import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import GoalForm from '@/components/GoalForm';
 import EmptyState from '@/components/EmptyState';
@@ -16,7 +16,7 @@ interface GoalRow {
 }
 
 export default async function GoalsPage({ params }: { params: Promise<{ tenant: string }> }) {
-  const { tenant: tenantSlug } = await params;
+  await params;
   const auth = await getAuthContext();
 
   const isDirector = ['director', 'institution_admin', 'admin'].includes(auth.profile.role);

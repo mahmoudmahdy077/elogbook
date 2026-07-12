@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -137,7 +137,7 @@ export default function ApprovalsScreen() {
       .order('requested_at', { ascending: false });
 
     if (requests) {
-      const mapped: ApprovalItem[] = requests.map((r: any) => ({
+      const mapped: ApprovalItem[] = requests.map((r: unknown) => ({
         id: r.id,
         entry_id: r.entry_id,
         resident_name: r.profiles?.full_name ?? 'Unknown',

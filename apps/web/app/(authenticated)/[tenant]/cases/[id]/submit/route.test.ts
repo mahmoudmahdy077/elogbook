@@ -290,13 +290,14 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     mockSupabase.from = vi.fn((table: string) => {
       const builder = originalFrom(table);
       if (table === 'approval_requests') {
-        const originalInsert = builder.insert;
-        builder.insert = ((...args: any[]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        builder.insert = ((..._args: any[]) => {
           insertFailed = true;
           return {
             then: (resolve: (v: unknown) => void) => resolve({ error: new Error('insert failure') }),
             error: null,
           };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }) as any;
       }
       return builder;

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
 
@@ -63,10 +62,8 @@ function groupMilestones(milestones: MilestoneData[]): CompetencyGroup[] {
 
 function MilestoneMatrix({
   milestones,
-  role,
 }: {
   milestones: MilestoneData[];
-  role: string | null;
 }) {
   const groups = useMemo(() => groupMilestones(milestones), [milestones]);
 
@@ -203,7 +200,6 @@ function ResidentPicker({
 
 export default function MilestonesScreen() {
   const [role, setRole] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [milestones, setMilestones] = useState<MilestoneData[]>([]);
   const [residents, setResidents] = useState<ResidentData[]>([]);
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
@@ -317,6 +313,8 @@ export default function MilestonesScreen() {
     }
   }, [selectedResident, fetchMilestones]);
 
+  // loadData is intentionally omitted from deps — it's an inline function that changes every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadData();
   }, []);

@@ -135,7 +135,7 @@ export function BiometricGate({
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [visible]); // only on visibility change, not on re-renders
+  }, [visible, attempts, triggerBiometric]); // only on visibility change, not on re-renders
 
   // ── Accessibility ───────────────────────────────────────────────────────────
   useEffect(() => {

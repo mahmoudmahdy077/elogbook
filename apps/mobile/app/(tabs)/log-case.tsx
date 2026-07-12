@@ -97,10 +97,14 @@ export default function LogCaseScreen() {
       } catch { /* storage limit */ }
     }, 1500);
     return () => clearTimeout(timer);
+  // Auto-save effect — step intentionally omitted to avoid saving on every step change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTemplateId, patientMrn, patientDob, fieldValues, isDeidentified]);
 
   const haptics = useHaptics();
 
+  // loadTemplates is intentionally omitted from deps — it's an inline function that changes every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadTemplates();
   }, []);
@@ -322,7 +326,7 @@ export default function LogCaseScreen() {
     setLoading(false);
   };
 
-  const toggleFavorite = async (templateId: string) => {
+  const toggleFavorite = useCallback(async (templateId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -359,16 +363,16 @@ export default function LogCaseScreen() {
         )
       );
     }
-  };
+  }, [favoriteIds, supabase]);
 
-  const selectTemplate = (t: CaseTemplate) => {
+  const selectTemplate = useCallback((t: CaseTemplate) => {
     setSelectedTemplate(t);
     const defaults: Record<string, string> = {};
     for (const field of t.fields) {
       defaults[field.key] = '';
     }
     setFieldValues(defaults);
-  };
+  }, []);
 
   const setFieldValue = (key: string, value: string) => {
     setFieldValues((prev) => ({ ...prev, [key]: value }));

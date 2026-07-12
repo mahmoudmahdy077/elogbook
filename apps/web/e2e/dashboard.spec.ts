@@ -1,4 +1,4 @@
-import { test, expect, goToAuthenticatedRoute, MOCK_TENANT_SLUG } from '../e2e/fixtures';
+import { test, expect, MOCK_TENANT_SLUG } from '../e2e/fixtures';
 
 test.describe('Dashboard Page', () => {
   test.beforeEach(async ({ page }) => {

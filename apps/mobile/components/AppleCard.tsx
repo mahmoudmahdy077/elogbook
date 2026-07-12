@@ -9,7 +9,6 @@ import {
   View,
   Text,
   ViewStyle,
-  TextStyle,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';

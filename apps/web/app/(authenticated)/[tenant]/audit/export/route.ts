@@ -3,13 +3,10 @@ import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
-import { safeRelativePath } from '@/lib/safe-redirect';
-
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-const PAGE_SIZE = 20;
 const MAX_EXPORT_ROWS = 5000;
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
 
@@ -21,10 +18,6 @@ const SUSPICIOUS_ACTIONS = [
   'audit_export',
   'sso_start',
 ];
-
-function isSuspicious(action: string): boolean {
-  return SUSPICIOUS_ACTIONS.includes(action);
-}
 
 function escapeCsv(v: unknown): string {
   const s = v === null || v === undefined ? '' : String(v);

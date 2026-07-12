@@ -61,9 +61,6 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
 
-    // Get current URL
-    const currentUrl = page.url();
-
     // Press 'G' then 'D' to navigate to dashboard
     await page.keyboard.press('g');
     await page.waitForTimeout(100);

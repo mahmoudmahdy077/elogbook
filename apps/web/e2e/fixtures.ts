@@ -1,5 +1,4 @@
 import { test as base, type Page } from '@playwright/test';
-import path from 'path';
 
 /**
  * Stub Supabase auth by setting a mock session cookie.

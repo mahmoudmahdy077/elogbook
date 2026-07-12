@@ -7,7 +7,6 @@ import UserManager from '@/components/UserManager';
 import AIConfigPanel from '@/components/AIConfigPanel';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
-import SSOManager from '@/components/SSOManager';
 
 interface AIConfigData {
   id: string;

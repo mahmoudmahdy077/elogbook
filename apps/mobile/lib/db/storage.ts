@@ -8,7 +8,6 @@ import { Rotation } from './models/Rotation';
 import { Milestone } from './models/Milestone';
 import { EvaluationForm } from './models/EvaluationForm';
 import { Comment } from './models/Comment';
-import { Shift } from './models/Shift';
 import type { CaseStatus } from '@elogbook/shared';
 
 // Safely parse dates — Supabase returns ISO string timestamps,
@@ -477,12 +476,12 @@ async function batchUpsertGeneric<T extends Model>(
       const match = existingMap.get(id) as T | undefined;
 
       if (match) {
-        return match.prepareUpdate((record: any) => {
+        return match.prepareUpdate((record: Record<string, unknown>) => {
           applyUpdate(record as T, serverData);
         });
       }
 
-      return db.get<T>(tableName).prepareCreate((record: any) => {
+      return db.get<T>(tableName).prepareCreate((record: Record<string, unknown>) => {
         record.id = String(serverData.id);
         applyCreate(record as T, serverData);
       });

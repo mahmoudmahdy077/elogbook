@@ -26,7 +26,7 @@ interface CaseCommentsProps {
 
 export default function CaseComments({
   caseEntryId,
-  tenantId,
+  tenantId: _tenantId,
   currentUserId,
   isOpen,
   onClose,
@@ -118,7 +118,7 @@ export default function CaseComments({
           table: 'case_comments',
           filter: `case_entry_id=eq.${caseEntryId}`,
         },
-        async (payload: any) => {
+        async (payload: { new: Record<string, unknown> }) => {
           const newC = payload.new as Comment;
           // Fetch the author name
           const { data: profile } = await supabase

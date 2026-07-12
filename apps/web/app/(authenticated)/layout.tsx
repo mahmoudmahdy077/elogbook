@@ -12,9 +12,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  let auth;
   try {
-    auth = await getAuthContext();
+    await getAuthContext();
   } catch {
     redirect('/login');
   }

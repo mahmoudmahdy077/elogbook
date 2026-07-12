@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, TextInput, TouchableOpacity, Text, View } from 'react-native';
 
-let DateTimePicker: any = null;
+let DateTimePicker: unknown = null;
 try {
   // The native module is not available in Vitest's node environment; the
   // require is wrapped in try/catch so the test harness never blows up.

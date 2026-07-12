@@ -9,10 +9,6 @@ interface RetentionRow {
   name: string;
 }
 
-interface ForecastRow {
-  forecast_count: number;
-}
-
 export default async function RetentionAdminPage({
   params,
 }: {

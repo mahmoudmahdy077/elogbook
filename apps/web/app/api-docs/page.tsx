@@ -37,14 +37,17 @@ export default function ApiDocsPage() {
 
   useEffect(() => {
     if (!loaded || !swaggerRef.current) return;
-    if ((window as any).SwaggerUIBundle) {
-      (window as any).SwaggerUIBundle({
+    const SwaggerUI = (window as unknown as Record<string, unknown>).SwaggerUIBundle as
+      | ((opts: Record<string, unknown>) => void)
+      | undefined;
+    if (SwaggerUI) {
+      SwaggerUI({
         url: '/openapi.yaml',
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
-          (window as any).SwaggerUIBundle.presets.apis,
-          (window as any).SwaggerUIBundle.SwaggerUIStandalonePreset,
+          (SwaggerUI as unknown as Record<string, unknown>).presets as { apis: unknown },
+          (window as unknown as Record<string, unknown>).SwaggerUIBundle as unknown,
         ],
         layout: 'BaseLayout',
         defaultModelsExpandDepth: 1,

@@ -1,7 +1,5 @@
 'use client';
 
-import ErrorDisplay from '@/components/ErrorDisplay';
-
 export default function GoalsError({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="p-6">

@@ -1,4 +1,4 @@
-import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
+import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';

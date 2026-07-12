@@ -73,7 +73,7 @@ export default async function RotationsPage({
   }
 
   // Fetch shifts for the visible rotations
-  const rotationIds = (rotations ?? []).map((r: any) => r.id);
+  const rotationIds = (rotations ?? []).map((r: RotationRow) => r.id);
   let shifts: ShiftRow[] = [];
   if (rotationIds.length > 0) {
     const { data: shiftData } = await supabase
