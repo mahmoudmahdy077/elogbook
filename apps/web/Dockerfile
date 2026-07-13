@@ -14,11 +14,11 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY packages ./packages
 COPY apps/web ./apps/web
 COPY package.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 RUN pnpm --filter @elogbook/web build
 
 FROM base AS runner
