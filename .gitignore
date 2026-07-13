@@ -42,3 +42,7 @@ supabase/.temp/
 
 .vercel
 .env*
+
+# CI debug logs
+*_logs.zip
+*_logs/
