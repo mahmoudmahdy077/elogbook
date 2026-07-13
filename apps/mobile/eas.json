@@ -2,6 +2,7 @@
   "cli": {
     "version": ">= 14.0.0"
   },
+  "projectId": "c0d8281c-0fae-4a16-b7ba-0b7a4a170bb7",
   "build": {
     "production": {
       "node": "22.14.0",
