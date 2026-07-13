@@ -13,11 +13,12 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   transpilePackages: ['@elogbook/shared'],
+  turbopack: {
+    root: process.env.TURBOPACK_ROOT ?? '../..',
+  },
   experimental: {
     optimizePackageImports: ['@heroui/react', 'framer-motion', '@sentry/nextjs'],
   },
-  // Use webpack instead of Turbopack for Vercel compatibility
-  turbopack: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

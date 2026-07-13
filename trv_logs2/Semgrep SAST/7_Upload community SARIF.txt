@@ -1,0 +1,29 @@
+﻿2026-07-13T21:20:59.1385495Z ##[group]Run github/codeql-action/upload-sarif@v4
+2026-07-13T21:20:59.1385833Z with:
+2026-07-13T21:20:59.1386056Z   sarif_file: semgrep-community.sarif
+2026-07-13T21:20:59.1386365Z   category: semgrep-community
+2026-07-13T21:20:59.1386669Z   checkout_path: /home/runner/work/elogbook/elogbook
+2026-07-13T21:20:59.1389052Z   token: ***
+2026-07-13T21:20:59.1389256Z   matrix: null
+2026-07-13T21:20:59.1389474Z   wait-for-processing: true
+2026-07-13T21:20:59.1389719Z env:
+2026-07-13T21:20:59.1389945Z   CODEQL_ACTION_FEATURE_MULTI_LANGUAGE: false
+2026-07-13T21:20:59.1390260Z   CODEQL_ACTION_FEATURE_SANDWICH: false
+2026-07-13T21:20:59.1390551Z   CODEQL_ACTION_FEATURE_SARIF_COMBINE: true
+2026-07-13T21:20:59.1390849Z   CODEQL_ACTION_FEATURE_WILL_UPLOAD: true
+2026-07-13T21:20:59.1391144Z   CODEQL_ACTION_VERSION: 4.37.0
+2026-07-13T21:20:59.1391486Z   CODEQL_ACTION_ANALYSIS_KEY: .github/workflows/semgrep.yml:semgrep
+2026-07-13T21:20:59.1391891Z   CODEQL_WORKFLOW_STARTED_AT: 2026-07-13T21:20:52.885Z
+2026-07-13T21:20:59.1392418Z   CODEQL_UPLOAD_SARIF_SEMGREP_CUSTOM__SEMGREP_OSS: CODEQL_UPLOAD_SARIF_SEMGREP_CUSTOM__SEMGREP_OSS
+2026-07-13T21:20:59.1392871Z ##[endgroup]
+2026-07-13T21:20:59.1399208Z ##[command]/usr/bin/docker exec  c3b4e21d5e1586de64dc8ea12a4e70b8d8a44f8aa99c4bcff0ce435bc6192519 sh -c "cat /etc/*release | grep ^ID"
+2026-07-13T21:20:59.7986448Z Post-processing sarif files: ["semgrep-community.sarif"]
+2026-07-13T21:20:59.8077128Z Validating semgrep-community.sarif
+2026-07-13T21:21:00.0722507Z Adding fingerprints to SARIF file. See https://docs.github.com/en/code-security/reference/code-scanning/sarif-support-for-code-scanning#data-for-preventing-duplicated-alerts for more information.
+2026-07-13T21:21:00.1176727Z ##[group]Uploading code scanning results
+2026-07-13T21:21:00.1575528Z Uploading results
+2026-07-13T21:21:00.6589774Z Successfully uploaded results
+2026-07-13T21:21:00.6590679Z ##[endgroup]
+2026-07-13T21:21:00.6597225Z ##[group]Waiting for processing to finish
+2026-07-13T21:21:05.8278155Z Analysis upload status is complete.
+2026-07-13T21:21:05.8279182Z ##[endgroup]

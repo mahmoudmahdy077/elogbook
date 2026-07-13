@@ -1,0 +1,52 @@
+﻿2026-07-13T21:20:40.9510596Z ##[group]Run semgrep \
+2026-07-13T21:20:40.9510906Z [36;1msemgrep \[0m
+2026-07-13T21:20:40.9511151Z [36;1m  --config p/typescript \[0m
+2026-07-13T21:20:40.9511440Z [36;1m  --config p/owasp-top-ten \[0m
+2026-07-13T21:20:40.9511716Z [36;1m  --config p/javascript \[0m
+2026-07-13T21:20:40.9512027Z [36;1m  --sarif --output semgrep-community.sarif \[0m
+2026-07-13T21:20:40.9512346Z [36;1m  --metrics off \[0m
+2026-07-13T21:20:40.9512605Z [36;1m  --exclude '**/node_modules/**' \[0m
+2026-07-13T21:20:40.9512891Z [36;1m  --exclude '**/.next/**' \[0m
+2026-07-13T21:20:40.9513148Z [36;1m  --exclude '**/dist/**' \[0m
+2026-07-13T21:20:40.9513412Z [36;1m  --exclude '**/build/**' \[0m
+2026-07-13T21:20:40.9513862Z [36;1m  .[0m
+2026-07-13T21:20:40.9514176Z shell: sh -e {0}
+2026-07-13T21:20:40.9514376Z env:
+2026-07-13T21:20:40.9514576Z   SEMGREP_SEND_METRICS: off
+2026-07-13T21:20:40.9514820Z ##[endgroup]
+2026-07-13T21:20:44.5886790Z                
+2026-07-13T21:20:44.5887203Z                
+2026-07-13T21:20:44.5887925Z ┌─────────────┐
+2026-07-13T21:20:44.5888253Z │ Scan Status │
+2026-07-13T21:20:44.5888574Z └─────────────┘
+2026-07-13T21:20:44.5893650Z   Scanning 609 files tracked by git with 563 Code rules:
+2026-07-13T21:20:44.6508550Z                                                                                                                         
+2026-07-13T21:20:44.6509648Z   Language      Rules   Files          Origin      Rules                                                                
+2026-07-13T21:20:44.6511002Z  ─────────────────────────────        ───────────────────                                                               
+2026-07-13T21:20:44.6512100Z   <multilang>       6     609          Community     563                                                                
+2026-07-13T21:20:44.6512871Z   ts               74     362                                                                                           
+2026-07-13T21:20:44.6513710Z   json              3      32                                                                                           
+2026-07-13T21:20:44.6514361Z   yaml             28      23                                                                                           
+2026-07-13T21:20:44.6514955Z   js               68      14                                                                                           
+2026-07-13T21:20:44.6515621Z   python          147       3                                                                                           
+2026-07-13T21:20:44.6516258Z   bash              1       3                                                                                           
+2026-07-13T21:20:44.6516966Z   dockerfile        4       1                                                                                           
+2026-07-13T21:20:44.6517583Z                                                                                                                         
+2026-07-13T21:20:52.0551515Z                 
+2026-07-13T21:20:52.0551969Z                 
+2026-07-13T21:20:52.0552621Z ┌──────────────┐
+2026-07-13T21:20:52.0553029Z │ Scan Summary │
+2026-07-13T21:20:52.0553398Z └──────────────┘
+2026-07-13T21:20:52.0553971Z ✅ Scan completed successfully.
+2026-07-13T21:20:52.0554457Z  • Findings: 84 (84 blocking)
+2026-07-13T21:20:52.0554847Z  • Rules run: 263
+2026-07-13T21:20:52.0555200Z  • Targets scanned: 609
+2026-07-13T21:20:52.0555584Z  • Parsed lines: ~99.9%
+2026-07-13T21:20:52.0555945Z  • Scan skipped: 
+2026-07-13T21:20:52.0556393Z    ◦ Files matching .semgrepignore patterns: 9
+2026-07-13T21:20:52.0557297Z  • Scan was limited to files tracked by git
+2026-07-13T21:20:52.0558098Z  • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+2026-07-13T21:20:52.0558795Z Ran 263 rules on 609 files: 84 findings.
+2026-07-13T21:20:52.0570645Z 
+2026-07-13T21:20:52.0571513Z 📢 Too many findings? Try Semgrep Pro for more powerful queries and less noise.
+2026-07-13T21:20:52.0572190Z    See https://sg.run/false-positives.
