@@ -27,6 +27,7 @@ import {
   clearBiometricAuthCache,
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
+import { initDatabase } from '../lib/db/database';
 
 // Font asset imports — loaded statically instead of using require()
 import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
@@ -174,6 +175,9 @@ export default function RootLayout() {
     // Navigate to login screen for full passcode auth
     router.replace('/login');
   }, [router]);
+
+  // Initialize local database for offline storage
+  useEffect(() => { initDatabase().catch(console.error); }, []);
 
   // Initialize sync service with auth state
   useSyncInit();

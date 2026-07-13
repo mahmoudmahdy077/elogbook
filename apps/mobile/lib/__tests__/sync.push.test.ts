@@ -169,7 +169,7 @@ describe('pushCases — server id + conflict handling', () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0].type).toBe('upsert');
-    expect(mockUpdateSyncStatus).toHaveBeenCalledWith(draft, 'synced', 'server-uuid-99');
+    expect(mockUpdateSyncStatus).toHaveBeenCalledWith(draft, 'synced', draft.id);
   });
 
   it('targets server id (not local uuid) for `modified` updates', async () => {

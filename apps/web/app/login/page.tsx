@@ -257,7 +257,7 @@ export default function LoginPage() {
                   disabled={!email || loading}
                   className="w-full py-3 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center justify-center gap-2"
                 >
-                  {loading ? <Spinner /> : null}
+                  {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
                   {loading
                     ? 'Signing in...'
                     : password

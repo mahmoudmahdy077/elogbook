@@ -15,39 +15,43 @@ import { getOrCreateDbEncryptionKey } from './encryption-key';
 const modelClasses = [CaseEntry, CaseTemplate, ProgramGoal, Rotation, Milestone, EvaluationForm, Comment, Shift];
 
 let _database: Database | null = null;
-let _dbKey: string | null = null;
+let _initPromise: Promise<void> | null = null;
 
-export async function getDbEncryptionKey(): Promise<string> {
-  if (_dbKey) return _dbKey;
-  _dbKey = await getOrCreateDbEncryptionKey();
-  return _dbKey;
+async function ensureInit(): Promise<void> {
+  if (_database) return;
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
+    const dbKey = await getOrCreateDbEncryptionKey();
+
+    const adapter = new SQLiteAdapter({
+      schema,
+      migrations,
+      jsi: true,
+      dbName: 'elogbook-encrypted',
+      encryptionKey: dbKey,
+      onSetUpError: (err: unknown) => {
+        console.error('WatermelonDB setup error:', err);
+      },
+    } as any);
+
+    _database = new Database({
+      adapter,
+      modelClasses,
+    });
+  })();
+
+  return _initPromise;
 }
 
-export async function getDatabase(): Promise<Database> {
-  if (_database) return _database;
-
-  const dbKey = await getDbEncryptionKey();
-
-  const adapter = new SQLiteAdapter({
-    schema,
-    migrations,
-    jsi: true,
-    dbName: 'elogbook-encrypted',
-    encryptionKey: dbKey,
-    onSetUpError: (error) => {
-      console.error('WatermelonDB setup error:', error);
-    },
-  });
-
-  _database = new Database({
-    adapter,
-    modelClasses,
-  });
-
+export function getDatabase(): Database {
+  if (!_database) {
+    throw new Error('Database not initialized. Call initDatabase() first.');
+  }
   return _database;
 }
 
-/** @deprecated Use the async getDatabase() instead */
-export function getDatabaseSync(): Database {
-  throw new Error('getDatabaseSync is not supported. Use getDatabase() instead.');
+export async function initDatabase(): Promise<Database> {
+  await ensureInit();
+  return _database!;
 }

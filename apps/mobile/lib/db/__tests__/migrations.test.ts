@@ -4,7 +4,7 @@ import { migrations } from '../migrations';
 describe('migrations', () => {
   it('declares a v2 → v3 step that adds server_id to case_entries', () => {
     expect(migrations.validated).toBe(true);
-    expect(migrations.maxVersion).toBe(3);
+    expect(migrations.maxVersion).toBe(4);
 
     const v3 = migrations.sortedMigrations.find((m) => m.toVersion === 3);
     expect(v3).toBeDefined();
