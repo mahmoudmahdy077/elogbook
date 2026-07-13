@@ -69,7 +69,6 @@
           "photosPermission": "Photo library access is used to attach images to case entries"
         }
       ],
-      "expo-haptics",
       "expo-font",
       [
         "expo-build-properties",
@@ -78,7 +77,7 @@
             "usesCleartextTraffic": false
           },
           "ios": {
-            "deploymentTarget": "15.0"
+            "deploymentTarget": "16.4"
           }
         }
       ]
