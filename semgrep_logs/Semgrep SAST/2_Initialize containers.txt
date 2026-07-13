@@ -1,0 +1,104 @@
+﻿2026-07-13T21:02:03.8730409Z ##[group]Checking docker version
+2026-07-13T21:02:03.8744069Z ##[command]/usr/bin/docker version --format '{{.Server.APIVersion}}'
+2026-07-13T21:02:03.9458482Z '1.48'
+2026-07-13T21:02:03.9476811Z Docker daemon API version: '1.48'
+2026-07-13T21:02:03.9478497Z ##[command]/usr/bin/docker version --format '{{.Client.APIVersion}}'
+2026-07-13T21:02:03.9655516Z '1.48'
+2026-07-13T21:02:03.9670001Z Docker client API version: '1.48'
+2026-07-13T21:02:03.9675139Z ##[endgroup]
+2026-07-13T21:02:03.9678189Z ##[group]Clean up resources from previous jobs
+2026-07-13T21:02:03.9683627Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter "label=32ef9d"
+2026-07-13T21:02:03.9849224Z ##[command]/usr/bin/docker network prune --force --filter "label=32ef9d"
+2026-07-13T21:02:03.9993740Z ##[endgroup]
+2026-07-13T21:02:03.9994488Z ##[group]Create local container network
+2026-07-13T21:02:04.0006082Z ##[command]/usr/bin/docker network create --label 32ef9d github_network_80fbd8d90af049b79d516478985cdfb0
+2026-07-13T21:02:04.0638283Z cf3da28794ac471f55a1d1b7a8cb30385843153f81e9ca5baa59f924cd7dfc34
+2026-07-13T21:02:04.0670824Z ##[endgroup]
+2026-07-13T21:02:04.0694556Z ##[group]Starting job container
+2026-07-13T21:02:04.0716782Z ##[command]/usr/bin/docker pull returntocorp/semgrep:latest
+2026-07-13T21:02:04.3477061Z latest: Pulling from returntocorp/semgrep
+2026-07-13T21:02:04.4412964Z e6f31ffc071e: Pulling fs layer
+2026-07-13T21:02:04.4414086Z ccb2114c27e1: Pulling fs layer
+2026-07-13T21:02:04.4414940Z bd9ddc54bea9: Pulling fs layer
+2026-07-13T21:02:04.4415777Z 94e01ae9a186: Pulling fs layer
+2026-07-13T21:02:04.4416611Z 538aed312edf: Pulling fs layer
+2026-07-13T21:02:04.4417440Z ffca6f36b8c4: Pulling fs layer
+2026-07-13T21:02:04.4418554Z d44f2628839e: Pulling fs layer
+2026-07-13T21:02:04.4419369Z 6be285c53517: Pulling fs layer
+2026-07-13T21:02:04.4420178Z e227f139f3f0: Pulling fs layer
+2026-07-13T21:02:04.4421014Z e08e74f806c1: Pulling fs layer
+2026-07-13T21:02:04.4422226Z e86718175e55: Pulling fs layer
+2026-07-13T21:02:04.4423048Z f4cbfaba6e2b: Pulling fs layer
+2026-07-13T21:02:04.4423965Z 9049ecc4ddce: Pulling fs layer
+2026-07-13T21:02:04.4424826Z ffca6f36b8c4: Waiting
+2026-07-13T21:02:04.4425901Z d44f2628839e: Waiting
+2026-07-13T21:02:04.4426679Z 6be285c53517: Waiting
+2026-07-13T21:02:04.4427432Z e227f139f3f0: Waiting
+2026-07-13T21:02:04.4428378Z e08e74f806c1: Waiting
+2026-07-13T21:02:04.4429135Z e86718175e55: Waiting
+2026-07-13T21:02:04.4429894Z f4cbfaba6e2b: Waiting
+2026-07-13T21:02:04.4430657Z 9049ecc4ddce: Waiting
+2026-07-13T21:02:04.4431491Z 94e01ae9a186: Waiting
+2026-07-13T21:02:04.4432424Z 538aed312edf: Waiting
+2026-07-13T21:02:04.5216265Z bd9ddc54bea9: Verifying Checksum
+2026-07-13T21:02:04.5218249Z bd9ddc54bea9: Download complete
+2026-07-13T21:02:04.5773918Z e6f31ffc071e: Verifying Checksum
+2026-07-13T21:02:04.5776190Z e6f31ffc071e: Download complete
+2026-07-13T21:02:04.6301806Z 94e01ae9a186: Verifying Checksum
+2026-07-13T21:02:04.6308987Z 94e01ae9a186: Download complete
+2026-07-13T21:02:04.7164651Z ccb2114c27e1: Verifying Checksum
+2026-07-13T21:02:04.7173920Z ccb2114c27e1: Download complete
+2026-07-13T21:02:04.8124980Z e6f31ffc071e: Pull complete
+2026-07-13T21:02:05.1982126Z d44f2628839e: Verifying Checksum
+2026-07-13T21:02:05.2024259Z d44f2628839e: Download complete
+2026-07-13T21:02:05.2525800Z 6be285c53517: Verifying Checksum
+2026-07-13T21:02:05.2536367Z 6be285c53517: Download complete
+2026-07-13T21:02:05.3094395Z e227f139f3f0: Download complete
+2026-07-13T21:02:05.3631695Z e08e74f806c1: Verifying Checksum
+2026-07-13T21:02:05.3635282Z e08e74f806c1: Download complete
+2026-07-13T21:02:05.4189844Z e86718175e55: Verifying Checksum
+2026-07-13T21:02:05.4194490Z e86718175e55: Download complete
+2026-07-13T21:02:05.4734730Z f4cbfaba6e2b: Verifying Checksum
+2026-07-13T21:02:05.4738556Z f4cbfaba6e2b: Download complete
+2026-07-13T21:02:05.5298063Z 9049ecc4ddce: Verifying Checksum
+2026-07-13T21:02:05.5299986Z 9049ecc4ddce: Download complete
+2026-07-13T21:02:05.6661971Z 538aed312edf: Verifying Checksum
+2026-07-13T21:02:05.6663844Z 538aed312edf: Download complete
+2026-07-13T21:02:05.7665463Z ffca6f36b8c4: Verifying Checksum
+2026-07-13T21:02:05.7667270Z ffca6f36b8c4: Download complete
+2026-07-13T21:02:08.4049848Z ccb2114c27e1: Pull complete
+2026-07-13T21:02:08.4154725Z bd9ddc54bea9: Pull complete
+2026-07-13T21:02:08.4440013Z 94e01ae9a186: Pull complete
+2026-07-13T21:02:09.1484031Z 538aed312edf: Pull complete
+2026-07-13T21:02:15.0001101Z ffca6f36b8c4: Pull complete
+2026-07-13T21:02:15.0544147Z d44f2628839e: Pull complete
+2026-07-13T21:02:15.0658309Z 6be285c53517: Pull complete
+2026-07-13T21:02:15.0767411Z e227f139f3f0: Pull complete
+2026-07-13T21:02:15.0846684Z e08e74f806c1: Pull complete
+2026-07-13T21:02:15.0958466Z e86718175e55: Pull complete
+2026-07-13T21:02:15.1042857Z f4cbfaba6e2b: Pull complete
+2026-07-13T21:02:15.1167135Z 9049ecc4ddce: Pull complete
+2026-07-13T21:02:15.1192903Z Digest: sha256:59fbed6127ea7c5dde3ba6a85142733bb20ea9aaa36120c953904f1539aaf66e
+2026-07-13T21:02:15.1204669Z Status: Downloaded newer image for returntocorp/semgrep:latest
+2026-07-13T21:02:15.1214347Z docker.io/returntocorp/semgrep:latest
+2026-07-13T21:02:15.1309615Z ##[command]/usr/bin/docker create --name f76571d0fdf442228a22ab827263bb71_returntocorpsemgreplatest_9fcc21 --label 32ef9d --workdir /__w/elogbook/elogbook --network github_network_80fbd8d90af049b79d516478985cdfb0  -e "HOME=/github/home" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work":"/__w" -v "/home/runner/actions-runner/cached/2.335.1/externals":"/__e":ro -v "/home/runner/work/_temp":"/__w/_temp" -v "/home/runner/work/_actions":"/__w/_actions" -v "/opt/hostedtoolcache":"/__t" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" --entrypoint "tail" returntocorp/semgrep:latest "-f" "/dev/null"
+2026-07-13T21:02:15.1574883Z d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f
+2026-07-13T21:02:15.1602025Z ##[command]/usr/bin/docker start d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f
+2026-07-13T21:02:15.3348145Z d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f
+2026-07-13T21:02:15.3369433Z ##[command]/usr/bin/docker ps --all --filter id=d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f --filter status=running --no-trunc --format "{{.ID}} {{.Status}}"
+2026-07-13T21:02:15.3499111Z d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f Up Less than a second
+2026-07-13T21:02:15.3518192Z ##[command]/usr/bin/docker inspect --format "{{range .Config.Env}}{{println .}}{{end}}" d8569cbc66d1aca3f22a9f34574bdc70be64e9573904a298544d415ba8245f3f
+2026-07-13T21:02:15.3647444Z HOME=/github/home
+2026-07-13T21:02:15.3648071Z GITHUB_ACTIONS=true
+2026-07-13T21:02:15.3648327Z CI=true
+2026-07-13T21:02:15.3648643Z PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+2026-07-13T21:02:15.3648996Z SEMGREP_IN_DOCKER=1
+2026-07-13T21:02:15.3649232Z SEMGREP_USER_AGENT_APPEND=Docker
+2026-07-13T21:02:15.3649529Z PYTHONIOENCODING=utf8
+2026-07-13T21:02:15.3649865Z PYTHONUNBUFFERED=1
+2026-07-13T21:02:15.3662009Z DOCKER_OTEL_RESOURCE_ATTRIBUTES=vcs.ref.head.name=release-1.168.0,vcs.ref.head.revision=245399d858b127673878803dcdbef08264bdcb0c,vcs.repository.url.full=github.com/semgrep/semgrep-proprietary,docker.base_image=alpine:3.23
+2026-07-13T21:02:15.3663037Z DD_SERVICE=semgrep-core
+2026-07-13T21:02:15.3663313Z TSAN_OPTIONS=exitcode=0 report_signal_unsafe=0
+2026-07-13T21:02:15.3673302Z ##[endgroup]
+2026-07-13T21:02:15.3683043Z ##[group]Waiting for all services to be ready
+2026-07-13T21:02:15.3684770Z ##[endgroup]

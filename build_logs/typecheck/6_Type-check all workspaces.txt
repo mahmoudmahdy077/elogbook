@@ -1,0 +1,18 @@
+﻿2026-07-13T20:41:59.8350793Z ##[group]Run pnpm -r typecheck
+2026-07-13T20:41:59.8351277Z [36;1mpnpm -r typecheck[0m
+2026-07-13T20:41:59.8398072Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-13T20:41:59.8398608Z env:
+2026-07-13T20:41:59.8399012Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-07-13T20:41:59.8399517Z ##[endgroup]
+2026-07-13T20:42:00.2848325Z Scope: 5 of 6 workspace projects
+2026-07-13T20:42:00.2874039Z packages/env typecheck$ tsc --noEmit
+2026-07-13T20:42:00.2881625Z packages/shared typecheck$ tsc --noEmit
+2026-07-13T20:42:00.2885662Z packages/supabase typecheck$ echo ok
+2026-07-13T20:42:00.3358092Z packages/supabase typecheck: ok
+2026-07-13T20:42:00.3367384Z packages/supabase typecheck: Done
+2026-07-13T20:42:02.7494526Z packages/env typecheck: Done
+2026-07-13T20:42:03.3646319Z packages/shared typecheck: Done
+2026-07-13T20:42:03.3657083Z apps/mobile typecheck$ tsc --noEmit
+2026-07-13T20:42:03.3659832Z apps/web typecheck$ tsc --noEmit
+2026-07-13T20:42:10.6580940Z apps/mobile typecheck: Done
+2026-07-13T20:42:14.1255709Z apps/web typecheck: Done

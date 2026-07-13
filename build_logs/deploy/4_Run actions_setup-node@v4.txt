@@ -1,0 +1,29 @@
+﻿2026-07-13T20:42:53.7087672Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-07-13T20:42:53.7089297Z ##[group]Run actions/setup-node@v4
+2026-07-13T20:42:53.7089588Z with:
+2026-07-13T20:42:53.7089779Z   node-version: 22
+2026-07-13T20:42:53.7089981Z   cache: pnpm
+2026-07-13T20:42:53.7090187Z   always-auth: false
+2026-07-13T20:42:53.7090409Z   check-latest: false
+2026-07-13T20:42:53.7092707Z   token: ***
+2026-07-13T20:42:53.7092901Z env:
+2026-07-13T20:42:53.7093153Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-07-13T20:42:53.7093461Z ##[endgroup]
+2026-07-13T20:42:53.8499287Z Found in cache @ /opt/hostedtoolcache/node/22.23.1/x64
+2026-07-13T20:42:53.8505015Z (node:2290) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-07-13T20:42:53.8506087Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-07-13T20:42:53.8508653Z ##[group]Environment details
+2026-07-13T20:42:56.7113715Z node: v22.23.1
+2026-07-13T20:42:56.7114263Z npm: 10.9.8
+2026-07-13T20:42:56.7114589Z yarn: 1.22.22
+2026-07-13T20:42:56.7115557Z ##[endgroup]
+2026-07-13T20:42:56.7166708Z [command]/home/runner/setup-pnpm/node_modules/.bin/pnpm store path --silent
+2026-07-13T20:42:57.3215737Z /home/runner/setup-pnpm/node_modules/.bin/store/v3
+2026-07-13T20:42:57.4665308Z Cache hit for: node-cache-Linux-x64-pnpm-66d0da123b61c3f505d205266a78b7e7ad693217b31a0f043eefe839d0828363
+2026-07-13T20:42:57.4770146Z (node:2290) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-07-13T20:42:58.5015574Z Received 243269632 of 530202439 (45.9%), 231.8 MBs/sec
+2026-07-13T20:42:59.5217816Z Received 530202439 of 530202439 (100.0%), 250.2 MBs/sec
+2026-07-13T20:42:59.5219311Z Cache Size: ~506 MB (530202439 B)
+2026-07-13T20:42:59.5255405Z [command]/usr/bin/tar -xf /home/runner/work/_temp/4c8e5288-8d26-495c-92c9-4191248147cc/cache.tzst -P -C /home/runner/work/elogbook/elogbook --use-compress-program unzstd
+2026-07-13T20:43:04.9357167Z Cache restored successfully
+2026-07-13T20:43:04.9601829Z Cache restored from key: node-cache-Linux-x64-pnpm-66d0da123b61c3f505d205266a78b7e7ad693217b31a0f043eefe839d0828363

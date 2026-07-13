@@ -1,0 +1,8 @@
+2026-07-13T20:42:47.5910000Z Requested labels: ubuntu-latest
+2026-07-13T20:42:47.5910000Z Job defined at: mahmoudmahdy077/elogbook/.github/workflows/deploy-web.yml@refs/heads/main
+2026-07-13T20:42:47.5910000Z Waiting for a runner to pick up this job...
+2026-07-13T20:42:47.5880000Z Evaluating deploy.if
+2026-07-13T20:42:47.5880000Z Evaluating: success()
+2026-07-13T20:42:47.5880000Z Result: true
+2026-07-13T20:42:47.9370000Z Job is about to start running on the hosted runner: GitHub Actions 1000000875
+2026-07-13T20:42:47.9360000Z Job is waiting for a hosted runner to come online.

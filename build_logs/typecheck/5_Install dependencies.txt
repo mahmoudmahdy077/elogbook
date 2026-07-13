@@ -1,0 +1,31 @@
+﻿2026-07-13T20:41:54.8732438Z ##[group]Run pnpm install --frozen-lockfile
+2026-07-13T20:41:54.8732853Z [36;1mpnpm install --frozen-lockfile[0m
+2026-07-13T20:41:54.8879196Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-13T20:41:54.8879568Z env:
+2026-07-13T20:41:54.8879841Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-07-13T20:41:54.8880163Z ##[endgroup]
+2026-07-13T20:41:55.2951938Z Scope: all 6 workspace projects
+2026-07-13T20:41:55.3766751Z Lockfile is up to date, resolution step is skipped
+2026-07-13T20:41:55.4703218Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-07-13T20:41:55.6748354Z Packages: +1242
+2026-07-13T20:41:55.6774853Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-07-13T20:41:56.4708258Z Progress: resolved 1242, reused 1105, downloaded 0, added 0
+2026-07-13T20:41:57.4713486Z Progress: resolved 1242, reused 1242, downloaded 0, added 547
+2026-07-13T20:41:58.4753117Z Progress: resolved 1242, reused 1242, downloaded 0, added 1051
+2026-07-13T20:41:59.0662154Z Progress: resolved 1242, reused 1242, downloaded 0, added 1242, done
+2026-07-13T20:41:59.7096956Z 
+2026-07-13T20:41:59.7099228Z dependencies:
+2026-07-13T20:41:59.7100920Z + next 16.2.7
+2026-07-13T20:41:59.7101343Z + react 19.2.7
+2026-07-13T20:41:59.7102594Z + react-dom 19.2.7
+2026-07-13T20:41:59.7102800Z 
+2026-07-13T20:41:59.7102964Z devDependencies:
+2026-07-13T20:41:59.7103760Z + @next/bundle-analyzer 16.2.9
+2026-07-13T20:41:59.7104972Z + @testing-library/jest-dom 6.9.1
+2026-07-13T20:41:59.7107156Z + @vitest/coverage-v8 4.1.9
+2026-07-13T20:41:59.7117727Z + eslint-plugin-react 7.37.5
+2026-07-13T20:41:59.7119929Z + jsdom 29.1.1
+2026-07-13T20:41:59.7120589Z + typescript 6.0.3
+2026-07-13T20:41:59.7122087Z + vitest 4.1.9
+2026-07-13T20:41:59.7122474Z 
+2026-07-13T20:41:59.7585734Z Done in 4.8s

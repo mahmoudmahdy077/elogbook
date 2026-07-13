@@ -1,0 +1,66 @@
+﻿2026-07-13T21:02:16.4882123Z ##[group]Run semgrep \
+2026-07-13T21:02:16.4882437Z [36;1msemgrep \[0m
+2026-07-13T21:02:16.4882691Z [36;1m  --config .semgrep.yml \[0m
+2026-07-13T21:02:16.4882978Z [36;1m  --config p/typescript \[0m
+2026-07-13T21:02:16.4883248Z [36;1m  --config p/owasp-top-ten \[0m
+2026-07-13T21:02:16.4883522Z [36;1m  --config p/javascript \[0m
+2026-07-13T21:02:16.4883774Z [36;1m  --error \[0m
+2026-07-13T21:02:16.4884212Z [36;1m  --sarif --output semgrep.sarif \[0m
+2026-07-13T21:02:16.4884519Z [36;1m  --metrics off \[0m
+2026-07-13T21:02:16.4884769Z [36;1m  --exclude '**/node_modules/**' \[0m
+2026-07-13T21:02:16.4885044Z [36;1m  --exclude '**/.next/**' \[0m
+2026-07-13T21:02:16.4885304Z [36;1m  --exclude '**/dist/**' \[0m
+2026-07-13T21:02:16.4885553Z [36;1m  --exclude '**/build/**' \[0m
+2026-07-13T21:02:16.4885787Z [36;1m  .[0m
+2026-07-13T21:02:16.4889196Z shell: sh -e {0}
+2026-07-13T21:02:16.4889431Z env:
+2026-07-13T21:02:16.4889633Z   SEMGREP_SEND_METRICS: off
+2026-07-13T21:02:16.4889876Z ##[endgroup]
+2026-07-13T21:02:20.0255103Z Rule shared-package-any-cast contains an include pattern 'packages/shared/**' that will soon be interpreted as '/packages/shared/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule shared-package-any-cast and change it to '**/packages/shared/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/shared/**'.
+2026-07-13T21:02:20.0449327Z Rule sql-string-concat contains an include pattern 'apps/**' that will soon be interpreted as '/apps/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/apps/**'. To confirm the anchored behavior and avoid this warning, change it to '/apps/**'.
+2026-07-13T21:02:20.0451642Z Rule sql-string-concat contains an include pattern 'packages/**' that will soon be interpreted as '/packages/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/packages/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/**'.
+2026-07-13T21:02:20.0454012Z Rule sql-string-concat contains an include pattern 'supabase/functions/**' that will soon be interpreted as '/supabase/functions/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/supabase/functions/**'. To confirm the anchored behavior and avoid this warning, change it to '/supabase/functions/**'.
+2026-07-13T21:02:20.0478306Z Rule sql-string-concat contains an include pattern 'apps/**' that will soon be interpreted as '/apps/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/apps/**'. To confirm the anchored behavior and avoid this warning, change it to '/apps/**'.
+2026-07-13T21:02:20.0482974Z Rule sql-string-concat contains an include pattern 'packages/**' that will soon be interpreted as '/packages/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/packages/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/**'.
+2026-07-13T21:02:20.0487479Z Rule sql-string-concat contains an include pattern 'supabase/functions/**' that will soon be interpreted as '/supabase/functions/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/supabase/functions/**'. To confirm the anchored behavior and avoid this warning, change it to '/supabase/functions/**'.
+2026-07-13T21:02:20.5213694Z                
+2026-07-13T21:02:20.5214130Z                
+2026-07-13T21:02:20.5214766Z ┌─────────────┐
+2026-07-13T21:02:20.5215114Z │ Scan Status │
+2026-07-13T21:02:20.5216114Z └─────────────┘
+2026-07-13T21:02:20.5220797Z   Scanning 608 files tracked by git with 568 Code rules:
+2026-07-13T21:02:20.5856025Z                                                                                                                         
+2026-07-13T21:02:20.5856727Z   Language      Rules   Files          Origin      Rules                                                                
+2026-07-13T21:02:20.5858508Z  ─────────────────────────────        ───────────────────                                                               
+2026-07-13T21:02:20.5859446Z   <multilang>       6     608          Community     563                                                                
+2026-07-13T21:02:20.5860276Z   ts               79     362          Custom          5                                                                
+2026-07-13T21:02:20.5860982Z   json              3      32                                                                                           
+2026-07-13T21:02:20.5861622Z   yaml             28      23                                                                                           
+2026-07-13T21:02:20.5862245Z   js               72      14                                                                                           
+2026-07-13T21:02:20.5862903Z   python          147       3                                                                                           
+2026-07-13T21:02:20.5863613Z   bash              1       3                                                                                           
+2026-07-13T21:02:20.5864298Z   dockerfile        4       1                                                                                           
+2026-07-13T21:02:20.5864988Z                                                                                                                         
+2026-07-13T21:02:20.6052442Z Rule shared-package-any-cast contains an include pattern 'packages/shared/**' that will soon be interpreted as '/packages/shared/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule shared-package-any-cast and change it to '**/packages/shared/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/shared/**'.
+2026-07-13T21:02:20.6058646Z Rule sql-string-concat contains an include pattern 'apps/**' that will soon be interpreted as '/apps/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/apps/**'. To confirm the anchored behavior and avoid this warning, change it to '/apps/**'.
+2026-07-13T21:02:20.6062057Z Rule sql-string-concat contains an include pattern 'packages/**' that will soon be interpreted as '/packages/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/packages/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/**'.
+2026-07-13T21:02:20.6065200Z Rule sql-string-concat contains an include pattern 'supabase/functions/**' that will soon be interpreted as '/supabase/functions/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/supabase/functions/**'. To confirm the anchored behavior and avoid this warning, change it to '/supabase/functions/**'.
+2026-07-13T21:02:20.6068270Z Rule sql-string-concat contains an include pattern 'apps/**' that will soon be interpreted as '/apps/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/apps/**'. To confirm the anchored behavior and avoid this warning, change it to '/apps/**'.
+2026-07-13T21:02:20.6071797Z Rule sql-string-concat contains an include pattern 'packages/**' that will soon be interpreted as '/packages/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/packages/**'. To confirm the anchored behavior and avoid this warning, change it to '/packages/**'.
+2026-07-13T21:02:20.6074356Z Rule sql-string-concat contains an include pattern 'supabase/functions/**' that will soon be interpreted as '/supabase/functions/**' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule sql-string-concat and change it to '**/supabase/functions/**'. To confirm the anchored behavior and avoid this warning, change it to '/supabase/functions/**'.
+2026-07-13T21:02:28.5282789Z                 
+2026-07-13T21:02:28.5283252Z                 
+2026-07-13T21:02:28.5283837Z ┌──────────────┐
+2026-07-13T21:02:28.5284183Z │ Scan Summary │
+2026-07-13T21:02:28.5284509Z └──────────────┘
+2026-07-13T21:02:28.5284874Z ✅ Scan completed successfully.
+2026-07-13T21:02:28.5285385Z  • Findings: 102 (102 blocking)
+2026-07-13T21:02:28.5285799Z  • Rules run: 268
+2026-07-13T21:02:28.5286164Z  • Targets scanned: 608
+2026-07-13T21:02:28.5286567Z  • Parsed lines: ~100.0%
+2026-07-13T21:02:28.5286985Z  • Scan skipped: 
+2026-07-13T21:02:28.5287432Z    ◦ Files matching .semgrepignore patterns: 9
+2026-07-13T21:02:28.5288250Z  • Scan was limited to files tracked by git
+2026-07-13T21:02:28.5289069Z  • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+2026-07-13T21:02:28.5289756Z Ran 268 rules on 608 files: 102 findings.
+2026-07-13T21:02:28.8088586Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,99 @@
+﻿2026-07-13T20:43:10.4230388Z ##[group]Run pnpm --filter @elogbook/web build
+2026-07-13T20:43:10.4230810Z [36;1mpnpm --filter @elogbook/web build[0m
+2026-07-13T20:43:10.4262164Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-13T20:43:10.4262513Z env:
+2026-07-13T20:43:10.4262772Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-07-13T20:43:10.4263089Z ##[endgroup]
+2026-07-13T20:43:10.8740194Z 
+2026-07-13T20:43:10.8750636Z > @elogbook/web@1.0.0 build /home/runner/work/elogbook/elogbook/apps/web
+2026-07-13T20:43:10.8751380Z > next build
+2026-07-13T20:43:10.8751585Z 
+2026-07-13T20:43:11.6448433Z ⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+2026-07-13T20:43:11.6537303Z Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-07-13T20:43:11.6538625Z This information is used to shape Next.js' roadmap and prioritize features.
+2026-07-13T20:43:11.6540715Z You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-07-13T20:43:11.6542026Z https://nextjs.org/telemetry
+2026-07-13T20:43:11.6542349Z 
+2026-07-13T20:43:11.6815724Z ▲ Next.js 16.2.7 (Turbopack)
+2026-07-13T20:43:11.6840759Z - Experiments (use with caution):
+2026-07-13T20:43:11.6841876Z   · optimizePackageImports
+2026-07-13T20:43:11.6850462Z 
+2026-07-13T20:43:11.7486792Z   Creating an optimized production build ...
+2026-07-13T20:43:25.3714448Z ✓ Compiled successfully in 13.0s
+2026-07-13T20:43:25.3820105Z   Running TypeScript ...
+2026-07-13T20:43:34.9013034Z   Finished TypeScript in 9.5s ...
+2026-07-13T20:43:34.9053695Z   Collecting page data using 3 workers ...
+2026-07-13T20:43:35.6897605Z   Generating static pages using 3 workers (0/13) ...
+2026-07-13T20:43:35.7256316Z   Generating static pages using 3 workers (3/13) 
+2026-07-13T20:43:35.8860841Z ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+2026-07-13T20:43:35.9093971Z   Generating static pages using 3 workers (6/13) 
+2026-07-13T20:43:36.0051648Z   Generating static pages using 3 workers (9/13) 
+2026-07-13T20:43:36.0325854Z ✓ Generating static pages using 3 workers (13/13) in 343ms
+2026-07-13T20:43:36.0374301Z   Finalizing page optimization ...
+2026-07-13T20:43:36.0459159Z 
+2026-07-13T20:43:36.0489567Z Route (app)
+2026-07-13T20:43:36.0490419Z ┌ ƒ /
+2026-07-13T20:43:36.0491050Z ├ ƒ /_not-found
+2026-07-13T20:43:36.0491805Z ├ ƒ /[tenant]/admin
+2026-07-13T20:43:36.0492397Z ├ ƒ /[tenant]/admin/overview
+2026-07-13T20:43:36.0493004Z ├ ƒ /[tenant]/admin/retention
+2026-07-13T20:43:36.0493631Z ├ ƒ /[tenant]/admin/scim
+2026-07-13T20:43:36.0494167Z ├ ƒ /[tenant]/admin/sso
+2026-07-13T20:43:36.0494715Z ├ ƒ /[tenant]/admin/webhooks
+2026-07-13T20:43:36.0495266Z ├ ƒ /[tenant]/analytics
+2026-07-13T20:43:36.0495807Z ├ ƒ /[tenant]/approvals
+2026-07-13T20:43:36.0496322Z ├ ƒ /[tenant]/audit
+2026-07-13T20:43:36.0496890Z ├ ƒ /[tenant]/audit/export
+2026-07-13T20:43:36.0497478Z ├ ƒ /[tenant]/billing
+2026-07-13T20:43:36.0498160Z ├ ƒ /[tenant]/cases
+2026-07-13T20:43:36.0498705Z ├ ƒ /[tenant]/cases/[id]
+2026-07-13T20:43:36.0499618Z ├ ƒ /[tenant]/cases/[id]/submit
+2026-07-13T20:43:36.0500286Z ├ ƒ /[tenant]/cases/new
+2026-07-13T20:43:36.0500853Z ├ ƒ /[tenant]/compliance
+2026-07-13T20:43:36.0501626Z ├ ƒ /[tenant]/consent
+2026-07-13T20:43:36.0502130Z ├ ƒ /[tenant]/dashboard
+2026-07-13T20:43:36.0502628Z ├ ƒ /[tenant]/evaluate
+2026-07-13T20:43:36.0503232Z ├ ƒ /[tenant]/evaluate/resident/[id]
+2026-07-13T20:43:36.0503835Z ├ ƒ /[tenant]/evaluations
+2026-07-13T20:43:36.0504329Z ├ ƒ /[tenant]/goals
+2026-07-13T20:43:36.0504841Z ├ ƒ /[tenant]/milestones
+2026-07-13T20:43:36.0505345Z ├ ƒ /[tenant]/onboarding
+2026-07-13T20:43:36.0505861Z ├ ƒ /[tenant]/reports
+2026-07-13T20:43:36.0506695Z ├ ƒ /[tenant]/reports/duty-hours
+2026-07-13T20:43:36.0507390Z ├ ƒ /[tenant]/resident/duty-hours
+2026-07-13T20:43:36.0508595Z ├ ƒ /[tenant]/resident/evaluations
+2026-07-13T20:43:36.0509671Z ├ ƒ /[tenant]/rotations
+2026-07-13T20:43:36.0510174Z ├ ƒ /[tenant]/settings
+2026-07-13T20:43:36.0510710Z ├ ƒ /api-docs
+2026-07-13T20:43:36.0511204Z ├ ƒ /api/[tenant]/admin/ai-config
+2026-07-13T20:43:36.0511855Z ├ ƒ /api/[tenant]/admin/assign-role
+2026-07-13T20:43:36.0512590Z ├ ƒ /api/[tenant]/admin/payment-gateway
+2026-07-13T20:43:36.0513224Z ├ ƒ /api/[tenant]/admin/scim
+2026-07-13T20:43:36.0513795Z ├ ƒ /api/[tenant]/admin/sso
+2026-07-13T20:43:36.0514431Z ├ ƒ /api/[tenant]/admin/webhooks
+2026-07-13T20:43:36.0515136Z ├ ƒ /api/[tenant]/admin/webhooks/test
+2026-07-13T20:43:36.0515841Z ├ ƒ /api/[tenant]/approvals/action
+2026-07-13T20:43:36.0516517Z ├ ƒ /api/[tenant]/audit/export
+2026-07-13T20:43:36.0517251Z ├ ƒ /api/[tenant]/compliance/export
+2026-07-13T20:43:36.0517879Z ├ ƒ /api/[tenant]/export-pdf
+2026-07-13T20:43:36.0518515Z ├ ƒ /api/[tenant]/reports/duty-hours.csv
+2026-07-13T20:43:36.0519580Z ├ ƒ /api/[tenant]/reports/evaluations.csv
+2026-07-13T20:43:36.0520346Z ├ ƒ /api/[tenant]/reports/specialty.csv
+2026-07-13T20:43:36.0521064Z ├ ƒ /api/[tenant]/reports/status.csv
+2026-07-13T20:43:36.0521641Z ├ ƒ /api/csp-violation
+2026-07-13T20:43:36.0522080Z ├ ƒ /api/health
+2026-07-13T20:43:36.0522511Z ├ ƒ /api/sso/check
+2026-07-13T20:43:36.0522936Z ├ ƒ /auth/callback
+2026-07-13T20:43:36.0523375Z ├ ƒ /auth/signout
+2026-07-13T20:43:36.0523792Z ├ ƒ /dashboard
+2026-07-13T20:43:36.0524179Z ├ ƒ /login
+2026-07-13T20:43:36.0524552Z ├ ƒ /login/sso
+2026-07-13T20:43:36.0524964Z ├ ƒ /mfa/enroll
+2026-07-13T20:43:36.0525383Z ├ ƒ /mfa/verify
+2026-07-13T20:43:36.0525771Z └ ƒ /onboarding
+2026-07-13T20:43:36.0525978Z 
+2026-07-13T20:43:36.0525990Z 
+2026-07-13T20:43:36.0526219Z ƒ Proxy (Middleware)
+2026-07-13T20:43:36.0526799Z 
+2026-07-13T20:43:36.0527200Z ƒ  (Dynamic)  server-rendered on demand
+2026-07-13T20:43:36.0527566Z 
