@@ -23,9 +23,8 @@
   <domain-config>
     <domain includeSubdomains="true">supabase.co</domain>
     <pin-set expiration="2027-12-31">
-      <!-- Placeholder pin — replace with real SHA-256 of leaf SPKI before ship -->
+      <!-- TODO(P2.1): Replace with real SHA-256 SPKI hashes before production ship -->
       <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-      <!-- Backup pin (intermediate CA) — required so the app still works after rotation -->
       <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
     </pin-set>
   </domain-config>

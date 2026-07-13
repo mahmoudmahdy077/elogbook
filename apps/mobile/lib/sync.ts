@@ -310,6 +310,7 @@ class SyncService {
       // a previous partial failure) lands on the same row.
       if (newDrafts.length > 0) {
         const rows = newDrafts.map((draft) => ({
+          id: draft.id,
           tenant_id: draft.tenantId,
           resident_id: draft.residentId,
           template_id: draft.templateId,
@@ -323,38 +324,25 @@ class SyncService {
           is_deidentified: draft.isDeidentified,
           status: draft.status,
         }));
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('case_entries')
-          .upsert(rows, { onConflict: 'id', ignoreDuplicates: false })
-          .select('id');
+          .upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
 
         if (error) {
           console.error('Batch insert error:', error);
-          // If the whole batch fails, mark every draft as conflict so the
-          // user can resolve one-by-one. A 409 is the only signal we have
-          // that says "row exists with a different updated_at".
           const isConflict = error.code === '409' || /conflict/i.test(error.message ?? '');
           await Promise.all(
             newDrafts.map(async (draft) => {
               if (isConflict) {
                 await markCaseAsConflict(draft);
                 this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
-              } else {
-                // leave as `draft` so it retries on the next sync
               }
             }),
           );
-        } else if (data && Array.isArray(data)) {
-          // Match returned rows back to drafts by index. The order of `data`
-          // mirrors the order of the input rows in a supabase upsert.
+        } else {
           await Promise.all(
-            newDrafts.map(async (draft, i) => {
-              const serverId = (data[i] as { id?: string } | undefined)?.id;
-              if (serverId) {
-                await updateSyncStatus(draft, 'synced', serverId);
-              } else {
-                await updateSyncStatus(draft, 'synced');
-              }
+            newDrafts.map(async (draft) => {
+              await updateSyncStatus(draft, 'synced', draft.id);
             }),
           );
           this.retryIndex = 0;

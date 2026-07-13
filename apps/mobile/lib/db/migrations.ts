@@ -3,8 +3,6 @@ import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrati
 export const migrations = schemaMigrations({
   migrations: [
     {
-      // v2 → v3: track the server id assigned after a successful push so
-      // subsequent `modified` updates use the server id (not the local UUID).
       toVersion: 3,
       steps: [
         addColumns({
@@ -14,6 +12,10 @@ export const migrations = schemaMigrations({
           ],
         }),
       ],
+    },
+    {
+      toVersion: 4,
+      steps: [],
     },
   ],
 });

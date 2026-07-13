@@ -16,6 +16,7 @@
     "@elogbook/shared": "workspace:*",
     "@expo/vector-icons": "^15.1.1",
     "@nozbe/watermelondb": "^0.28.0",
+    "@op-engineering/op-sqlite": "^11.0.0",
     "@nozbe/with-observables": "^1.6.0",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/blur": "^4.4.1",
