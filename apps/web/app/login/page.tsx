@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { APP_NAME } from '@elogbook/shared';
 import { FormField, FormDivider } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';

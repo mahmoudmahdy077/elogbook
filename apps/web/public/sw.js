@@ -6,8 +6,6 @@ const STATIC_SHELL = [
   '/icons/icon-512.svg',
 ];
 
-const AUTH_ROUTES = /^\/(en|ar|fr)?\/[^\/]+\//;
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_SHELL))
