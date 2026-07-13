@@ -19,16 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Build web image
         # P7.4: build the image that the CD pipeline would ship, so
         # the scanner sees the same artifact as production. We do
         # NOT push it; the scanner reads the local image.
-        run: docker build \
-              --tag elogbook-web:scan \
-              --file apps/web/Dockerfile \
-              .
+        run: docker build --tag elogbook-web:scan --file apps/web/Dockerfile .
 
       - name: Run Trivy (SARIF)
         # Default severity gate: CRITICAL only (--exit-code 1 --severity CRITICAL).
