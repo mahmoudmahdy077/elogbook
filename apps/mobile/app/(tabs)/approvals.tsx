@@ -137,7 +137,7 @@ export default function ApprovalsScreen() {
       .order('requested_at', { ascending: false });
 
     if (requests) {
-      const mapped: ApprovalItem[] = requests.map((r: unknown) => ({
+      const mapped: ApprovalItem[] = requests.map((r: any) => ({
         id: r.id,
         entry_id: r.entry_id,
         resident_name: r.profiles?.full_name ?? 'Unknown',

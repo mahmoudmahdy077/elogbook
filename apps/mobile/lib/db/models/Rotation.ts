@@ -1,3 +1,4 @@
+import { Model } from '@nozbe/watermelondb';
 import { field, text, date } from '@nozbe/watermelondb/decorators';
 
 export class Rotation extends Model {

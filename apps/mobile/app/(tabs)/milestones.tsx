@@ -243,7 +243,6 @@ export default function MilestonesScreen() {
       }
 
       setRole(profile.role);
-      setCurrentUserId(profile.id);
 
       const isDirector =
         profile.role === 'director' ||
@@ -382,7 +381,7 @@ export default function MilestonesScreen() {
 
         {/* Milestone matrix */}
         {selectedResident && (
-          <MilestoneMatrix milestones={milestones} role={role} />
+          <MilestoneMatrix milestones={milestones} />
         )}
 
         {!selectedResident && !loading && (

@@ -119,7 +119,7 @@ export default function CaseComments({
           filter: `case_entry_id=eq.${caseEntryId}`,
         },
         async (payload: { new: Record<string, unknown> }) => {
-          const newC = payload.new as Comment;
+          const newC = payload.new as unknown as Comment;
           // Fetch the author name
           const { data: profile } = await supabase
             .from('profiles')

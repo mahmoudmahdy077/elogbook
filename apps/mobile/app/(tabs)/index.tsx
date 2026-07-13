@@ -101,7 +101,7 @@ export default function DashboardScreen() {
         .eq('tenant_id', profile.tenant_id);
 
       if (goalsWithProgress) {
-        setGoals(goalsWithProgress.map((g: unknown) => ({
+        setGoals(goalsWithProgress.map((g: any) => ({
           id: g.id,
           title: g.title,
           current: g.goal_progress?.[0]?.current_count ?? 0,

@@ -111,25 +111,26 @@ export default function CaseDetailScreen() {
         .single();
 
       if (entry) {
-        const rejectionRequest = (entry as Record<string, unknown>).approval_requests?.find(
+        const e = entry as Record<string, unknown>;
+        const rejectionRequest = (e.approval_requests as Record<string, unknown>[] | undefined)?.find(
           (r: Record<string, unknown>) => r.status === 'rejected'
         );
         setCaseDetail({
-          id: entry.id,
-          resident_name: (entry as Record<string, unknown>).profiles?.full_name ?? 'Unknown',
-          specialty: (entry as Record<string, unknown>).case_templates?.specialty ?? '',
-          template_name: (entry as Record<string, unknown>).case_templates?.name ?? '',
-          case_date: entry.case_date,
-          status: entry.status as CaseStatus,
-          is_deidentified: entry.is_deidentified,
-          patient_mrn: entry.patient_mrn,
-          patient_dob: entry.patient_dob,
-          patient_age_years: entry.patient_age_years,
-          patient_hash: entry.patient_hash,
-          field_values: entry.field_values ?? {},
-          rejection_comment: rejectionRequest?.comment ?? null,
-          created_at: entry.created_at,
-          updated_at: entry.updated_at,
+          id: e.id as string,
+          resident_name: ((e.profiles as Record<string, unknown>)?.full_name as string) ?? 'Unknown',
+          specialty: ((e.case_templates as Record<string, unknown>)?.specialty as string) ?? '',
+          template_name: ((e.case_templates as Record<string, unknown>)?.name as string) ?? '',
+          case_date: (e.case_date as string),
+          status: e.status as CaseStatus,
+          is_deidentified: e.is_deidentified as boolean,
+          patient_mrn: e.patient_mrn as string,
+          patient_dob: e.patient_dob as string,
+          patient_age_years: Number(e.patient_age_years) || null,
+          patient_hash: e.patient_hash as string,
+          field_values: (e.field_values ?? {}) as Record<string, unknown>,
+          rejection_comment: ((rejectionRequest?.comment as string | undefined) ?? null) as string | null,
+          created_at: e.created_at as string,
+          updated_at: e.updated_at as string,
         });
         await upsertCaseEntry(entry as Record<string, unknown>);
       }

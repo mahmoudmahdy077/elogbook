@@ -46,30 +46,6 @@ interface CaseFormProps {
   lastEntry?: boolean;
 }
 
-interface CaseFormProps {
-  id: string;
-  tenant_id: string;
-  specialty: string;
-  name: string;
-  fields: TemplateField[];
-  required_fields: string[];
-}
-
-interface AccreditationFramework {
-  id: string;
-  tenant_id: string;
-  name: string;
-  version: string;
-  framework_type: string;
-  milestones: Array<{
-    code: string;
-    description: string;
-    competency_area: string;
-    target_minimum: number;
-    specialty?: string;
-  }>;
-}
-
 const STEPS = ['Template', 'Patient Info', 'Case Details', 'Review'];
 
 const stepVariants = {
@@ -122,7 +98,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
       if (tenantTemplatesRes.error) {
         setErrors([tenantTemplatesRes.error.message]);
-        setLoadingTemplates(false);
         return;
       }
       const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
@@ -134,7 +109,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       let favIds = new Set<string>();
       let personalCounts = new Map<string, number>();
       let tenantCounts = new Map<string, number>();
-      let frameworks: AccreditationFramework[] = [];
 
       if (user) {
         const [favResult, profileResult, tenantEntriesResult, frameworkResult] = await Promise.allSettled([
@@ -179,16 +153,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
         }
 
         if (frameworkResult.status === 'fulfilled' && frameworkResult.value.data) {
-          frameworks = frameworkResult.value.data as AccreditationFramework[];
+          // frameworks data available but not directly used
         }
       }
 
       if (cancelled) return;
       setFavoriteIds(favIds);
-      setAccreditationFrameworks(frameworks);
       const sorted = sortTemplates(allTemplates, favIds, personalCounts, tenantCounts);
       setTemplates(sorted);
-      setLoadingTemplates(false);
     }
 
     loadAllData();
@@ -274,6 +246,15 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
     loadSourceCase();
   }, [duplicateCaseId, lastEntry, supabase]);
+
+  interface TemplateField {
+    key?: string;
+    name?: string;
+    label: string;
+    type: string;
+    options?: string[];
+    required?: boolean;
+  }
 
   function getFieldKey(f: TemplateField): string {
     return f.key || f.name || '';

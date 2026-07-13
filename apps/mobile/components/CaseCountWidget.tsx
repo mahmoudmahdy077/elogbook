@@ -4,9 +4,6 @@ import * as Svg from 'react-native-svg';
 import { clinicalTokens } from '@elogbook/shared';
 import type { TodayStats } from '../lib/today-stats';
 
-const SvgCircle = Svg.Circle as unknown;
-const SvgText = Svg.Text as unknown;
-
 export interface CaseCountWidgetProps {
   stats: TodayStats;
   dailyGoal?: number;
@@ -81,7 +78,7 @@ function ProgressRing({
   return (
     <Svg.Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {/* Background track */}
-      <SvgCircle
+      <Svg.Circle
         cx={center}
         cy={center}
         r={radius}
@@ -90,7 +87,7 @@ function ProgressRing({
         fill="none"
       />
       {/* Foreground arc */}
-      <SvgCircle
+      <Svg.Circle
         cx={center}
         cy={center}
         r={radius}
@@ -104,7 +101,7 @@ function ProgressRing({
         origin={`${center}, ${center}`}
       />
       {/* Percentage label */}
-      <SvgText
+      <Svg.Text
         x={center}
         y={center + fontSize * 0.35}
         textAnchor="middle"
@@ -114,7 +111,7 @@ function ProgressRing({
         fontWeight="600"
       >
         {Math.round(percentage)}%
-      </SvgText>
+      </Svg.Text>
     </Svg.Svg>
   );
 }
