@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN pnpm --filter @elogbook/web build
+RUN NEXT_OUTPUT=standalone pnpm --filter @elogbook/web build
 
 FROM base AS runner
 WORKDIR /app
