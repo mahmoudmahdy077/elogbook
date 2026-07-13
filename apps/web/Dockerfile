@@ -9,7 +9,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
-COPY packages/supabase/package.json ./packages/supabase/ 2>/dev/null || true
+COPY packages/supabase/package.json ./packages/supabase/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
