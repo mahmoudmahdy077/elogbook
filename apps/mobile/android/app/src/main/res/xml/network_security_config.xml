@@ -23,9 +23,8 @@
   <domain-config>
     <domain includeSubdomains="true">supabase.co</domain>
     <pin-set expiration="2027-12-31">
-      <!-- TODO(P2.1): Replace with real SHA-256 SPKI hashes before production ship -->
-      <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-      <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+      <pin digest="SHA-256">ZcJbApTb7wyllleAjHw2vYAskqdT+DhMY9aPDFwAtf4=</pin>
+      <pin digest="SHA-256">i7WTqTvh0OioIruIfb4D2vX0imF6Vv3UoRJk3QaSCk0=</pin>
     </pin-set>
   </domain-config>
 </network-security-config>
