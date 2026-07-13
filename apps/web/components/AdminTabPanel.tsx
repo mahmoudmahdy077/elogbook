@@ -41,6 +41,8 @@ interface AdminTabPanelProps {
   pendingCases: number;
 }
 
+// SSO and SCIM tabs hidden: pending complete SAML/OIDC/SCIM implementation
+// See P1.4 in ENTERPRISE_TRANSFORMATION_PLAN.md
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'templates', label: 'Case Templates' },
@@ -49,8 +51,6 @@ const TABS = [
   { id: 'payment', label: 'Payment Gateway' },
   { id: 'webhooks', label: 'Webhooks' },
   { id: 'accreditation', label: 'Accreditation' },
-  { id: 'sso', label: 'SSO' },
-  { id: 'scim', label: 'SCIM Provisioning' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -158,38 +158,7 @@ export default function AdminTabPanel({
         <CompetencyManager tenantId={tenantId} />
       )}
 
-      {activeTab === 'sso' && (
-        <div className="panel p-5">
-          <h2 className="text-lg font-heading font-semibold mb-2">SSO Configuration</h2>
-          <p className="text-sm text-text-muted/60 mb-4">
-            Configure SAML or OIDC single sign-on so users can sign in with their
-            institutional identity provider.
-          </p>
-          <Link
-            href={`/${tenantSlug}/admin/sso`}
-            className="inline-flex items-center rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Manage SSO
-          </Link>
-        </div>
-      )}
-
-      {activeTab === 'scim' && (
-        <div className="panel p-5">
-          <h2 className="text-lg font-heading font-semibold mb-2">SCIM Provisioning</h2>
-          <p className="text-sm text-text-muted/60 mb-4">
-            Configure SCIM 2.0 bearer tokens and provisioning URL to automate
-            user provisioning from Okta, Microsoft Entra ID, JumpCloud, or any
-            SCIM-compatible identity provider.
-          </p>
-          <Link
-            href={`/${tenantSlug}/admin/scim`}
-            className="inline-flex items-center rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Manage SCIM
-          </Link>
-        </div>
-      )}
+      {/* SSO and SCIM tabs removed pending complete implementation (P1.4) */}
     </div>
   );
 }

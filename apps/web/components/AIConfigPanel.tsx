@@ -19,12 +19,12 @@ interface AIConfigPanelProps {
   config: AIConfigData | null;
 }
 
+// P1.6: Custom provider disabled — only approved providers allowed
 const PROVIDERS = [
   { key: 'openai', label: 'OpenAI' },
   { key: 'anthropic', label: 'Anthropic' },
   { key: 'azure', label: 'Azure' },
   { key: 'openrouter', label: 'OpenRouter' },
-  { key: 'custom', label: 'Custom' },
 ];
 
 const DEFAULT_MODELS: Record<string, string> = {

@@ -1,53 +1,20 @@
-// supabase/functions/sso-callback/index.ts
-// Phase 6 / P6.0 — minimal SSO callback broker.
-//
-// Flow:
-//   1. Browser is redirected to /functions/v1/sso-callback?tenant=<slug>&metadata=...&next=...
-//   2. This function looks up the tenant + active sso_config, validates the
-//      protocol (saml | oidc), and returns a 302 to the IdP's authorize URL
-//      (constructed from the discovery/metadata endpoint).
-//   3. After the IdP completes, it should call back to /auth/callback on the
-//      web app with a Supabase exchange code.
-//
-// Production-ready: full SAML response validation and OIDC token exchange
-// require a per-tenant secret and are out of scope for the wiring task.
-// The function deliberately fails closed: if the protocol is not 'saml' or
-// 'oidc', or no discovery/metadata is present, it returns 400.
+// P1.4: SSO disabled until complete SAML/OIDC implementation is verified.
+// Returns an explicit disabled response instead of redirecting to IdP.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = (origin: string | null) => ({
-  'Access-Control-Allow-Origin': origin ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-});
-
-const SAFE_PATH = /^\/(?!\/)[^\\]*$/;
-
-function safeNext(input: string | null): string {
-  if (!input) return '/';
-  if (!SAFE_PATH.test(input)) return '/';
-  return input;
-}
 
 serve(async (req) => {
-  const origin = req.headers.get('Origin');
-  const headers = corsHeaders(origin);
-
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers });
-  }
-
-  const url = new URL(req.url);
-  const tenantSlug = url.searchParams.get('tenant');
-  const protocol = url.searchParams.get('protocol');
-  const metadata = url.searchParams.get('metadata');
-  const discovery = url.searchParams.get('discovery');
-  const next = safeNext(url.searchParams.get('next'));
-
-  if (!tenantSlug) {
-    return new Response(
+  return new Response(
+    JSON.stringify({ error: 'SSO is disabled. Enterprise SSO is not yet available.' }),
+    {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    },
+  );
+});
       JSON.stringify({ error: 'Missing tenant slug' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
     );

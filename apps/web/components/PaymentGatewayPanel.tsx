@@ -20,11 +20,9 @@ interface PaymentGatewayPanelProps {
   config: GatewayConfig | null;
 }
 
+// P1.5: Stripe-only until Paddle/LemonSqueezy have equivalent production support
 const PROVIDERS = [
   { key: 'stripe', label: 'Stripe' },
-  { key: 'paddle', label: 'Paddle' },
-  { key: 'lemonsqueezy', label: 'LemonSqueezy' },
-  { key: 'custom', label: 'Custom' },
 ];
 
 export default function PaymentGatewayPanel({ tenantId, config }: PaymentGatewayPanelProps) {
