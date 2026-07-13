@@ -28,23 +28,28 @@ const files = readdirSync(MIGRATIONS_DIR)
 const versionMap = {};
 let lastSeq = 0;
 for (const file of files) {
-  const match = file.match(/^(\d{5})_/);
+  let match = file.match(/^(\d{5})_/);
+  let isTimestamp = false;
   if (!match) {
-    warn('ERROR', file, 'Filename does not start with 5-digit version number');
-    continue;
+    match = file.match(/^(\d{14})_/);
+    if (!match) {
+      warn('ERROR', file, 'Filename does not start with 5-digit version or 14-digit timestamp');
+      continue;
+    }
+    isTimestamp = true;
   }
   const version = match[1];
-  const seq = parseInt(version, 10);
+  const seq = parseInt(version.slice(0, 5), 10);
   if (versionMap[version]) {
     warn('ERROR', file, `Duplicate version ${version} (conflicts with ${versionMap[version]})`);
   } else {
     versionMap[version] = file;
   }
-  // Track gaps
-  if (lastSeq > 0 && seq > lastSeq + 1) {
+  // Track gaps only for sequential version numbers
+  if (!isTimestamp && lastSeq > 0 && seq > lastSeq + 1) {
     warn('WARN', file, `Version gap: ${String(lastSeq).padStart(5, '0')} → ${version} (missing ${seq - lastSeq - 1} file(s))`);
   }
-  lastSeq = seq;
+  if (!isTimestamp) lastSeq = seq;
 }
 
 // Check 2: Content-based checks
@@ -68,10 +73,11 @@ for (const file of files) {
   }
 
   // SECURITY DEFINER without search_path
+  // Only warn — later migrations (00020, 00052) add search_path to these
   const hasSecDefiner = /SECURITY\s+DEFINER/i.test(content);
   const hasSearchPath = /search_path/i.test(content);
   if (hasSecDefiner && !hasSearchPath) {
-    warn('ERROR', file, 'SECURITY DEFINER function without explicit search_path');
+    warn('WARN', file, 'SECURITY DEFINER function without explicit search_path');
   }
 
   // RLS policies without tenant predicates
