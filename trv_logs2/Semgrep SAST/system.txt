@@ -1,8 +1,0 @@
-2026-07-13T21:20:17.9280000Z Evaluating semgrep.if
-2026-07-13T21:20:17.9280000Z Evaluating: success()
-2026-07-13T21:20:17.9280000Z Result: true
-2026-07-13T21:20:17.9380000Z Requested labels: ubuntu-latest
-2026-07-13T21:20:17.9380000Z Job defined at: mahmoudmahdy077/elogbook/.github/workflows/semgrep.yml@refs/heads/main
-2026-07-13T21:20:17.9380000Z Waiting for a runner to pick up this job...
-2026-07-13T21:20:18.4340000Z Job is about to start running on the hosted runner: GitHub Actions 1000001001
-2026-07-13T21:20:18.4320000Z Job is waiting for a hosted runner to come online.
