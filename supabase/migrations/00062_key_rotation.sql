@@ -74,7 +74,7 @@ BEGIN
     RAISE EXCEPTION 'encryption key v% not configured', p_version
       USING ERRCODE = 'insufficient_privilege';
   END IF;
-  RETURN pgp_sym_decrypt(p_encrypted, v_key);
+  RETURN extensions.pgp_sym_decrypt(p_encrypted, v_key);
 END;
 $$;
 -- service_role is the only caller; the views route through here.
@@ -119,7 +119,7 @@ BEGIN
   -- ai_config
   WITH upd AS (
     UPDATE public.ai_config
-       SET api_key_enc = pgp_sym_encrypt(pgp_sym_decrypt(api_key_enc, v_old_key), v_new_key),
+        SET api_key_enc = extensions.pgp_sym_encrypt(extensions.pgp_sym_decrypt(api_key_enc, v_old_key), v_new_key),
            key_version = p_new_version,
            updated_at = now()
      WHERE key_version = p_old_version
@@ -131,8 +131,8 @@ BEGIN
   -- payment_gateway_config
   WITH upd AS (
     UPDATE public.payment_gateway_config
-       SET secret_key_enc    = pgp_sym_encrypt(pgp_sym_decrypt(secret_key_enc,    v_old_key), v_new_key),
-           webhook_secret_enc = pgp_sym_encrypt(pgp_sym_decrypt(webhook_secret_enc, v_old_key), v_new_key),
+       SET secret_key_enc    = extensions.pgp_sym_encrypt(extensions.pgp_sym_decrypt(secret_key_enc,    v_old_key), v_new_key),
+            webhook_secret_enc = extensions.pgp_sym_encrypt(extensions.pgp_sym_decrypt(webhook_secret_enc, v_old_key), v_new_key),
            key_version       = p_new_version,
            updated_at        = now()
      WHERE key_version = p_old_version
@@ -196,7 +196,7 @@ BEGIN
     RETURN jsonb_build_object('error', format('tenant %s not found', p_tenant_id));
   END IF;
 
-  v_new_salt   := encode(gen_random_bytes(32), 'hex');
+  v_new_salt   := encode(extensions.gen_random_bytes(32), 'hex');
   v_new_version := v_old_version + 1;
 
   UPDATE public.tenants

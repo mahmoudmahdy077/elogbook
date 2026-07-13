@@ -1,34 +1,18 @@
-/**
- * @elogbook/env — Shared environment variable validation & access
- *
- * Single source of truth for all environment variables across the monorepo.
- * Validates at first access so missing/invalid vars fail fast.
- *
- * Usage:
- *   import { env } from '@elogbook/env';
- *   const url = env.SUPABASE_URL; // string — validated at boot
- *   const isDev = env.IS_DEV;     // boolean
- */
-
 import { z } from 'zod';
 
-// ---------------------------------------------------------------------------
-// Schema
-// ---------------------------------------------------------------------------
-const envSchema = z.object({
-  // ── Supabase ──────────────────────────────────────────────────────────
+const webPublicSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
+});
 
-  // ── Site ──────────────────────────────────────────────────────────────
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+const webServerSchema = z.object({
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+});
 
-  // ── Redis (Upstash) ───────────────────────────────────────────────────
+const optionalSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-
-  // ── Sentry ────────────────────────────────────────────────────────────
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_SENTRY_ENV: z.enum(['development', 'production', 'test']).optional(),
   SENTRY_ORG: z.string().optional(),
@@ -37,43 +21,43 @@ const envSchema = z.object({
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
-
-  // ── PostHog ───────────────────────────────────────────────────────────
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
-
-  // ── Build / CI ────────────────────────────────────────────────────────
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  ANALYZE: z
-    .string()
-    .optional()
-    .transform((v) => v === 'true'),
+  ANALYZE: z.string().optional().transform((v) => v === 'true'),
 });
 
-// ---------------------------------------------------------------------------
-// Parser
-// ---------------------------------------------------------------------------
-function parseEnv(env: Record<string, string | undefined>) {
-  const result = envSchema.safeParse(env);
+const envSchema = webPublicSchema.merge(webServerSchema).merge(optionalSchema);
+
+function parseOrThrow<T extends z.ZodRawShape>(
+  schema: z.ZodObject<T>,
+  source: Record<string, string | undefined>,
+  label: string,
+): z.infer<typeof schema> {
+  const result = schema.safeParse(source);
   if (!result.success) {
-    const missing = result.error.issues
-      .filter((i) => i.code === 'invalid_type' && i.message.includes('Required'))
-      .map((i) => i.path.join('.'));
-    if (missing.length > 0) {
-      console.error(`[env] Missing required variables: ${missing.join(', ')}`);
-    }
-    // Return partial with defaults where possible instead of crashing
-    return result.data as unknown as z.infer<typeof envSchema>;
+    const details = result.error.issues
+      .map((i) => `  ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
+    throw new Error(`[env/${label}] Validation failed:\n${details}`);
   }
   return result.data;
 }
 
-// ---------------------------------------------------------------------------
-// Singleton — parsed once at module load
-// ---------------------------------------------------------------------------
-export const env = parseEnv(process.env);
+export function parseWebPublicEnv(source: Record<string, string | undefined>) {
+  return parseOrThrow(webPublicSchema, source, 'web-public');
+}
 
-// Convenience helpers
+export function parseWebServerEnv(source: Record<string, string | undefined>) {
+  return parseOrThrow(webServerSchema, source, 'web-server');
+}
+
+export function parseWebFullEnv(source: Record<string, string | undefined>) {
+  return parseOrThrow(envSchema, source, 'web-full');
+}
+
+export const env = parseOrThrow(envSchema, process.env, 'default');
+
 export const IS_DEV = env.NODE_ENV === 'development';
 export const IS_PROD = env.NODE_ENV === 'production';
 export const IS_TEST = env.NODE_ENV === 'test';

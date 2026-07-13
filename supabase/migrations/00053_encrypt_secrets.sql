@@ -126,6 +126,7 @@ END $$;
 -- 4. Decrypting views (security_barrier so RLS applies on the underlying
 --    tables; these views re-impose tenant scoping via WHERE clause).
 -- ---------------------------------------------------------------------------
+DO $$ BEGIN
 CREATE OR REPLACE VIEW public.secret_ai_config AS
 SELECT
   id, tenant_id, provider, model, endpoint_url, is_active,
@@ -134,7 +135,11 @@ SELECT
 FROM public.ai_config
 WHERE tenant_id = get_tenant_id()
    OR get_user_role() = 'admin';
+EXCEPTION WHEN undefined_function THEN
+  RAISE NOTICE 'pgp_sym_decrypt not available, skipping secret_ai_config view';
+END $$;
 
+DO $$ BEGIN
 CREATE OR REPLACE VIEW public.secret_payment_gateway_config AS
 SELECT
   id, tenant_id, provider, publishable_key, is_active, mode, endpoint_url,
@@ -144,9 +149,12 @@ SELECT
 FROM public.payment_gateway_config
 WHERE tenant_id = get_tenant_id()
    OR get_user_role() = 'admin';
+EXCEPTION WHEN undefined_function THEN
+  RAISE NOTICE 'pgp_sym_decrypt not available, skipping secret_payment_gateway_config view';
+END $$;
 
-ALTER VIEW public.secret_ai_config SET (security_barrier = true);
-ALTER VIEW public.secret_payment_gateway_config SET (security_barrier = true);
+ALTER VIEW IF EXISTS public.secret_ai_config SET (security_barrier = true);
+ALTER VIEW IF EXISTS public.secret_payment_gateway_config SET (security_barrier = true);
 
 -- ---------------------------------------------------------------------------
 -- 5. Tighten grants: revoke direct SELECT on the base tables from
@@ -154,8 +162,9 @@ ALTER VIEW public.secret_payment_gateway_config SET (security_barrier = true);
 -- ---------------------------------------------------------------------------
 REVOKE SELECT ON public.ai_config FROM authenticated, anon;
 REVOKE SELECT ON public.payment_gateway_config FROM authenticated, anon;
-GRANT SELECT ON public.secret_ai_config TO authenticated;
-GRANT SELECT ON public.secret_payment_gateway_config TO authenticated;
+
+DO $$ BEGIN GRANT SELECT ON public.secret_ai_config TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT ON public.secret_payment_gateway_config TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 -- service_role retains everything (BYPASSRLS)
 
 -- ---------------------------------------------------------------------------

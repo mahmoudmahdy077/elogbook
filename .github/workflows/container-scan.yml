@@ -2,9 +2,9 @@ name: Container Scan (Trivy)
 
 on:
   push:
-    branches: [master, feat/**, fix/**, security/**]
+    branches: [main, feat/**, fix/**, security/**]
   pull_request:
-    branches: [master]
+    branches: [main]
   schedule:
     - cron: '37 5 * * 3'  # Wednesdays 05:37 UTC
   workflow_dispatch:

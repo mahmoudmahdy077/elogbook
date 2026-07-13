@@ -3,7 +3,7 @@ name: Deploy Web
 on:
   workflow_dispatch:
   push:
-    branches: [master, main]
+    branches: [main]
 
 concurrency:
   group: deploy-web-${{ github.ref }}
@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -37,9 +37,9 @@ jobs:
     needs: [typecheck]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -58,9 +58,9 @@ jobs:
       url: ${{ steps.vercel-deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22

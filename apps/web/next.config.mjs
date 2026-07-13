@@ -28,31 +28,6 @@ const nextConfig = {
   },
   async headers() {
     return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com",
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://*.posthog.com https://sentry.io",
-              "frame-src 'none'",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
-        ],
-      },
       // Cache static assets aggressively
       {
         source: '/:file.(jpg|jpeg|png|gif|ico|webp|avif|svg|woff|woff2|ttf|eot)',

@@ -1,6 +1,6 @@
--- Migration 00067: Audit triggers for goals, templates, profile updates
+-- Migration 00067: Audit triggers + template favorites
+-- (merged from 00067_audit_gaps.sql and 00067_template_favorites.sql)
 
--- Trigger for program_goals changes
 CREATE OR REPLACE FUNCTION audit_program_goals()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -22,7 +22,6 @@ CREATE TRIGGER trg_audit_program_goals
   AFTER INSERT OR UPDATE OR DELETE ON program_goals
   FOR EACH ROW EXECUTE FUNCTION audit_program_goals();
 
--- Trigger for case_templates changes
 CREATE OR REPLACE FUNCTION audit_case_templates()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -44,7 +43,6 @@ CREATE TRIGGER trg_audit_case_templates
   AFTER INSERT OR UPDATE OR DELETE ON case_templates
   FOR EACH ROW EXECUTE FUNCTION audit_case_templates();
 
--- Trigger for profile role changes
 CREATE OR REPLACE FUNCTION audit_profile_changes()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -68,10 +66,26 @@ CREATE TRIGGER trg_audit_profile
   AFTER UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION audit_profile_changes();
 
--- Down migration:
--- DROP TRIGGER IF EXISTS trg_audit_program_goals ON program_goals;
--- DROP TRIGGER IF EXISTS trg_audit_case_templates ON case_templates;
--- DROP TRIGGER IF EXISTS trg_audit_profile ON profiles;
--- DROP FUNCTION IF EXISTS audit_program_goals();
--- DROP FUNCTION IF EXISTS audit_case_templates();
--- DROP FUNCTION IF EXISTS audit_profile_changes();
+CREATE TABLE template_favorites (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES case_templates(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, template_id)
+);
+
+CREATE INDEX idx_template_favorites_template_id
+  ON template_favorites(template_id);
+
+ALTER TABLE template_favorites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY template_favorites_select
+  ON template_favorites FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY template_favorites_insert
+  ON template_favorites FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY template_favorites_delete
+  ON template_favorites FOR DELETE
+  USING (user_id = auth.uid());

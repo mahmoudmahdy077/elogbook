@@ -2,9 +2,9 @@ name: Semgrep
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
   push:
-    branches: [master, feat/**, fix/**, security/**]
+    branches: [main, feat/**, fix/**, security/**]
   schedule:
     - cron: '23 4 * * 2'  # Tuesdays 04:23 UTC
 

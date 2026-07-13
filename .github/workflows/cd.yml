@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -16,16 +16,18 @@ jobs:
   web:
     name: Deploy Web (Vercel)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
@@ -44,10 +46,10 @@ jobs:
   db:
     name: Push DB migrations
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: latest
@@ -61,14 +63,14 @@ jobs:
   functions:
     name: Deploy Edge Functions
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     needs: [db]
     strategy:
       matrix:
         function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: latest
@@ -83,14 +85,16 @@ jobs:
   mobile:
     name: Build Mobile (EAS)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - uses: expo/expo-github-action@v9
@@ -98,7 +102,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - run: pnpm --filter @elogbook/mobile expo prebuild --clean
-      - run: eas build --platform all --non-interactive --auto-submit
+      - run: eas build --platform all --non-interactive --no-wait
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

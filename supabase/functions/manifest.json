@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "functions": {
+    "ai-gap-analysis": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": ["OPENAI_API_KEY"],
+      "owner": "ai"
+    },
+    "ai-insights": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": ["OPENAI_API_KEY"],
+      "owner": "ai"
+    },
+    "ai-quality": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": ["OPENAI_API_KEY"],
+      "owner": "ai"
+    },
+    "create-checkout": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": ["STRIPE_SECRET_KEY"],
+      "owner": "billing"
+    },
+    "dispatch-webhook": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": [],
+      "owner": "integrations"
+    },
+    "generate-pdf": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": [],
+      "owner": "export"
+    },
+    "list-invoices": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": ["STRIPE_SECRET_KEY"],
+      "owner": "billing"
+    },
+    "payment-webhook": {
+      "public": true,
+      "jwt_mode": "none",
+      "required_secrets": ["STRIPE_WEBHOOK_SECRET"],
+      "owner": "billing"
+    },
+    "scim": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": [],
+      "owner": "identity"
+    },
+    "sso-callback": {
+      "public": true,
+      "jwt_mode": "none",
+      "required_secrets": [],
+      "owner": "identity"
+    },
+    "webads-export": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": [],
+      "owner": "export"
+    }
+  }
+}

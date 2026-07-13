@@ -343,6 +343,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE TRIGGER trg_audit_accreditation_framework
-  AFTER INSERT OR UPDATE OR DELETE ON accreditation_frameworks
-  FOR EACH ROW EXECUTE FUNCTION audit_accreditation_framework();
+DO $$ BEGIN
+  CREATE TRIGGER trg_audit_accreditation_framework
+    AFTER INSERT OR UPDATE OR DELETE ON accreditation_frameworks
+    FOR EACH ROW EXECUTE FUNCTION audit_accreditation_framework();
+EXCEPTION WHEN undefined_table THEN NULL; END $$;

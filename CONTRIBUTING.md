@@ -4,7 +4,7 @@ Thanks for your interest in E-Logbook Enterprise! This project handles Protected
 
 ## Branch model
 
-- `master` is the production branch. All PRs target `master`.
+- `main` is the production branch. All PRs target `main`.
 - Feature branches: `feat/<short-slug>` (e.g. `feat/case-attachments`)
 - Fix branches: `fix/<short-slug>` (e.g. `fix/approve-case-tenant-id`)
 - Refactor / cleanup: `chore/<short-slug>`

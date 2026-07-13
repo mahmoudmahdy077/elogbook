@@ -13,7 +13,7 @@ defaults:
     shell: bash
 
 env:
-  PNPM_VERSION: 9
+  PNPM_VERSION: 9.15.0
 
 jobs:
   typecheck:

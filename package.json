@@ -16,18 +16,25 @@
     "react-dom": "^19.2.7"
   },
   "scripts": {
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
     "typecheck": "pnpm -r typecheck",
-    "dev:web": "pnpm --filter @elogbook/web dev",
-    "dev:mobile": "pnpm --filter @elogbook/mobile start",
-    "build:web": "pnpm --filter @elogbook/web build",
-    "analyze": "ANALYZE=true pnpm build:web",
-    "db:migrate": "supabase db push",
-    "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
-    "test": "vitest run --exclude '**/e2e/**'",
+    "lint": "pnpm lint:all",
+    "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint",
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run --exclude '**/e2e/**'",
+    "test:db": "supabase db test",
     "test:watch": "vitest --exclude '**/e2e/**'",
     "test:coverage": "vitest run --coverage --exclude '**/e2e/**'",
     "test:e2e": "pnpm --filter @elogbook/web test:e2e",
-    "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint"
+    "dev:web": "pnpm --filter @elogbook/web dev",
+    "dev:mobile": "pnpm --filter @elogbook/mobile start",
+    "build:web": "pnpm --filter @elogbook/web build",
+    "build:mobile:validate": "pnpm --filter @elogbook/mobile expo prebuild --clean",
+    "analyze": "ANALYZE=true pnpm build:web",
+    "db:migrate": "supabase db push",
+    "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
+    "security:scan": "pnpm audit --prod --audit-level=high && trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed elogbook-web:scan",
+    "release:verify": "pnpm check && pnpm build:web && pnpm security:scan"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.9",
