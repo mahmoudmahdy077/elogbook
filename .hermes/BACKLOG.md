@@ -10,11 +10,17 @@
 - [x] Fix pre-existing typecheck errors in mobile (`Svg.default.Svg` → `Svg.Svg`, `as` → `as unknown as`)
 - [x] Fix pre-existing typecheck error in web route test (missing `afterEach` import)
 
+## Phase: Pipeline Health Restoration (Jul 13)
+
+- [x] Fix typecheck errors in web (CaseComments.tsx double-cast, CaseForm.tsx missing TemplateField)
+- [x] Fix typecheck errors in mobile (missing Model imports, SVG aliases, DateTimePicker type, unknown params, font declarations)
+- [x] All 472 tests pass, typecheck clean across all 5 packages
+
 ## Phase: Lint Cleanup
 
 - [x] Fix remaining 4 ESLint errors in web (jsx/global unknown properties, e2e hooks rule)
 - [x] Fix remaining 1 ESLint error in mobile (unescaped entity)
-- [ ] Address 109+68 warnings (prefer type annotations over `any`, unused vars)
+- [ ] Address 34 remaining warnings (prefer type annotations over `any`, unused vars) — down from 177
 
 ## Phase: Apple Health Redesign — Visual Polish
 
