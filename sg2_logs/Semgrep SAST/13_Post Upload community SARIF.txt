@@ -1,0 +1,4 @@
+﻿2026-07-13T21:05:19.6039507Z Post job cleanup.
+2026-07-13T21:05:19.6046010Z ##[command]/usr/bin/docker exec  5aa672b6207eb9d465e52dfd3f00699fb27a86662b727540e8837220180776d6 sh -c "cat /etc/*release | grep ^ID"
+2026-07-13T21:05:20.0246454Z ##[group]Uploading combined SARIF debug artifact
+2026-07-13T21:05:20.0250742Z ##[endgroup]

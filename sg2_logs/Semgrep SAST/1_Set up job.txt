@@ -1,0 +1,33 @@
+﻿2026-07-13T21:04:51.3650547Z Current runner version: '2.335.1'
+2026-07-13T21:04:51.3675654Z ##[group]Runner Image Provisioner
+2026-07-13T21:04:51.3676579Z Hosted Compute Agent
+2026-07-13T21:04:51.3677199Z Version: 20260624.560
+2026-07-13T21:04:51.3677907Z Commit: 925d229a51159bc391ae97e54a2dd1fe20af789d
+2026-07-13T21:04:51.3678639Z Build Date: 2026-06-24T18:26:47Z
+2026-07-13T21:04:51.3679350Z Worker ID: {452197ac-c3c5-4c8c-8a87-bbbe3a95fc0c}
+2026-07-13T21:04:51.3680084Z Azure Region: westus
+2026-07-13T21:04:51.3680678Z ##[endgroup]
+2026-07-13T21:04:51.3682221Z ##[group]Operating System
+2026-07-13T21:04:51.3682880Z Ubuntu
+2026-07-13T21:04:51.3683389Z 24.04.4
+2026-07-13T21:04:51.3683958Z LTS
+2026-07-13T21:04:51.3684701Z ##[endgroup]
+2026-07-13T21:04:51.3685382Z ##[group]Runner Image
+2026-07-13T21:04:51.3686006Z Image: ubuntu-24.04
+2026-07-13T21:04:51.3686563Z Version: 20260705.232.1
+2026-07-13T21:04:51.3688023Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260705.232/images/ubuntu/Ubuntu2404-Readme.md
+2026-07-13T21:04:51.3689740Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260705.232
+2026-07-13T21:04:51.3690795Z ##[endgroup]
+2026-07-13T21:04:51.3692082Z ##[group]GITHUB_TOKEN Permissions
+2026-07-13T21:04:51.3694237Z Contents: read
+2026-07-13T21:04:51.3695225Z Metadata: read
+2026-07-13T21:04:51.3695875Z SecurityEvents: write
+2026-07-13T21:04:51.3696498Z ##[endgroup]
+2026-07-13T21:04:51.3698521Z Secret source: Actions
+2026-07-13T21:04:51.3699437Z Prepare workflow directory
+2026-07-13T21:04:51.4121904Z Prepare all required actions
+2026-07-13T21:04:51.4161024Z Getting action download info
+2026-07-13T21:04:51.8118934Z Download action repository 'actions/checkout@v5' (SHA:93cb6efe18208431cddfb8368fd83d5badbf9bfd)
+2026-07-13T21:04:51.9032207Z Download action repository 'github/codeql-action@v4' (SHA:99df26d4f13ea111d4ec1a7dddef6063f76b97e9)
+2026-07-13T21:04:52.4168654Z Download action repository 'actions/upload-artifact@v7' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+2026-07-13T21:04:52.6197615Z Complete job name: Semgrep SAST

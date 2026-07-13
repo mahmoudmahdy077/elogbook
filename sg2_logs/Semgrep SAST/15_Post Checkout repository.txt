@@ -1,0 +1,16 @@
+﻿2026-07-13T21:05:20.4903711Z Post job cleanup.
+2026-07-13T21:05:20.4911221Z ##[command]/usr/bin/docker exec  5aa672b6207eb9d465e52dfd3f00699fb27a86662b727540e8837220180776d6 sh -c "cat /etc/*release | grep ^ID"
+2026-07-13T21:05:20.6929543Z [command]/usr/bin/git version
+2026-07-13T21:05:20.6982066Z git version 2.52.0
+2026-07-13T21:05:20.7049331Z Copying '/github/home/.gitconfig' to '/__w/_temp/3b304257-73c7-47de-9c27-0d5e250b7729/.gitconfig'
+2026-07-13T21:05:20.7063855Z Temporarily overriding HOME='/__w/_temp/3b304257-73c7-47de-9c27-0d5e250b7729' before making global git config changes
+2026-07-13T21:05:20.7065858Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-13T21:05:20.7074046Z [command]/usr/bin/git config --global --add safe.directory /__w/elogbook/elogbook
+2026-07-13T21:05:20.7112214Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-13T21:05:20.7151664Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-13T21:05:20.7350765Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-13T21:05:20.7375858Z http.https://github.com/.extraheader
+2026-07-13T21:05:20.7389351Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-07-13T21:05:20.7427985Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-13T21:05:20.7629909Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-13T21:05:20.7659690Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url

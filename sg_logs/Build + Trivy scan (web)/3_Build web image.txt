@@ -1,0 +1,10 @@
+﻿2026-07-13T21:04:54.1489296Z ##[group]Run docker build \ --tag elogbook-web:scan \ --file apps/web/Dockerfile \ .
+2026-07-13T21:04:54.1489993Z [36;1mdocker build \ --tag elogbook-web:scan \ --file apps/web/Dockerfile \ .[0m
+2026-07-13T21:04:54.1689197Z shell: /usr/bin/bash -e {0}
+2026-07-13T21:04:54.1689564Z ##[endgroup]
+2026-07-13T21:04:56.6256648Z ERROR: docker: 'docker buildx build' requires 1 argument
+2026-07-13T21:04:56.6265942Z 
+2026-07-13T21:04:56.6266268Z Usage:  docker buildx build [OPTIONS] PATH | URL | -
+2026-07-13T21:04:56.6266572Z 
+2026-07-13T21:04:56.6266741Z Run 'docker buildx build --help' for more information
+2026-07-13T21:04:56.6311212Z ##[error]Process completed with exit code 1.
