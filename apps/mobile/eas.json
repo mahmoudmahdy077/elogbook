@@ -6,17 +6,20 @@
     "production": {
       "node": "20.18.0",
       "pnpm": "9.15.0",
-      "resourceClass": "large",
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
         "NODE_ENV": "production",
+        "NODE_OPTIONS": "--max-old-space-size=4096",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true"
       },
       "channel": "production",
       "autoIncrement": true,
-      "distribution": "store"
+      "distribution": "store",
+      "cache": {
+        "disabled": true
+      }
     },
     "preview": {
       "node": "20.18.0",
@@ -26,6 +29,7 @@
       },
       "env": {
         "NODE_ENV": "production",
+        "NODE_OPTIONS": "--max-old-space-size=4096",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false"
       },
       "channel": "preview",
