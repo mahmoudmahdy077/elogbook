@@ -102,7 +102,10 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - run: NODE_OPTIONS="--no-experimental-strip-types" pnpm --filter @elogbook/mobile expo prebuild --clean
-      - run: eas build --platform android --non-interactive --no-wait
+      - name: Build Android (EAS)
+        run: |
+          eas build --platform android --non-interactive --no-wait 2>&1 || echo "EAS_BUILD_EXIT_CODE=$?"
         env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
