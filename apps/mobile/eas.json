@@ -4,14 +4,13 @@
   },
   "build": {
     "production": {
-      "node": "22.14.0",
+      "node": "20.18.0",
       "pnpm": "9.15.0",
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
         "NODE_ENV": "production",
-        "NODE_OPTIONS": "--no-experimental-strip-types",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true"
       },
       "channel": "production",
@@ -19,7 +18,7 @@
       "distribution": "store"
     },
     "preview": {
-      "node": "22.14.0",
+      "node": "20.18.0",
       "pnpm": "9.15.0",
       "android": {
         "buildType": "apk"
@@ -33,7 +32,7 @@
       "autoIncrement": true
     },
     "development": {
-      "node": "22.14.0",
+      "node": "20.18.0",
       "pnpm": "9.15.0",
       "android": {
         "buildType": "apk",
