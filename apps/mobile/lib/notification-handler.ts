@@ -19,6 +19,7 @@
 
 import * as Notifications from 'expo-notifications';
 import { parseDeepLink } from './linking';
+import { route, Routes, type TypedRoute } from './routes';
 
 // ---------------------------------------------------------------------------
 // Notification payload types understood by this handler.
@@ -43,7 +44,7 @@ interface NotificationPayload {
 
 function payloadToDeepLink(
   payload: NotificationPayload
-): { pathname: string; params?: Record<string, string> } | null {
+): TypedRoute | null {
   if (!payload.type) return null;
 
   switch (payload.type) {
@@ -52,29 +53,21 @@ function payloadToDeepLink(
     case 'case.commented':
     case 'new.rejection':
       if (payload.caseId) {
-        return {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          pathname: '/(tabs)/case-detail' as any,
-          params: { caseId: payload.caseId },
-        };
+        return route(Routes.CASE_DETAIL, { caseId: payload.caseId });
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return { pathname: '/(tabs)/my-cases' as any };
+      return route(Routes.MY_CASES);
 
     case 'approval.pending':
     case 'approval.requested':
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return { pathname: '/(tabs)/approvals' as any };
+      return route(Routes.APPROVALS);
 
     case 'deep.link':
       if (payload.url) {
-        const route = parseDeepLink(payload.url);
-        if (route) {
-          return route.params
-            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              { pathname: route.screen as any, params: route.params }
-            : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              { pathname: route.screen as any };
+        const link = parseDeepLink(payload.url);
+        if (link) {
+          return link.params
+            ? route(link.screen as typeof Routes.HOME, link.params)
+            : route(link.screen as typeof Routes.HOME);
         }
       }
       return null;
@@ -96,21 +89,21 @@ export function handleNotificationResponse(
     .data as NotificationPayload | null;
   if (!payload) return;
 
-  const route = payloadToDeepLink(payload);
-  if (!route) return;
+  const deepLink = payloadToDeepLink(payload);
+  if (!deepLink) return;
 
   // Use a small delay to ensure the navigation container is mounted.
   // Expo Router needs to be ready before router.navigate() works.
   setTimeout(() => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { router } = require('expo-router');
-    if (route.params) {
+    if (deepLink.params) {
       router.navigate({
-        pathname: route.pathname,
-        params: route.params,
+        pathname: deepLink.pathname,
+        params: deepLink.params,
       });
     } else {
-      router.navigate(route.pathname);
+      router.navigate(deepLink.pathname);
     }
   }, 100);
 }

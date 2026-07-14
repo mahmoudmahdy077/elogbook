@@ -20,6 +20,7 @@
  */
 
 import { router } from 'expo-router';
+import { type TypedRoute, type AppRoute, route, Routes } from './routes';
 
 
 // ---------------------------------------------------------------------------
@@ -123,15 +124,13 @@ export const linkingConfig = {
 // handlers, background listeners, etc.).
 // ---------------------------------------------------------------------------
 
-export function navigateToDeepLink(route: DeepLinkRoute): void {
-  if (route.params) {
+export function navigateToDeepLink(deepLink: DeepLinkRoute): void {
+  if (deepLink.params) {
     router.navigate({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pathname: route.screen as any,
-      params: route.params,
+      pathname: deepLink.screen as typeof Routes.HOME,
+      params: deepLink.params,
     });
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    router.navigate(route.screen as any);
+    router.navigate(deepLink.screen as typeof Routes.HOME);
   }
 }
