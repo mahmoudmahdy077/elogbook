@@ -102,7 +102,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - run: NODE_OPTIONS="--no-experimental-strip-types" pnpm --filter @elogbook/mobile expo prebuild --clean
-      - run: eas build --platform all --non-interactive --no-wait
+      - run: eas build --platform android --non-interactive --no-wait
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
