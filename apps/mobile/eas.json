@@ -11,6 +11,7 @@
       },
       "env": {
         "NODE_ENV": "production",
+        "NODE_OPTIONS": "--no-experimental-strip-types",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true"
       },
       "channel": "production",
