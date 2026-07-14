@@ -6,6 +6,7 @@
     "production": {
       "node": "20.18.0",
       "pnpm": "9.15.0",
+      "resourceClass": "large",
       "android": {
         "buildType": "app-bundle"
       },
