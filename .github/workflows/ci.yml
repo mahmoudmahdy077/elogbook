@@ -63,6 +63,8 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Generate native files (for mobile tests)
+        run: pnpm --filter @elogbook/mobile expo prebuild --no-install 2>/dev/null || true
       - name: Run unit & integration tests
         run: pnpm test
 

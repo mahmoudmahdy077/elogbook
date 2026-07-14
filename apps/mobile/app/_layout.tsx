@@ -28,6 +28,7 @@ import {
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
 import { initDatabase } from '../lib/db/database';
+import { Sentry, SentryNavigationIntegration } from '../lib/sentry';
 
 // Font asset imports — loaded statically instead of using require()
 import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
@@ -56,6 +57,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    Sentry.captureException(error, {
+      extra: { componentStack: errorInfo.componentStack ?? '' },
+    });
   }
 
   reset = () => {
@@ -105,7 +112,7 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   useFonts({
     'Outfit': OutfitRegular,
     'Outfit-Bold': OutfitBold,
@@ -221,4 +228,4 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </ErrorBoundary>
   );
-}
+});

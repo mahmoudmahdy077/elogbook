@@ -57,7 +57,7 @@
         }
       ],
       "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
-      "versionCode": 9
+      "versionCode": 10
     },
     "plugins": [
       "expo-router",
