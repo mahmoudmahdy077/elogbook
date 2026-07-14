@@ -38,10 +38,12 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.9",
+    "@tailwindcss/postcss": "^4.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@vitest/coverage-v8": "^4.1.9",
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^29.1.1",
+    "tailwindcss": "^4.1.0",
     "typescript": "^6.0.0",
     "vitest": "^4.1.9"
   }
