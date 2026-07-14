@@ -41,6 +41,7 @@
     "@tailwindcss/postcss": "^4.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "babel-preset-expo": "^56.0.14",
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.0",

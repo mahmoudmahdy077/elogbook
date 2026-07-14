@@ -26,6 +26,7 @@
     "@sentry/react-native": "^8.16.0",
     "@supabase/supabase-js": "^2.43.0",
     "@tailwindcss/postcss": "^4.1.0",
+    "babel-preset-expo": "^56.0.14",
     "date-fns": "^4.4.0",
     "expo": "~56.0.8",
     "expo-build-properties": "^56.0.19",
