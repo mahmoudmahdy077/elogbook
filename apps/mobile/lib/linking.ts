@@ -20,7 +20,7 @@
  */
 
 import { router } from 'expo-router';
-import { Platform } from 'react-native';
+
 
 // ---------------------------------------------------------------------------
 // Route definitions — single source of truth for all deep-link → screen
@@ -126,10 +126,12 @@ export const linkingConfig = {
 export function navigateToDeepLink(route: DeepLinkRoute): void {
   if (route.params) {
     router.navigate({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pathname: route.screen as any,
       params: route.params,
     });
   } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     router.navigate(route.screen as any);
   }
 }

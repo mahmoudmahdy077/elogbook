@@ -1,6 +1,4 @@
 import { useEffect } from 'react';
-import { Q } from '@nozbe/watermelondb';
-import { getDatabase } from './db/database';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
@@ -23,7 +21,7 @@ import {
   setLastSyncTimestamp,
 } from './db/storage';
 import { pickMaxServerUpdatedAt } from './sync-incremental';
-import { computeRetryDelayMs, MAX_RETRY_DELAY_MS, RETRY_DELAYS_MS } from './sync-retry';
+import { computeRetryDelayMs, RETRY_DELAYS_MS } from './sync-retry';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 

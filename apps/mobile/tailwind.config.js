@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { clinicalTokens } = require('@elogbook/shared/src/design-tokens.config.cjs');
 
 const { colors, fonts, spacing, radius, shadows, animation, glass } = clinicalTokens;

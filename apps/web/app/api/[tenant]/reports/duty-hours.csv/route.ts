@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';
-  const pathParts = request.nextUrl.pathname.split('/');
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();

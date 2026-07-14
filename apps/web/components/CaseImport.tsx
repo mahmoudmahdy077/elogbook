@@ -111,7 +111,6 @@ export default function CaseImport({
     setImporting(true);
     setError(null);
 
-    const allRows = previewRows; // Use all parsed rows from full file
     // Re-parse the full file since previewRows only has first 10
     const file = fileInputRef.current?.files?.[0];
     if (!file) return;

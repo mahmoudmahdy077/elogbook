@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 import { clinicalTokens } from '@elogbook/shared';
 
-const { colors, fonts, spacing, radius, animation, glass } = clinicalTokens;
+const { colors, fonts, radius, glass } = clinicalTokens;
 
 const config: Config = {
   content: [

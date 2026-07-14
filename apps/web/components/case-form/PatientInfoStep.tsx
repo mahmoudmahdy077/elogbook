@@ -14,7 +14,7 @@ interface PatientInfoStepProps {
 }
 
 /* Apple-style toggle switch */
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Toggle({ checked, onChange, label: _label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       type="button"

@@ -3,7 +3,7 @@
 import { APP_NAME } from '@elogbook/shared';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
 
@@ -23,7 +23,6 @@ export default function Sidebar({
   user?: { name: string; role: string; tenantName: string };
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('sidebar-collapsed') === 'true';

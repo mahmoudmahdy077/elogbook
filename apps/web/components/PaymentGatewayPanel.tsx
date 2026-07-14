@@ -91,7 +91,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
 
       setSuccess('Payment gateway configuration saved successfully.');
       router.refresh();
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

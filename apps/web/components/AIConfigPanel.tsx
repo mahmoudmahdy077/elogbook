@@ -99,7 +99,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
 
       setSuccess('AI configuration saved successfully.');
       router.refresh();
-    } catch (_err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

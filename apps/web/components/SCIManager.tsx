@@ -23,14 +23,13 @@ interface SCIManagerProps {
 
 export default function SCIManager({
   tenantId,
-  tenantSlug,
+  tenantSlug: _tenantSlug,
   initialTokens,
   initialScimUrl,
 }: SCIManagerProps) {
   const router = useRouter();
   const [tokens, setTokens] = useState<ScimToken[]>(initialTokens);
   const [scimUrl] = useState(initialScimUrl);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 

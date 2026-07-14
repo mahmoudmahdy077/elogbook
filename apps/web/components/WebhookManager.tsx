@@ -35,7 +35,6 @@ interface WebhookManagerProps {
 export default function WebhookManager({ tenantId, initialWebhooks }: WebhookManagerProps) {
   const router = useRouter();
   const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 

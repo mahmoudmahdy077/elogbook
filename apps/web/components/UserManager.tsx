@@ -117,7 +117,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       router.refresh();
       setShowRoleDialog(false);
       setRoleChangeTarget(null);
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

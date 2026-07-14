@@ -18,7 +18,7 @@
  */
 
 import * as Notifications from 'expo-notifications';
-import { parseDeepLink, navigateToDeepLink } from './linking';
+import { parseDeepLink } from './linking';
 
 // ---------------------------------------------------------------------------
 // Notification payload types understood by this handler.
@@ -53,24 +53,28 @@ function payloadToDeepLink(
     case 'new.rejection':
       if (payload.caseId) {
         return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           pathname: '/(tabs)/case-detail' as any,
           params: { caseId: payload.caseId },
         };
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { pathname: '/(tabs)/my-cases' as any };
 
     case 'approval.pending':
     case 'approval.requested':
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { pathname: '/(tabs)/approvals' as any };
 
     case 'deep.link':
-      // Generic deep-link payload — parse the URL
       if (payload.url) {
         const route = parseDeepLink(payload.url);
         if (route) {
           return route.params
-            ? { pathname: route.screen as any, params: route.params }
-            : { pathname: route.screen as any };
+            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { pathname: route.screen as any, params: route.params }
+            : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { pathname: route.screen as any };
         }
       }
       return null;
@@ -98,6 +102,7 @@ export function handleNotificationResponse(
   // Use a small delay to ensure the navigation container is mounted.
   // Expo Router needs to be ready before router.navigate() works.
   setTimeout(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { router } = require('expo-router');
     if (route.params) {
       router.navigate({

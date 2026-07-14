@@ -41,7 +41,7 @@ export default function MilestonesMatrix({
   epaMappings,
   currentLevels = {},
   residentId,
-  tenantId,
+  tenantId: _tenantId,
   isEditable = false,
 }: MilestonesMatrixProps) {
   const supabase = createClient();

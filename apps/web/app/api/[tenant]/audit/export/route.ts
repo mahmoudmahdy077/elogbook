@@ -167,7 +167,7 @@ export async function GET(
         },
         body: JSON.stringify(pdfPayload),
       });
-    } catch (_err) {
+    } catch {
       // Edge function unavailable — fall back to inline HTML
       return generateAuditPdfInline(rows, {
         tenantName: tenant.slug,

@@ -14,14 +14,6 @@ interface RotationRow {
   profiles: { full_name: string } | null;
 }
 
-interface ShiftRow {
-  id: string;
-  rotation_id: string;
-  date: string;
-  shift_type: string;
-  hours: number | null;
-}
-
 interface ResidentRow {
   id: string;
   full_name: string;
@@ -74,13 +66,11 @@ export default async function RotationsPage({
 
   // Fetch shifts for the visible rotations
   const rotationIds = (rotations ?? []).map((r: RotationRow) => r.id);
-  let shifts: ShiftRow[] = [];
   if (rotationIds.length > 0) {
-    const { data: shiftData } = await supabase
+    await supabase
       .from('shifts')
       .select('id, rotation_id, date, shift_type, hours')
       .in('rotation_id', rotationIds);
-    shifts = (shiftData ?? []) as ShiftRow[];
   }
 
   // Fetch residents for filter (directors+ only)

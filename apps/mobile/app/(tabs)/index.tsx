@@ -101,6 +101,7 @@ export default function DashboardScreen() {
         .eq('tenant_id', profile.tenant_id);
 
       if (goalsWithProgress) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setGoals(goalsWithProgress.map((g: any) => ({
           id: g.id,
           title: g.title,

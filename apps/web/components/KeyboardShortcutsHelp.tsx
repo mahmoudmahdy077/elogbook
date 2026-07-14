@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useShortcuts, formatBinding } from '@/lib/shortcuts';
+import { motion } from 'framer-motion';
+import { useShortcuts } from '@/lib/shortcuts';
 
 const CATEGORY_ORDER = ['actions', 'navigation', 'list-navigation'] as const;
 const CATEGORY_LABEL: Record<string, string> = {

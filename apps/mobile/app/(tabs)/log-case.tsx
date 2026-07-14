@@ -103,11 +103,9 @@ export default function LogCaseScreen() {
 
   const haptics = useHaptics();
 
-  // loadTemplates is intentionally omitted from deps — it's an inline function that changes every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadTemplates();
-  }, []);
+  }, []); /* eslint-disable-line react-hooks/exhaustive-deps */
 
   // When the route is opened with `editCaseId`, hydrate the form from the
   // local DB row (or fall back to Supabase if not cached). The submit path
@@ -363,7 +361,7 @@ export default function LogCaseScreen() {
         )
       );
     }
-  }, [favoriteIds, supabase]);
+  }, [favoriteIds]);
 
   const selectTemplate = useCallback((t: CaseTemplate) => {
     setSelectedTemplate(t);

@@ -60,6 +60,7 @@ function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
   let tenantId: string | undefined;
   let userId: string | undefined;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { requestContext } = require('./request-context') as typeof import('./request-context');
     requestId = requestContext.getRequestId();
     tenantId = requestContext.getTenantId();

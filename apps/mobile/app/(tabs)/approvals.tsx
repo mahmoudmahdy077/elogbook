@@ -137,6 +137,7 @@ export default function ApprovalsScreen() {
       .order('requested_at', { ascending: false });
 
     if (requests) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mapped: ApprovalItem[] = requests.map((r: any) => ({
         id: r.id,
         entry_id: r.entry_id,

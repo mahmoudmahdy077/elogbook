@@ -22,7 +22,7 @@ interface OnboardingWizardProps {
 export default function OnboardingWizard({
   tenantSlug,
   profileId,
-  tenantId,
+  tenantId: _tenantId,
   initialName,
   initialSpecialty,
 }: OnboardingWizardProps) {
@@ -73,7 +73,7 @@ export default function OnboardingWizard({
       await saveProfile(profileName, specialty);
       toast.show('Onboarding complete! Welcome to Elogbook.', 'success');
       router.push(`/${tenantSlug}/dashboard`);
-    } catch (err) {
+    } catch {
       toast.show('Failed to save profile. Please try again.', 'error');
     } finally {
       setSubmitting(false);
@@ -86,14 +86,12 @@ export default function OnboardingWizard({
       await saveProfile(profileName, specialty);
       toast.show('Onboarding complete!', 'success');
       router.push(`/${tenantSlug}/goals`);
-    } catch (err) {
+    } catch {
       toast.show('Failed to save profile. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
   }, [saveProfile, profileName, specialty, toast, router, tenantSlug]);
-
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
     <div className="panel p-6 sm:p-8">

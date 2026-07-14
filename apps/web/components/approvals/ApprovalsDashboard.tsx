@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client'
 import ApprovalActions from '@/components/ApprovalActions';
 import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -47,11 +46,6 @@ interface PendingEntry {
   approval_requests: RelationApprovalRequest[];
 }
 
-interface AllEntry {
-  id: string;
-  status: string;
-}
-
 const itemVariants = {
   enter: { opacity: 0, y: 16 },
   center: { opacity: 1, y: 0 },
@@ -84,7 +78,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  const fetchPending = async () => {
+  const fetchPending = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -165,11 +159,11 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     }
 
     setLoading(false);
-  };
+  }, [tenantId, supabase]);
 
   useEffect(() => {
     fetchPending();
-  }, [tenantId]);
+  }, [fetchPending]);
 
   const pendingCount = entries.length;
   const todayUTC = new Date().toISOString().split('T')[0];

@@ -312,11 +312,9 @@ export default function MilestonesScreen() {
     }
   }, [selectedResident, fetchMilestones]);
 
-  // loadData is intentionally omitted from deps — it's an inline function that changes every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

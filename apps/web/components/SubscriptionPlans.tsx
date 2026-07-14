@@ -35,10 +35,6 @@ const FEATURE_LABELS: Record<string, string> = {
   custom_branding: 'Custom Branding',
 };
 
-const CORE_FEATURES = ['max_cases', 'pdf_export', 'approval_workflow'];
-const PREMIUM_FEATURES = ['ai_insights', 'goals', 'audit'];
-const ENTERPRISE_FEATURES = ['sso', 'priority_support', 'custom_branding'];
-
 function getFeatureGroup(features: Record<string, unknown>) {
   const all = Object.entries(FEATURE_LABELS).filter(([k]) => k in features).map(([k, label]) => ({
     key: k,

@@ -32,10 +32,9 @@ const ALLOWED_ROLES = [
 
 type RoleId = (typeof ALLOWED_ROLES)[number]['id'];
 
-export default function SSOManager({ tenantId, tenantSlug, initialConfigs }: SSOManagerProps) {
+export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialConfigs }: SSOManagerProps) {
   const router = useRouter();
   const [configs, setConfigs] = useState<SsoConfig[]>(initialConfigs);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -55,9 +54,6 @@ export default function SSOManager({ tenantId, tenantSlug, initialConfigs }: SSO
   const [formError, setFormError] = useState('');
 
   // ACS URL display
-  const supabaseUrl = typeof window !== 'undefined'
-    ? (window as { __NEXT_DATA__?: { env?: Record<string, string> } } as Record<string, unknown>)
-    : null;
   const acsUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sso-callback`
     : '';

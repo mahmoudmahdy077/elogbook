@@ -27,7 +27,7 @@ const useRedis = !!(UPSTASH_URL && UPSTASH_TOKEN);
 /**
  * Execute a Redis command via Upstash REST API
  */
-async function redisCommand(command: string, ...args: string[]): Promise<any> {
+async function redisCommand(command: string, ...args: string[]): Promise<string | null> {
   if (!UPSTASH_URL || !UPSTASH_TOKEN) throw new Error('Redis not configured');
   const res = await fetch(`${UPSTASH_URL}/${command}/${args.join('/')}`, {
     headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },

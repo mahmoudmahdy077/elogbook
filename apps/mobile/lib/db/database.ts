@@ -33,6 +33,7 @@ async function ensureInit(): Promise<void> {
       onSetUpError: (err: unknown) => {
         console.error('WatermelonDB setup error:', err);
       },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     _database = new Database({
