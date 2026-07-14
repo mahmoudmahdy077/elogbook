@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "E-Logbook",
+    "owner": "mahmahdys-team",
     "slug": "elogbook-t5plytminvsqg3jhrtlw",
     "version": "1.0.0",
     "orientation": "portrait",

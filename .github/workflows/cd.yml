@@ -31,14 +31,14 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
-      - id: deploy
-        uses: amondnet/vercel-action@v42
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod --yes'
+      - name: Deploy to Vercel
+        run: |
+          npx vercel deploy --prod --yes \
+            --token="${{ secrets.VERCEL_TOKEN }}" \
+            --scope=mahmoudmahdy077s-projects \
+            2>&1 | tee /tmp/vercel-deploy.log
+          DEPLOY_URL=$(grep -oP 'https://[^ ]+\.vercel\.app' /tmp/vercel-deploy.log | head -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
   # ----------------------------------------------------------------------
   # Push database migrations
