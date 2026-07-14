@@ -34,8 +34,8 @@ coverage/
 # Mobile
 *.apk
 *.ipa
-/android
-/ios
+/apps/mobile/android
+/apps/mobile/ios
 
 # Supabase CLI local state (project ref, pooler URLs, etc.)
 supabase/.temp/

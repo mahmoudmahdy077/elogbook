@@ -56,9 +56,15 @@ describe('Android network_security_config', () => {
     expect(xml).not.toMatch(/<pin digest="SHA-1">/);
   });
 
-  it('references the config from app.json', () => {
+  it('references the config from expo-build-properties plugin', () => {
     const appJson = JSON.parse(readFileSync(join(mobileRoot, 'app.json'), 'utf8'));
-    expect(appJson.expo.android.networkSecurityConfig).toMatch(
+    const buildPropsPlugin = appJson.expo.plugins.find(
+      (p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties',
+    );
+    expect(buildPropsPlugin).toBeDefined();
+    const config = buildPropsPlugin?.[1] as Record<string, unknown> | undefined;
+    expect(config?.android).toBeDefined();
+    expect((config?.android as Record<string, unknown>)?.networkSecurityConfig).toMatch(
       /network_security_config\.xml$/,
     );
   });
