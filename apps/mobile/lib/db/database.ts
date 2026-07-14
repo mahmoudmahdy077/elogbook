@@ -1,5 +1,6 @@
 import { Database } from '@nozbe/watermelondb';
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
+import type { SQLiteAdapterOptions } from '@nozbe/watermelondb/adapters/sqlite/type';
 import { schema } from './schema';
 import { migrations } from './migrations';
 import { CaseEntry } from './models/CaseEntry';
@@ -24,7 +25,7 @@ async function ensureInit(): Promise<void> {
   _initPromise = (async () => {
     const dbKey = await getOrCreateDbEncryptionKey();
 
-    const adapter = new SQLiteAdapter({
+    const adapterOptions: SQLiteAdapterOptions & { encryptionKey: string } = {
       schema,
       migrations,
       jsi: true,
@@ -33,8 +34,9 @@ async function ensureInit(): Promise<void> {
       onSetUpError: (err: unknown) => {
         console.error('WatermelonDB setup error:', err);
       },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+
+    const adapter = new SQLiteAdapter(adapterOptions);
 
     _database = new Database({
       adapter,

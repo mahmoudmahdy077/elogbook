@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { clearBiometricAuthCache } from '../lib/biometric-auth';
+import { setBiometricPreference } from '../lib/secure-store';
 import { clinicalTokens } from '@elogbook/shared';
 
 export default function LoginScreen() {
@@ -22,6 +24,11 @@ export default function LoginScreen() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        // Reset biometric auth state on fresh login — clear in-memory cache
+        // and disable the biometric re-auth preference so the user is prompted
+        // to re-enroll on next use rather than inheriting a stale session.
+        clearBiometricAuthCache();
+        setBiometricPreference(false).catch(console.error);
         router.replace('/(tabs)');
       }
     });

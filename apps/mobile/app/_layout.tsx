@@ -27,6 +27,7 @@ import {
   clearBiometricAuthCache,
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
+import { supabase } from '../lib/supabase';
 import { initDatabase } from '../lib/db/database';
 import { Sentry } from '../lib/sentry';
 
@@ -177,8 +178,16 @@ export default function RootLayout() {
     setShowBiometricGate(false);
   }, []);
 
-  const handleBiometricFallback = useCallback(() => {
+  const handleBiometricFallback = useCallback(async () => {
     setShowBiometricGate(false);
+    // Sign out the existing Supabase session first, otherwise the login
+    // screen will auto-redirect since the session is still valid,
+    // completely bypassing biometric / passcode security.
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Best-effort: continue to login screen even if sign-out fails
+    }
     // Navigate to login screen for full passcode auth
     router.replace('/login');
   }, [router]);

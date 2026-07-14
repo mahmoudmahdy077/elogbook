@@ -15,7 +15,7 @@ export const migrations = schemaMigrations({
     },
     {
       toVersion: 4,
-      steps: [],
+      steps: [], // No schema changes in v4 — just advancing the version to match schema.ts
     },
   ],
 });
