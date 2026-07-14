@@ -28,7 +28,7 @@ import {
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
 import { initDatabase } from '../lib/db/database';
-import { Sentry, SentryNavigationIntegration } from '../lib/sentry';
+import { Sentry } from '../lib/sentry';
 
 // Font asset imports — loaded statically instead of using require()
 import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
@@ -112,7 +112,7 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default Sentry.wrap(function RootLayout() {
+export default function RootLayout() {
   useFonts({
     'Outfit': OutfitRegular,
     'Outfit-Bold': OutfitBold,
@@ -228,4 +228,4 @@ export default Sentry.wrap(function RootLayout() {
       </SafeAreaProvider>
     </ErrorBoundary>
   );
-});
+}

@@ -1,7 +1,9 @@
+// Sentry error tracking — gracefully degrades when no DSN is set
+// Import this module to make Sentry.captureException available everywhere.
+
 import * as Sentry from '@sentry/react-native';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-const SENTRY_ENV = process.env.EXPO_PUBLIC_SENTRY_ENV ?? process.env.NODE_ENV ?? 'development';
 
 // PHI-sensitive fields to scrub from Sentry events
 const PHI_FIELDS = ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values'];
@@ -25,14 +27,12 @@ function scrubPhi<T>(event: T, fields: string[] = PHI_FIELDS): T {
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: SENTRY_ENV,
+    environment: process.env.EXPO_PUBLIC_SENTRY_ENV ?? process.env.NODE_ENV ?? 'development',
     tracesSampleRate: Number(process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
-    // PHI: never send patient fields
     beforeSend(event) {
       return scrubPhi(event as typeof event);
     },
     beforeBreadcrumb(breadcrumb) {
-      // Redact navigation breadcrumbs that contain patient data
       if (breadcrumb.data?.url && typeof breadcrumb.data.url === 'string') {
         const url = breadcrumb.data.url as string;
         if (url.includes('/patient/') || url.includes('/case/')) {
@@ -44,9 +44,5 @@ if (SENTRY_DSN) {
   });
 }
 
-const SentryNavigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: true,
-});
-
-export { Sentry, SentryNavigationIntegration };
+export { Sentry };
 export default Sentry;
