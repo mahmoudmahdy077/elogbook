@@ -28,17 +28,28 @@ const supabaseAnonKey =
 // ---------------------------------------------------------------------------
 
 function createNoopClient(): SupabaseClient {
-  // Return a proxy that throws meaningful errors on any actual usage
-  return new Proxy({} as SupabaseClient, {
-    get(_target, prop) {
-      return () =>
-        Promise.reject(
-          new Error(
-            `Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY. Called: ${String(prop)}`
-          )
-        );
-    },
-  });
+  // Recursive proxy that returns functions with meaningful errors for any
+  // leaf property, but returns child proxies for intermediate objects.
+  // This allows nested access like noop.auth.signOut() to produce a
+  // helpful error message instead of "undefined is not a function".
+  function createProxy(path: string[]): Record<string, unknown> {
+    return new Proxy({} as Record<string, unknown>, {
+      get(_target, prop) {
+        const key = String(prop);
+        const fullPath = [...path, key];
+        // For 'then' just return undefined (not a thenable)
+        if (key === 'then') return undefined;
+        // Return a function that rejects with a descriptive error
+        return (...args: unknown[]) =>
+          Promise.reject(
+            new Error(
+              `Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY. Called: ${fullPath.join('.')}(${args.length} args)`
+            )
+          );
+      },
+    });
+  }
+  return createProxy([]) as unknown as SupabaseClient;
 }
 
 // ---------------------------------------------------------------------------
