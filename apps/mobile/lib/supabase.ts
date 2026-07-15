@@ -24,35 +24,6 @@ const supabaseAnonKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 // ---------------------------------------------------------------------------
-// Fallback: no-op client when Supabase is not configured
-// ---------------------------------------------------------------------------
-
-function createNoopClient(): SupabaseClient {
-  // Recursive proxy that returns functions with meaningful errors for any
-  // leaf property, but returns child proxies for intermediate objects.
-  // This allows nested access like noop.auth.signOut() to produce a
-  // helpful error message instead of "undefined is not a function".
-  function createProxy(path: string[]): Record<string, unknown> {
-    return new Proxy({} as Record<string, unknown>, {
-      get(_target, prop) {
-        const key = String(prop);
-        const fullPath = [...path, key];
-        // For 'then' just return undefined (not a thenable)
-        if (key === 'then') return undefined;
-        // Return a function that rejects with a descriptive error
-        return (...args: unknown[]) =>
-          Promise.reject(
-            new Error(
-              `Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY. Called: ${fullPath.join('.')}(${args.length} args)`
-            )
-          );
-      },
-    });
-  }
-  return createProxy([]) as unknown as SupabaseClient;
-}
-
-// ---------------------------------------------------------------------------
 // SecureStore adapter for auth persistence (encrypted at rest)
 // ---------------------------------------------------------------------------
 
@@ -78,8 +49,7 @@ function createFetchWithTimeout(
     return baseFetch(url, {
       ...options,
       signal: options?.signal
-        ? // Combine external+internal abort signals
-          (() => {
+        ? (() => {
             const externalSignal = options.signal;
             const combinedController = new AbortController();
             const onAbort = () => combinedController.abort();
@@ -98,29 +68,30 @@ function createFetchWithTimeout(
 
 let _client: SupabaseClient | null = null;
 
-export function getSupabaseClient(): SupabaseClient {
-  if (_client) return _client;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn(
-      '[Supabase] Missing configuration — using no-op client. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.'
-    );
-    _client = createNoopClient();
-    return _client;
-  }
-
-  _client = createClient(supabaseUrl, supabaseAnonKey, {
+function createRealClient(): SupabaseClient {
+  return createClient(supabaseUrl!, supabaseAnonKey!, {
     auth: {
       storage: ExpoSecureStoreAdapter,
       autoRefreshToken: true,
-      detectSessionInUrl: false, // Mobile — no URL-based sessions
+      detectSessionInUrl: false,
       persistSession: true,
     },
     global: {
       fetch: createFetchWithTimeout(),
     },
   });
+}
 
+export function getSupabaseClient(): SupabaseClient {
+  if (_client) return _client;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your environment.'
+    );
+  }
+
+  _client = createRealClient();
   return _client;
 }
 

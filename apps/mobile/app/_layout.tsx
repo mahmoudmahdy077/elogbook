@@ -114,7 +114,8 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  useFonts({
+  console.log('[RootLayout] Mounting...');
+  const [fontsLoaded, fontsError] = useFonts({
     'Outfit': OutfitRegular,
     'Outfit-Bold': OutfitBold,
     'Outfit-SemiBold': OutfitSemiBold,
@@ -124,9 +125,22 @@ export default function RootLayout() {
     'GeistMono': GeistMonoRegular,
     'GeistMono-Medium': GeistMonoMedium,
   });
+  if (fontsError) {
+    console.error('[RootLayout] Font loading error:', fontsError);
+  }
 
   // ── Auth state ────────────────────────────────────────────────────────────
-  const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
+  console.log('[RootLayout] Before useAuthGuard');
+  let isAuthenticated = false;
+  let authLoading = true;
+  try {
+    const auth = useAuthGuard();
+    isAuthenticated = auth.isAuthenticated;
+    authLoading = auth.isLoading;
+    console.log('[RootLayout] useAuthGuard OK:', { isAuthenticated, authLoading });
+  } catch (err) {
+    console.error('[RootLayout] useAuthGuard ERROR:', err);
+  }
   const router = useRouter();
 
   // ── Biometric gate ─────────────────────────────────────────────────────────
