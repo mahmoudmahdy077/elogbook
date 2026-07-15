@@ -20,7 +20,7 @@
 
 - [x] Fix remaining 4 ESLint errors in web (jsx/global unknown properties, e2e hooks rule)
 - [x] Fix remaining 1 ESLint error in mobile (unescaped entity)
-- [ ] Address 34 remaining warnings (prefer type annotations over `any`, unused vars) — down from 177
+- [x] Address 34 remaining warnings (prefer type annotations over `any`, unused vars) — down from 177
 
 ## Phase: Apple Health Redesign — Visual Polish
 

@@ -20,7 +20,7 @@
  */
 
 import { router } from 'expo-router';
-import { type TypedRoute, type AppRoute, route, Routes } from './routes';
+import { Routes } from './routes';
 
 
 // ---------------------------------------------------------------------------
