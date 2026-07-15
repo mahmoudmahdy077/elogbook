@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Find the React Native renderer implementations
-const rendererDir = path.join(__dirname, 'node_modules', 'react-native', 'Libraries', 'Renderer', 'implementations');
+const rendererDir = path.join(process.cwd(), 'node_modules', 'react-native', 'Libraries', 'Renderer', 'implementations');
 
 if (!fs.existsSync(rendererDir)) {
   console.warn('[postinstall] React Native renderer not found, skipping version patch.');
@@ -26,7 +26,7 @@ if (rendererFiles.length === 0) {
 }
 
 // Get the actual installed React version
-const reactPkg = path.join(__dirname, 'node_modules', 'react', 'package.json');
+const reactPkg = path.join(process.cwd(), 'node_modules', 'react', 'package.json');
 const reactVersion = JSON.parse(fs.readFileSync(reactPkg, 'utf8')).version;
 console.log(`[postinstall] Patching React Native renderer to accept React v${reactVersion}...`);
 
