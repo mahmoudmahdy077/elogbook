@@ -7,16 +7,11 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "postinstall": "node scripts/patch-renderer-version.js",
     "lint": "eslint . --ext .js,.mjs,.cjs,.ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
-  },
-  "pnpm": {
-    "overrides": {
-      "react": "19.2.3",
-      "react-dom": "19.2.3"
-    }
   },
   "dependencies": {
     "@elogbook/shared": "workspace:*",
@@ -55,7 +50,7 @@
     "nativewind": "5.0.0-preview.4",
     "postcss": "^8.5.0",
     "posthog-react-native": "^4.53.2",
-    "react": "19.2.3",
+    "react": "19.2.7",
     "react-native": "0.85.3",
     "react-native-css": "^3.0.7",
     "react-native-reanimated": "4.3.0",
