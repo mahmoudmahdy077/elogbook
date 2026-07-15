@@ -1,56 +1,75 @@
 #!/usr/bin/env node
 /**
  * Post-install script to patch React Native's renderer
- * version check to accept our installed React version.
- *
- * React Native 0.85.3 hardcodes a check for React 19.2.3 in its renderer.
- * If the actual React version differs (e.g. 19.2.7), the app crashes on startup.
- * This patch updates the renderer to accept whatever React version is installed.
+ * version check. Replaces the version-mismatch throw with a
+ * no-op so the app loads regardless of which React version
+ * is actually installed.
  */
 const fs = require('fs');
 const path = require('path');
+const cwd = process.cwd();
 
-// Find the React Native renderer implementations
-const rendererDir = path.join(process.cwd(), 'node_modules', 'react-native', 'Libraries', 'Renderer', 'implementations');
+const rendererDir = path.join(cwd, 'node_modules', 'react-native', 'Libraries', 'Renderer', 'implementations');
 
 if (!fs.existsSync(rendererDir)) {
-  console.warn('[postinstall] React Native renderer not found, skipping version patch.');
+  console.warn('[patch-renderer] React Native renderer not found, skipping.');
   process.exit(0);
 }
 
 const rendererFiles = fs.readdirSync(rendererDir).filter(f => f.startsWith('ReactNativeRenderer') && f.endsWith('.js'));
-
 if (rendererFiles.length === 0) {
-  console.warn('[postinstall] No ReactNativeRenderer files found.');
+  console.warn('[patch-renderer] No ReactNativeRenderer files found.');
   process.exit(0);
 }
 
-// Get the actual installed React version
-const reactPkg = path.join(process.cwd(), 'node_modules', 'react', 'package.json');
+const reactPkg = path.join(cwd, 'node_modules', 'react', 'package.json');
 const reactVersion = JSON.parse(fs.readFileSync(reactPkg, 'utf8')).version;
-console.log(`[postinstall] Patching React Native renderer to accept React v${reactVersion}...`);
+console.log(`[patch-renderer] Patching renderer to accept React v${reactVersion}...`);
 
 let patched = 0;
 for (const file of rendererFiles) {
   const filePath = path.join(rendererDir, file);
   let content = fs.readFileSync(filePath, 'utf8');
 
-  // Find the hardcoded version check: "19.2.3" !== isomorphicReactPackageVersion
-  // Replace with a dynamic check that accepts the installed version
-  const originalVersion = '19.2.3';
-  if (content.includes(`"${originalVersion}" !== isomorphicReactPackageVersion`)) {
-    content = content.replace(
-      `"${originalVersion}" !== isomorphicReactPackageVersion`,
-      `"${originalVersion}" !== "dummy" /* patched: ${reactVersion} */`
-    );
+  if (content.includes('PATCH_RENDERER_DISABLED')) {
+    console.log(`  ${file}: already patched ✓`);
+    continue;
+  }
+
+  // Match: if ("X.Y.Z" !== isomorphicReactPackageVersion)
+  const regex = /if\s*\(\s*"(\d+\.\d+\.\d+)"\s*!==\s*(\w+)\s*\)/;
+  const match = content.match(regex);
+
+  if (match) {
+    const hardcodedVersion = match[1];
+    const fullMatch = match[0];
+
+    // Replace the condition with `if (false)` so the version check
+    // never throws. This effectively disables the version mismatch check.
+    const replacement = `if (false/*PATCH_RENDERER_DISABLED*/)`;
+    content = content.replace(fullMatch, replacement);
+
     fs.writeFileSync(filePath, content, 'utf8');
     patched++;
-    console.log(`  ✓ Patched ${file}`);
+    console.log(`  ${file}: patched ✓ (was ${hardcodedVersion}, installed ${reactVersion})`);
+  } else {
+    // Try the already-patched-from-old-versions pattern
+    // The previous script version used: "dummy" /* patched: 19.2.3 */
+    const legacyRegex = /if\s*\(\s*"(\d+\.\d+\.\d+)"\s*!==\s*"dummy"\s*\/\*\s*patched:/;
+    const legacyMatch = content.match(legacyRegex);
+    if (legacyMatch) {
+      content = content.replace(legacyMatch[0], `if (false/*PATCH_RENDERER_DISABLED*/)`);
+      fs.writeFileSync(filePath, content, 'utf8');
+      patched++;
+      console.log(`  ${file}: re-patched from legacy format ✓`);
+    } else {
+      console.log(`  ${file}: no version check found, skipping`);
+    }
   }
 }
 
 if (patched > 0) {
-  console.log(`[postinstall] ✅ Patched ${patched} renderer file(s) — version check disabled.`);
+  console.log(`[patch-renderer] ✅ ${patched} file(s) patched.`);
 } else {
-  console.log(`[postinstall] ⚠️ No renderer files needed patching (version check not found).`);
+  console.log(`[patch-renderer] ⚠️ No files needed patching.`);
 }

@@ -34,7 +34,10 @@
       },
       "channel": "preview",
       "distribution": "internal",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "cache": {
+        "disabled": true
+      }
     },
     "development": {
       "node": "22.14.0",
