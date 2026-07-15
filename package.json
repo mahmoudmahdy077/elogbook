@@ -10,10 +10,16 @@
     "pnpm": ">=9.0.0 <10"
   },
   "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
+    }
+  },
   "dependencies": {
     "next": "^16.2.7",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "scripts": {
     "check": "pnpm typecheck && pnpm lint && pnpm test",
