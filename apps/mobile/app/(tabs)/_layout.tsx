@@ -120,6 +120,7 @@ export default function TabLayout() {
         <Tabs.Screen name="evaluations" options={{ href: null }} />
         <Tabs.Screen name="milestones" options={{ href: null }} />
         <Tabs.Screen name="case-detail" options={{ href: null }} />
+        <Tabs.Screen name="analytics" options={{ href: null }} />
       </Tabs>
     </ScreenErrorBoundary>
   );

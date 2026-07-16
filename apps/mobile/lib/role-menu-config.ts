@@ -66,6 +66,13 @@ export const SIDE_MENU_ITEMS: MenuItem[] = [
     route: '/(tabs)/milestones',
     roles: ['resident', 'supervisor', 'director', 'admin'],
   },
+  {
+    key: 'analytics',
+    label: 'Analytics',
+    icon: 'stats-chart',
+    route: '/(tabs)/analytics',
+    roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'],
+  },
 ];
 
 export function getFilteredMenuItems(role: UserRole | null): MenuItem[] {
