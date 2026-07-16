@@ -24,7 +24,7 @@
 
 ## Phase: Apple Health Redesign — Visual Polish
 
-- [ ] Verify DashboardContent.tsx matches Apple Health prototype
+- [x] Verify DashboardContent.tsx matches Apple Health prototype
 - [ ] Verify frosted glass Sidebar renders correctly
 - [ ] Verify StatusBadge pills (flat, no glow) on all pages
 - [ ] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
