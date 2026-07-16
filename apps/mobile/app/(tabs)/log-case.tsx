@@ -70,7 +70,7 @@ export default function LogCaseScreen() {
     'text-green-400': '#34D399',
     'text-yellow-400': '#FBBF24',
     'text-red-400': '#F87171',
-    'text-emerald-400': '#34D399',
+    'text-[#34C759]': '#34D399',
     'text-amber-400': '#FBBF24',
   };
 
@@ -544,7 +544,7 @@ export default function LogCaseScreen() {
                 key={opt}
                 className={`rounded-lg px-3 py-2 border ${
                   value === opt
-                    ? 'bg-teal-600 border-teal-500'
+                    ? 'bg-primary border-teal-500'
                     : 'bg-gray-200 border-gray-300'
                 }`}
                 onPress={() => { setFieldValue(field.key, opt); haptics.selection(); }}
@@ -602,7 +602,7 @@ export default function LogCaseScreen() {
       syncing: { bg: 'bg-blue-900/50', border: 'border-blue-500/30', text: 'Syncing...', icon: 'cloud-upload-outline' as const, color: 'text-blue-400' },
       error: { bg: 'bg-red-900/50', border: 'border-red-500/30', text: 'Sync failed — will retry', icon: 'alert-circle-outline' as const, color: 'text-red-400' },
       offline: { bg: 'bg-amber-900/50', border: 'border-amber-500/30', text: 'Offline Mode — cases saved locally', icon: 'cloud-offline-outline' as const, color: 'text-amber-400' },
-      synced: { bg: 'bg-emerald-900/50', border: 'border-emerald-500/30', text: 'Synced', icon: 'checkmark-circle-outline' as const, color: 'text-emerald-400' },
+      synced: { bg: 'bg-emerald-900/50', border: 'border-emerald-500/30', text: 'Synced', icon: 'checkmark-circle-outline' as const, color: 'text-[#34C759]' },
     };
         const c = config[syncStatus as keyof typeof config] ?? config.syncing;
     return (
@@ -811,7 +811,7 @@ export default function LogCaseScreen() {
       )}
       <View className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#007AFF]/15" style={{ backgroundColor: 'rgba(6,8,20,0.9)', paddingBottom: Math.max(16, Platform.OS === 'ios' ? 34 : 16) }}>
         <TouchableOpacity
-          className={`bg-teal-600 rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
+          className={`bg-primary rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
           onPress={handleSubmit}
           disabled={submitting}
           accessibilityLabel="Submit case for verification"

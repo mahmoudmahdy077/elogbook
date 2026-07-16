@@ -13,6 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { aiQuerySchema } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { UserRole } from '@elogbook/shared';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 
@@ -199,7 +200,7 @@ export default function AIInsightsScreen() {
               {query.length}/500
             </Text>
             <TouchableOpacity
-              className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-teal-600' : 'bg-gray-400'}`}
+              className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
               onPress={handleSubmit}
               disabled={submitting || quotaRemaining <= 0}
               accessibilityLabel="Submit AI query"
@@ -238,7 +239,6 @@ export default function AIInsightsScreen() {
             </Text>
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }

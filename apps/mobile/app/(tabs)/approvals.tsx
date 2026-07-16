@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useHaptics } from '../../lib/haptics';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { UserRole } from '@elogbook/shared';
 
 interface ApprovalItem {
@@ -62,18 +63,18 @@ const ApprovalCard = React.memo(function ApprovalCard({
       {isPending && (
         <View className="flex-row gap-3 mt-3 pt-3 border-t border-gray-300/50">
           <TouchableOpacity
-            className="flex-1 bg-emerald-600/20 rounded-lg py-2.5 items-center border border-emerald-500/40"
+            className="flex-1 bg-primary/15 rounded-lg py-2.5 items-center border border-emerald-500/40"
             onPress={() => onConfirm(item.id, item.entry_id, 'approve')}
             disabled={isProcessing || isOffline}
             accessibilityLabel={`Approve case from ${item.resident_name}`}
             accessibilityRole="button"
           >
-            <Text className="text-emerald-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            <Text className="text-[#34C759] text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               {isProcessing ? '...' : 'Approve'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-red-600/20 rounded-lg py-2.5 items-center border border-red-500/40"
+            className="flex-1 bg-[#FF3B30]/15 rounded-lg py-2.5 items-center border border-red-500/40"
             onPress={() => onConfirm(item.id, item.entry_id, 'reject')}
             disabled={isProcessing || isOffline}
             accessibilityLabel={`Reject case from ${item.resident_name}`}
@@ -257,10 +258,10 @@ export default function ApprovalsScreen() {
     );
   }
 
-  if (role && role !== 'supervisor' && role !== 'director' && role !== 'admin') {
+  if (role && role !== 'supervisor' && role !== 'director' && role !== 'institution_admin' && role !== 'admin') {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-gray-500 text-center">
+        <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
           You do not have permission to view approvals.
         </Text>
       </View>
@@ -268,7 +269,7 @@ export default function ApprovalsScreen() {
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+    <ScreenWrapper title="Approvals" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.heading }}>
@@ -277,12 +278,9 @@ export default function ApprovalsScreen() {
         </View>
       )}
 
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Approvals</Text>
-        <Text className="text-gray-400 text-xs mb-3" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-          {approvals.filter((a) => a.status === 'pending').length} pending
-        </Text>
-      </View>
+      <Text className="text-xs mb-3" style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.muted }}>
+        {approvals.filter((a) => a.status === 'pending').length} pending
+      </Text>
 
       <FlatList
         data={approvals}
@@ -290,10 +288,10 @@ export default function ApprovalsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={clinicalTokens.colors.primary.DEFAULT} />
         }
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={
           <View className="items-center py-16">
-            <Text className="text-gray-500 text-center">No approval requests found.</Text>
+            <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>No approval requests found.</Text>
           </View>
         }
         renderItem={renderItem}
@@ -305,43 +303,45 @@ export default function ApprovalsScreen() {
             className="w-full rounded-2xl p-6 border border-[#007AFF]/15"
             style={{ backgroundColor: clinicalTokens.colors.neutral.dark }}
           >
-            <Text className="text-white text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            <Text className="text-lg mb-2" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>
               Reject Case
             </Text>
-            <Text className="text-gray-500 text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>
+            <Text className="text-sm mb-4" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>
               Please provide a reason. The resident will see this message.
             </Text>
             <TextInput
-              className="text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+              className="rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
+              style={{ backgroundColor: clinicalTokens.colors.backdrop.dark, color: clinicalTokens.colors.text.primary }}
               multiline
               textAlignVertical="top"
               placeholder="Reason for rejection"
-              placeholderTextColor="#666"
+              placeholderTextColor={clinicalTokens.colors.text.muted}
               value={rejectComment}
               onChangeText={setRejectComment}
               accessibilityLabel="Rejection reason"
             />
             <View className="flex-row gap-3 mt-4">
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-gray-200"
+                className="flex-1 rounded-lg py-3 items-center"
+                style={{ backgroundColor: clinicalTokens.colors.neutral.light }}
                 onPress={() => { setRejectTarget(null); setRejectComment(''); }}
                 accessibilityLabel="Cancel rejection"
                 accessibilityRole="button"
               >
-                <Text className="text-gray-900" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
+                <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.heading, color: clinicalTokens.colors.text.primary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-red-600"
+                className="flex-1 rounded-lg py-3 items-center bg-[#FF3B30]"
                 onPress={submitReject}
                 accessibilityLabel="Confirm rejection"
                 accessibilityRole="button"
               >
-                <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Reject</Text>
+                <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Reject</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </ScreenWrapper>
   );
 }

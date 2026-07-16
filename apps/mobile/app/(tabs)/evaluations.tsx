@@ -92,7 +92,7 @@ function EvaluationCard({
           </View>
           {evaluation.overall_score != null && (
             <Text
-              className="text-teal-400 text-sm"
+              className="text-primary text-sm"
               style={{ fontFamily: clinicalTokens.fonts.heading }}
             >
               {evaluation.overall_score.toFixed(1)}
@@ -406,7 +406,7 @@ function NewEvaluationSheet({
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className={`flex-1 bg-teal-600 rounded-xl py-3 items-center ${saving ? 'opacity-50' : ''}`}
+                  className={`flex-1 bg-primary rounded-xl py-3 items-center ${saving ? 'opacity-50' : ''}`}
                   onPress={handleSave}
                   disabled={saving}
                   accessibilityLabel="Save evaluation"
@@ -551,7 +551,7 @@ export default function EvaluationsScreen() {
 
           {role !== 'resident' && (
             <TouchableOpacity
-              className="bg-teal-600 rounded-xl px-4 py-2"
+              className="bg-primary rounded-xl px-4 py-2"
               onPress={() => setShowNewEval(true)}
               accessibilityLabel="New evaluation"
               accessibilityRole="button"
@@ -583,14 +583,14 @@ export default function EvaluationsScreen() {
           <View key={group.type} className="mb-5">
             <View className="flex-row items-center mb-2">
               <Text
-                className="text-teal-400 text-sm font-semibold flex-1"
+                className="text-primary text-sm font-semibold flex-1"
                 style={{ fontFamily: clinicalTokens.fonts.heading }}
               >
                 {group.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
               </Text>
-              <View className="bg-teal-600/20 rounded-full px-2 py-0.5">
+              <View className="bg-primary/20 rounded-full px-2 py-0.5">
                 <Text
-                  className="text-teal-400 text-xs"
+                  className="text-primary text-xs"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
                   {group.count}
@@ -611,7 +611,7 @@ export default function EvaluationsScreen() {
             {group.evaluations.length > 5 && (
               <TouchableOpacity className="py-2">
                 <Text
-                  className="text-teal-500 text-sm text-center"
+                  className="text-primary text-sm text-center"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
                   +{group.evaluations.length - 5} more

@@ -1,229 +1,126 @@
 import { useState, useEffect } from 'react';
+import { View, TouchableOpacity } from 'react-native';
 import { Tabs } from 'expo-router';
-import { View, ActivityIndicator, TouchableOpacity, Text, AppState } from 'react-native';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
 import { useSyncInit } from '../../lib/sync';
-import { useAuthGuard } from '../../lib/auth-guard';
+import { useAuthGuard, getRoleFromAuth } from '../../lib/auth-guard';
 import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
-import {
-  authenticateWithBiometrics,
-  isBiometricSessionValid,
-  markBiometricAuthed,
-} from '../../lib/biometric-gate';
-import type { UserRole } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
+import type { UserRole } from '@elogbook/shared';
+
+function TabIcon({ name, color, size }: { name: keyof typeof Ionicons.glyphMap; color: string; size: number }) {
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
+// Elevated center button for "New Case"
+function CenterButton({ focused }: { focused: boolean }) {
+  return (
+    <View
+      style={{
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: clinicalTokens.colors.primary.DEFAULT,
+        marginTop: -14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: clinicalTokens.colors.primary.DEFAULT,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        elevation: 10,
+      }}
+    >
+      <Ionicons name="add" size={28} color="#FFFFFF" />
+    </View>
+  );
+}
 
 export default function TabLayout() {
   useSyncInit();
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const [role, setRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [biometricUnlocked, setBiometricUnlocked] = useState(false);
-  const [biometricError, setBiometricError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile) {
-        setRole(profile.role as UserRole);
-      }
-      setLoading(false);
-    })();
-  }, []);
-
-  // Biometric gate: re-authenticate when the app comes back to the foreground
-  // or on first mount. A 5-minute in-memory cache avoids prompting again for
-  // short in-app navigations. The `authed` outcome (or `unavailable` on
-  // devices without biometrics enrolled) is what unblocks the tabs.
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setBiometricUnlocked(false);
-      return;
-    }
-    if (isBiometricSessionValid()) {
-      setBiometricUnlocked(true);
-      return;
-    }
-    (async () => {
-      const r = await authenticateWithBiometrics('Unlock E-Logbook');
-      if (r.outcome === 'authed') {
-        markBiometricAuthed();
-        setBiometricUnlocked(true);
-      } else if (r.outcome === 'unavailable') {
-        setBiometricUnlocked(true);
-      } else {
-        setBiometricError(r.reason ?? r.outcome);
-      }
+      const { role } = await getRoleFromAuth();
+      if (role) setRole(role);
     })();
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'background') {
-        // Invalidate the cached biometric session on background so a
-        // subsequent foreground forces a re-prompt.
-        setBiometricUnlocked(false);
-      }
-    });
-    return () => sub.remove();
-  }, []);
-
-  if (authLoading || loading) {
-    return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-      </View>
-    );
-  }
-
-  if (!isAuthenticated) {
-    if (typeof window !== 'undefined' || router.canGoBack()) {
-      router.replace('/login');
-    }
-    return null;
-  }
-
-  if (!biometricUnlocked) {
-    return (
-      <View
-        className="flex-1 items-center justify-center px-6"
-        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      >
-        <Ionicons name="lock-closed" size={56} color={clinicalTokens.colors.primary.DEFAULT} />
-        <Text
-          className="text-white text-xl mt-4 text-center"
-          style={{ fontFamily: clinicalTokens.fonts.heading }}
-          accessibilityRole="header"
-        >
-          Locked
-        </Text>
-        <Text
-          className="text-gray-500 text-sm mt-2 mb-6 text-center"
-          style={{ fontFamily: clinicalTokens.fonts.body }}
-        >
-          {biometricError ? `Authentication required (${biometricError})` : 'Authenticate to view your cases'}
-        </Text>
-        <TouchableOpacity
-          className="bg-teal-600 rounded-xl py-3 px-6"
-          onPress={async () => {
-            setBiometricError(null);
-            const r = await authenticateWithBiometrics('Unlock E-Logbook');
-            if (r.outcome === 'authed') {
-              markBiometricAuthed();
-              setBiometricUnlocked(true);
-            } else if (r.outcome === 'unavailable') {
-              setBiometricUnlocked(true);
-            } else {
-              setBiometricError(r.reason ?? r.outcome);
-            }
-          }}
-          accessibilityLabel="Retry biometric authentication"
-          accessibilityRole="button"
-        >
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Unlock</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const showLogCase = role === 'resident';
 
   return (
     <ScreenErrorBoundary screenName="Tabs">
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarStyle: { backgroundColor: clinicalTokens.colors.neutral.dark, borderTopColor: clinicalTokens.colors.neutral.dark },
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',
+            borderTopColor: clinicalTokens.colors.border.DEFAULT,
+            borderTopWidth: 1,
+            height: 60,
+            paddingBottom: 6,
+            paddingTop: 6,
+          },
           tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
           tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
+          tabBarLabelStyle: {
+            fontFamily: clinicalTokens.fonts.body,
+            fontSize: 11,
+            fontWeight: '500',
+          },
+          animation: 'fade' as const,
         }}
       >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="log-case"
-        options={{
-          title: 'Log Case',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={color} />
-          ),
-        }}
-        listeners={!showLogCase ? { tabPress: (e) => { e.preventDefault(); } } : undefined}
-      />
-      <Tabs.Screen
-        name="my-cases"
-        options={{
-          title: 'My Cases',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="approvals"
-        options={{
-          title: 'Approvals',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ai-insights"
-        options={{
-          title: 'AI Insights',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sparkles" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="rotations"
-        options={{
-          title: 'Rotations',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="case-detail"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+        {/* Tab 1 — Dashboard */}
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Dashboard',
+            tabBarIcon: ({ color, size }) => (
+              <TabIcon name="home" color={color} size={size} />
+            ),
+          }}
+        />
+
+        {/* Tab 2 — New Case (center elevated) */}
+        <Tabs.Screen
+          name="log-case"
+          listeners={({ navigation }: { navigation: any }) => ({
+            tabPress: (e: any) => {
+              if (role && role !== 'resident') {
+                e.preventDefault();
+              }
+            },
+          })}
+          options={{
+            title: 'New Case',
+            tabBarIcon: ({ focused }) => <CenterButton focused={focused} />,
+            tabBarLabel: () => null,
+          }}
+        />
+
+        {/* Tab 3 — Profile */}
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ color, size }) => (
+              <TabIcon name="person" color={color} size={size} />
+            ),
+          }}
+        />
+
+        {/* Hidden screens (side menu only) */}
+        <Tabs.Screen name="my-cases" options={{ href: null }} />
+        <Tabs.Screen name="approvals" options={{ href: null }} />
+        <Tabs.Screen name="rotations" options={{ href: null }} />
+        <Tabs.Screen name="ai-insights" options={{ href: null }} />
+        <Tabs.Screen name="duty-hours" options={{ href: null }} />
+        <Tabs.Screen name="evaluations" options={{ href: null }} />
+        <Tabs.Screen name="milestones" options={{ href: null }} />
+        <Tabs.Screen name="case-detail" options={{ href: null }} />
+      </Tabs>
     </ScreenErrorBoundary>
   );
 }

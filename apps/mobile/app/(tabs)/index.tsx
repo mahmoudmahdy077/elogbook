@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl, AppState } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
+import { getRoleFromAuth } from '../../lib/auth-guard';
 import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
@@ -10,6 +11,7 @@ import { AccessibleText } from '../../components/AccessibleText';
 import { clinicalTokens } from '@elogbook/shared';
 import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -83,22 +85,39 @@ export default function DashboardScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
+    const profileId = (user.app_metadata?.profile_id as string) ?? null;
+    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
 
-    if (!profile) { setLoading(false); return; }
+    if (!profileId || !tenantId) {
+      // Fallback: try direct DB query (may fail due to RLS policy bug)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        const netState = await NetInfo.fetch();
+        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
+      } catch {
+        setLoading(false);
+      }
+      return;
+    }
 
     const netState = await NetInfo.fetch();
+    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
+  };
 
-    if (netState.isConnected) {
+  const loadWithProfile = async (profileId: string, tenantId: string, user: any, isOnline: boolean | null) => {
+
+    if (isOnline) {
       const { data: goalsWithProgress } = await supabase
         .from('program_goals')
         .select('id, title, target_count, specialty, resident_id, tenant_id, goal_progress(current_count)')
-        .eq('resident_id', profile.id)
-        .eq('tenant_id', profile.tenant_id);
+        .eq('resident_id', profileId)
+        .eq('tenant_id', tenantId);
 
       if (goalsWithProgress) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,7 +130,7 @@ export default function DashboardScreen() {
         })));
       }
     } else {
-      const localGoals = await getAllGoalsForResident(profile.id);
+      const localGoals = await getAllGoalsForResident(profileId);
       setGoals(localGoals.map((g) => ({
         id: g.id,
         title: g.title,
@@ -121,7 +140,7 @@ export default function DashboardScreen() {
       })));
     }
 
-    const localCases = await getAllCasesForResident(profile.id);
+    const localCases = await getAllCasesForResident(profileId);
     if (localCases.length > 0) {
       const counts = { draft: 0, pending: 0, approved: 0 };
       for (const c of localCases) {
@@ -130,11 +149,11 @@ export default function DashboardScreen() {
         else if (c.status === 'approved') counts.approved++;
       }
       setStats(counts);
-    } else if (netState.isConnected) {
+    } else if (isOnline) {
       const { data: cases } = await supabase
         .from('case_entries')
         .select('status')
-        .eq('resident_id', profile.id);
+        .eq('resident_id', profileId);
 
       if (cases) {
         const counts = { draft: 0, pending: 0, approved: 0 };
@@ -169,29 +188,18 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-backdrop px-4 pt-4"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={clinicalTokens.colors.primary.DEFAULT}
-          colors={[clinicalTokens.colors.primary.DEFAULT]}
-        />
-      }
-    >
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-white text-2xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>Dashboard</Text>
-        <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
-          Last synced: {lastSyncAgo}
-        </Text>
-      </View>
-
+    <ScreenWrapper title="Dashboard" refreshing={refreshing} onRefresh={onRefresh}>
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
         </View>
       )}
+
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-xs" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>
+          Last synced: {lastSyncAgo}
+        </Text>
+      </View>
 
       {/* Today's case count widget */}
       {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
@@ -241,7 +249,7 @@ export default function DashboardScreen() {
           accessibilityLabel={`${stats.approved} approved`}
         >
           <AccessibleText
-            className="text-emerald-400 text-3xl"
+            className="text-[#34C759] text-3xl"
             accessibilityLabel={`${stats.approved} approved`}
             style={{ fontFamily: clinicalTokens.fonts.mono }}
           >
@@ -258,7 +266,7 @@ export default function DashboardScreen() {
 
       {goals.length > 0 && (
         <View className="mb-6">
-          <Text className="text-white text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Goal Progress</Text>
+          <Text className="text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>Goal Progress</Text>
           <View className="flex-row gap-4 flex-wrap">
             {goals.map((g) => (
               <ProgressRing
@@ -271,7 +279,7 @@ export default function DashboardScreen() {
             ))}
           </View>
           <View className="mt-3 bg-white rounded-xl p-4 border border-[#007AFF]/15">
-          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+          <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.heading, color: clinicalTokens.colors.text.primary }}>
             {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
           </Text>
           </View>
@@ -279,11 +287,11 @@ export default function DashboardScreen() {
       )}
 
       <TouchableOpacity
-        className="bg-teal-600 rounded-xl py-4 items-center mb-8"
+        className="bg-primary rounded-xl py-4 items-center mb-4"
         onPress={() => router.push('/log-case')}
       >
         <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log New Case</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }

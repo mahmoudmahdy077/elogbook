@@ -9,6 +9,7 @@ import { syncService } from '../../lib/sync';
 import { supabase } from '../../lib/supabase';
 import { NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { CaseStatus } from '@elogbook/shared';
 
 interface CaseData {
@@ -78,7 +79,7 @@ const CaseCard = React.memo(function CaseCard({
             accessibilityLabel="Duplicate this case"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate</Text>
+            <Text className="text-primary text-xs" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -191,7 +192,7 @@ export default function MyCasesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-backdrop">
+    <ScreenWrapper title="My Cases" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
@@ -209,26 +210,23 @@ export default function MyCasesScreen() {
         </View>
       )}
 
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-white text-2xl mb-3" style={{ fontFamily: clinicalTokens.fonts.heading }}>My Cases</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2 mb-2">
-          {FILTER_CHIPS.map((chip) => (
-            <TouchableOpacity
-              key={chip.key}
-              className={`rounded-full px-4 py-1.5 mr-2 border ${
-                filter === chip.key
-                  ? 'bg-teal-600 border-teal-500'
-                  : 'bg-white border-[#007AFF]/15'
-              }`}
-              onPress={() => setFilter(chip.key)}
-            >
-              <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
-                {chip.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2 mb-3">
+        {FILTER_CHIPS.map((chip) => (
+          <TouchableOpacity
+            key={chip.key}
+            className={`rounded-full px-4 py-1.5 mr-2 border ${
+              filter === chip.key
+                ? 'bg-primary border-teal-500'
+                : 'bg-white border-[#007AFF]/15'
+            }`}
+            onPress={() => setFilter(chip.key)}
+          >
+            <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {chip.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <FlatList
         data={filteredCases}
@@ -236,7 +234,7 @@ export default function MyCasesScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={clinicalTokens.colors.primary.DEFAULT} />
         }
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={
           <View className="bg-white rounded-xl p-6 border border-[#007AFF]/15 items-center">
             <Text className="text-gray-500" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
@@ -244,6 +242,6 @@ export default function MyCasesScreen() {
         }
         renderItem={renderItem}
       />
-    </View>
+    </ScreenWrapper>
   );
 }

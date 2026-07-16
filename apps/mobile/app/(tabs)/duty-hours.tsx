@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const SHIFT_TYPES = [
   { key: 'call', label: 'Call' },
@@ -98,7 +99,7 @@ export default function DutyHoursScreen() {
         {SHIFT_TYPES.map((t) => (
           <TouchableOpacity
             key={t.key}
-            className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-teal-600 border-teal-500' : 'bg-gray-200 border-[#007AFF]/15'}`}
+            className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-primary border-teal-500' : 'bg-gray-200 border-[#007AFF]/15'}`}
             onPress={() => setShiftType(t.key)}
             accessibilityLabel={t.label}
             accessibilityRole="button"
@@ -118,7 +119,7 @@ export default function DutyHoursScreen() {
       />
 
       <TouchableOpacity
-        className={`bg-teal-600 rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
+        className={`bg-primary rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
         onPress={handleSave}
         disabled={saving}
         accessibilityLabel="Save duty hours"

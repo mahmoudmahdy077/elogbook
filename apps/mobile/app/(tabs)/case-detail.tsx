@@ -18,6 +18,7 @@ import { upsertCaseEntry } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
 interface CaseDetail {
@@ -221,9 +222,9 @@ export default function CaseDetailScreen() {
   if (!caseDetail) {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-gray-500">Case not found.</Text>
+        <Text className="text-gray-500" style={{ fontFamily: clinicalTokens.fonts.body }}>Case not found.</Text>
         <TouchableOpacity
-          className="mt-4 bg-teal-600 px-6 py-2 rounded-lg"
+          className="mt-4 bg-primary px-6 py-2 rounded-lg"
           onPress={() => router.back()}
           accessibilityLabel="Go back"
           accessibilityRole="button"
@@ -238,7 +239,7 @@ export default function CaseDetailScreen() {
   const canEdit = caseDetail.status === 'draft' || caseDetail.status === 'rejected';
 
   return (
-    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScreenWrapper title="Case Detail">
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — actions require a connection</Text>
@@ -334,24 +335,24 @@ export default function CaseDetailScreen() {
         accessibilityLabel="Duplicate this case"
         accessibilityRole="button"
       >
-        <Text className="text-teal-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
+        <Text className="text-primary" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
       </TouchableOpacity>
 
       {canApprove && caseDetail.status === 'pending' && (
         <View className="flex-row gap-3 mb-3">
           <TouchableOpacity
-            className="flex-1 bg-emerald-600/20 rounded-xl py-4 items-center border border-emerald-500/40"
+            className="flex-1 bg-primary/15 rounded-xl py-4 items-center border border-emerald-500/40"
             onPress={() => confirmAction('approve')}
             disabled={processing || isOffline}
             accessibilityLabel="Approve case"
             accessibilityRole="button"
           >
-            <Text className="text-emerald-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            <Text className="text-[#34C759]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
               {processing ? 'Processing...' : 'Approve'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-red-600/20 rounded-xl py-4 items-center border border-red-500/40"
+            className="flex-1 bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-500/40"
             onPress={() => confirmAction('reject')}
             disabled={processing || isOffline}
             accessibilityLabel="Reject case"
@@ -366,7 +367,7 @@ export default function CaseDetailScreen() {
 
       {caseDetail.status === 'rejected' && (
         <TouchableOpacity
-          className="bg-teal-600 rounded-xl py-4 items-center mb-3"
+          className="bg-primary rounded-xl py-4 items-center mb-3"
           onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
           accessibilityLabel="Resubmit case"
           accessibilityRole="button"
@@ -407,7 +408,7 @@ export default function CaseDetailScreen() {
                 <Text className="text-gray-900" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-red-600"
+                className="flex-1 rounded-lg py-3 items-center bg-[#FF3B30]"
                 onPress={submitReject}
                 accessibilityLabel="Confirm rejection"
                 accessibilityRole="button"
@@ -418,6 +419,6 @@ export default function CaseDetailScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }

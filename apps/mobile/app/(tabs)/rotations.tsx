@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -248,7 +249,7 @@ function RotationDetailModal({
 
           {rotation.specialty && (
             <Text
-              className="text-teal-400 text-sm mb-4"
+              className="text-primary text-sm mb-4"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {rotation.specialty}
@@ -300,7 +301,7 @@ function RotationDetailModal({
                 Notes
               </Text>
               <Text
-                className="text-white text-sm"
+                className="text-sm"
                 style={{ fontFamily: clinicalTokens.fonts.body }}
               >
                 {rotation.notes}
@@ -309,7 +310,7 @@ function RotationDetailModal({
           )}
 
           <TouchableOpacity
-            className="bg-teal-600 rounded-xl py-3 items-center mt-2"
+            className="bg-primary rounded-xl py-3 items-center mt-2"
             onPress={onClose}
             accessibilityLabel="Close rotation details"
             accessibilityRole="button"
@@ -504,7 +505,7 @@ export default function RotationsScreen() {
             accessibilityLabel="Previous month"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xl">{'◀'}</Text>
+            <Text className="text-primary text-xl">{'◀'}</Text>
           </TouchableOpacity>
 
           <Text
@@ -523,7 +524,7 @@ export default function RotationsScreen() {
             accessibilityLabel="Next month"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xl">{'▶'}</Text>
+            <Text className="text-primary text-xl">{'▶'}</Text>
           </TouchableOpacity>
         </View>
 

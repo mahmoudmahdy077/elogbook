@@ -88,7 +88,7 @@ function MilestoneMatrix({
           className="mb-4 bg-white/5 rounded-xl p-3 border border-gray-700/30"
         >
           <Text
-            className="text-teal-400 text-sm font-semibold mb-2"
+            className="text-primary text-sm font-semibold mb-2"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             {group.area}
@@ -174,7 +174,7 @@ function ResidentPicker({
             key={r.id}
             className={`rounded-xl px-4 py-2 border ${
               selectedResident === r.id
-                ? 'bg-teal-600 border-teal-500'
+                ? 'bg-primary border-teal-500'
                 : 'bg-white/10 border-gray-700'
             }`}
             onPress={() => onSelect(r.id)}

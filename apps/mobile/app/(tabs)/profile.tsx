@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { getDatabase } from '../../lib/db/database';
+import { getRoleFromAuth } from '../../lib/auth-guard';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 interface ProfileData {
   id: string;
@@ -22,7 +24,7 @@ interface PlanData {
 
 function titleCase(str: string): string {
   return str
-    .split(/[_\s]+/)
+    .split(/[_\\s]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
@@ -39,6 +41,9 @@ export default function ProfileScreen() {
     setLoadError(false);
 
     try {
+      // First try to read from JWT metadata (fast, no DB query)
+      const { role, fullName, tenantId } = await getRoleFromAuth();
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -47,6 +52,74 @@ export default function ProfileScreen() {
         return;
       }
 
+      // Build profile from JWT metadata with DB fallback for specialty
+      const profileId = user.id;
+
+      if (role && fullName && tenantId) {
+        setProfile({
+          id: profileId,
+          full_name: fullName,
+          role,
+          specialty: null,
+          tenant_id: tenantId,
+        });
+
+        // Try to get specialty from profiles table (non-critical, best-effort)
+        try {
+          const { data: dbProfile } = await supabase
+            .from('profiles')
+            .select('specialty, id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (dbProfile) {
+            setProfile((prev) =>
+              prev ? { ...prev, specialty: dbProfile.specialty, id: dbProfile.id } : prev
+            );
+          }
+        } catch {
+          // Non-critical — JWT already has basic profile data
+        }
+
+        // Load subscription data (non-critical)
+        try {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('plan_id')
+            .eq('id', tenantId)
+            .maybeSingle();
+
+          if (tenant?.plan_id) {
+            const { data: planData } = await supabase
+              .from('subscription_plans')
+              .select('name, slug')
+              .eq('id', tenant.plan_id)
+              .maybeSingle();
+
+            if (planData) {
+              setPlan(planData as PlanData);
+            }
+          }
+
+          const { data: subscription } = await supabase
+            .from('subscriptions')
+            .select('status')
+            .eq('tenant_id', tenantId)
+            .maybeSingle();
+
+          if (subscription) {
+            setSubscriptionStatus(subscription.status as string);
+          }
+        } catch {
+          // Subscription data is non-critical
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: direct DB query (may fail due to RLS bug)
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, role, specialty, tenant_id')
@@ -59,21 +132,21 @@ export default function ProfileScreen() {
         return;
       }
 
-      const profileData = data as ProfileData;
+      const profileData = data as unknown as ProfileData;
       setProfile(profileData);
 
       const { data: tenant } = await supabase
         .from('tenants')
         .select('plan_id')
         .eq('id', profileData.tenant_id)
-        .single();
+        .maybeSingle();
 
       if (tenant?.plan_id) {
         const { data: planData } = await supabase
           .from('subscription_plans')
           .select('name, slug')
           .eq('id', tenant.plan_id)
-          .single();
+          .maybeSingle();
 
         if (planData) {
           setPlan(planData as PlanData);
@@ -84,7 +157,7 @@ export default function ProfileScreen() {
         .from('subscriptions')
         .select('status')
         .eq('tenant_id', profileData.tenant_id)
-        .single();
+        .maybeSingle();
 
       if (subscription) {
         setSubscriptionStatus(subscription.status as string);
@@ -144,7 +217,7 @@ export default function ProfileScreen() {
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <Text className="text-gray-500 mb-4" style={{ fontFamily: clinicalTokens.fonts.body }}>Unable to load profile.</Text>
         <TouchableOpacity
-          className="bg-teal-600 px-6 py-2 rounded-lg"
+          className="bg-primary px-6 py-2 rounded-lg"
           onPress={loadProfile}
           accessibilityLabel="Retry loading profile"
           accessibilityRole="button"
@@ -158,85 +231,95 @@ export default function ProfileScreen() {
   const initial = profile.full_name.charAt(0).toUpperCase();
 
   return (
-    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View className="items-center mb-8 mt-4">
-        <View className="w-20 h-20 rounded-full bg-teal-600 items-center justify-center mb-4">
+    <ScreenWrapper title="Profile">
+      {/* Avatar & Name */}
+      <View className="items-center mb-8 mt-2">
+        <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
           <Text className="text-white text-3xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{initial}</Text>
         </View>
-        <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{profile.full_name}</Text>
-        <Text className="text-gray-500 mt-1" style={{ fontFamily: clinicalTokens.fonts.body }}>{titleCase(profile.role)}</Text>
+        <Text className="text-xl" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>
+          {profile.full_name}
+        </Text>
+        <Text className="mt-1" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>
+          {titleCase(profile.role)}
+        </Text>
         {profile.specialty && (
-          <Text className="text-teal-400 mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="mt-1" style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.primary.DEFAULT }}>
             {profile.specialty}
           </Text>
         )}
       </View>
 
+      {/* Subscription */}
       {(plan || subscriptionStatus) && (
         <GlassPanel style={{ marginBottom: 12 }}>
           <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Subscription</Text>
           {plan && (
-            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{plan.name}</Text>
+            <Text style={{ fontFamily: clinicalTokens.fonts.heading, color: clinicalTokens.colors.text.primary }}>{plan.name}</Text>
           )}
           {subscriptionStatus && (
             <Text
-              className={`text-xs mt-1 ${
-                subscriptionStatus === 'active'
-                  ? 'text-emerald-400'
-                  : subscriptionStatus === 'trialing'
-                    ? 'text-amber-400'
-                    : 'text-red-400'
-              }`}
-              style={{ fontFamily: clinicalTokens.fonts.mono }}
+              className="text-xs mt-1"
+              style={{
+                fontFamily: clinicalTokens.fonts.mono,
+                color:
+                  subscriptionStatus === 'active'
+                    ? '#34C759'
+                    : subscriptionStatus === 'trialing'
+                      ? '#FF9500'
+                      : '#FF3B30',
+              }}
             >
               {titleCase(subscriptionStatus)}
             </Text>
           )}
           <TouchableOpacity
-            className="mt-3 bg-blue-100/50 rounded-lg py-2.5 items-center border border-blue-500/40"
+            className="mt-3 bg-primary/10 rounded-lg py-2.5 items-center border border-primary/30"
             onPress={() => {
               Alert.alert('Coming Soon', 'Subscription management will be available in a future update.');
             }}
             accessibilityLabel="Manage subscription"
             accessibilityRole="button"
           >
-            <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
+            <Text className="text-primary text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
           </TouchableOpacity>
         </GlassPanel>
       )}
 
+      {/* Account Info */}
       <GlassPanel style={{ marginBottom: 12 }}>
         <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Account</Text>
-        <View className="flex-row justify-between py-2 border-b border-gray-200/50">
-          <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Role</Text>
-          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+        <View className="flex-row justify-between py-2 border-b" style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}>
+          <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Role</Text>
+          <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.primary }}>
             {titleCase(profile.role)}
           </Text>
         </View>
         {profile.specialty && (
-          <View className="flex-row justify-between py-2 border-b border-gray-200/50">
-            <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Specialty</Text>
-            <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <View className="flex-row justify-between py-2 border-b" style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}>
+            <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Specialty</Text>
+            <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.primary }}>
               {profile.specialty}
             </Text>
           </View>
         )}
         <View className="flex-row justify-between py-2">
-          <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>ID</Text>
-          <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>ID</Text>
+          <Text className="text-xs" style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.muted }}>
             {profile.id.slice(0, 8)}...
           </Text>
         </View>
       </GlassPanel>
 
+      {/* Sign Out */}
       <TouchableOpacity
-        className="bg-red-600/20 rounded-xl py-4 items-center border border-red-600/40 mb-4"
+        className="bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-600/40 mb-4"
         onPress={handleSignOut}
         accessibilityLabel="Sign out"
         accessibilityRole="button"
       >
         <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Sign Out</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }
