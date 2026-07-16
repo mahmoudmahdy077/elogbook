@@ -12,6 +12,7 @@ import { clinicalTokens } from '@elogbook/shared';
 import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import ResidentOverview from '../../components/ResidentOverview';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -36,9 +37,18 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleLoaded, setRoleLoaded] = useState(false);
 
   useEffect(() => {
     loadData();
+
+    // Detect role for conditional rendering
+    (async () => {
+      const { role } = await getRoleFromAuth();
+      setUserRole(role);
+      setRoleLoaded(true);
+    })();
 
     const netUnsub = NetInfo.addEventListener((state) => {
       setIsOffline(state.isConnected !== true);
@@ -179,11 +189,20 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, []);
 
-  if (loading) {
+  if (loading && !roleLoaded) {
     return (
       <View className="flex-1 bg-backdrop items-center justify-center">
         <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
       </View>
+    );
+  }
+
+  // Residents see analytics overview as their home tab
+  if (userRole === 'resident' && roleLoaded) {
+    return (
+      <ScreenWrapper title="Overview" refreshing={refreshing} onRefresh={onRefresh}>
+        <ResidentOverview />
+      </ScreenWrapper>
     );
   }
 
