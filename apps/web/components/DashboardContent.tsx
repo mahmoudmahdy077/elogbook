@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import { useSubscriptionStatus } from '@/components/SubscriptionStatusProvider';
@@ -64,8 +63,8 @@ interface DashboardData {
 
 /* ===== Apple Watch-Style KPI Ring ===== */
 function KpiRing({ value, max, label, color, delay }: { value: number; max: number; label: string; color: string; delay: number }) {
+  const [animated, setAnimated] = useState(false);
   const [animatedValue, setAnimatedValue] = useState(0);
-  const reduceMotion = useReducedMotion();
   const size = 68;
   const strokeWidth = 4;
   const radius = (size - strokeWidth * 2) / 2;
@@ -74,58 +73,59 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
   const offset = circumference * (1 - progress);
 
   useEffect(() => {
-    const timer = setTimeout(() => setAnimatedValue(value), delay + 100);
-    return () => clearTimeout(timer);
+    const t1 = setTimeout(() => setAnimated(true), delay + 100);
+    const t2 = setTimeout(() => setAnimatedValue(value), delay + 100);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [value, delay]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: delay * 0.001, ease: 'easeOut' }}
+    <div
       className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5"
+      style={{ animation: `fadeSlideIn 0.35s ease-out ${delay * 0.001}s both` }}
     >
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" role="img" aria-label={`${label}: ${value} of ${max}`}>
           <title>{`${label}: ${value} of ${max}`}</title>
           <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(60, 60, 67, 0.10)" strokeWidth={strokeWidth} />
-          <motion.circle
+          <circle
             cx={size / 2} cy={size / 2} r={radius}
             fill="none"
             stroke={color}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset: offset }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.6, delay: delay * 0.001 + 0.15, ease: 'easeOut' }}
+            strokeDashoffset={animated ? offset : circumference}
+            style={{ transition: `stroke-dashoffset 0.6s ease-out ${delay * 0.001 + 0.15}s` }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-xl font-semibold text-text-primary tracking-tight font-sans">{animatedValue}</span>
         </div>
       </div>
-      <span className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">{label}</span>
-    </motion.div>
+      <span className="text-[0.75rem] font-medium text-[#8E8E93] uppercase tracking-wider">{label}</span>
+    </div>
   );
 }
 
 /* ===== Progress Bar ===== */
 function ProgressBar({ current, target, label }: { current: number; target: number; label: string }) {
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-  const reduceMotion = useReducedMotion();
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    setAnimated(true);
+  }, []);
+
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs">
         <span className="text-[#3C3C43] font-medium truncate">{label}</span>
-        <span className="text-[#8E8E93] font-medium">{current} of {target}</span>
+        <span className="text-[#8E8E93] font-medium font-mono">{current} / {target}</span>
       </div>
       <div className="h-1 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
-        <motion.div
+        <div
           className="h-full rounded-full bg-primary"
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: 'easeOut' }}
+          style={{ width: animated ? `${pct}%` : '0%', transition: 'width 0.5s ease-out' }}
         />
       </div>
     </div>
@@ -147,16 +147,13 @@ export default function Dashboard({ data }: { data: DashboardData }) {
   const role = profile.role;
   const totalCases = stats.draft + stats.pending + stats.approved + stats.rejected;
   const { isReadOnly } = useSubscriptionStatus();
-  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-7">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.3 }}
+      <div
         className="flex items-start justify-between"
+        style={{ animation: 'fadeSlideIn 0.3s ease-out both' }}
       >
         <div>
           <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em] font-sans">
@@ -178,7 +175,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             </Link>
           )
         )}
-      </motion.div>
+      </div>
 
       {/* KPI Rings */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -190,11 +187,9 @@ export default function Dashboard({ data }: { data: DashboardData }) {
 
       {/* Duty Hours Violations */}
       {(residentViolations.length > 0 || directorViolations.length > 0) && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.3, delay: 0.3 }}
+        <div
           className="p-4 rounded-2xl bg-[rgba(255,59,48,0.06)] border border-[rgba(255,59,48,0.15)]"
+          style={{ animation: 'fadeSlideIn 0.3s ease-out 0.3s both' }}
         >
           <div className="flex items-center gap-2 mb-3">
             <svg className="w-5 h-5 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -220,17 +215,15 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* 2-Column */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent Cases */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.2 }}
+        <div
           className="bg-surface-solid rounded-2xl border border-border p-5"
+          style={{ animation: 'fadeSlideIn 0.35s ease-out 0.2s both' }}
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Recent Cases</h2>
@@ -268,14 +261,12 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Right Column — Goals + Pending Approvals */}
-        <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.25 }}
+        <div
           className="bg-surface-solid rounded-2xl border border-border p-5"
+          style={{ animation: 'fadeSlideIn 0.35s ease-out 0.25s both' }}
         >
           {/* Resident: Goal Progress */}
           {role === 'resident' && (
@@ -349,15 +340,13 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               </div>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Quick Links */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.35, delay: 0.35 }}
+      <div
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+        style={{ animation: 'fadeSlideIn 0.35s ease-out 0.35s both' }}
       >
         <Link href={`/${tenantSlug}/cases`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
           <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -385,7 +374,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           </svg>
           <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Reports</span>
         </Link>
-      </motion.div>
+      </div>
     </div>
   );
 }
