@@ -63,7 +63,7 @@ BEGIN
         'authenticated',
         'authenticated',
         v_email,
-        '$2b$10$6BroQh/IHi2pYC3/yl6m5u.gSevmmX134eauRv56gxonOjiv9wplC',
+        '$2b$10$.46DqzYX3n./W2aCv2m7d.2kRXI.foI5JCxVIkfJOSWIj5nadZIPW',
         now(),
         '{"provider":"email","providers":["email"]}'::JSONB,
         jsonb_build_object('role', v_role, 'full_name', v_name),
@@ -98,7 +98,7 @@ BEGIN
       -- User exists, update role and name
       UPDATE auth.users
       SET raw_user_meta_data = jsonb_build_object('role', v_role, 'full_name', v_name),
-          encrypted_password = '$2b$10$6BroQh/IHi2pYC3/yl6m5u.gSevmmX134eauRv56gxonOjiv9wplC',
+          encrypted_password = '$2b$10$.46DqzYX3n./W2aCv2m7d.2kRXI.foI5JCxVIkfJOSWIj5nadZIPW',
           email_confirmed_at = now()
       WHERE id = v_user_id;
     END IF;
