@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../../lib/db/database';
@@ -179,7 +180,11 @@ export default function MyCasesScreen() {
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: CaseData }) => <CaseCard item={item} onPress={handleCaseTap} />,
+    ({ item, index }: { item: CaseData; index: number }) => (
+      <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+        <CaseCard item={item} onPress={handleCaseTap} />
+      </Animated.View>
+    ),
     [handleCaseTap],
   );
 

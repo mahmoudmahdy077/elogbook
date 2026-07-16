@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
 } from 'react-native';
+import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import { clinicalTokens } from '@elogbook/shared';
@@ -294,15 +295,15 @@ export default function AnalyticsScreen() {
       </View>
 
       {/* Stats row */}
-      <View className="flex-row gap-3 mb-6">
+      <Animated.View entering={FadeIn.delay(100)} className="flex-row gap-3 mb-6">
         <StatTile value={totalCases} label="Total Cases" color={clinicalTokens.colors.primary.DEFAULT} />
         <StatTile value={approvedCases} label="Approved" color="#34C759" />
         <StatTile value={pendingCases + draftCases} label="In Progress" color="#FF9500" />
-      </View>
+      </Animated.View>
 
       {/* Goals */}
       {goals.length > 0 && (
-        <View
+        <Animated.View entering={FadeIn.delay(200)}
           className="bg-white rounded-2xl p-5 mb-5 border"
           style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}
         >
@@ -326,31 +327,33 @@ export default function AnalyticsScreen() {
               />
             ))}
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Share */}
-      <TouchableOpacity
-        className="bg-primary rounded-2xl py-4 items-center mb-6 flex-row justify-center gap-2"
-        onPress={handleShare}
-        disabled={sharing}
-        accessibilityLabel="Share my analytics"
-        accessibilityRole="button"
-        style={{
-          shadowColor: clinicalTokens.colors.primary.DEFAULT,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 6,
-        }}
-      >
-        <Text
-          className="text-white text-base"
-          style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600' }}
+      <Animated.View entering={SlideInUp.delay(300)}>
+        <TouchableOpacity
+          className="bg-primary rounded-2xl py-4 items-center mb-6 flex-row justify-center gap-2"
+          onPress={handleShare}
+          disabled={sharing}
+          accessibilityLabel="Share my analytics"
+          accessibilityRole="button"
+          style={{
+            shadowColor: clinicalTokens.colors.primary.DEFAULT,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
         >
-          {sharing ? 'Sharing...' : '📤 Share My Progress'}
-        </Text>
-      </TouchableOpacity>
+          <Text
+            className="text-white text-base"
+            style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600' }}
+          >
+            {sharing ? 'Sharing...' : '📤 Share My Progress'}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
     </ScreenWrapper>
   );
 }

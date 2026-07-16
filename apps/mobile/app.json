@@ -7,11 +7,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "elogbook",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#060814"
+      "backgroundColor": "#F2F2F7"
     },
     "ios": {
       "supportsTablet": true,
@@ -28,7 +28,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#060814"
+        "backgroundColor": "#F2F2F7"
       },
       "package": "com.elogbook.app",
       "permissions": [

@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Animated,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
@@ -27,6 +28,40 @@ interface ApprovalItem {
   status: 'pending' | 'approved' | 'rejected';
   comment: string | null;
 }
+
+const AnimatedCard = React.memo(function AnimatedCard({
+  index,
+  children,
+}: {
+  index: number;
+  children: React.ReactNode;
+}) {
+  const opacity = React.useRef(new Animated.Value(0)).current;
+  const translateY = React.useRef(new Animated.Value(24)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 400,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index, opacity, translateY]);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+});
 
 const ApprovalCard = React.memo(function ApprovalCard({
   item,
@@ -239,13 +274,15 @@ export default function ApprovalsScreen() {
   }, [rejectTarget, rejectComment, handleAction]);
 
   const renderItem = useCallback(
-    ({ item }: { item: ApprovalItem }) => (
-      <ApprovalCard
-        item={item}
-        isProcessing={processingIds.has(item.id)}
-        isOffline={isOffline}
-        onConfirm={confirmAction}
-      />
+    ({ item, index }: { item: ApprovalItem; index: number }) => (
+      <AnimatedCard index={index}>
+        <ApprovalCard
+          item={item}
+          isProcessing={processingIds.has(item.id)}
+          isOffline={isOffline}
+          onConfirm={confirmAction}
+        />
+      </AnimatedCard>
     ),
     [processingIds, isOffline, confirmAction],
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Share } from 'react-native';
+import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { supabase } from '../lib/supabase';
 import { getRoleFromAuth } from '../lib/auth-guard';
 import { clinicalTokens } from '@elogbook/shared';
@@ -93,23 +94,25 @@ export default function ResidentOverview() {
         </Svg>
       </View>
 
-      <View className="flex-row gap-3 mb-6">
+      <Animated.View entering={FadeIn.delay(100)} className="flex-row gap-3 mb-6">
         <StatTile value={total} label="Total" color={clinicalTokens.colors.primary.DEFAULT} />
         <StatTile value={approved} label="Approved" color="#34C759" />
         <StatTile value={pending + draft} label="In Progress" color="#FF9500" />
-      </View>
+      </Animated.View>
 
       {goals.length > 0 && (
-        <View className="bg-white rounded-2xl p-5 mb-5 border" style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}>
+        <Animated.View entering={FadeIn.delay(200)} className="bg-white rounded-2xl p-5 mb-5 border" style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}>
           <Text className="text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '700', color: clinicalTokens.colors.text.primary }}>🎯 My Goals</Text>
           <View className="flex-row flex-wrap">{goals.map((g,i) => <GoalRing key={i} current={g.current} target={g.target} label={g.title} />)}</View>
-        </View>
+        </Animated.View>
       )}
 
-      <TouchableOpacity className="bg-primary rounded-2xl py-4 items-center mb-6 flex-row justify-center gap-2" onPress={share} disabled={sharing}
-        style={{ shadowColor: clinicalTokens.colors.primary.DEFAULT, shadowOffset: {width:0,height:4}, shadowOpacity:0.3, shadowRadius:8, elevation:6 }}>
-        <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight:'600' }}>{sharing ? 'Sharing...' : '📤 Share My Progress'}</Text>
-      </TouchableOpacity>
+      <Animated.View entering={SlideInUp.delay(300)}>
+        <TouchableOpacity className="bg-primary rounded-2xl py-4 items-center mb-6 flex-row justify-center gap-2" onPress={share} disabled={sharing}
+          style={{ shadowColor: clinicalTokens.colors.primary.DEFAULT, shadowOffset: {width:0,height:4}, shadowOpacity:0.3, shadowRadius:8, elevation:6 }}>
+          <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight:'600' }}>{sharing ? 'Sharing...' : '📤 Share My Progress'}</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
