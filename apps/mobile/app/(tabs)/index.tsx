@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, AppState, Animated } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { getRoleFromAuth } from '../../lib/auth-guard';
+import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
@@ -39,13 +40,6 @@ export default function DashboardScreen() {
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
-
-  const fadeAnimStats = useRef(new Animated.Value(0)).current;
-  const fadeAnimGoals = useRef(new Animated.Value(0)).current;
-  const fadeAnimButton = useRef(new Animated.Value(0)).current;
-  const slideAnimStats = useRef(new Animated.Value(30)).current;
-  const slideAnimGoals = useRef(new Animated.Value(30)).current;
-  const slideAnimButton = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     loadData();
@@ -84,26 +78,6 @@ export default function DashboardScreen() {
       clearInterval(interval);
     };
   }, []);
-
-  // Entering animations: stagger fade-in + slide-up when data is ready
-  useEffect(() => {
-    if (!loading) {
-      Animated.stagger(120, [
-        Animated.parallel([
-          Animated.timing(fadeAnimStats, { toValue: 1, duration: 400, useNativeDriver: true }),
-          Animated.timing(slideAnimStats, { toValue: 0, duration: 400, useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(fadeAnimGoals, { toValue: 1, duration: 400, useNativeDriver: true }),
-          Animated.timing(slideAnimGoals, { toValue: 0, duration: 400, useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(fadeAnimButton, { toValue: 1, duration: 400, useNativeDriver: true }),
-          Animated.timing(slideAnimButton, { toValue: 0, duration: 400, useNativeDriver: true }),
-        ]),
-      ]).start();
-    }
-  }, [loading, fadeAnimStats, fadeAnimGoals, fadeAnimButton, slideAnimStats, slideAnimGoals, slideAnimButton]);
 
   const updateLastSyncLabel = async () => {
     const ts = await getLastSyncTimestamp();
@@ -250,7 +224,7 @@ export default function DashboardScreen() {
       {/* Today's case count widget */}
       {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
 
-      <Animated.View style={{ opacity: fadeAnimStats, transform: [{ translateY: slideAnimStats }] }} className="flex-row gap-3 mb-6">
+      <View className="flex-row gap-3 mb-6">
         <View
           className="flex-1 bg-white rounded-xl p-4 border border-[#007AFF]/15"
           accessible
@@ -308,10 +282,10 @@ export default function DashboardScreen() {
             Approved
           </AccessibleText>
         </View>
-      </Animated.View>
+      </View>
 
       {goals.length > 0 && (
-        <Animated.View style={{ opacity: fadeAnimGoals, transform: [{ translateY: slideAnimGoals }] }} className="mb-6">
+        <View className="mb-6">
           <Text className="text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>Goal Progress</Text>
           <View className="flex-row gap-4 flex-wrap">
             {goals.map((g) => (
@@ -329,17 +303,15 @@ export default function DashboardScreen() {
             {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
           </Text>
           </View>
-        </Animated.View>
+        </View>
       )}
 
-      <Animated.View style={{ opacity: fadeAnimButton, transform: [{ translateY: slideAnimButton }] }}>
-        <TouchableOpacity
+      <TouchableOpacity
           className="bg-primary rounded-xl py-4 items-center mb-4"
           onPress={() => router.push('/log-case')}
         >
           <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log New Case</Text>
         </TouchableOpacity>
-      </Animated.View>
     </ScreenWrapper>
   );
 }
