@@ -27,6 +27,7 @@ import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import { DateField } from '../../components/DateField';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   surgery: 'cut',
@@ -668,8 +669,7 @@ export default function LogCaseScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-white text-2xl mb-6" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
+      <ScreenWrapper title="Log Case" scroll={false}>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
             <View key={i} className="bg-white rounded-xl p-4 border border-[#007AFF]/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
@@ -679,22 +679,22 @@ export default function LogCaseScreen() {
             </View>
           ))}
         </View>
-      </View>
+      </ScreenWrapper>
     );
   }
 
   if (!selectedTemplate) {
     return (
-      <View className="flex-1" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+      <ScreenWrapper title="Log Case" scroll={false}>
         {renderSyncBanner()}
         <FlatList
           data={templates}
           keyExtractor={(t) => t.id}
           renderItem={renderTemplateCard}
           numColumns={2}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           ListHeaderComponent={
-            <Text className="text-white text-2xl mb-4 px-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
+            <Text className="text-[#000000] text-2xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
           }
           ListEmptyComponent={
             <View className="items-center py-16">
@@ -710,33 +710,33 @@ export default function LogCaseScreen() {
             </View>
           }
         />
-      </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
-        {renderSyncBanner()}
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={24} color={clinicalTokens.colors.secondary.DEFAULT} />
-          </TouchableOpacity>
-          <Text className="text-white text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-            {selectedTemplate.specialty} - {selectedTemplate.name}
-          </Text>
-          <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
-            <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
-          </TouchableOpacity>
-        </View>
+    <ScreenWrapper title="Log Case" scroll={false}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+          {renderSyncBanner()}
+          <View className="flex-row items-center mb-4">
+            <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
+              <Ionicons name="arrow-back" size={24} color={clinicalTokens.colors.secondary.DEFAULT} />
+            </TouchableOpacity>
+            <Text className="text-[#000000] text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {selectedTemplate.specialty} - {selectedTemplate.name}
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
+              <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View className="flex-row items-center justify-between mb-4 px-1">
-          <Text className="text-gray-300 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>De-identified entry</Text>
-          <Switch
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-[#3C3C43] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>De-identified entry</Text>
+            <Switch
             value={isDeidentified}
             onValueChange={setIsDeidentified}
             trackColor={{ false: clinicalTokens.colors.neutral.light, true: clinicalTokens.colors.primary.DEFAULT }}
@@ -829,5 +829,6 @@ export default function LogCaseScreen() {
 
       {renderConfirmation()}
     </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }
