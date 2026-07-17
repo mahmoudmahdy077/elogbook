@@ -91,13 +91,12 @@ export function AnimatedPressable({
   children,
   scaleTo = 0.96,
   style,
-  ...props
+  ...rest
 }: {
   onPress?: () => void;
   children: React.ReactNode;
   scaleTo?: number;
   style?: any;
-  [key: string]: any;
 }) {
   const { animatedStyle, onPressIn, onPressOut } = usePressScale(scaleTo);
 
@@ -108,7 +107,7 @@ export function AnimatedPressable({
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         activeOpacity={1}
-        {...props}
+        {...rest}
       >
         {children}
       </TouchableOpacity>

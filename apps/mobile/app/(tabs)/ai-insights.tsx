@@ -150,14 +150,14 @@ export default function AIInsightsScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text className="text-white text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
-        <Text className="text-gray-400 text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+    <ScreenWrapper title="AI Insights" scroll={false}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+          <Text className="text-[#000000] text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
+          <Text className="text-[#8E8E93] text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           {quotaUsed} of {MAX_QUERIES} queries used today
         </Text>
 
@@ -239,6 +239,8 @@ export default function AIInsightsScreen() {
             </Text>
           </View>
         )}
+      </ScrollView>
+    </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }
