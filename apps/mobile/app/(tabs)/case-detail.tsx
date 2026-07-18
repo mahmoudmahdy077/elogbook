@@ -353,41 +353,45 @@ export default function CaseDetailScreen() {
       </Animated.View>
 
       {canApprove && caseDetail.status === 'pending' && (
-        <View className="flex-row gap-3 mb-3">
-          <TouchableOpacity
-            className="flex-1 bg-primary/15 rounded-xl py-4 items-center border border-emerald-500/40"
-            onPress={() => confirmAction('approve')}
-            disabled={processing || isOffline}
-            accessibilityLabel="Approve case"
-            accessibilityRole="button"
-          >
-            <Text className="text-[#34C759]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-              {processing ? 'Processing...' : 'Approve'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-500/40"
-            onPress={() => confirmAction('reject')}
-            disabled={processing || isOffline}
-            accessibilityLabel="Reject case"
-            accessibilityRole="button"
-          >
-            <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-              {processing ? 'Processing...' : 'Reject'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Animated.View entering={Entering.staggeredSlideUp(2)}>
+          <View className="flex-row gap-3 mb-3">
+            <TouchableOpacity
+              className="flex-1 bg-primary/15 rounded-xl py-4 items-center border border-emerald-500/40"
+              onPress={() => confirmAction('approve')}
+              disabled={processing || isOffline}
+              accessibilityLabel="Approve case"
+              accessibilityRole="button"
+            >
+              <Text className="text-[#34C759]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                {processing ? 'Processing...' : 'Approve'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-500/40"
+              onPress={() => confirmAction('reject')}
+              disabled={processing || isOffline}
+              accessibilityLabel="Reject case"
+              accessibilityRole="button"
+            >
+              <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                {processing ? 'Processing...' : 'Reject'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       )}
 
       {caseDetail.status === 'rejected' && (
-        <TouchableOpacity
-          className="bg-primary rounded-xl py-4 items-center mb-3"
-          onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
-          accessibilityLabel="Resubmit case"
-          accessibilityRole="button"
-        >
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
-        </TouchableOpacity>
+        <Animated.View entering={Entering.staggeredSlideUp(3)}>
+          <TouchableOpacity
+            className="bg-primary rounded-xl py-4 items-center mb-3"
+            onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
+            accessibilityLabel="Resubmit case"
+            accessibilityRole="button"
+          >
+            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       <Modal transparent animationType="fade" visible={rejectModalOpen}>
