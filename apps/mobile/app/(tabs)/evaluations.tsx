@@ -57,14 +57,14 @@ function EvaluationCard({
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-2">
           <Text
-            className="text-white text-sm"
+            className="text-[#000000] text-sm"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             {evaluation.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
           {evaluation.encounter_date && (
             <Text
-              className="text-gray-500 text-xs mt-1"
+              className="text-[#8E8E93] text-xs mt-1"
               style={{ fontFamily: clinicalTokens.fonts.mono }}
             >
               {new Date(evaluation.encounter_date).toLocaleDateString()}
@@ -72,7 +72,7 @@ function EvaluationCard({
           )}
           {evaluation.setting && (
             <Text
-              className="text-gray-400 text-xs mt-0.5"
+              className="text-[#8E8E93] text-xs mt-0.5"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {evaluation.setting}
@@ -540,7 +540,7 @@ export default function EvaluationsScreen() {
       >
         <View className="flex-row justify-between items-center mb-4">
           <Text
-            className="text-white text-2xl"
+            className="text-[#000000] text-2xl"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             Evaluations
@@ -567,9 +567,9 @@ export default function EvaluationsScreen() {
         {groupedByType.length === 0 && (
           <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-gray-500 text-sm"
+              className="text-[#8E8E93] text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
-            >
+              >
               No evaluations found.
             </Text>
           </View>

@@ -16,6 +16,8 @@ import { getDatabase } from '../../lib/db/database';
 import type { CaseEntry } from '../../lib/db/models/CaseEntry';
 import { upsertCaseEntry } from '../../lib/db/storage';
 import { useHaptics } from '../../lib/haptics';
+import Animated from 'react-native-reanimated';
+import { Entering } from '../../lib/animations';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -256,8 +258,9 @@ export default function CaseDetailScreen() {
         <StatusBadge status={caseDetail.status} />
       </View>
 
-      <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
+      <Animated.View entering={Entering.staggeredFadeIn(0)}>
+        <GlassPanel style={{ marginBottom: 12 }}>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
         {caseDetail.is_deidentified ? (
           <View>
             <Text className="text-gray-900 text-sm" style={{ fontFamily: 'Geist Mono' }}>
@@ -277,10 +280,12 @@ export default function CaseDetailScreen() {
             </Text>
           </View>
         )}
-      </GlassPanel>
+        </GlassPanel>
+      </Animated.View>
 
-      <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
+      <Animated.View entering={Entering.staggeredFadeIn(1)}>
+        <GlassPanel style={{ marginBottom: 12 }}>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
         <Text className="text-gray-900 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Date: {caseDetail.case_date}
         </Text>

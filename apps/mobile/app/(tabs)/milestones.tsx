@@ -101,7 +101,7 @@ function MilestoneMatrix({
               className="flex-row items-center py-2 border-b border-gray-800/50"
             >
               <Text
-                className="text-white text-sm flex-1 mr-2"
+                className="text-[#3C3C43] text-sm flex-1 mr-2"
                 style={{ fontFamily: clinicalTokens.fonts.body }}
                 numberOfLines={2}
               >
@@ -184,7 +184,7 @@ function ResidentPicker({
           >
             <Text
               className={`text-sm ${
-                selectedResident === r.id ? 'text-white' : 'text-gray-300'
+                selectedResident === r.id ? 'text-white' : 'text-[#3C3C43]'
               }`}
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
@@ -358,7 +358,7 @@ export default function MilestonesScreen() {
         }
       >
         <Text
-          className="text-white text-2xl mb-4"
+          className="text-[#000000] text-2xl mb-4"
           style={{ fontFamily: clinicalTokens.fonts.heading }}
         >
           Milestones

@@ -538,7 +538,7 @@ export default function LogCaseScreen() {
     if (field.type === 'select' && field.options) {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+          <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <View className="flex-row flex-wrap gap-2">
             {field.options.map((opt) => (
               <TouchableOpacity
@@ -552,7 +552,7 @@ export default function LogCaseScreen() {
                 accessibilityLabel={opt}
                 accessibilityRole="button"
               >
-                <Text className="text-white text-sm">{opt}</Text>
+                <Text className={`text-sm ${value === opt ? 'text-white' : 'text-[#000000]'}`}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -563,9 +563,9 @@ export default function LogCaseScreen() {
     if (field.type === 'textarea') {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+          <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <TextInput
-            className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
+            className="bg-white text-[#000000] rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
             multiline
             textAlignVertical="top"
             returnKeyType="next"
@@ -581,9 +581,9 @@ export default function LogCaseScreen() {
 
     return (
       <View key={field.key} className="mb-4">
-        <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+        <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
         <TextInput
-          className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15"
+          className="bg-white text-[#000000] rounded-xl px-4 py-3 border border-[#007AFF]/15"
           placeholder={field.label}
           placeholderTextColor="#666"
           returnKeyType="next"
@@ -657,7 +657,7 @@ export default function LogCaseScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+        <Text className="text-[#000000] mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
           {t.specialty} - {t.name}
         </Text>
         <Text className="text-[#007AFF] text-xs mt-2 bg-[#007AFF]/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
