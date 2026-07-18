@@ -45,11 +45,11 @@ const ApprovalCard = React.memo(function ApprovalCard({
     <GlassPanel style={{ marginBottom: 12 }}>
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>{item.resident_name}</Text>
+          <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.heading }}>{item.resident_name}</Text>
           <Text className="text-[#007AFF] text-xs mt-0.5" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.specialty}
           </Text>
-          <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
           {item.comment && (

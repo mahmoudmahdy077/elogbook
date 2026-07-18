@@ -59,20 +59,20 @@ const CaseCard = React.memo(function CaseCard({
     >
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+          <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {item.template_specialty} - {item.template_name}
           </Text>
-          <Text className="text-gray-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
-          <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
         </View>
         <View className="flex-col items-end gap-1">
           <StatusBadge status={item.status} />
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
-            <Text className="text-xs text-gray-400" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+            <Text className="text-xs text-[#8E8E93]" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}
@@ -226,7 +226,7 @@ export default function MyCasesScreen() {
             }`}
             onPress={() => setFilter(chip.key)}
           >
-            <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+            <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-[#3C3C43]'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
               {chip.label}
             </Text>
           </TouchableOpacity>

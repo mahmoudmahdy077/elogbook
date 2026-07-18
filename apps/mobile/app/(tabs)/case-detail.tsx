@@ -298,11 +298,13 @@ export default function CaseDetailScreen() {
         <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Updated: {new Date(caseDetail.updated_at).toLocaleString()}
         </Text>
-      </GlassPanel>
+        </GlassPanel>
+      </Animated.View>
 
       {Object.keys(caseDetail.field_values).length > 0 && (
-        <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
+        <Animated.View entering={Entering.staggeredFadeIn(2)}>
+          <GlassPanel style={{ marginBottom: 12 }}>
+            <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
           {Object.entries(caseDetail.field_values).map(([key, value]) => (
             <View key={key} className="flex-row justify-between py-1 border-b border-gray-200/50">
               <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
@@ -314,34 +316,41 @@ export default function CaseDetailScreen() {
             </View>
           ))}
         </GlassPanel>
+        </Animated.View>
       )}
 
       {caseDetail.status === 'rejected' && caseDetail.rejection_comment && (
-        <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
-          <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
-        </GlassPanel>
+        <Animated.View entering={Entering.staggeredFadeIn(3)}>
+          <GlassPanel style={{ marginBottom: 12 }}>
+            <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
+            <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
+          </GlassPanel>
+        </Animated.View>
       )}
 
       {canEdit && (
-        <TouchableOpacity
-          className="bg-[#007AFF] rounded-xl py-4 items-center mb-3"
-          onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
-          accessibilityLabel="Edit this case"
-          accessibilityRole="button"
-        >
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Edit Case</Text>
-        </TouchableOpacity>
+        <Animated.View entering={Entering.staggeredSlideUp(0)}>
+          <TouchableOpacity
+            className="bg-[#007AFF] rounded-xl py-4 items-center mb-3"
+            onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
+            accessibilityLabel="Edit this case"
+            accessibilityRole="button"
+          >
+            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Edit Case</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
-      <TouchableOpacity
-        className="bg-gray-200 rounded-xl py-4 items-center mb-3 border border-[#007AFF]/15"
-        onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
-        accessibilityLabel="Duplicate this case"
-        accessibilityRole="button"
-      >
-        <Text className="text-primary" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
-      </TouchableOpacity>
+      <Animated.View entering={Entering.staggeredSlideUp(1)}>
+        <TouchableOpacity
+          className="bg-gray-200 rounded-xl py-4 items-center mb-3 border border-[#007AFF]/15"
+          onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
+          accessibilityLabel="Duplicate this case"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {canApprove && caseDetail.status === 'pending' && (
         <View className="flex-row gap-3 mb-3">
