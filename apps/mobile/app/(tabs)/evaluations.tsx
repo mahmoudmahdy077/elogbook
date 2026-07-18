@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 interface EvaluationData {
   id: string;
@@ -517,20 +518,16 @@ export default function EvaluationsScreen() {
 
   if (loading) {
     return (
-      <View
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      >
-        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-      </View>
+      <ScreenWrapper title="Evaluations" scroll={false}>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-    >
+    <ScreenWrapper title="Evaluations" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
@@ -631,6 +628,6 @@ export default function EvaluationsScreen() {
         tenantId={tenantId}
         onSaved={loadEvaluations}
       />
-    </View>
+    </ScreenWrapper>
   );
 }

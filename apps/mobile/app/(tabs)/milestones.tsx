@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const MAX_LEVEL = 5;
 
@@ -71,7 +72,7 @@ function MilestoneMatrix({
     return (
       <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
         <Text
-          className="text-gray-500 text-sm"
+          className="text-[#8E8E93] text-sm"
           style={{ fontFamily: clinicalTokens.fonts.body }}
         >
           No milestones recorded yet.
@@ -151,7 +152,7 @@ function ResidentPicker({
     return (
       <View className="bg-white/5 rounded-xl p-4 border border-gray-700/50 mb-4">
         <Text
-          className="text-gray-500 text-sm"
+          className="text-[#8E8E93] text-sm"
           style={{ fontFamily: clinicalTokens.fonts.body }}
         >
           No residents found in this tenant.
@@ -163,7 +164,7 @@ function ResidentPicker({
   return (
     <View className="mb-4">
       <Text
-        className="text-gray-400 text-xs mb-2"
+        className="text-[#8E8E93] text-xs mb-2"
         style={{ fontFamily: clinicalTokens.fonts.body }}
       >
         Select Resident
@@ -336,20 +337,16 @@ export default function MilestonesScreen() {
 
   if (loading) {
     return (
-      <View
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      >
-        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-      </View>
+      <ScreenWrapper title="Milestones" scroll={false}>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-    >
+    <ScreenWrapper title="Milestones" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
@@ -385,7 +382,7 @@ export default function MilestonesScreen() {
         {!selectedResident && !loading && (
           <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-gray-500 text-sm"
+              className="text-[#8E8E93] text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               Select a resident to view milestones.
@@ -393,6 +390,6 @@ export default function MilestonesScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </ScreenWrapper>
   );
 }

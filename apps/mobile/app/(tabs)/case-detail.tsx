@@ -229,7 +229,7 @@ export default function CaseDetailScreen() {
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
-          <Text className="text-white">Go Back</Text>
+          <Text className="text-[#000000]">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -248,7 +248,7 @@ export default function CaseDetailScreen() {
 
       <View className="flex-row justify-between items-start mb-4">
         <View className="flex-1 mr-3">
-          <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
+          <Text className="text-[#000000] text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
           <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {caseDetail.template_name}
           </Text>
