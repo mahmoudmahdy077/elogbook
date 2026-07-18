@@ -78,7 +78,7 @@ export default function TabLayout() {
           options={{
             title: 'Dashboard',
             tabBarIcon: ({ color, size }) => (
-              <TabIcon name="home" color={color} size={size} />
+              <TabIcon name="home" color={color as string} size={size} />
             ),
           }}
         />
@@ -106,7 +106,7 @@ export default function TabLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ color, size }) => (
-              <TabIcon name="person" color={color} size={size} />
+              <TabIcon name="person" color={color as string} size={size} />
             ),
           }}
         />

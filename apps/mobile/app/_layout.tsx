@@ -1,4 +1,4 @@
-import './global.css';
+import '../global.css';
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import {
@@ -18,29 +18,29 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { clinicalTokens } from '@elogbook/shared';
-import { usePreventScreenCapture, onScreenshotAttempt } from './lib/screenshot-guard';
-import { useSyncInit } from './lib/sync';
-import { parseDeepLink, navigateToDeepLink } from './lib/linking';
-import { useNotificationNavigation } from './hooks/useNotificationNavigation';
-import { useAuthGuard } from './lib/auth-guard';
+import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
+import { useSyncInit } from '../lib/sync';
+import { parseDeepLink, navigateToDeepLink } from '../lib/linking';
+import { useNotificationNavigation } from '../hooks/useNotificationNavigation';
+import { useAuthGuard } from '../lib/auth-guard';
 import {
   getEffectiveSkipWindow,
   clearBiometricAuthCache,
-} from './lib/biometric-auth';
-import { BiometricGate } from './components/BiometricGate';
-import { supabase } from './lib/supabase';
-import { initDatabase } from './lib/db/database';
-import { Sentry } from './lib/sentry';
+} from '../lib/biometric-auth';
+import { BiometricGate } from '../components/BiometricGate';
+import { supabase } from '../lib/supabase';
+import { initDatabase } from '../lib/db/database';
+import { Sentry } from '../lib/sentry';
 
 // Font assets
-import OutfitRegular from './assets/fonts/Outfit-Regular.ttf';
-import OutfitBold from './assets/fonts/Outfit-Bold.ttf';
-import OutfitSemiBold from './assets/fonts/Outfit-SemiBold.ttf';
-import InterRegular from './assets/fonts/Inter-Regular.ttf';
-import InterMedium from './assets/fonts/Inter-Medium.ttf';
-import InterSemiBold from './assets/fonts/Inter-SemiBold.ttf';
-import GeistMonoRegular from './assets/fonts/GeistMono-Regular.ttf';
-import GeistMonoMedium from './assets/fonts/GeistMono-Medium.ttf';
+import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
+import OutfitBold from '../assets/fonts/Outfit-Bold.ttf';
+import OutfitSemiBold from '../assets/fonts/Outfit-SemiBold.ttf';
+import InterRegular from '../assets/fonts/Inter-Regular.ttf';
+import InterMedium from '../assets/fonts/Inter-Medium.ttf';
+import InterSemiBold from '../assets/fonts/Inter-SemiBold.ttf';
+import GeistMonoRegular from '../assets/fonts/GeistMono-Regular.ttf';
+import GeistMonoMedium from '../assets/fonts/GeistMono-Medium.ttf';
 
 // ── Error Boundary ────────────────────────────────────────────────────────
 
