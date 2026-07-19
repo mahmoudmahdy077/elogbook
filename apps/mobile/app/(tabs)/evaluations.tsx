@@ -13,6 +13,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
 interface EvaluationData {
   id: string;
@@ -519,9 +520,9 @@ export default function EvaluationsScreen() {
   if (loading) {
     return (
       <ScreenWrapper title="Evaluations" scroll={false}>
-        <View className="flex-1 items-center justify-center">
+        <Animated.View entering={FadeIn} className="flex-1 items-center justify-center">
           <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-        </View>
+        </Animated.View>
       </ScreenWrapper>
     );
   }
@@ -538,7 +539,7 @@ export default function EvaluationsScreen() {
           />
         }
       >
-        <View className="flex-row justify-between items-center mb-4">
+        <Animated.View entering={FadeInDown} className="flex-row justify-between items-center mb-4">
           <Text
             className="text-[#000000] text-2xl"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
@@ -561,23 +562,27 @@ export default function EvaluationsScreen() {
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
 
         {/* Empty state */}
         {groupedByType.length === 0 && (
-          <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
+          <Animated.View entering={FadeIn} className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
               className="text-[#8E8E93] text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
               >
               No evaluations found.
             </Text>
-          </View>
+          </Animated.View>
         )}
 
         {/* Evaluations grouped by type */}
-        {groupedByType.map((group) => (
-          <View key={group.type} className="mb-5">
+        {groupedByType.map((group, groupIdx) => (
+          <Animated.View
+            key={group.type}
+            entering={FadeInDown.delay(groupIdx * 120).springify()}
+          >
+            <View className="mb-5">
             <View className="flex-row items-center mb-2">
               <Text
                 className="text-primary text-sm font-semibold flex-1"
@@ -595,17 +600,23 @@ export default function EvaluationsScreen() {
               </View>
             </View>
 
-            {group.evaluations.slice(0, 5).map((ev) => (
-              <EvaluationCard
+            {group.evaluations.slice(0, 5).map((ev, cardIdx) => (
+              <Animated.View
                 key={ev.id}
-                evaluation={ev}
-                onPress={() => {
-                  // Detail view could navigate to a full evaluation detail screen
-                }}
-              />
+                entering={FadeInRight.delay(cardIdx * 80).springify()}
+              >
+                <EvaluationCard
+                  key={ev.id}
+                  evaluation={ev}
+                  onPress={() => {
+                    // Detail view could navigate to a full evaluation detail screen
+                  }}
+                />
+              </Animated.View>
             ))}
 
             {group.evaluations.length > 5 && (
+              <Animated.View entering={FadeIn}>
               <TouchableOpacity className="py-2">
                 <Text
                   className="text-primary text-sm text-center"
@@ -614,8 +625,10 @@ export default function EvaluationsScreen() {
                   +{group.evaluations.length - 5} more
                 </Text>
               </TouchableOpacity>
+              </Animated.View>
             )}
-          </View>
+            </View>
+          </Animated.View>
         ))}
       </ScrollView>
 

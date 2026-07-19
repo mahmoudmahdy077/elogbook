@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { getDatabase } from '../../lib/db/database';
 import { getRoleFromAuth } from '../../lib/auth-guard';
@@ -233,7 +234,8 @@ export default function ProfileScreen() {
   return (
     <ScreenWrapper title="Profile">
       {/* Avatar & Name */}
-      <View className="items-center mb-8 mt-2">
+      <Animated.View entering={FadeIn.delay(100).springify()}>
+        <View className="items-center mb-8 mt-2">
         <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
           <Text className="text-white text-3xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{initial}</Text>
         </View>
@@ -249,10 +251,12 @@ export default function ProfileScreen() {
           </Text>
         )}
       </View>
+      </Animated.View>
 
       {/* Subscription */}
       {(plan || subscriptionStatus) && (
-        <GlassPanel style={{ marginBottom: 12 }}>
+        <Animated.View entering={FadeInDown.delay(150).springify()}>
+          <GlassPanel style={{ marginBottom: 12 }}>
           <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Subscription</Text>
           {plan && (
             <Text style={{ fontFamily: clinicalTokens.fonts.heading, color: clinicalTokens.colors.text.primary }}>{plan.name}</Text>

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { aiQuerySchema } from '@elogbook/shared';
@@ -156,88 +157,102 @@ export default function AIInsightsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-          <Text className="text-[#000000] text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
-          <Text className="text-[#8E8E93] text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-          {quotaUsed} of {MAX_QUERIES} queries used today
-        </Text>
+          <Animated.View entering={FadeIn.delay(100).springify()}>
+            <Text className="text-[#000000] text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
+            <Text className="text-[#8E8E93] text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {quotaUsed} of {MAX_QUERIES} queries used today
+          </Text>
+          </Animated.View>
 
         {isOffline && (
-          <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-            <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
-              Offline — AI insights require a connection
-            </Text>
-          </View>
+          <Animated.View entering={FadeIn.delay(150).springify()}>
+            <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
+              <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
+                Offline — AI insights require a connection
+              </Text>
+            </View>
+          </Animated.View>
         )}
 
-        <View className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-3 mb-4">
-          <Text className="text-amber-400 text-xs text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
-            AI-generated insights are for educational purposes only and do not constitute medical advice.
-          </Text>
-        </View>
-
-        <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
-            Ask a clinical question
-          </Text>
-          <TextInput
-            className="text-white text-sm min-h-[80px]"
-            style={{ fontFamily: clinicalTokens.fonts.mono }}
-            multiline
-            textAlignVertical="top"
-            placeholder="e.g., What are the key competencies for laparoscopic cholecystectomy?"
-            placeholderTextColor="#666"
-            value={query}
-            onChangeText={(text) => {
-              setQuery(text);
-              if (error) setError(null);
-            }}
-            maxLength={500}
-            editable={!submitting && quotaRemaining > 0}
-            accessibilityLabel="AI clinical reflection query"
-          />
-          <View className="flex-row justify-between items-center mt-2">
-            <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-              {query.length}/500
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
+          <View className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-3 mb-4">
+            <Text className="text-amber-400 text-xs text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
+              AI-generated insights are for educational purposes only and do not constitute medical advice.
             </Text>
-            <TouchableOpacity
-              className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
-              onPress={handleSubmit}
-              disabled={submitting || quotaRemaining <= 0}
-              accessibilityLabel="Submit AI query"
-              accessibilityRole="button"
-            >
-              {submitting ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
-                  Ask
-                </Text>
-              )}
-            </TouchableOpacity>
           </View>
-        </GlassPanel>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(250).springify()}>
+          <GlassPanel style={{ marginBottom: 12 }}>
+            <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
+              Ask a clinical question
+            </Text>
+            <TextInput
+              className="text-white text-sm min-h-[80px]"
+              style={{ fontFamily: clinicalTokens.fonts.mono }}
+              multiline
+              textAlignVertical="top"
+              placeholder="e.g., What are the key competencies for laparoscopic cholecystectomy?"
+              placeholderTextColor="#666"
+              value={query}
+              onChangeText={(text) => {
+                setQuery(text);
+                if (error) setError(null);
+              }}
+              maxLength={500}
+              editable={!submitting && quotaRemaining > 0}
+              accessibilityLabel="AI clinical reflection query"
+            />
+            <View className="flex-row justify-between items-center mt-2">
+              <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+                {query.length}/500
+              </Text>
+              <TouchableOpacity
+                className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
+                onPress={handleSubmit}
+                disabled={submitting || quotaRemaining <= 0}
+                accessibilityLabel="Submit AI query"
+                accessibilityRole="button"
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                    Ask
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </GlassPanel>
+        </Animated.View>
 
         {error && (
-          <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-            <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{error}</Text>
-          </View>
+          <Animated.View entering={FadeIn.delay(200).springify()}>
+            <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
+              <Text className="text-red-400 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{error}</Text>
+            </View>
+          </Animated.View>
         )}
 
         {response ? (
-          <GlassPanel style={{ marginBottom: 12 }}>
-            <Text className="text-[#007AFF] text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Response</Text>
-            <Text className="text-gray-200 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-              {response}
-            </Text>
-          </GlassPanel>
+          <Animated.View entering={FadeInDown.delay(300).springify()}>
+            <GlassPanel style={{ marginBottom: 12 }}>
+              <Text className="text-[#007AFF] text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Response</Text>
+              <Text className="text-gray-200 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+                {response}
+              </Text>
+            </GlassPanel>
+          </Animated.View>
         ) : null}
 
         {quotaRemaining <= 0 && !response && (
-          <View className="items-center py-8">
-            <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
-              You have reached your daily query limit. Insights will reset tomorrow.
-            </Text>
-          </View>
+          <Animated.View entering={FadeIn.delay(350).springify()}>
+            <View className="items-center py-8">
+              <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>
+                You have reached your daily query limit. Insights will reset tomorrow.
+              </Text>
+            </View>
+          </Animated.View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

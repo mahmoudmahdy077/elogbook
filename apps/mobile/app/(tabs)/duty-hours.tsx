@@ -67,9 +67,9 @@ export default function DutyHoursScreen() {
   };
 
   return (
-    <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+    <ScreenWrapper title="Duty Hours" scroll={false}>
       <Animated.View entering={FadeIn.delay(100).springify()}>
-        <Text className="text-white text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
+        <Text className="text-[#000000] text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(150).springify()}>
@@ -92,7 +92,7 @@ export default function DutyHoursScreen() {
 
       <Animated.View entering={FadeInDown.delay(200).springify()}>
         <TextInput
-          className="bg-white text-white rounded-xl px-4 py-3 mb-3 border border-[#007AFF]/15"
+          className="bg-white text-[#000000] rounded-xl px-4 py-3 mb-3 border border-[#007AFF]/15"
           placeholder="Hours (e.g., 8.5)"
           placeholderTextColor="#666"
           value={hours}
@@ -140,6 +140,6 @@ export default function DutyHoursScreen() {
           <Text className="text-white font-bold" style={{ fontFamily: clinicalTokens.fonts.heading }}>Save</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </ScreenWrapper>
   );
 }
