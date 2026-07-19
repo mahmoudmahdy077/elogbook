@@ -125,6 +125,7 @@ function MilestoneMatrix({
               </View>
             </View>
           ))}
+        </View>
         </Animated.View>
       ))}
     </View>
@@ -396,6 +397,7 @@ export default function MilestonesScreen() {
             >
               Select a resident to view milestones.
             </Text>
+          </View>
           </Animated.View>
         )}
       </ScrollView>

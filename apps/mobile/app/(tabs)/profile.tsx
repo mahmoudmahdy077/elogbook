@@ -288,10 +288,12 @@ export default function ProfileScreen() {
             <Text className="text-primary text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Manage Subscription</Text>
           </TouchableOpacity>
         </GlassPanel>
+      </Animated.View>
       )}
 
       {/* Account Info */}
-      <GlassPanel style={{ marginBottom: 12 }}>
+      <Animated.View entering={FadeInDown.delay(200).springify()}>
+        <GlassPanel style={{ marginBottom: 12 }}>
         <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Account</Text>
         <View className="flex-row justify-between py-2 border-b" style={{ borderColor: clinicalTokens.colors.border.DEFAULT }}>
           <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Role</Text>
@@ -314,9 +316,11 @@ export default function ProfileScreen() {
           </Text>
         </View>
       </GlassPanel>
+      </Animated.View>
 
       {/* Sign Out */}
-      <TouchableOpacity
+      <Animated.View entering={FadeInDown.delay(250).springify()}>
+        <TouchableOpacity
         className="bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-600/40 mb-4"
         onPress={handleSignOut}
         accessibilityLabel="Sign out"
@@ -324,6 +328,7 @@ export default function ProfileScreen() {
       >
         <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Sign Out</Text>
       </TouchableOpacity>
+      </Animated.View>
     </ScreenWrapper>
   );
 }
