@@ -27,7 +27,7 @@
 - [x] Verify DashboardContent.tsx matches Apple Health prototype
 - [x] Verify frosted glass Sidebar renders correctly
 - [x] Verify StatusBadge pills (flat, no glow) on all pages
-- [ ] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
+- [x] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
 - [ ] Verify light theme is default, dark theme works via `.dark` class on `<html>`
 
 ## Phase: Mobile Alignment
