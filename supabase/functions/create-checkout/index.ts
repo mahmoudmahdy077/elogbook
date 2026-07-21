@@ -79,13 +79,34 @@ serve(async (req) => {
     );
   }
 
-  const { data: gwConfig, error: gwError } = await supabase
+  let { data: gwConfig, error: gwError } = await supabase
     .from('secret_payment_gateway_config')
-    .select('*')
+    .select('id, tenant_id, secret_key, publishable_key, mode, webhook_secret')
     .eq('tenant_id', tenantId)
-    .single();
+    .eq('provider', 'stripe')
+    .eq('is_active', true)
+    .maybeSingle();
 
-  if (gwError || !gwConfig) {
+  // Fallback to platform-default gateway
+  if (!gwConfig) {
+    ({ data: gwConfig, error: gwError } = await supabase
+      .from('secret_payment_gateway_config')
+      .select('id, tenant_id, secret_key, publishable_key, mode, webhook_secret')
+      .eq('tenant_id', '00000000-0000-0000-0000-000000000000')
+      .eq('provider', 'stripe')
+      .eq('is_active', true)
+      .maybeSingle());
+  }
+
+  // Final fallback: STRIPE_SECRET_KEY from env (for platform-level billing)
+  if (!gwConfig && !gwError) {
+    const envKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (envKey) {
+      gwConfig = { id: 'env', tenant_id: '00000000-0000-0000-0000-000000000000', secret_key: envKey, publishable_key: '', mode: 'live', webhook_secret: '' };
+    }
+  }
+
+  if (!gwConfig) {
     console.error('Gateway config lookup failed', { tenant_id: tenantId, error: gwError?.message });
     return new Response(
       JSON.stringify({ error: 'Gateway not configured' }),
