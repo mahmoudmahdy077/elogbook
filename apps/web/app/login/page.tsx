@@ -10,7 +10,7 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 
 function EyeIcon() {
   return (
-    <svg className="w-4 h-4 text-[#8E8E93] cursor-pointer hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -19,7 +19,7 @@ function EyeIcon() {
 
 function EyeOffIcon() {
   return (
-    <svg className="w-4 h-4 text-[#8E8E93] cursor-pointer hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
       <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
       <line x1="1" y1="1" x2="23" y2="23" />
@@ -50,9 +50,9 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
   if (sent) {
     return (
       <div className="text-center py-4">
-        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-2">Check your email</h2>
-        <p className="text-sm text-[#8E8E93]">
-          We sent password reset instructions to <strong className="text-black">{email}</strong>.
+        <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-2">Check your email</h2>
+        <p className="text-sm text-text-muted">
+          We sent password reset instructions to <strong className="text-text-primary">{email}</strong>.
         </p>
         <button onClick={onBack} className="mt-4 text-sm font-medium text-primary hover:opacity-80 transition-opacity">
           Back to sign in
@@ -63,8 +63,8 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-1">Reset password</h2>
-      <p className="text-sm text-[#8E8E93] mb-4">Enter your email and we&apos;ll send you a reset link.</p>
+      <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-1">Reset password</h2>
+      <p className="text-sm text-text-muted mb-4">Enter your email and we&apos;ll send you a reset link.</p>
       {error && (
         <div className="mb-4">
           <ErrorDisplay message={error} />
@@ -77,7 +77,7 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
       >
         {loading ? 'Sending...' : 'Send reset link'}
       </button>
-      <button onClick={onBack} className="mt-3 w-full text-sm text-[#8E8E93] hover:text-black transition-colors">
+      <button onClick={onBack} className="mt-3 w-full text-sm text-text-muted hover:text-text-primary transition-colors">
         Back to sign in
       </button>
     </div>
@@ -92,11 +92,11 @@ function SuccessState({ email }: { email: string }) {
           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-1">Check your email</h2>
-      <p className="text-sm text-[#8E8E93]">
-        We sent a magic link to <strong className="text-black">{email}</strong>.
+      <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-1">Check your email</h2>
+      <p className="text-sm text-text-muted">
+        We sent a magic link to <strong className="text-text-primary">{email}</strong>.
       </p>
-      <p className="text-xs text-[#8E8E93] mt-3">Click the link in the email to sign in. The link expires in 1 hour.</p>
+      <p className="text-xs text-text-muted mt-3">Click the link in the email to sign in. The link expires in 1 hour.</p>
     </div>
   );
 }
@@ -182,8 +182,8 @@ export default function LoginPage() {
     <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-black tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
-          <p className="text-sm sm:text-base text-[#8E8E93] mt-2">Sign in to your account</p>
+          <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-text-primary tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
+          <p className="text-sm sm:text-base text-text-muted mt-2">Sign in to your account</p>
         </div>
 
         {/* Demo credentials banner */}
@@ -239,7 +239,7 @@ export default function LoginPage() {
                   }
                 />
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-[#8E8E93]">Leave blank to receive a magic link.</p>
+                  <p className="text-xs text-text-muted">Leave blank to receive a magic link.</p>
                   <button
                     type="button"
                     onClick={() => setShowForgot(true)}
@@ -268,7 +268,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-[#8E8E93] mt-6 sm:mt-8">
+        <p className="text-center text-xs text-text-muted mt-6 sm:mt-8">
           By signing in, you agree to your institution&apos;s data handling policy.
         </p>
       </div>
