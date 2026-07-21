@@ -42,7 +42,8 @@ export async function GET(
     .eq('tenant_id', profile.tenant_id)
     .eq('resident_id', profile.id)
     .eq('status', 'approved')
-    .order('case_date', { ascending: false });
+    .order('case_date', { ascending: false })
+    .limit(100);
 
   if (!cases || cases.length === 0) {
     return NextResponse.json({ error: 'No approved cases to export' }, { status: 404 });

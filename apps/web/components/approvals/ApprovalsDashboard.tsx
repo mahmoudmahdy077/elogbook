@@ -34,7 +34,6 @@ interface RelationApprovalRequest {
 interface PendingEntry {
   id: string;
   case_date: string;
-  field_values: Record<string, unknown>;
   is_deidentified: boolean;
   status: string;
   resident_id: string;
@@ -86,11 +85,12 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
       supabase
         .from('case_entries')
         .select(
-          'id, case_date, field_values, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name)'
+          'id, case_date, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name), approval_requests(id, status, requested_at, comment)'
         )
         .eq('tenant_id', tenantId)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(50),
       supabase
         .from('case_entries')
         .select('id', { count: 'exact', head: true })
@@ -114,50 +114,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     const approved = approvedCountRes.count ?? 0;
     if (mountedRef.current) setApprovalRate(total > 0 ? Math.round((approved / total) * 100) : 0);
 
-    const entries = (pendingRes.data || []) as Omit<PendingEntry, 'approval_requests'>[];
-    const entryIds = entries.map((e) => e.id);
-
-    if (entryIds.length > 0) {
-      const { data: approvalData, error: approvalError } = await supabase
-        .from('approval_requests')
-        .select('id, status, requested_at, comment, entry_id')
-        .in('entry_id', entryIds);
-
-      if (approvalError) {
-        setError(approvalError.message);
-        setLoading(false);
-        return;
-      }
-
-      interface ApprovalDataRaw {
-        id: string;
-        status: string;
-        requested_at: string;
-        comment: string | null;
-        entry_id: string;
-      }
-
-      const approvalMap = new Map<string, RelationApprovalRequest[]>();
-      for (const a of (approvalData || []) as ApprovalDataRaw[]) {
-        if (!approvalMap.has(a.entry_id)) approvalMap.set(a.entry_id, []);
-        approvalMap.get(a.entry_id)!.push({
-          id: a.id,
-          status: a.status,
-          requested_at: a.requested_at,
-          comment: a.comment,
-        });
-      }
-
-      const merged = entries.map((e) => ({
-        ...e,
-        approval_requests: approvalMap.get(e.id) || [],
-      })) as PendingEntry[];
-
-      setEntries(merged);
-    } else {
-      setEntries([]);
-    }
-
+    setEntries((pendingRes.data || []) as PendingEntry[]);
     setLoading(false);
   }, [tenantId, supabase]);
 
@@ -232,9 +189,6 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
               const profile = entry.profiles[0];
               const template = entry.case_templates[0];
               const approvalRequest = entry.approval_requests[0];
-              const fields = entry.field_values || {};
-              const fieldEntries = Object.entries(fields).slice(0, 4);
-
               return (
                 <motion.div
                   key={entry.id}
@@ -283,23 +237,6 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         </span>
                       </div>
                     </div>
-
-                    {/* Field Values */}
-                    {fieldEntries.length > 0 && (
-                      <div className="border-t border-border pt-3">
-                        <span className="text-xs text-[#8E8E93] block mb-2">Field Values</span>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                          {fieldEntries.map(([key, value]) => (
-                            <div key={key} className="flex justify-between gap-2">
-                              <span className="text-xs text-[#8E8E93] truncate">{key}</span>
-                              <span className="text-xs font-medium text-[#3C3C43] truncate">
-                                {value === null || value === '' ? '-' : String(value)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Approval Actions */}
                     {approvalRequest && (

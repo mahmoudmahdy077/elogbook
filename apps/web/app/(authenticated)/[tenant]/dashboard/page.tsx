@@ -169,7 +169,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
         .from('case_entries')
         .select('resident_id, status')
         .eq('tenant_id', tenantId)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .limit(10000);
 
       if (residentCaseCounts) {
         for (const c of residentCaseCounts) {

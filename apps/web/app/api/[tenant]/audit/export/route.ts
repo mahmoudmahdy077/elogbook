@@ -136,14 +136,18 @@ export async function GET(
 
   // ---- Format response ----
   if (format === 'csv') {
-    const csv = toCsv(rows);
     const filename = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    return new Response(csv, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
+    const csvHeaders = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
+    return new Response(new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(csvHeaders.join(',') + '\n'));
+        for (const r of rows) {
+          controller.enqueue(encoder.encode(rowToCsv(r) + '\n'));
+        }
+        controller.close();
+      }
+    }), { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="${filename}"` } });
   }
 
   // ---- PDF export ----
@@ -203,8 +207,8 @@ export async function GET(
 
 // ---- Helpers ----
 
-function toCsv(rows: AuditLogRow[]): string {
-  const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
+function rowToCsv(r: AuditLogRow): string {
+  const csvHeaders = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v);
     if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -212,11 +216,7 @@ function toCsv(rows: AuditLogRow[]): string {
     }
     return s;
   };
-  const lines = [headers.join(',')];
-  for (const r of rows) {
-    lines.push(headers.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(','));
-  }
-  return lines.join('\n');
+  return csvHeaders.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(',');
 }
 
 async function generateAuditPdfInline(

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { TemplateWithMeta } from '@elogbook/shared';
 import HelpPopover from '@/components/HelpPopover';
 
@@ -8,6 +9,7 @@ interface TemplateStepProps {
   selectedTemplateId: string;
   onSelect: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  onSearch: (q: string) => void;
 }
 
 const SPECIALTY_ICONS: Record<string, string> = {
@@ -32,7 +34,14 @@ export default function TemplateStep({
   selectedTemplateId,
   onSelect,
   onToggleFavorite,
+  onSearch,
 }: TemplateStepProps) {
+  const [searchInput, setSearchInput] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => onSearch(searchInput), 200);
+    return () => clearTimeout(timer);
+  }, [searchInput, onSearch]);
   if (templates.length === 0) {
     return (
       <div className="space-y-4">
@@ -65,6 +74,14 @@ export default function TemplateStep({
       <p className="text-sm text-[#8E8E93]">
         Choose a template for your logbook entry. Star your favorites for quick access.
       </p>
+      <input
+        type="text"
+        aria-label="Search templates"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        placeholder="Search templates..."
+        className="w-full px-3 py-2 text-sm border border-black/10 rounded-xl bg-white text-black placeholder-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {templates.map((t) => {
           const isSelected = t.id === selectedTemplateId;

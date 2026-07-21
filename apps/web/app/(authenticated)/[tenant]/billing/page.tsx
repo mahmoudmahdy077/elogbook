@@ -18,57 +18,57 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
   const supabase = await createServerSupabase();
 
-  const { data: plans, error: plansError } = await supabase
-    .from('subscription_plans')
-    .select('*')
-    .eq('tenant_type', auth.tenant.tenant_type)
-    .order('price_monthly', { ascending: true });
-  if (plansError) return <ErrorDisplay message={plansError.message} />;
+  const [plansResult, subscriptionResult, gatewayResult, purchasesResult, caseCountResult, residentCountResult, paymentsResult] = await Promise.all([
+    supabase
+      .from('subscription_plans')
+      .select('name, price_monthly')
+      .eq('tenant_type', auth.tenant.tenant_type)
+      .order('price_monthly', { ascending: true }),
+    supabase
+      .from('subscriptions')
+      .select('id, plan_id, tenant_id, status, current_period_end, plan:subscription_plans(name, price_monthly)')
+      .eq('tenant_id', auth.profile.tenant_id)
+      .eq('status', 'active')
+      .maybeSingle(),
+    supabase
+      .from('payment_gateway_config')
+      .select('provider, publishable_key')
+      .eq('tenant_id', auth.profile.tenant_id)
+      .eq('is_active', true)
+      .maybeSingle(),
+    supabase
+      .from('one_time_purchases')
+      .select('id, purchase_type, amount, created_at, status')
+      .eq('resident_id', auth.profile.id)
+      .eq('purchase_type', 'ai_report')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.profile.tenant_id)
+      .is('deleted_at', null),
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.profile.tenant_id),
+    supabase
+      .from('payments')
+      .select('id, amount, status, created_at')
+      .eq('tenant_id', auth.profile.tenant_id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ]);
 
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('subscriptions')
-    .select('*, plan:subscription_plans(*)')
-    .eq('tenant_id', auth.profile.tenant_id)
-    .eq('status', 'active')
-    .maybeSingle();
-  if (subscriptionError) return <ErrorDisplay message={subscriptionError.message} />;
+  const error = plansResult.error || subscriptionResult.error || gatewayResult.error || purchasesResult.error || caseCountResult.error || residentCountResult.error || paymentsResult.error;
+  if (error) return <ErrorDisplay message={error.message} />;
 
-  const { data: gatewayConfig, error: gatewayError } = await supabase
-    .from('payment_gateway_config')
-    .select('*')
-    .eq('tenant_id', auth.profile.tenant_id)
-    .eq('is_active', true)
-    .maybeSingle();
-  if (gatewayError) return <ErrorDisplay message={gatewayError.message} />;
-
-  const { data: purchases, error: purchasesError } = await supabase
-    .from('one_time_purchases')
-    .select('*')
-    .eq('resident_id', auth.profile.id)
-    .eq('purchase_type', 'ai_report')
-    .order('created_at', { ascending: false });
-  if (purchasesError) return <ErrorDisplay message={purchasesError.message} />;
-
-  const { count: caseCount, error: caseCountError } = await supabase
-    .from('case_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', auth.profile.tenant_id)
-    .is('deleted_at', null);
-  if (caseCountError) return <ErrorDisplay message={caseCountError.message} />;
-
-  const { count: residentCount, error: residentCountError } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', auth.profile.tenant_id);
-  if (residentCountError) return <ErrorDisplay message={residentCountError.message} />;
-
-  const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('tenant_id', auth.profile.tenant_id)
-    .order('created_at', { ascending: false })
-    .limit(10);
-  if (paymentsError) return <ErrorDisplay message={paymentsError.message} />;
+  const plans = plansResult.data;
+  const subscription = subscriptionResult.data;
+  const gatewayConfig = gatewayResult.data;
+  const purchases = purchasesResult.data;
+  const caseCount = caseCountResult.count;
+  const residentCount = residentCountResult.count;
+  const payments = paymentsResult.data;
 
   const plan = (subscription as Record<string, unknown> | null)?.plan as SubscriptionPlan | null;
 

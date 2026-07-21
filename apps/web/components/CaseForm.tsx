@@ -60,6 +60,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState<TemplateWithMeta[]>([]);
+  const [templateSearch, setTemplateSearch] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
@@ -89,10 +90,10 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     let cancelled = false;
 
     async function loadAllData() {
-      // Phase 1: Templates (parallel — tenant + global)
+      const searchPattern = `%${templateSearch}%`;
       const [tenantTemplatesRes, globalTemplatesRes] = await Promise.all([
-        supabase.from('case_templates').select('*').eq('tenant_id', tenantId),
-        supabase.from('case_templates').select('*').eq('tenant_id', GLOBAL_TENANT_ID),
+        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', tenantId).ilike('name', searchPattern).limit(30),
+        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', GLOBAL_TENANT_ID).ilike('name', searchPattern).limit(30),
       ]);
       if (cancelled) return;
 
@@ -102,7 +103,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       }
       const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
 
-      // Phase 2: User-dependent data (parallel with getUser)
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled) return;
 
@@ -111,10 +111,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       let tenantCounts = new Map<string, number>();
 
       if (user) {
-        const [favResult, profileResult, tenantEntriesResult, frameworkResult] = await Promise.allSettled([
+        const [favResult, profileResult, frameworkResult] = await Promise.allSettled([
           supabase.from('template_favorites').select('template_id').eq('user_id', user.id),
           supabase.from('profiles').select('id').eq('user_id', user.id).single(),
-          supabase.from('case_entries').select('template_id').eq('tenant_id', tenantId),
           supabase.from('accreditation_frameworks').select('*').eq('tenant_id', tenantId),
         ]);
         if (cancelled) return;
@@ -125,34 +124,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
         if (profileResult.status === 'fulfilled' && profileResult.value.data) {
           const profileId = (profileResult.value.data as { id: string }).id;
-          const { data: personalData } = await supabase
-            .from('case_entries')
-            .select('template_id')
-            .eq('resident_id', profileId);
-          if (personalData) {
-            personalCounts = new Map(
-              Array.from(
-                personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-                  acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-                  return acc;
-                }, new Map<string, number>())
-              )
-            );
+          const { data: countsData } = await supabase.rpc('get_template_usage_counts', { p_tenant_id: tenantId, p_resident_id: profileId });
+          if (countsData) {
+            personalCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.personal_count]));
+            tenantCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.tenant_count]));
           }
         }
 
-        if (tenantEntriesResult.status === 'fulfilled' && tenantEntriesResult.value.data) {
-          tenantCounts = new Map(
-            Array.from(
-              tenantEntriesResult.value.data.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-                acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-                return acc;
-              }, new Map<string, number>())
-            )
-          );
-        }
-
-        if (frameworkResult.status === 'fulfilled' && frameworkResult.value.data) {
+        if (frameworkResult.status === 'fulfilled') {
           // frameworks data available but not directly used
         }
       }
@@ -165,7 +144,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
     loadAllData();
     return () => { cancelled = true; };
-  }, [tenantId, supabase]);
+  }, [tenantId, templateSearch, supabase]);
 
   const toggleFavorite = useCallback(async (templateId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -459,6 +438,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   selectedTemplateId={selectedTemplateId}
                   onSelect={(id) => { setSelectedTemplateId(id); setFieldValues({}); }}
                   onToggleFavorite={toggleFavorite}
+                  onSearch={setTemplateSearch}
                 />
               )}
               {step === 1 && (
