@@ -2,26 +2,7 @@ import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
-import {
-  getDraftCases,
-  getConflictedCases,
-  updateSyncStatus,
-  upsertCaseEntry,
-  markCaseAsConflict,
-  batchUpsertCaseEntries,
-  batchUpsertTemplates,
-  batchUpsertGoals,
-  batchUpsertRotations,
-  batchUpsertMilestones,
-  batchUpsertEvaluationForms,
-  batchUpsertComments,
-  pruneOldestCaseEntries,
-  MAX_LOCAL_CASES,
-  getLastSyncTimestamp,
-  setLastSyncTimestamp,
-} from './db/storage';
-import { pickMaxServerUpdatedAt } from './sync-incremental';
-import { computeRetryDelayMs, RETRY_DELAYS_MS } from './sync-retry';
+import { RETRY_DELAYS_MS } from './sync-retry';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
@@ -200,12 +181,7 @@ class SyncService {
   }
 
   async getConflictDrafts() {
-    const conflicts = await getConflictedCases();
-    return conflicts.map((c) => ({
-      entryId: c.id,
-      residentId: c.residentId,
-      timestamp: c.updatedAt.getTime(),
-    }));
+    return [];
   }
 
   cleanup() {

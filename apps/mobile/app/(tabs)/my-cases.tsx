@@ -3,9 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, FlatList, 
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
-import { getDatabase } from '../../lib/db/database';
-import { CaseEntry } from '../../lib/db/models/CaseEntry';
-import { getAllCasesForResident, getConflictedCases } from '../../lib/db/storage';
+
 import { syncService } from '../../lib/sync';
 import { supabase } from '../../lib/supabase';
 import { NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
@@ -109,33 +107,25 @@ export default function MyCasesScreen() {
 
     if (!profile) { setLoading(false); return; }
 
-    const db = getDatabase();
-    const localEntries = await getAllCasesForResident(profile.id);
-    const localTemplates = await db.get<import('../../lib/db/models/CaseTemplate').CaseTemplate>('case_templates').query().fetch();
-    const templateMap = new Map(localTemplates.map((t) => [t.id, t]));
+    const { data: entries, error } = await supabase
+      .from('case_entries')
+      .select('id, patient_mrn, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
+      .eq('resident_id', profile.id);
 
-    const conflicts = await getConflictedCases();
-
-    const mapped: CaseData[] = localEntries.map((entry: CaseEntry) => {
-      const tmpl = templateMap.get(entry.templateId);
-      return {
-        id: entry.id,
-        patient_mrn: entry.patientMrn,
-        patient_dob: entry.patientDob,
-        case_date: entry.caseDate,
-        status: (entry.status ?? 'draft') as CaseStatus,
-        template_name: tmpl?.name ?? '',
-        template_specialty: tmpl?.specialty ?? '',
-        is_deidentified: entry.isDeidentified ?? true,
-        local_sync_status: entry.localSyncStatus,
-      };
-    });
+    const mapped: CaseData[] = (entries ?? []).map((entry: any) => ({
+      id: entry.id,
+      patient_mrn: entry.patient_mrn,
+      patient_dob: entry.patient_dob,
+      case_date: entry.case_date,
+      status: entry.status ?? ('draft' as CaseStatus),
+      template_name: entry.case_templates?.name ?? '',
+      template_specialty: entry.case_templates?.specialty ?? '',
+      is_deidentified: entry.is_deidentified ?? true,
+      local_sync_status: entry.local_sync_status ?? '',
+    }));
 
     setCases(mapped);
-
-    if (conflicts.length > 0) {
-      setConflictDrafts(conflicts.map((c) => ({ entryId: c.id, residentId: c.residentId })));
-    }
+    setConflictDrafts([]);
 
     setLoading(false);
   }, []);

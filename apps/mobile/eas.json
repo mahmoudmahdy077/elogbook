@@ -14,7 +14,8 @@
         "NODE_OPTIONS": "--max-old-space-size=4096",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true",
         "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://example@sentry.io/0"
       },
       "channel": "production",
       "autoIncrement": true,
@@ -34,7 +35,8 @@
         "NODE_OPTIONS": "--max-old-space-size=4096",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://example@sentry.io/0"
       },
       "channel": "preview",
       "distribution": "internal",
@@ -54,7 +56,8 @@
         "NODE_ENV": "development",
         "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://example@sentry.io/0"
       },
       "channel": "development",
       "distribution": "internal",

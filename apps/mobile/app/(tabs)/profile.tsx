@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-na
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
-import { getDatabase } from '../../lib/db/database';
+
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
@@ -175,32 +175,6 @@ export default function ProfileScreen() {
   }, [loadProfile]);
 
   const handleSignOut = async () => {
-    // Clear local WatermelonDB data before signing out
-    try {
-      const db = getDatabase();
-      const tableNames = [
-        'case_entries',
-        'case_templates',
-        'program_goals',
-        'rotations',
-        'milestones',
-        'evaluation_forms',
-        'comments',
-        'shifts',
-      ];
-
-      await db.write(async () => {
-        for (const tableName of tableNames) {
-          const records = await db.get(tableName).query().fetch();
-          for (const record of records) {
-            await record.destroyPermanently();
-          }
-        }
-      });
-    } catch (err) {
-      console.error('Failed to clear local data on sign out:', err);
-    }
-
     await supabase.auth.signOut();
     router.replace('/login');
   };

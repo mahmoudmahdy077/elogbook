@@ -4,6 +4,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSyncInit } from '../../lib/sync';
 import { useAuthGuard, getRoleFromAuth } from '../../lib/auth-guard';
+import { SideMenuProvider } from '../../lib/side-menu-context';
+import SideMenu from '../../components/SideMenu';
 import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
@@ -40,88 +42,93 @@ export default function TabLayout() {
   useSyncInit();
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const [role, setRole] = useState<UserRole | null>(null);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) return;
     (async () => {
-      const { role } = await getRoleFromAuth();
+      const { role, fullName } = await getRoleFromAuth();
       if (role) setRole(role);
+      if (fullName) setUserName(fullName);
     })();
   }, [isAuthenticated]);
 
   return (
-    <ScreenErrorBoundary screenName="Tabs">
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopColor: clinicalTokens.colors.border.DEFAULT,
-            borderTopWidth: 1,
-            height: 60,
-            paddingBottom: 6,
-            paddingTop: 6,
-          },
-          tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
-          tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
-          tabBarLabelStyle: {
-            fontFamily: clinicalTokens.fonts.body,
-            fontSize: 11,
-            fontWeight: '500',
-          },
-          animation: 'fade' as const,
-        }}
-      >
-        {/* Tab 1 — Dashboard */}
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Dashboard',
-            tabBarIcon: ({ color, size }) => (
-              <TabIcon name="home" color={color as string} size={size} />
-            ),
-          }}
-        />
-
-        {/* Tab 2 — New Case (center elevated) */}
-        <Tabs.Screen
-          name="log-case"
-          listeners={({ navigation }: { navigation: any }) => ({
-            tabPress: (e: any) => {
-              if (role && role !== 'resident') {
-                e.preventDefault();
-              }
+    <SideMenuProvider>
+      <ScreenErrorBoundary screenName="Tabs">
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: '#FFFFFF',
+              borderTopColor: clinicalTokens.colors.border.DEFAULT,
+              borderTopWidth: 1,
+              height: 60,
+              paddingBottom: 6,
+              paddingTop: 6,
             },
-          })}
-          options={{
-            title: 'New Case',
-            tabBarIcon: ({ focused }) => <CenterButton focused={focused} />,
-            tabBarLabel: () => null,
+            tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
+            tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
+            tabBarLabelStyle: {
+              fontFamily: clinicalTokens.fonts.body,
+              fontSize: 11,
+              fontWeight: '500',
+            },
+            animation: 'fade' as const,
           }}
-        />
+        >
+          {/* Tab 1 — Dashboard */}
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Dashboard',
+              tabBarIcon: ({ color, size }) => (
+                <TabIcon name="home" color={color as string} size={size} />
+              ),
+            }}
+          />
 
-        {/* Tab 3 — Profile */}
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ color, size }) => (
-              <TabIcon name="person" color={color as string} size={size} />
-            ),
-          }}
-        />
+          {/* Tab 2 — New Case (center elevated) */}
+          <Tabs.Screen
+            name="log-case"
+            listeners={({ navigation }: { navigation: any }) => ({
+              tabPress: (e: any) => {
+                if (role && role !== 'resident') {
+                  e.preventDefault();
+                }
+              },
+            })}
+            options={{
+              title: 'New Case',
+              tabBarIcon: ({ focused }) => <CenterButton focused={focused} />,
+              tabBarLabel: () => null,
+            }}
+          />
 
-        {/* Hidden screens (side menu only) */}
-        <Tabs.Screen name="my-cases" options={{ href: null }} />
-        <Tabs.Screen name="approvals" options={{ href: null }} />
-        <Tabs.Screen name="rotations" options={{ href: null }} />
-        <Tabs.Screen name="ai-insights" options={{ href: null }} />
-        <Tabs.Screen name="duty-hours" options={{ href: null }} />
-        <Tabs.Screen name="evaluations" options={{ href: null }} />
-        <Tabs.Screen name="milestones" options={{ href: null }} />
-        <Tabs.Screen name="case-detail" options={{ href: null }} />
-        <Tabs.Screen name="analytics" options={{ href: null }} />
-      </Tabs>
-    </ScreenErrorBoundary>
+          {/* Tab 3 — Profile */}
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+              tabBarIcon: ({ color, size }) => (
+                <TabIcon name="person" color={color as string} size={size} />
+              ),
+            }}
+          />
+
+          {/* Hidden screens (side menu only) */}
+          <Tabs.Screen name="my-cases" options={{ href: null }} />
+          <Tabs.Screen name="approvals" options={{ href: null }} />
+          <Tabs.Screen name="rotations" options={{ href: null }} />
+          <Tabs.Screen name="ai-insights" options={{ href: null }} />
+          <Tabs.Screen name="duty-hours" options={{ href: null }} />
+          <Tabs.Screen name="evaluations" options={{ href: null }} />
+          <Tabs.Screen name="milestones" options={{ href: null }} />
+          <Tabs.Screen name="case-detail" options={{ href: null }} />
+          <Tabs.Screen name="analytics" options={{ href: null }} />
+        </Tabs>
+      </ScreenErrorBoundary>
+      <SideMenu role={role} userName={userName} />
+    </SideMenuProvider>
   );
 }

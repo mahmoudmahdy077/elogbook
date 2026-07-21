@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
-import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
+
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
@@ -41,9 +41,11 @@ export default function DashboardScreen() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     loadData();
+  }, [loadData]));
 
+  useEffect(() => {
     // Detect role for conditional rendering
     (async () => {
       const { role } = await getRoleFromAuth();
@@ -80,16 +82,7 @@ export default function DashboardScreen() {
   }, []);
 
   const updateLastSyncLabel = async () => {
-    const ts = await getLastSyncTimestamp();
-    if (!ts) {
-      setLastSyncAgo('Never');
-      return;
-    }
-    const diffMs = Date.now() - ts;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) setLastSyncAgo('Just now');
-    else if (diffMin < 60) setLastSyncAgo(`${diffMin}m ago`);
-    else setLastSyncAgo(`${Math.floor(diffMin / 60)}h ago`);
+    setLastSyncAgo('');
   };
 
   const loadData = async () => {
@@ -140,27 +133,9 @@ export default function DashboardScreen() {
           specialty: g.specialty,
         })));
       }
-    } else {
-      const localGoals = await getAllGoalsForResident(profileId);
-      setGoals(localGoals.map((g) => ({
-        id: g.id,
-        title: g.title,
-        current: g.currentCount,
-        target: g.targetCount,
-        specialty: g.specialty,
-      })));
     }
 
-    const localCases = await getAllCasesForResident(profileId);
-    if (localCases.length > 0) {
-      const counts = { draft: 0, pending: 0, approved: 0 };
-      for (const c of localCases) {
-        if (c.status === 'draft') counts.draft++;
-        else if (c.status === 'pending') counts.pending++;
-        else if (c.status === 'approved') counts.approved++;
-      }
-      setStats(counts);
-    } else if (isOnline) {
+    if (isOnline) {
       const { data: cases } = await supabase
         .from('case_entries')
         .select('status')

@@ -12,9 +12,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
-import { getDatabase } from '../../lib/db/database';
-import type { CaseEntry } from '../../lib/db/models/CaseEntry';
-import { upsertCaseEntry } from '../../lib/db/storage';
+
 import { useHaptics } from '../../lib/haptics';
 import Animated from 'react-native-reanimated';
 import { Entering } from '../../lib/animations';
@@ -77,33 +75,6 @@ export default function CaseDetailScreen() {
 
     setRole(profile.role as UserRole);
 
-    const db = getDatabase();
-    try {
-      const localEntry = await db.get<CaseEntry>('case_entries').find(caseId);
-      if (localEntry) {
-        setCaseDetail({
-          id: localEntry.id,
-          resident_name: '',
-          specialty: '',
-          template_name: '',
-          case_date: localEntry.caseDate ?? '',
-          status: (localEntry.status ?? 'draft') as CaseStatus,
-          is_deidentified: localEntry.isDeidentified ?? true,
-          patient_mrn: localEntry.patientMrn ?? null,
-          patient_dob: localEntry.patientDob ?? null,
-          patient_age_years: localEntry.patientAgeYears ?? null,
-          patient_hash: localEntry.patientHash ?? null,
-          field_values: localEntry.fieldValues ?? {},
-          rejection_comment: null,
-          created_at: localEntry.createdAt?.toISOString() ?? '',
-          updated_at: localEntry.updatedAt?.toISOString() ?? '',
-        });
-        setLoading(false);
-      }
-    } catch {
-      // Not in local DB — proceed to network fetch
-    }
-
     if (!isOffline) {
       const { data: entry } = await supabase
         .from('case_entries')
@@ -135,7 +106,7 @@ export default function CaseDetailScreen() {
           created_at: e.created_at as string,
           updated_at: e.updated_at as string,
         });
-        await upsertCaseEntry(entry as Record<string, unknown>);
+
       }
     }
 

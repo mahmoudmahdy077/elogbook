@@ -15,12 +15,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
-import { saveDraftCase, updateSyncStatus } from '../../lib/db/storage';
-import { getDatabase } from '../../lib/db/database';
-import type { CaseEntry } from '../../lib/db/models/CaseEntry';
+
 import { useHaptics } from '../../lib/haptics';
 import { generatePatientHash } from '../../lib/patient-hash';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
@@ -63,7 +61,7 @@ export default function LogCaseScreen() {
   const [confirmationSuccess, setConfirmationSuccess] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const confirmationTypeRef = useRef<'offline' | 'submitted' | null>(null);
-  const editEntryRef = useRef<CaseEntry | null>(null);
+
   const syncColorMap: Record<string, string> = {
     // Intentional: sync status indicator colors — these are not UI theme colors
     // but data-driven mappings from sync state class names to icon colors.
@@ -104,9 +102,9 @@ export default function LogCaseScreen() {
 
   const haptics = useHaptics();
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     loadTemplates();
-  }, []); /* eslint-disable-line react-hooks/exhaustive-deps */
+  }, [loadTemplates]));
 
   // When the route is opened with `editCaseId`, hydrate the form from the
   // local DB row (or fall back to Supabase if not cached). The submit path
@@ -114,43 +112,25 @@ export default function LogCaseScreen() {
   useEffect(() => {
     if (!editCaseId) return;
     (async () => {
-      const db = getDatabase();
-      let entry: CaseEntry | null = null;
-      try {
-        entry = await db.get<CaseEntry>('case_entries').find(editCaseId);
-      } catch {
-        // not in local cache — try server
-      }
-      if (!entry) {
-        const { data } = await supabase
-          .from('case_entries')
-          .select('*')
-          .eq('id', editCaseId)
-          .single();
-        if (data) {
-          setIsDeidentified(Boolean(data.is_deidentified));
-          setPatientMrn(data.patient_mrn ?? '');
-          setPatientDob(data.patient_dob ?? '');
-          setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-          setCaseDate(data.case_date ?? '');
-          setSelectedTemplateId(String(data.template_id ?? ''));
-          const fv = typeof data.field_values === 'string'
-            ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
-            : ((data.field_values as Record<string, string>) ?? {});
-          setFieldValues(fv);
-          return;
-        }
+      const { data } = await supabase
+        .from('case_entries')
+        .select('*')
+        .eq('id', editCaseId)
+        .single();
+      if (data) {
+        setIsDeidentified(Boolean(data.is_deidentified));
+        setPatientMrn(data.patient_mrn ?? '');
+        setPatientDob(data.patient_dob ?? '');
+        setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
+        setCaseDate(data.case_date ?? '');
+        setSelectedTemplateId(String(data.template_id ?? ''));
+        const fv = typeof data.field_values === 'string'
+          ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
+          : ((data.field_values as Record<string, string>) ?? {});
+        setFieldValues(fv);
+      } else {
         Alert.alert('Case not found', 'The case you tried to edit is no longer available.');
-        return;
       }
-      editEntryRef.current = entry;
-      setIsDeidentified(Boolean(entry.isDeidentified));
-      setPatientMrn(entry.patientMrn ?? '');
-      setPatientDob(entry.patientDob ?? '');
-      setPatientAge(entry.patientAgeYears != null ? String(entry.patientAgeYears) : '');
-      setCaseDate(entry.caseDate ?? '');
-      setSelectedTemplateId(entry.templateId ?? '');
-      setFieldValues((entry.fieldValues as Record<string, string>) ?? {});
     })();
   }, [editCaseId]);
 
@@ -444,31 +424,21 @@ export default function LogCaseScreen() {
       is_deidentified: isDeidentified,
     };
 
-    // Edit path: update the existing row in place (network first, fall back
-    // to marking the local row as `modified` so the next push picks it up).
     if (editCaseId) {
       try {
-        const targetId = editEntryRef.current?.serverId ?? editCaseId;
         const { error } = await supabase
           .from('case_entries')
           .update({
             ...caseData,
             status: 'pending',
           })
-          .eq('id', targetId);
+          .eq('id', editCaseId);
         if (error) throw error;
-        if (editEntryRef.current) {
-          await updateSyncStatus(editEntryRef.current, 'synced', targetId);
-        }
         haptics.submitSuccess();
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
         setShowConfirmation(true);
       } catch {
-        // Network failed — mark local row as `modified` so push resends.
-        if (editEntryRef.current) {
-          await updateSyncStatus(editEntryRef.current, 'modified');
-        }
         haptics.offlineSave();
         setConfirmationSuccess(false);
         confirmationTypeRef.current = 'offline';
@@ -492,22 +462,6 @@ export default function LogCaseScreen() {
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
     } catch {
-      const patientHashValue = isDeidentified
-        ? await generatePatientHash(profile.tenant_id, patientAge, '')
-        : undefined;
-      await saveDraftCase({
-        tenantId: profile.tenant_id,
-        residentId: profile.id,
-        templateId: selectedTemplate.id,
-        patientMrn: isDeidentified ? undefined : patientMrn,
-        patientDob: isDeidentified ? undefined : patientDob,
-        patientAgeYears: isDeidentified ? Number(patientAge) : undefined,
-        patientHash: patientHashValue,
-        caseDate: caseDate,
-        fieldValues: fieldValues,
-        isDeidentified: isDeidentified,
-        status,
-      });
       haptics.offlineSave();
       setConfirmationSuccess(false);
       confirmationTypeRef.current = 'offline';
