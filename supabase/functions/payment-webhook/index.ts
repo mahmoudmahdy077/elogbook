@@ -220,6 +220,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
       }
 
       const subscriptionId = session.subscription as string;
+      const customerId = session.customer as string | null;
 
       await supabase.from('subscriptions').upsert(
         {
@@ -227,6 +228,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
           plan_id,
           status: 'active',
           gateway_subscription_id: subscriptionId,
+          stripe_customer_id: customerId,
         },
         { onConflict: 'tenant_id' }
       );
@@ -250,6 +252,47 @@ export async function handleWebhook(req: Request): Promise<Response> {
           .update({ status: 'canceled' })
           .eq('gateway_subscription_id', subId);
       }
+
+      break;
+    }
+
+    case 'customer.subscription.updated': {
+      const updatedSub = event.data.object;
+      const updatedSubId = updatedSub.id as string;
+      const updatedStatus = updatedSub.status as string;
+
+      const statusMap: Record<string, string> = {
+        active: 'active',
+        past_due: 'past_due',
+        canceled: 'canceled',
+        unpaid: 'unpaid',
+        incomplete: 'incomplete',
+        incomplete_expired: 'canceled',
+        trialing: 'trialing',
+        paused: 'paused',
+      };
+
+      const mappedStatus = statusMap[updatedStatus] || updatedStatus;
+
+      // Map price to plan_id via stripe_price_id
+      const priceId = updatedSub.items?.data?.[0]?.price?.id;
+      let newPlanId: string | undefined;
+      if (priceId) {
+        const { data: plan } = await supabase
+          .from('subscription_plans')
+          .select('id')
+          .eq('stripe_price_id', priceId)
+          .maybeSingle();
+        newPlanId = plan?.id;
+      }
+
+      await supabase
+        .from('subscriptions')
+        .update({
+          status: mappedStatus,
+          ...(newPlanId ? { plan_id: newPlanId } : {}),
+        })
+        .eq('gateway_subscription_id', updatedSubId);
 
       break;
     }
@@ -279,6 +322,41 @@ export async function handleWebhook(req: Request): Promise<Response> {
           .eq('gateway_subscription_id', stripeSubId);
       }
 
+      // Populate payments table
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('tenant_id')
+        .eq('gateway_subscription_id', stripeSubId)
+        .maybeSingle();
+
+      if (sub && invoice.amount_paid && invoice.amount_paid > 0) {
+        await supabase.from('payments').insert({
+          tenant_id: sub.tenant_id,
+          amount: invoice.amount_paid,
+          currency: invoice.currency || 'usd',
+          gateway_payment_intent_id: invoice.payment_intent,
+          status: 'succeeded',
+        });
+      }
+
+      break;
+    }
+
+    case 'invoice.payment_failed': {
+      const failedInvoice = event.data.object;
+      const failedSubId = failedInvoice.subscription as string;
+      if (failedSubId) {
+        await supabase
+          .from('subscriptions')
+          .update({ status: 'past_due' })
+          .eq('gateway_subscription_id', failedSubId);
+      }
+      break;
+    }
+
+    case 'customer.subscription.trial_will_end': {
+      // Log notification — no action needed for v1
+      console.info('Trial will end soon', { subscription_id: event.data.object.id });
       break;
     }
   }
