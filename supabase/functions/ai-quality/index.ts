@@ -156,6 +156,10 @@ async function callAiProvider(
   throw new Error(`Unsupported provider: ${provider}`);
 }
 
+function scanForPhi(text: string): boolean {
+  return /\b\d{6,}\b/.test(text) || /\d{4}-\d{2}-\d{2}/.test(text) || /\d{2}\/\d{2}\/\d{4}/.test(text);
+}
+
 function validateScores(parsed: any): QualityScores {
   const completeness = Math.max(0, Math.min(100, Math.round(Number(parsed.completeness ?? 0))));
   const specificity = Math.max(0, Math.min(100, Math.round(Number(parsed.specificity ?? 0))));
@@ -236,6 +240,7 @@ serve(async (req) => {
     `)
     .eq('id', case_entry_id)
     .eq('tenant_id', tenantId)
+    .eq('is_deidentified', true)
     .is('deleted_at', null)
     .single();
 
@@ -244,6 +249,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: 'Case entry not found' }),
       { status: 404, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  if (!caseEntry.is_deidentified) {
+    return new Response(
+      JSON.stringify({ error: 'Case must be deidentified' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
@@ -263,6 +275,14 @@ serve(async (req) => {
   });
 
   const analyzedFieldCount = Object.keys(fieldValues).length;
+
+  const combinedText = JSON.stringify(fieldValues);
+  if (scanForPhi(combinedText)) {
+    return new Response(
+      JSON.stringify({ error: 'Case contains potential PHI data' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
 
   // Build prompt for AI
   const systemPrompt = `You are a clinical case entry quality assessment assistant. Analyze surgery/case log entries and provide structured quality scores.
