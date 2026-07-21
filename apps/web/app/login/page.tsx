@@ -186,18 +186,20 @@ export default function LoginPage() {
           <p className="text-sm sm:text-base text-text-muted mt-2">Sign in to your account</p>
         </div>
 
-        {/* Demo credentials banner */}
-        <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
-          <p className="text-xs font-semibold text-[#34C759] mb-1.5">🔐 Demo Accounts</p>
-          <div className="space-y-0.5">
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">resident@demo.com</code> — resident</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">director@demo.com</code> — director</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+        {/* Demo credentials banner (dev/staging only) */}
+        {process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (
+          <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
+            <p className="text-xs font-semibold text-[#34C759] mb-1.5">🔐 Demo Accounts</p>
+            <div className="space-y-0.5">
+              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">resident@demo.com</code> — resident</p>
+              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
+              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">director@demo.com</code> — director</p>
+              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
+              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+            </div>
+            <p className="text-[11px] text-[#34C759]/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
           </div>
-          <p className="text-[11px] text-[#34C759]/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
-        </div>
+        )}
 
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/5 p-6 sm:p-8 md:p-10 shadow-sm">
           {sent ? (
