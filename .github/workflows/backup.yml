@@ -1,0 +1,13 @@
+name: Backup DB
+on:
+  schedule: [{ cron: '0 3 * * *' }]
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash ./scripts/backup-db.sh
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

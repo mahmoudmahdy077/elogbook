@@ -1,0 +1,9 @@
+[projects]
+project_id = "elogbook"
+[api]
+port = 54321
+[db]
+major_version = 17
+[functions]
+enabled = true
+include = ["ai-insights", "ai-quality", "ai-gap-analysis", "generate-pdf", "create-checkout", "payment-webhook", "create-portal-session", "list-invoices", "webads-export"]

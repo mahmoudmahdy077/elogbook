@@ -16,6 +16,7 @@ jobs:
   web:
     name: Deploy Web (Vercel)
     runs-on: ubuntu-latest
+    needs: [db]
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -53,7 +54,7 @@ jobs:
       - uses: supabase/setup-cli@v2
         with:
           version: latest
-      - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all
+      - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
@@ -68,7 +69,7 @@ jobs:
     needs: [db]
     strategy:
       matrix:
-        function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
+        function: [ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export]
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2

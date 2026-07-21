@@ -37,6 +37,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 
+ENV NEXT_OUTPUT=standalone
+
 # Build the web application (Next.js standalone output)
 RUN pnpm --filter @elogbook/web build
 
