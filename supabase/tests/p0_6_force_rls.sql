@@ -19,35 +19,53 @@
 DO $$
 DECLARE
   v_table TEXT;
-  -- Tenant-scoped tables we expect to be forced. The list mirrors the
-  -- inventory in 00049_force_rls_all_tables.sql. If a new tenant-scoped
-  -- table is added later, it must be added to BOTH the migration and
-  -- this list — that is the point of the test.
+  -- Tenant-scoped tables we expect to be forced. This started as a
+  -- mirror of 00049_force_rls_all_tables.sql and was extended with
+  -- tables created in later migrations.  Migration 00096 now uses a
+  -- dynamic query so new tables are caught automatically, but the
+  -- test remains as a hard check: every known tenant-scoped table
+  -- must have FORCE RLS.
   v_expected TEXT[] := ARRAY[
-    'institutions',
-    'tenants',
-    'profiles',
-    'case_templates',
-    'case_entries',
-    'case_attachments',
+    'accreditation_frameworks',
+    'ai_config',
+    'ai_query_logs',
+    'ai_response_cache',
     'approval_requests',
+    'attachment_signatures',
     'audit_logs',
-    'program_goals',
+    'case_attachments',
+    'case_entries',
+    'case_templates',
+    'comments',
+    'consent_records',
+    'duty_periods',
+    'epa_mappings',
+    'evaluation_forms',
+    'faculty_evaluations',
     'goal_progress',
+    'institution_billing',
+    'institutions',
+    'milestones',
+    'notifications',
+    'one_time_purchases',
+    'payment_gateway_config',
+    'payments',
+    'profiles',
+    'program_goals',
+    'resident_ai_toggle',
+    'rotations',
+    'scholarly_activities',
+    'scim_tokens',
+    'shifts',
+    'stripe_events',
     'subscription_plans',
     'subscriptions',
-    'payments',
-    'one_time_purchases',
-    'ai_config',
-    'resident_ai_toggle',
-    'ai_query_logs',
-    'payment_gateway_config',
-    'accreditation_frameworks',
-    'attachment_signatures',
-    'institution_billing',
-    'consent_records',
-    'ai_response_cache',
-    'stripe_events'
+    'template_favorites',
+    'tenant_sso_configs',
+    'tenant_webhook_deliveries',
+    'tenant_webhooks',
+    'tenants',
+    'webhook_retry_queue'
   ];
   v_missing TEXT[] := ARRAY[]::TEXT[];
   v_relrowsecurity BOOLEAN;
