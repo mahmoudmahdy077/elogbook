@@ -70,29 +70,36 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { error: inviteError } = await supabase.auth.signInWithOtp({
-      email: inviteEmail.trim(),
-      options: {
-        data: {
+    try {
+      const res = await fetch(`/api/${tenantId}/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
           full_name: inviteName.trim(),
+          role: inviteRole,
           specialty: inviteSpecialty || null,
-        },
-      },
-    });
+        }),
+      });
 
-    if (inviteError) {
-      setError(inviteError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send invitation.');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
+      setSuccess(data.message || `Invitation sent to ${inviteEmail}.`);
+      resetForm();
+      router.refresh();
+      setShowInviteModal(false);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSuccess(`Invitation sent to ${inviteEmail}. Role will need to be assigned separately.`);
-    resetForm();
-    router.refresh();
-    setShowInviteModal(false);
   }
 
   async function doRoleChange() {
