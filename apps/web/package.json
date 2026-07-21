@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@elogbook/env": "workspace:*",
     "@elogbook/shared": "workspace:*",
     "@sentry/nextjs": "^10.62.0",
     "@supabase/ssr": "^0.10.3",

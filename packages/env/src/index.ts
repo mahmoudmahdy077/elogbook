@@ -56,8 +56,4 @@ export function parseWebFullEnv(source: Record<string, string | undefined>) {
   return parseOrThrow(envSchema, source, 'web-full');
 }
 
-export const env = parseOrThrow(envSchema, process.env, 'default');
-
-export const IS_DEV = env.NODE_ENV === 'development';
-export const IS_PROD = env.NODE_ENV === 'production';
-export const IS_TEST = env.NODE_ENV === 'test';
+export const env = () => parseOrThrow(envSchema, process.env, 'default');
