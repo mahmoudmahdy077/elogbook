@@ -56,6 +56,15 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const isDirectorPlus = role === 'director' || role === 'institution_admin' || role === 'admin';
 
   // ── Single RPC replaces 5+ separate queries ────────────────────────
+  // Fetch plan info for upgrade prompts
+  const { data: subData } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(slug)')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .maybeSingle();
+  const planSlug = (subData as { subscription_plans: { slug: string } } | null)?.subscription_plans?.slug;
+
   const { data: rpcData, error: rpcError } = await supabase
     .rpc('get_dashboard_data', {
       p_tenant_id: tenantId,
@@ -224,6 +233,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
           tenantType: tenant.tenant_type as 'individual' | 'institution',
           residentViolations: residentViolations.data ?? [],
           directorViolations: directorViolations.data ?? [],
+          planSlug,
         }}
       />
     </Suspense>

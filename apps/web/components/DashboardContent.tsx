@@ -59,6 +59,7 @@ interface DashboardData {
   tenantType: 'individual' | 'institution';
   residentViolations?: ViolationRow[];
   directorViolations?: ViolationRow[];
+  planSlug?: string;
 }
 
 /* ===== Apple Watch-Style KPI Ring ===== */
@@ -184,6 +185,24 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         <KpiRing value={stats.approved} max={totalCases || 1} label="Approved" color="#34C759" delay={180} />
         <KpiRing value={stats.rejected} max={totalCases || 1} label="Rejected" color="#FF3B30" delay={240} />
       </div>
+
+      {/* Upgrade prompt for Free plan near limit */}
+      {data.planSlug === 'free' && totalCases >= 18 && totalCases < 20 && (
+        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+          <p className="text-sm font-medium text-text-primary mb-1">
+            You&apos;re approaching your free limit ({totalCases}/20 cases)
+          </p>
+          <p className="text-xs text-text-muted mb-3">
+            Upgrade for unlimited case logging and AI-powered insights.
+          </p>
+          <Link
+            href={`/${tenantSlug}/billing`}
+            className="inline-block px-4 py-1.5 rounded-full bg-primary text-white text-xs font-medium hover:opacity-90 transition-opacity"
+          >
+            View upgrade options
+          </Link>
+        </div>
+      )}
 
       {/* Duty Hours Violations */}
       {(residentViolations.length > 0 || directorViolations.length > 0) && (
