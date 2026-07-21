@@ -2,6 +2,7 @@ import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ClientSubscriptionPlans from '@/components/ClientSubscriptionPlans';
+import ManageSubscriptionButton from '@/components/ManageSubscriptionButton';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface SubscriptionPlan {
@@ -107,7 +108,10 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
       {subscription && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
-          <h2 className="text-lg font-semibold mb-3">Current Plan</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Current Plan</h2>
+            <ManageSubscriptionButton />
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl font-bold">
