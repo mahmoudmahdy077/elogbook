@@ -50,7 +50,7 @@ const mockFrom = vi.fn();
 const mockSupabase = {
   from: mockFrom,
   rpc: mockRpc,
-  auth: { getUser: vi.fn() },
+  auth: { getUser: vi.fn(), getSession: vi.fn() },
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -113,6 +113,9 @@ describe('GET /api/[tenant]/audit/export', () => {
     mockSupabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'u-1' } },
       error: null,
+    });
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'user-jwt-token' } },
     });
 
     // Default mocks: profile lookup succeeds, audit logs return sample data

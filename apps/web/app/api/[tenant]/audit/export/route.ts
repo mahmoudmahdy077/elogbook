@@ -157,13 +157,16 @@ export async function GET(
       tenant: tenant.slug,
     };
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const userJwt = session?.access_token ?? '';
+
     let pdfResponse;
     try {
       pdfResponse = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''}`,
+          'Authorization': `Bearer ${userJwt}`,
         },
         body: JSON.stringify(pdfPayload),
       });
