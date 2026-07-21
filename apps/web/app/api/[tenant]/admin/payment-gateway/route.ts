@@ -51,66 +51,28 @@ export async function POST(
     return NextResponse.json({ error: 'Publishable key is required.' }, { status: 400 });
   }
 
+  const { data: result, error } = await supabase.rpc('store_payment_gateway_secret', {
+    p_provider: provider,
+    p_publishable_key: publishable_key,
+    p_secret_key: secret_key || '',
+    p_webhook_secret: webhook_secret || '',
+    p_endpoint_url: endpoint_url || null,
+    p_mode: (is_active ? 'live' : 'test'),
+  });
+
+  if (error) {
+    console.error('payment-gateway rpc error:', error.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+
+  if (result?.error) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
   const adminClient = createServiceRoleClient();
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'payment_gateway_upsert', resource_type: 'payment_gateway_config', resource_id: result.id, changes: {} });
 
-  const payload: Record<string, unknown> = {
-    tenant_id: profile.tenant_id,
-    provider,
-    publishable_key,
-    is_active: is_active ?? false,
-  };
-
-  if (secret_key) {
-    payload.encrypted_secret_key = secret_key;
-  }
-  if (webhook_secret) {
-    payload.encrypted_webhook_secret = webhook_secret;
-  }
-  if (endpoint_url !== undefined) {
-    payload.endpoint_url = endpoint_url;
-  }
-
-  const { data: existing } = await adminClient
-    .from('payment_gateway_config')
-    .select('id')
-    .eq('tenant_id', profile.tenant_id)
-    .maybeSingle();
-
-  let configId: string | undefined;
-
-  if (existing) {
-    const updatePayload = { ...payload };
-    delete updatePayload.tenant_id;
-
-    const { error } = await adminClient
-      .from('payment_gateway_config')
-      .update(updatePayload)
-      .eq('id', existing.id);
-
-    if (error) {
-      console.error('payment-gateway error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    configId = existing.id;
-  } else {
-    const { data: newConfig, error } = await adminClient
-      .from('payment_gateway_config')
-      .insert(payload)
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('payment-gateway error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    configId = newConfig!.id;
-  }
-
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'payment_gateway_upsert', resource_type: 'payment_gateway_config', resource_id: configId!, changes: {} });
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, config: { id: result.id } });
 }
 
 export async function PUT(

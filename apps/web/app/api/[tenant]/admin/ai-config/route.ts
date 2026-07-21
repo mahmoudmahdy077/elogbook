@@ -63,67 +63,27 @@ export async function POST(
     return NextResponse.json({ error: 'Model is required.' }, { status: 400 });
   }
 
+  const { data: result, error } = await supabase.rpc('store_ai_config', {
+    p_provider: provider,
+    p_model: model,
+    p_api_key: api_key || '',
+    p_endpoint_url: endpoint_url || null,
+    p_is_active: is_active ?? false,
+  });
+
+  if (error) {
+    console.error('ai-config rpc error:', error.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+
+  if (result?.error) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
   const adminClient = createServiceRoleClient();
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'ai_config_upsert', resource_type: 'ai_config', resource_id: result.id, changes: {} });
 
-  const payload: Record<string, unknown> = {
-    tenant_id: profile.tenant_id,
-    provider,
-    model,
-    is_active: is_active ?? false,
-  };
-
-  if (api_key) {
-    payload.encrypted_api_key = api_key;
-  }
-  if (endpoint_url !== undefined) {
-    payload.endpoint_url = endpoint_url;
-  }
-
-  const { data: existing } = await adminClient
-    .from('ai_config')
-    .select('id')
-    .eq('tenant_id', profile.tenant_id)
-    .maybeSingle();
-
-  let configId: string | undefined;
-
-  if (existing) {
-    const updatePayload = { ...payload };
-    delete updatePayload.tenant_id;
-
-    const { error } = await adminClient
-      .from('ai_config')
-      .update(updatePayload)
-      .eq('id', existing.id);
-
-    if (error) {
-      console.error('ai-config error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    configId = existing.id;
-  } else {
-    if (!api_key) {
-      return NextResponse.json({ error: 'API Key is required for new configuration.' }, { status: 400 });
-    }
-
-    const { data: newConfig, error } = await adminClient
-      .from('ai_config')
-      .insert(payload)
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('ai-config error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    configId = newConfig!.id;
-  }
-
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'ai_config_upsert', resource_type: 'ai_config', resource_id: configId!, changes: {} });
-
-  return NextResponse.json({ success: true, has_key: !!api_key || !!existing });
+  return NextResponse.json({ success: true, config: { id: result.id } });
 }
 
 export async function PUT(
