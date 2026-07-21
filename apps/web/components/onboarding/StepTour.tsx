@@ -20,7 +20,7 @@ const TOUR_ITEMS: TourItem[] = [
   },
   {
     icon: (
-      <svg className="w-6 h-6 text-[#34C759]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <svg className="w-6 h-6 text-success" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
       </svg>
     ),
@@ -29,7 +29,7 @@ const TOUR_ITEMS: TourItem[] = [
   },
   {
     icon: (
-      <svg className="w-6 h-6 text-[#FF9500]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <svg className="w-6 h-6 text-warning" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
         <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
       </svg>
@@ -48,7 +48,7 @@ const TOUR_ITEMS: TourItem[] = [
   },
   {
     icon: (
-      <svg className="w-6 h-6 text-[#FF3B30]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <svg className="w-6 h-6 text-danger" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fillRule="evenodd" d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-8.75 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z" clipRule="evenodd" />
       </svg>
     ),
@@ -90,9 +90,9 @@ export default function StepTour({ onComplete }: StepTourProps) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 * i, duration: 0.3 }}
-            className="flex gap-3 p-4 rounded-xl bg-white dark:bg-neutral-dark border border-border"
+            className="flex gap-3 p-4 rounded-xl bg-surface-solid border border-border"
           >
-            <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-neutral-dark flex items-center justify-center flex-shrink-0">
               {item.icon}
             </div>
             <div className="min-w-0">

@@ -8,9 +8,9 @@ interface Notification {
   id: string;
   title: string;
   body: string | null;
-  read: boolean;
+  read_at: string | null;
   created_at: string;
-  data?: Record<string, unknown> | null;
+  link?: string | null;
 }
 
 interface NotificationBellProps {
@@ -33,7 +33,7 @@ export default function NotificationBell({
     async function fetchNotifications() {
       const { data } = await supabase
         .from('notifications')
-        .select('id, title, body, read, created_at, data')
+        .select('id, title, body, read_at, created_at, link')
         .eq('user_id', userId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
@@ -42,7 +42,7 @@ export default function NotificationBell({
       if (data) {
         const typed = data as Notification[];
         setNotifications(typed);
-        setUnreadCount(typed.filter((n) => !n.read).length);
+        setUnreadCount(typed.filter((n) => n.read_at === null).length);
       }
     }
     fetchNotifications();
@@ -81,7 +81,7 @@ export default function NotificationBell({
           );
           // Recalculate unread count
           setNotifications((prev) => {
-            setUnreadCount(prev.filter((n) => !n.read).length);
+            setUnreadCount(prev.filter((n) => n.read_at === null).length);
             return prev;
           });
         }
@@ -110,16 +110,16 @@ export default function NotificationBell({
   async function markAsRead(notificationId: string) {
     await supabase
       .from('notifications')
-      .update({ read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('id', notificationId);
   }
 
   async function markAllAsRead() {
     await supabase
       .from('notifications')
-      .update({ read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('user_id', userId)
-      .eq('read', false);
+      .is('read_at', null);
     setUnreadCount(0);
   }
 
@@ -218,19 +218,19 @@ export default function NotificationBell({
                     type="button"
                     onClick={() => markAsRead(notif.id)}
                     className={`w-full text-left px-4 py-3 hover:bg-neutral-dark transition-colors ${
-                      !notif.read ? 'bg-primary-glow' : ''
+                      notif.read_at === null ? 'bg-primary-glow' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                          !notif.read ? 'bg-primary' : 'bg-transparent'
+                          notif.read_at === null ? 'bg-primary' : 'bg-transparent'
                         }`}
                       />
                       <div className="min-w-0 flex-1">
                         <p
                           className={`text-sm ${
-                            !notif.read
+                            notif.read_at === null
                               ? 'font-semibold text-text-primary'
                               : 'text-text-secondary'
                           }`}

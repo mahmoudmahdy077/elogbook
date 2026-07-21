@@ -41,7 +41,7 @@ export default function LocaleSwitcher() {
               'flex items-center gap-2 px-2 py-1.5 rounded-md border text-xs transition-colors ' +
               (active === l.code
                 ? 'border-primary text-primary bg-primary/5'
-                : 'border-border text-neutral-light/60 hover:text-neutral-light hover:bg-black/5 dark:hover:bg-white/5')
+                : 'border-border text-neutral-light/60 hover:text-neutral-light hover:bg-neutral-dark')
             }
             aria-label={`Switch to ${l.label}`}
             aria-pressed={active === l.code}

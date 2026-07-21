@@ -87,7 +87,7 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
 function SuccessState({ email }: { email: string }) {
   return (
     <div className="text-center py-6">
-      <div className="w-12 h-12 rounded-full bg-[rgba(52,199,89,0.12)] border border-[rgba(52,199,89,0.20)] text-[#34C759] flex items-center justify-center mx-auto mb-4">
+      <div className="w-12 h-12 rounded-full bg-success/10 border border-success/20 text-success flex items-center justify-center mx-auto mb-4">
         <svg className="w-6 h-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
@@ -168,9 +168,9 @@ export default function LoginPage() {
 
   if (showForgot) {
     return (
-      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm sm:max-w-md">
-          <div className="bg-white rounded-2xl border border-black/5 p-6 sm:p-8 md:p-10">
+          <div className="bg-surface-solid rounded-2xl border border-border p-6 sm:p-8 md:p-10">
             <ForgotPasswordForm email={email} onBack={() => setShowForgot(false)} />
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
+    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-text-primary tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
@@ -189,19 +189,19 @@ export default function LoginPage() {
         {/* Demo credentials banner (dev/staging only) */}
         {process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (
           <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
-            <p className="text-xs font-semibold text-[#34C759] mb-1.5">🔐 Demo Accounts</p>
+            <p className="text-xs font-semibold text-success mb-1.5">🔐 Demo Accounts</p>
             <div className="space-y-0.5">
-              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">resident@demo.com</code> — resident</p>
-              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
-              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">director@demo.com</code> — director</p>
-              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
-              <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">resident@demo.com</code> — resident</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">director@demo.com</code> — director</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
             </div>
-            <p className="text-[11px] text-[#34C759]/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
+            <p className="text-[11px] text-success/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/5 p-6 sm:p-8 md:p-10 shadow-sm">
+        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 shadow-sm">
           {sent ? (
             <SuccessState email={email} />
           ) : (
@@ -233,7 +233,6 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOffIcon /> : <EyeIcon />}

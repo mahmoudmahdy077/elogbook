@@ -46,8 +46,8 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-black/5 p-5 mt-6">
-      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">AI Case Insights</h2>
+    <div className="bg-surface-solid rounded-2xl border border-border p-5 mt-6">
+      <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">AI Case Insights</h2>
 
       {error && (
         <div className="mb-4">
@@ -55,7 +55,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         </div>
       )}
 
-      <label htmlFor="ai-query" className="block text-sm font-medium text-[#3C3C43] mb-1.5">
+      <label htmlFor="ai-query" className="block text-sm font-medium text-text-secondary mb-1.5">
         Ask a question about your cases (optional)
       </label>
       <textarea
@@ -64,7 +64,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         onChange={(e) => setQuery(e.target.value)}
         rows={2}
         placeholder="e.g., What patterns do you see in my surgical cases?"
-        className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F2F7] border border-black/5 text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors resize-none mb-4"
+        className="w-full px-3.5 py-2.5 rounded-xl bg-backdrop border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors resize-none mb-4"
       />
 
       <button
@@ -82,7 +82,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
       )}
 
       {response && !loading && (
-        <div className="mt-4 bg-[#F2F2F7] rounded-xl p-4 text-sm text-[#3C3C43] whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto border border-black/5">
+        <div className="mt-4 bg-backdrop rounded-xl p-4 text-sm text-text-secondary whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto border border-border">
           {response}
         </div>
       )}

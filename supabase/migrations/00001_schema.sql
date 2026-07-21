@@ -180,7 +180,7 @@ CREATE TABLE one_time_purchases (
 CREATE TABLE ai_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE UNIQUE,
-  provider TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'azure', 'openrouter', 'custom')),
+  provider TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'azure', 'openrouter', 'aihubmix', 'custom')),
   model TEXT NOT NULL,
   encrypted_api_key TEXT NOT NULL,
   endpoint_url TEXT,

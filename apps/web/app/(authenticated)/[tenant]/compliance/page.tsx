@@ -48,7 +48,7 @@ export default async function CompliancePage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1 text-[#000000]">Compliance Reports</h1>
+      <h1 className="text-2xl font-bold mb-1 text-text-primary">Compliance Reports</h1>
       <p className="text-sm text-text-muted mb-6">
         HIPAA / GDPR / SCFHS compliance overview for {auth.tenant.slug}
       </p>

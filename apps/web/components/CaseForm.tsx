@@ -64,7 +64,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-  const [isDeidentified, setIsDeidentified] = useState(false);
+  const [isDeidentified, setIsDeidentified] = useState(true);
   // SECURITY: patientMrn and patientDob are PHI. They MUST NOT be persisted to
   // localStorage, sessionStorage, or any other client-side storage. They live
   // only in React state and are written to the server on save/submit.
@@ -74,6 +74,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const [caseDate, setCaseDate] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [accreditationMappings, setAccreditationMappings] = useState<AccreditationMapping[]>([]);
+
+  const handleIsDeidentifiedChange = (value: boolean) => {
+    if (isDeidentified && !value) {
+      const confirmed = window.confirm("You're about to store patient PHI. Continue?");
+      if (!confirmed) return;
+    }
+    setIsDeidentified(value);
+  };
 
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -349,7 +357,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
         if (e.key === 'Enter') {
           e.preventDefault();
           setSubmitted(false); setSubmittedCaseId(null); setStep(0); setSelectedTemplateId('');
-          setFieldValues({}); setIsDeidentified(false); setPatientMrn(''); setPatientDob('');
+          setFieldValues({}); setIsDeidentified(true); setPatientMrn(''); setPatientDob('');
           setPatientAgeYears(''); setCaseDate(''); setAccreditationMappings([]); setErrors([]);
         }
         return;
@@ -393,7 +401,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             <h3 className="text-xl font-semibold text-text-primary tracking-[-0.03em] font-sans mb-1">
               Case Logged Successfully
             </h3>
-            <p className="text-sm text-[#8E8E93]">
+            <p className="text-sm text-text-muted">
               Your case has been saved and is now visible in your logbook.
             </p>
           </div>
@@ -401,7 +409,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             {submittedCaseId && (
               <a
                 href={`/${tenantSlug}/cases/${submittedCaseId}`}
-                className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               >
                 View Case
               </a>
@@ -413,9 +421,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               Go to My Cases
             </a>
           </div>
-          <p className="text-xs text-[#8E8E93] pt-2">
+          <p className="text-xs text-text-muted pt-2">
             Press{' '}
-            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-xs text-[#3C3C43] dark:text-text-secondary font-mono">
+            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-border text-xs text-text-secondary font-mono">
               Enter
             </kbd>{' '}
             to log another case
@@ -447,7 +455,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   patientMrn={patientMrn}
                   patientDob={patientDob}
                   patientAgeYears={patientAgeYears}
-                  onIsDeidentifiedChange={setIsDeidentified}
+                  onIsDeidentifiedChange={handleIsDeidentifiedChange}
                   onMrnChange={setPatientMrn}
                   onDobChange={setPatientDob}
                   onAgeChange={setPatientAgeYears}
@@ -484,7 +492,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               type="button"
               onClick={handleBack}
               disabled={step === 0}
-              className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Back
             </button>
@@ -494,7 +502,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={savingDraft}
-                  className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
                   {savingDraft ? 'Saving...' : 'Save Draft'}
                 </button>

@@ -142,7 +142,7 @@ export default function MilestonesMatrix({
                 return (
                   <div
                     key={milestone.id}
-                    className="grid grid-cols-[200px_repeat(5,1fr)_100px] hover:bg-black/[0.02] transition-colors"
+                    className="grid grid-cols-[200px_repeat(5,1fr)_100px] hover:bg-neutral-dark transition-colors"
                   >
                     {/* Sub-competency label */}
                     <div className="px-4 py-3 flex items-center">

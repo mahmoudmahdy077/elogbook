@@ -49,50 +49,16 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       }
 
       return (
-        <div
-          role="alert"
-          style={{
-            padding: '2rem',
-            textAlign: 'center',
-            borderRadius: '0.75rem',
-            background: 'var(--color-neutral-dark, #0F172A)',
-            border: '1px solid var(--color-crimson-glow, rgba(239, 68, 68, 0.45))',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 600,
-              fontFamily: 'var(--font-heading)',
-              color: '#F87171',
-              marginBottom: '0.5rem',
-            }}
-          >
+        <div role="alert" className="p-8 text-center rounded-xl bg-surface-solid border border-danger/30">
+          <h2 className="text-xl font-heading font-semibold text-danger mb-2">
             Something went wrong
           </h2>
-          <p
-            style={{
-              fontSize: '0.875rem',
-              color: 'var(--color-neutral-light, #E2E8F0)',
-              opacity: 0.7,
-              marginBottom: '1.5rem',
-            }}
-          >
+          <p className="text-sm text-text-secondary mb-6">
             An unexpected error occurred. Please try again.
           </p>
           <button
             onClick={this.reset}
-            style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: '0.5rem',
-              border: '1px solid var(--color-primary, #0D9488)',
-              background: 'transparent',
-              color: 'var(--color-primary, #0D9488)',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              transition: 'background 200ms ease, color 200ms ease',
-            }}
+            className="px-5 py-2 rounded-lg border border-primary bg-transparent text-primary cursor-pointer text-sm font-medium transition-colors duration-200 hover:bg-primary hover:text-text-on-primary"
           >
             Try again
           </button>

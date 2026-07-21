@@ -145,8 +145,8 @@ export default function OnboardingWizard({
             transition={{ duration: 0.3 }}
           >
             <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#34C759]/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-[#34C759]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-success" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -185,8 +185,8 @@ export default function OnboardingWizard({
             transition={{ duration: 0.3 }}
           >
             <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FF9500]/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-[#FF9500]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-warning" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-8.75 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z" />
                 </svg>
               </div>

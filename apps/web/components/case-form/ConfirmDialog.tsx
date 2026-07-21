@@ -87,23 +87,23 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
           >
             <h3
               id="confirm-dialog-title"
-              className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-3"
+              className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-3"
             >
               Confirm Submission
             </h3>
-            <p className="text-sm text-[#3C3C43] mb-4">
+            <p className="text-sm text-text-secondary mb-4">
               You are about to submit this case entry. Please verify the information below is correct.
             </p>
 
-            <div className="bg-black/[0.03] rounded-xl p-3 mb-4 text-sm border border-black/5">
-              <span className="text-[#3C3C43]">{impact}</span>
+            <div className="bg-black/[0.03] rounded-xl p-3 mb-4 text-sm border border-border">
+              <span className="text-text-secondary">{impact}</span>
             </div>
 
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-full bg-black/5 text-[#3C3C43] px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors"
+                className="rounded-full bg-black/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors"
               >
                 Cancel
               </button>

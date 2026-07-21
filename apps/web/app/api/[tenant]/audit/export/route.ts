@@ -21,13 +21,12 @@ interface AuditLogRow {
 /**
  * GET /api/[tenant]/audit/export
  *
- * Exports audit logs as CSV or PDF with optional date range filter.
+ * Exports audit logs as CSV with optional date range filter.
  * Respects tenant isolation — only returns logs for the caller's tenant.
  *
  * Query params:
  *   - startDate: ISO date string (inclusive lower bound)
  *   - endDate: ISO date string (inclusive upper bound)
- *   - format: 'csv' | 'pdf' (default: 'csv')
  */
 export async function GET(
   request: Request,
@@ -84,14 +83,6 @@ export async function GET(
   const url = new URL(request.url);
   const startDate = url.searchParams.get('startDate');
   const endDate = url.searchParams.get('endDate');
-  const format = url.searchParams.get('format') || 'csv';
-
-  if (format !== 'csv' && format !== 'pdf') {
-    return NextResponse.json(
-      { error: 'format must be "csv" or "pdf"' },
-      { status: 400 },
-    );
-  }
 
   // ---- Query audit logs ----
   let query = supabase
@@ -129,80 +120,24 @@ export async function GET(
     resource_id: profile.tenant_id,
     changes: {
       row_count: rows.length,
-      format,
+      format: 'csv',
       date_range: { start: startDate ?? null, end: endDate ?? null },
     },
   }).maybeSingle();
 
-  // ---- Format response ----
-  if (format === 'csv') {
-    const filename = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    const csvHeaders = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
-    return new Response(new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(csvHeaders.join(',') + '\n'));
-        for (const r of rows) {
-          controller.enqueue(encoder.encode(rowToCsv(r) + '\n'));
-        }
-        controller.close();
+  // ---- CSV response ----
+  const filename = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  const csvHeaders = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
+  return new Response(new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      controller.enqueue(encoder.encode(csvHeaders.join(',') + '\n'));
+      for (const r of rows) {
+        controller.enqueue(encoder.encode(rowToCsv(r) + '\n'));
       }
-    }), { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="${filename}"` } });
-  }
-
-  // ---- PDF export ----
-  if (format === 'pdf') {
-    // Build PDF using the existing edge function via fetch
-    const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-pdf`;
-
-    const pdfPayload = {
-      case_ids: rows.map((r) => r.resource_id).filter(Boolean),
-      resident_name: 'Audit Log Export',
-      tenant: tenant.slug,
-    };
-
-    const { data: { session } } = await supabase.auth.getSession();
-    const userJwt = session?.access_token ?? '';
-
-    let pdfResponse;
-    try {
-      pdfResponse = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userJwt}`,
-        },
-        body: JSON.stringify(pdfPayload),
-      });
-    } catch {
-      // Edge function unavailable — fall back to inline HTML
-      return generateAuditPdfInline(rows, {
-        tenantName: tenant.slug,
-        startDate,
-        endDate,
-      });
+      controller.close();
     }
-
-    if (!pdfResponse.ok) {
-      // Fallback: render audit log data as a simple inline PDF table
-      return generateAuditPdfInline(rows, {
-        tenantName: tenant.slug,
-        startDate,
-        endDate,
-      });
-    }
-
-    const pdfBytes = await pdfResponse.arrayBuffer();
-    const filename = `audit-export-${new Date().toISOString().slice(0, 10)}.pdf`;
-    return new Response(pdfBytes, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
-  }
-
-  return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
+  }), { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="${filename}"` } });
 }
 
 // ---- Helpers ----
@@ -219,83 +154,4 @@ function rowToCsv(r: AuditLogRow): string {
   return csvHeaders.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(',');
 }
 
-async function generateAuditPdfInline(
-  rows: AuditLogRow[],
-  meta: { tenantName: string; startDate: string | null; endDate: string | null },
-): Promise<Response> {
-  // Build a simple HTML table and convert to PDF using a lightweight approach.
-  // Since we can't use pdf-lib on the server (it's a Deno edge function dep),
-  // we generate an HTML document that the browser can print to PDF.
-  const title = `Audit Log Export - ${meta.tenantName}`;
-  const dateRange = meta.startDate || meta.endDate
-    ? `${meta.startDate ?? '…'} to ${meta.endDate ?? '…'}`
-    : 'All dates';
 
-  const tableRows = rows.map((r) => `
-    <tr>
-      <td>${escapeHtml(r.created_at)}</td>
-      <td>${escapeHtml(r.action)}</td>
-      <td>${escapeHtml(r.resource_type)}</td>
-      <td>${escapeHtml(truncateId(r.resource_id))}</td>
-      <td>${escapeHtml(truncateId(r.user_id))}</td>
-      <td>${escapeHtml(r.ip_address ?? '')}</td>
-    </tr>
-  `).join('');
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${escapeHtml(title)}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; font-size: 11px; color: #000; margin: 20px; }
-    h1 { font-size: 18px; margin-bottom: 4px; }
-    .meta { color: #8E8E93; margin-bottom: 16px; font-size: 12px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 8px 6px; border-bottom: 1px solid #E5E5EA; font-weight: 600; color: #8E8E93; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-    td { padding: 8px 6px; border-bottom: 1px solid #E5E5EA; vertical-align: top; }
-    tr:last-child td { border-bottom: none; }
-    .footer { margin-top: 16px; font-size: 10px; color: #8E8E93; border-top: 1px solid #E5E5EA; padding-top: 8px; }
-  </style>
-</head>
-<body>
-  <h1>${escapeHtml(title)}</h1>
-  <div class="meta">${escapeHtml(dateRange)} · ${rows.length} entries</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Action</th>
-        <th>Resource</th>
-        <th>Res ID</th>
-        <th>User</th>
-        <th>IP</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${tableRows}
-    </tbody>
-  </table>
-  <div class="footer">Generated by E-Logbook on ${new Date().toISOString().slice(0, 10)}</div>
-</body>
-</html>`;
-
-  const filename = `audit-export-${new Date().toISOString().slice(0, 10)}.html`;
-  return new Response(html, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'X-Export-Format': 'html',
-      'X-Export-Note': 'PDF generation unavailable; downloaded as HTML for browser print-to-PDF',
-    },
-  });
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function truncateId(id: string | null): string {
-  if (!id) return '—';
-  return id.length > 8 ? `…${id.slice(-8)}` : id;
-}

@@ -291,7 +291,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── Add/Edit Form ── */}
@@ -301,13 +301,13 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {formError && (
-              <div className="bg-[rgba(255,69,58,0.10)] text-[#FF453A] p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             {/* Protocol selector */}
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Protocol <span className="text-[#FF453A]">*</span>
+                Protocol <span className="text-danger">*</span>
               </label>
               <div className="flex gap-3">
                 {(['saml', 'oidc'] as const).map((p) => (
@@ -338,7 +338,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <>
                 <div>
                   <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                    Metadata URL <span className="text-[#FF453A]">*</span>
+                    Metadata URL <span className="text-danger">*</span>
                   </label>
                   <input
                     type="url"
@@ -392,7 +392,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <>
                 <div>
                   <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                    Discovery URL <span className="text-[#FF453A]">*</span>
+                    Discovery URL <span className="text-danger">*</span>
                   </label>
                   <input
                     type="url"
@@ -548,7 +548,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                   <div className="flex items-center gap-2 mb-1">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        cfg.is_active ? 'bg-[#34C759]' : 'bg-neutral-light/40'
+                        cfg.is_active ? 'bg-success' : 'bg-neutral-light/40'
                       }`}
                     />
                     <span className="text-sm font-medium">
@@ -616,10 +616,10 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                   <button
                     type="button"
                     onClick={() => handleDelete(cfg)}
-                    className="rounded-full border border-border p-1.5 hover:bg-red-500/10 transition-colors"
+                    className="rounded-full border border-border p-1.5 hover:bg-danger/10 transition-colors"
                     title="Delete"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF453A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>

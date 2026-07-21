@@ -106,7 +106,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
       <div className="pt-4 space-y-4">
         {error && <ErrorDisplay message={error} />}
         {success && (
-          <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+          <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
         )}
 
         <div>

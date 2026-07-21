@@ -164,16 +164,16 @@ function CaseVolumeChart({ data }: { data: MonthlyVolume[] }) {
       </svg>
 
       {/* Footnotes / totals */}
-      <div className="flex items-center gap-4 mt-2 text-xs text-[#8E8E93]">
+      <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
         <span>
           Total:{' '}
-          <strong className="text-[#3C3C43]">
+          <strong className="text-text-secondary">
             {data.reduce((s, d) => s + d.count, 0)}
           </strong>
         </span>
         <span>
           Avg:{' '}
-          <strong className="text-[#3C3C43]">
+          <strong className="text-text-secondary">
             {Math.round(
               data.reduce((s, d) => s + d.count, 0) / Math.max(data.length, 1)
             )}
@@ -198,7 +198,7 @@ function SpecialtyChart({ data }: { data: SpecialtyCount[] }) {
 
   if (data.length === 0) {
     return (
-      <p className="text-sm text-[#8E8E93] py-6 text-center">
+      <p className="text-sm text-text-muted py-6 text-center">
         No cases with specialty data.
       </p>
     );
@@ -269,7 +269,7 @@ function SpecialtyChart({ data }: { data: SpecialtyCount[] }) {
 function SupervisorTable({ data }: { data: SupervisorRow[] }) {
   if (data.length === 0) {
     return (
-      <p className="text-sm text-[#8E8E93] py-6 text-center">
+      <p className="text-sm text-text-muted py-6 text-center">
         No supervisor review data yet.
       </p>
     );
@@ -279,20 +279,20 @@ function SupervisorTable({ data }: { data: SupervisorRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-black/5">
-            <th className="text-left py-2 pr-3 font-medium text-[#8E8E93] text-xs uppercase tracking-wider">
+          <tr className="border-b border-border">
+            <th className="text-left py-2 pr-3 font-medium text-text-muted text-xs uppercase tracking-wider">
               Supervisor
             </th>
-            <th className="text-right py-2 px-2 font-medium text-[#8E8E93] text-xs uppercase tracking-wider">
+            <th className="text-right py-2 px-2 font-medium text-text-muted text-xs uppercase tracking-wider">
               <span style={{ color: STATUS_COLORS.pending }}>Pending</span>
             </th>
-            <th className="text-right py-2 px-2 font-medium text-[#8E8E93] text-xs uppercase tracking-wider">
+            <th className="text-right py-2 px-2 font-medium text-text-muted text-xs uppercase tracking-wider">
               <span style={{ color: STATUS_COLORS.approved }}>Approved</span>
             </th>
-            <th className="text-right py-2 px-2 font-medium text-[#8E8E93] text-xs uppercase tracking-wider">
+            <th className="text-right py-2 px-2 font-medium text-text-muted text-xs uppercase tracking-wider">
               <span style={{ color: STATUS_COLORS.rejected }}>Rejected</span>
             </th>
-            <th className="text-right py-2 pl-2 font-medium text-[#8E8E93] text-xs uppercase tracking-wider">
+            <th className="text-right py-2 pl-2 font-medium text-text-muted text-xs uppercase tracking-wider">
               Total
             </th>
           </tr>
@@ -303,9 +303,9 @@ function SupervisorTable({ data }: { data: SupervisorRow[] }) {
             return (
               <tr
                 key={s.supervisorId}
-                className="border-b border-black/5 hover:bg-black/[0.02] transition-colors"
+                className="border-b border-border hover:bg-black/[0.02] transition-colors"
               >
-                <td className="py-2.5 pr-3 font-medium text-[#3C3C43] truncate max-w-[140px]">
+                <td className="py-2.5 pr-3 font-medium text-text-secondary truncate max-w-[140px]">
                   {s.supervisorName}
                 </td>
                 <td className="py-2.5 px-2 text-right font-semibold tabular-nums">
@@ -323,7 +323,7 @@ function SupervisorTable({ data }: { data: SupervisorRow[] }) {
                     {s.rejected}
                   </span>
                 </td>
-                <td className="py-2.5 pl-2 text-right font-semibold tabular-nums text-[#3C3C43]">
+                <td className="py-2.5 pl-2 text-right font-semibold tabular-nums text-text-secondary">
                   {total}
                 </td>
               </tr>
@@ -349,7 +349,7 @@ function ApprovalSparkline({ data }: { data: MonthlyRate[] }) {
 
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center h-12 text-xs text-[#8E8E93]">
+      <div className="flex items-center justify-center h-12 text-xs text-text-muted">
         <p>Insufficient data for trend</p>
       </div>
     );
@@ -412,8 +412,8 @@ function ApprovalSparkline({ data }: { data: MonthlyRate[] }) {
           );
         })}
       </svg>
-      <div className="text-xs text-[#8E8E93] whitespace-nowrap">
-        <span className="text-[#34C759] font-semibold text-sm">
+      <div className="text-xs text-text-muted whitespace-nowrap">
+        <span className="text-success font-semibold text-sm">
           {displayRate}
         </span>
         <br />
@@ -437,8 +437,8 @@ function MiniStat({
   color: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-black/5 p-4 flex flex-col gap-1">
-      <span className="text-[0.65rem] font-semibold text-[#8E8E93] uppercase tracking-wider">
+    <div className="bg-surface-solid rounded-2xl border border-border p-4 flex flex-col gap-1">
+      <span className="text-[0.65rem] font-semibold text-text-muted uppercase tracking-wider">
         {label}
       </span>
       <span
@@ -471,10 +471,10 @@ export default function AnalyticsDashboard({
     <div className="space-y-7">
       {/* ── Header ──────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-[2rem] font-semibold text-[#000] tracking-[-0.03em] font-sans">
+        <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em] font-sans">
           Analytics
         </h1>
-        <p className="text-[0.9rem] text-[#8E8E93] mt-1 font-normal">
+        <p className="text-[0.9rem] text-text-muted mt-1 font-normal">
           Case volume trends, specialty distribution &amp; supervisor workload
         </p>
       </div>
@@ -505,32 +505,32 @@ export default function AnalyticsDashboard({
 
       {/* ── Row 1: Case Volume + Sparkline ──────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="bg-white rounded-2xl border border-black/5 p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-[#000] tracking-[-0.02em] font-sans mb-4">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">
             Case Volume
           </h2>
           <CaseVolumeChart data={monthlyVolume} />
         </div>
-        <div className="bg-white rounded-2xl border border-black/5 p-5">
-          <h2 className="text-lg font-semibold text-[#000] tracking-[-0.02em] font-sans mb-3">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
+          <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-3">
             Approval Rate
           </h2>
           <ApprovalSparkline data={monthlyApprovalRate} />
           {/* Mini legend */}
-          <div className="mt-4 space-y-1.5 text-xs text-[#8E8E93]">
+          <div className="mt-4 space-y-1.5 text-xs text-text-muted">
             {monthlyApprovalRate.filter((d) => d.rate > 0).slice(-3).map((d) => (
               <div
                 key={d.month}
                 className="flex items-center justify-between"
               >
                 <span>{formatMonthLabel(d.month)}</span>
-                <span className="font-semibold text-[#3C3C43]">
+                <span className="font-semibold text-text-secondary">
                   {(d.rate * 100).toFixed(0)}%
                 </span>
               </div>
             ))}
             {monthlyApprovalRate.filter((d) => d.rate > 0).length > 3 && (
-              <p className="pt-1 text-[10px] text-[#8E8E93]">
+              <p className="pt-1 text-[10px] text-text-muted">
                 +{monthlyApprovalRate.filter((d) => d.rate > 0).length - 3} more months
               </p>
             )}
@@ -540,14 +540,14 @@ export default function AnalyticsDashboard({
 
       {/* ── Row 2: Specialty + Supervisor Table ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-black/5 p-5">
-          <h2 className="text-lg font-semibold text-[#000] tracking-[-0.02em] font-sans mb-4">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
+          <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">
             Specialty Distribution
           </h2>
           <SpecialtyChart data={specialtyBreakdown} />
         </div>
-        <div className="bg-white rounded-2xl border border-black/5 p-5">
-          <h2 className="text-lg font-semibold text-[#000] tracking-[-0.02em] font-sans mb-4">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
+          <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">
             Supervisor Workload
           </h2>
           <SupervisorTable data={supervisorWorkload} />

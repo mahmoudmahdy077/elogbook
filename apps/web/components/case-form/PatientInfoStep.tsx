@@ -26,7 +26,7 @@ function Toggle({ checked, onChange, label: _label }: { checked: boolean; onChan
       }`}
     >
       <span
-        className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+        className={`inline-block h-5 w-5 rounded-full bg-surface-solid shadow-sm transition-transform duration-200 ${
           checked ? 'translate-x-6' : 'translate-x-1'
         }`}
       />
@@ -54,7 +54,7 @@ function FormField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-black">
+      <label className="block text-sm font-medium text-text-primary">
         {label}
         {required && <span className="text-danger ml-0.5">*</span>}
       </label>
@@ -65,7 +65,7 @@ function FormField({
         placeholder={placeholder}
         required={required}
         aria-label={ariaLabel || label}
-        className="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm text-black placeholder:text-[#C7C7CC] transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="w-full rounded-xl border border-border bg-surface-solid px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
       />
     </div>
   );
@@ -84,7 +84,7 @@ export default function PatientInfoStep({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">
+        <h3 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">
           Patient Information
         </h3>
         <HelpPopover>
@@ -97,13 +97,13 @@ export default function PatientInfoStep({
         </HelpPopover>
       </div>
 
-      <div className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.03] border border-black/5">
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.03] border border-border">
         <Toggle
           checked={isDeidentified}
           onChange={onIsDeidentifiedChange}
           label="De-identify Patient Data"
         />
-        <span className="text-sm font-medium text-black">
+        <span className="text-sm font-medium text-text-primary">
           De-identify Patient Data
         </span>
       </div>

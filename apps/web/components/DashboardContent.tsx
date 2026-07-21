@@ -103,7 +103,7 @@ function KpiRing({ value, max, label, color, delay }: { value: number; max: numb
           <span className="text-xl font-semibold text-text-primary tracking-tight font-sans">{animatedValue}</span>
         </div>
       </div>
-      <span className="text-[0.75rem] font-medium text-[#8E8E93] uppercase tracking-wider">{label}</span>
+      <span className="text-[0.75rem] font-medium text-text-muted uppercase tracking-wider">{label}</span>
     </div>
   );
 }
@@ -120,10 +120,10 @@ function ProgressBar({ current, target, label }: { current: number; target: numb
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs">
-        <span className="text-[#3C3C43] font-medium truncate">{label}</span>
-        <span className="text-[#8E8E93] font-medium font-mono">{current} / {target}</span>
+        <span className="text-text-secondary font-medium truncate">{label}</span>
+        <span className="text-text-muted font-medium font-mono">{current} / {target}</span>
       </div>
-      <div className="h-1 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
+      <div className="h-1 rounded-full bg-neutral-dark overflow-hidden">
         <div
           className="h-full rounded-full bg-primary"
           style={{ width: animated ? `${pct}%` : '0%', transition: 'width 0.5s ease-out' }}
@@ -160,13 +160,13 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em] font-sans">
             Welcome, {profile.full_name.split(' ')[0]}
           </h1>
-          <p className="text-[0.9rem] text-[#8E8E93] mt-1 font-normal">
+          <p className="text-[0.9rem] text-text-muted mt-1 font-normal">
             {profile.specialty || 'Resident'} · {tenantType === 'individual' ? 'Individual Account' : profile.role === 'resident' ? 'Demo Hospital' : `${role === 'director' ? 'Program Director' : role === 'institution_admin' ? 'Institution Admin' : 'Supervisor'} Dashboard`}
           </p>
         </div>
         {role === 'resident' && (
           isReadOnly ? (
-            <span className="px-4 py-2.5 rounded-full bg-black/5 dark:bg-white/5 text-[#8E8E93] text-sm font-medium cursor-not-allowed" aria-disabled="true">
+            <span className="px-4 py-2.5 rounded-full bg-neutral-dark text-text-muted text-sm font-medium cursor-not-allowed" aria-disabled="true">
               Logging disabled — renew subscription
             </span>
           ) : (
@@ -207,7 +207,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
       {/* Duty Hours Violations */}
       {(residentViolations.length > 0 || directorViolations.length > 0) && (
         <div
-          className="p-4 rounded-2xl bg-[rgba(255,59,48,0.06)] border border-[rgba(255,59,48,0.15)]"
+          className="p-4 rounded-2xl bg-danger-50 border border-danger/20"
           style={{ animation: 'fadeSlideIn 0.3s ease-out 0.3s both' }}
         >
           <div className="flex items-center gap-2 mb-3">
@@ -219,7 +219,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {profile.role === 'resident' && (
             <div className="space-y-1">
               {residentViolations.map((v) => (
-                <p key={v.week_start} className="text-xs text-[#3C3C43]">
+                <p key={v.week_start} className="text-xs text-text-secondary">
                   Week of {v.week_start}: <span className="font-semibold">{v.total_hours}</span> hours
                 </p>
               ))}
@@ -228,7 +228,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {(profile.role === 'director' || profile.role === 'institution_admin' || profile.role === 'admin') && (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {directorViolations.map((v) => (
-                <p key={`${v.resident_id}-${v.week_start}`} className="text-xs text-[#3C3C43]">
+                <p key={`${v.resident_id}-${v.week_start}`} className="text-xs text-text-secondary">
                   {residents.find((r) => r.id === v.resident_id)?.full_name ?? 'Unknown'} — Week of {v.week_start}: <span className="font-semibold">{v.total_hours}</span> hours
                 </p>
               ))}
@@ -255,7 +255,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           {recentCases.length === 0 ? (
             <EmptyState
               icon={
-                <svg className="w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="w-5 h-5 text-text-muted" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5zM4.75 10.75a.75.75 0 01.75-.75h9a.75.75 0 010 1.5h-9a.75.75 0 01-.75-.75zm.75 4.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" />
                 </svg>
               }
@@ -273,7 +273,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">{c.template_specialty} — {c.template_name}</p>
-                    <p className="text-xs text-[#8E8E93] mt-0.5">{formatRelativeDate(c.case_date)}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{formatRelativeDate(c.case_date)}</p>
                   </div>
                   <StatusBadge status={c.status} size="sm" />
                 </Link>
@@ -328,11 +328,11 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               {pendingApprovals === 0 ? (
                 <EmptyState title="All caught up" description="No cases are currently awaiting your review." />
               ) : (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,149,0,0.08)]">
-                  <span className="text-2xl font-semibold text-[#FF9500] tracking-tight">{pendingApprovals}</span>
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-warning-50">
+                  <span className="text-2xl font-semibold text-warning tracking-tight">{pendingApprovals}</span>
                   <div>
                     <p className="text-sm font-medium text-text-primary">Cases awaiting review</p>
-                    <p className="text-xs text-[#8E8E93] mt-0.5">Review and approve or reject</p>
+                    <p className="text-xs text-text-muted mt-0.5">Review and approve or reject</p>
                   </div>
                 </div>
               )}
@@ -344,16 +344,16 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             <div className="mt-5 pt-4 border-t border-border">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-text-primary">Resident Overview</h3>
-                <span className="text-xs text-[#8E8E93]">{totalResidents} residents</span>
+                <span className="text-xs text-text-muted">{totalResidents} residents</span>
               </div>
               <div className="space-y-1 max-h-44 overflow-y-auto">
                 {residents.slice(0, 8).map((r) => (
-                  <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-1 rounded-lg hover:bg-black/3 dark:hover:bg-white/3">
+                  <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-1 rounded-lg hover:bg-neutral-dark">
                     <div className="truncate flex-1">
                       <span className="font-medium text-text-primary">{r.full_name}</span>
-                      <span className="text-[#8E8E93] ml-1">{r.specialty || ''}</span>
+                      <span className="text-text-muted ml-1">{r.specialty || ''}</span>
                     </div>
-                    <span className="text-[#8E8E93] font-medium">{r.approved}/{r.total_cases}</span>
+                    <span className="text-text-muted font-medium">{r.approved}/{r.total_cases}</span>
                   </div>
                 ))}
               </div>
@@ -368,30 +368,30 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         style={{ animation: 'fadeSlideIn 0.35s ease-out 0.35s both' }}
       >
         <Link href={`/${tenantSlug}/cases`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
-          <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.317.727L6.5 3.5h7A2.5 2.5 0 0116 6v.003a.75.75 0 11-1.5 0V6a1 1 0 00-1-1h-7l-.535-1.023A.375.375 0 005.648 3.5H3.5a.375.375 0 00-.375.375V16.5a.75.75 0 01-1.5 0V3.5z"/>
           </svg>
-          <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Cases</span>
+          <span className="text-xs font-medium text-text-secondary group-hover:text-primary transition-colors">Cases</span>
         </Link>
         {role !== 'resident' && (
           <Link href={`/${tenantSlug}/approvals`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
-            <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <svg className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"/>
             </svg>
-            <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Approvals</span>
+            <span className="text-xs font-medium text-text-secondary group-hover:text-primary transition-colors">Approvals</span>
           </Link>
         )}
         <Link href={`/${tenantSlug}/goals`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
-          <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/>
           </svg>
-          <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Goals</span>
+          <span className="text-xs font-medium text-text-secondary group-hover:text-primary transition-colors">Goals</span>
         </Link>
         <Link href={`/${tenantSlug}/reports`} className="bg-surface-solid rounded-2xl border border-border p-4 text-center text-sm transition-all duration-200 hover:border-primary flex flex-col items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group">
-          <svg className="w-5 h-5 text-[#8E8E93] group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M15.5 2A1.5 1.5 0 0014 3.5v13a1.5 1.5 0 001.5 1.5h1a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0016.5 2h-1zM9.5 6A1.5 1.5 0 008 7.5v9A1.5 1.5 0 009.5 18h1a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0010.5 6h-1zM3.5 10A1.5 1.5 0 002 11.5v5A1.5 1.5 0 003.5 18h1A1.5 1.5 0 006 16.5v-5A1.5 1.5 0 004.5 10h-1z"/>
           </svg>
-          <span className="text-xs font-medium text-[#3C3C43] group-hover:text-primary transition-colors">Reports</span>
+          <span className="text-xs font-medium text-text-secondary group-hover:text-primary transition-colors">Reports</span>
         </Link>
       </div>
     </div>

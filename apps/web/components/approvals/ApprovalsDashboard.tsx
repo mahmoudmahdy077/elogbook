@@ -59,7 +59,7 @@ function StatCard({ value, label, color }: { value: number; label: string; color
         <SimpleCounter value={value} />
         {label === 'Approval Rate' && <span className="text-base">%</span>}
       </p>
-      <p className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">{label}</p>
+      <p className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">{label}</p>
     </div>
   );
 }
@@ -136,7 +136,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   if (loading) {
     return (
       <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
-        <p className="text-[#8E8E93]">Loading...</p>
+        <p className="text-text-muted">Loading...</p>
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           Pending Approvals
         </h2>
         {pendingCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[rgba(255,149,0,0.12)] text-[#FF9500] border border-[rgba(255,149,0,0.20)]">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-50 text-warning border border-warning/20">
             {pendingCount}
           </span>
         )}
@@ -175,7 +175,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
       {entries.length === 0 ? (
         <EmptyState
           icon={
-            <svg className="w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <svg className="w-5 h-5 text-text-muted" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
           }
@@ -208,7 +208,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         <p className="text-sm font-semibold text-text-primary truncate">
                           {profile?.full_name || 'Unknown Resident'}
                         </p>
-                        <p className="text-xs text-[#8E8E93]">
+                        <p className="text-xs text-text-muted">
                           {profile?.specialty || 'No specialty'}
                         </p>
                       </div>
@@ -224,15 +224,15 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                     {/* Template + Case Date */}
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <span className="text-[#8E8E93] block text-xs">Template</span>
+                        <span className="text-text-muted block text-xs">Template</span>
                         <span className="font-medium text-text-primary">
                           {template?.specialty}
                           {template?.name ? ` \u2013 ${template.name}` : ''}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#8E8E93] block text-xs">Case Date</span>
-                        <span className="text-sm font-medium text-[#3C3C43]">
+                        <span className="text-text-muted block text-xs">Case Date</span>
+                        <span className="text-sm font-medium text-text-secondary">
                           {entry.case_date || '-'}
                         </span>
                       </div>

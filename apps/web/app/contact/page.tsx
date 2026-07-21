@@ -28,7 +28,7 @@ export default function ContactPage() {
                 name="name"
                 type="text"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-surface-solid border border-black/10 text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
                 placeholder="Dr. Jane Smith"
               />
             </div>
@@ -39,7 +39,7 @@ export default function ContactPage() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-surface-solid border border-black/10 text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
                 placeholder="jane@hospital.org"
               />
             </div>
@@ -49,7 +49,7 @@ export default function ContactPage() {
                 id="institution"
                 name="institution"
                 type="text"
-                className="w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-surface-solid border border-black/10 text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors"
                 placeholder="City Hospital"
               />
             </div>
@@ -60,7 +60,7 @@ export default function ContactPage() {
                 name="message"
                 required
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl bg-white border border-black/10 text-black placeholder:text-[#8E8E93]/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-surface-solid border border-black/10 text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-[rgba(0,122,255,0.12)] text-[15px] transition-colors resize-none"
                 placeholder="Tell us about your needs..."
               />
             </div>

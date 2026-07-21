@@ -40,6 +40,9 @@ importers:
       eslint-plugin-react:
         specifier: ^7.37.5
         version: 7.37.5(eslint@9.39.4(jiti@2.7.0))
+      framer-motion:
+        specifier: ^12.40.0
+        version: 12.40.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -239,6 +242,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@elogbook/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@elogbook/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -254,9 +260,6 @@ importers:
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
-      framer-motion:
-        specifier: ^12.40.0
-        version: 12.40.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next:
         specifier: ^16.2.7
         version: 16.2.7(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -315,6 +318,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^7.1.1
         version: 7.1.1(eslint@9.39.4(jiti@2.7.0))
+      framer-motion:
+        specifier: ^12.40.0
+        version: 12.40.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       globals:
         specifier: ^17.6.0
         version: 17.6.0
@@ -9002,7 +9008,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89':
     optional: true

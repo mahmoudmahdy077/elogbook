@@ -212,7 +212,7 @@ export interface AuditLog {
 export interface AIConfig {
   id: string;
   tenant_id: string;
-  provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'custom';
+  provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'aihubmix' | 'custom';
   model: string;
   // API key managed server-side only
   has_key?: boolean;

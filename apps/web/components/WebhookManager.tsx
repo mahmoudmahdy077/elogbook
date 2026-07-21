@@ -289,7 +289,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── Add/Edit Form ── */}
@@ -299,12 +299,12 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {formError && (
-              <div className="bg-[rgba(255,69,58,0.10)] text-[#FF453A] p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Webhook URL <span className="text-[#FF453A]">*</span>
+                Webhook URL <span className="text-danger">*</span>
               </label>
               <input
                 type="url"
@@ -319,7 +319,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Events <span className="text-[#FF453A]">*</span>
+                Events <span className="text-danger">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {EVENT_TYPES.map((evt) => (
@@ -358,7 +358,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Secret Key <span className="text-[#FF453A]">*</span>
+                Secret Key <span className="text-danger">*</span>
               </label>
               <input
                 type="password"
@@ -453,7 +453,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                   <div className="flex items-center gap-2 mb-1">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        wh.is_active ? 'bg-[#34C759]' : 'bg-neutral-light/40'
+                        wh.is_active ? 'bg-success' : 'bg-neutral-light/40'
                       }`}
                     />
                     <span className="text-sm font-medium truncate">
@@ -477,7 +477,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                       <span>
                         Last sent {formatDate(wh.last_sent)}
                         {wh.last_succeeded !== null && (
-                          <span className={`ml-1 ${wh.last_succeeded ? 'text-[#34C759]' : 'text-[#FF453A]'}`}>
+                          <span className={`ml-1 ${wh.last_succeeded ? 'text-success' : 'text-danger'}`}>
                             {wh.last_succeeded ? '✓' : '✗'}
                           </span>
                         )}
@@ -530,7 +530,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                     className="rounded-full border border-border p-1.5 hover:bg-red-500/10 transition-colors"
                     title="Delete"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF453A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
@@ -540,9 +540,9 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
               {testResult && testingId === null && (
                 <div className={`mt-3 p-3 rounded-xl text-xs font-mono whitespace-pre-wrap ${
-                  testResult.includes('✓') ? 'bg-[rgba(52,199,89,0.08)] text-[#34C759]' :
-                  testResult.startsWith('Status') ? 'bg-[rgba(255,69,58,0.08)] text-[#FF453A]' :
-                  'bg-[rgba(255,69,58,0.08)] text-[#FF453A]'
+                  testResult.includes('✓') ? 'bg-success/10 text-success' :
+                  testResult.startsWith('Status') ? 'bg-danger/10 text-danger' :
+                  'bg-danger/10 text-danger'
                 }`}>
                   {testResult}
                 </div>

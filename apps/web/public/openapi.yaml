@@ -96,7 +96,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [openai, openrouter, anthropic, azure, custom]
+          enum: [openai, openrouter, anthropic, azure, aihubmix, custom]
           description: AI provider name
         model:
           type: string

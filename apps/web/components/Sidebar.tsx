@@ -91,7 +91,7 @@ export default function Sidebar({
           {!collapsed && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className={`ml-auto p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-text-muted`}
+              className={`ml-auto p-1.5 rounded-lg hover:bg-neutral-dark transition-colors text-text-muted`}
               aria-label="Collapse sidebar"
             >
               <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -123,7 +123,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
+                    : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -154,7 +154,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
+                    : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -188,7 +188,7 @@ export default function Sidebar({
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
                     ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5') +
+                    : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
               >
@@ -203,7 +203,7 @@ export default function Sidebar({
         <div className={`mt-auto pt-4 border-t border-border ${collapsed ? 'flex flex-col items-center gap-2' : ''}`}>
           {!collapsed && user && (
             <div className="flex items-center gap-2.5 px-1 mb-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-[#34C759] flex items-center justify-center text-white font-semibold text-[0.6rem] flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-success flex items-center justify-center text-white font-semibold text-[0.6rem] flex-shrink-0">
                 {user.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
               <div className="min-w-0">
@@ -218,7 +218,7 @@ export default function Sidebar({
               <ThemeToggle />
               <button
                 onClick={() => setCollapsed(false)}
-                className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-text-muted"
+                className="p-2 rounded-lg hover:bg-neutral-dark transition-colors text-text-muted"
                 aria-label="Expand sidebar"
               >
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

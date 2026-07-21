@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { PhiFields } from '@/components/PhiFields';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -45,19 +46,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   const statusColor = (s: string) => {
     switch (s) {
-      case 'draft': return 'bg-[rgba(255,149,0,0.12)] text-[#FF9500]';
-      case 'pending': return 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]';
-      case 'approved': return 'bg-[rgba(52,199,89,0.12)] text-[#34C759]';
-      case 'rejected': return 'bg-[rgba(255,59,48,0.12)] text-[#FF3B30]';
+      case 'draft': return 'bg-warning/10 text-warning';
+      case 'pending': return 'bg-primary/10 text-primary';
+      case 'approved': return 'bg-success/10 text-success';
+      case 'rejected': return 'bg-danger/10 text-danger';
       default: return 'bg-default-100 text-text-muted';
     }
   };
 
   const approvalStatusColor = (s: string) => {
     switch (s) {
-      case 'approved': return 'bg-[rgba(52,199,89,0.12)] text-[#34C759]';
-      case 'rejected': return 'bg-[rgba(255,59,48,0.12)] text-[#FF3B30]';
-      default: return 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]';
+      case 'approved': return 'bg-success/10 text-success';
+      case 'rejected': return 'bg-danger/10 text-danger';
+      default: return 'bg-primary/10 text-primary';
     }
   };
 
@@ -89,22 +90,20 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
         </div>
         <div className="pt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <PhiFields
+              mrn={entry.patient_mrn}
+              dob={entry.patient_dob}
+              entryId={entry.id}
+              tenantId={auth.tenant.id}
+              userId={auth.profile.id}
+            />
             <div>
-              <label className="text-sm text-text-muted">Patient MRN</label>
-              <p>{entry.patient_mrn}</p>
-            </div>
-            <div>
-              <label className="text-sm text-text-muted">Patient DOB</label>
-              <p>{entry.patient_dob}</p>
-            </div>
-            <div>
-              <label className="text-sm text-text-muted">Case Date</label>
-              <p>{entry.case_date}</p>
+              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Date</dt><dd className="text-text-primary">{entry.case_date}</dd></dl>
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-text-muted block mb-2">Case Details</label>
+            <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Details</dt>
             {Array.isArray(entry.case_templates?.fields) &&
               (entry.case_templates.fields as Record<string, unknown>[]).map((f) => (
                 <div key={f.key as string} className="flex justify-between py-1 border-b border-divider">

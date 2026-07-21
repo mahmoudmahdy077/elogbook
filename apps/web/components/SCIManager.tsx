@@ -205,15 +205,15 @@ export default function SCIManager({
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── New token plaintext banner ── */}
       {newTokenPlaintext && (
-        <div className="bg-[rgba(0,122,255,0.10)] border border-[rgba(0,122,255,0.25)] rounded-2xl p-5 shadow-sm">
+        <div className="bg-primary/10 border border-primary/25 rounded-2xl p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[#007AFF] mb-1">
+              <p className="text-sm font-semibold text-primary mb-1">
                 ⚠️ Token generated — copy it now
               </p>
               <p className="text-xs text-text-muted mb-3">
@@ -292,7 +292,7 @@ export default function SCIManager({
 
           <form onSubmit={handleGenerate} className="space-y-5">
             {formError && (
-              <div className="bg-[rgba(255,69,58,0.10)] text-[#FF453A] p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             <div>
@@ -347,7 +347,7 @@ export default function SCIManager({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#34C759]" title="Active" />
+                    <span className="inline-block w-2 h-2 rounded-full bg-success" title="Active" />
                     <span className="text-sm font-medium truncate">
                       {token.description || 'Unnamed token'}
                     </span>
@@ -372,7 +372,7 @@ export default function SCIManager({
                   <button
                     type="button"
                     onClick={() => handleRevoke(token)}
-                    className="rounded-full border border-[#FF453A] text-[#FF453A] px-3 py-1.5 text-xs font-medium hover:bg-[rgba(255,69,58,0.08)] transition-colors"
+                    className="rounded-full border border-danger text-danger px-3 py-1.5 text-xs font-medium hover:bg-danger/10 transition-colors"
                   >
                     Revoke
                   </button>
@@ -397,7 +397,7 @@ export default function SCIManager({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#FF453A]" title="Revoked" />
+                    <span className="inline-block w-2 h-2 rounded-full bg-danger" title="Revoked" />
                     <span className="text-sm font-medium truncate line-through">
                       {token.description || 'Unnamed token'}
                     </span>
