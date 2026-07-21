@@ -8,6 +8,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -73,6 +76,8 @@ export async function POST(
     .eq('tenant_id', profile.tenant_id)
     .maybeSingle();
 
+  let configId: string | undefined;
+
   if (existing) {
     const updatePayload = { ...payload };
     delete updatePayload.tenant_id;
@@ -86,16 +91,24 @@ export async function POST(
       console.error('payment-gateway error:', error.message);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+
+    configId = existing.id;
   } else {
-    const { error } = await adminClient
+    const { data: newConfig, error } = await adminClient
       .from('payment_gateway_config')
-      .insert(payload);
+      .insert(payload)
+      .select('id')
+      .single();
 
     if (error) {
       console.error('payment-gateway error:', error.message);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+
+    configId = newConfig!.id;
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'payment_gateway_upsert', resource_type: 'payment_gateway_config', resource_id: configId!, changes: {} });
 
   return NextResponse.json({ success: true });
 }
@@ -104,5 +117,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   return POST(request, { params });
 }

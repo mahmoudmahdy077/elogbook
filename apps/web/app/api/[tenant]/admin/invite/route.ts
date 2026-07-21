@@ -8,6 +8,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -80,6 +83,8 @@ export async function POST(
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'invite_user', resource_type: 'profiles', resource_id: newUser!.user!.id, changes: { email, full_name, role: inviteRole } });
 
   return NextResponse.json({ success: true, message: `Invitation sent to ${email}` });
 }

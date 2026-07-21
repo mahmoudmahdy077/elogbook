@@ -166,5 +166,26 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  const isAdminRoute =
+    segments[1] === 'admin' || (segments[0] === 'api' && segments[2] === 'admin');
+
+  if (isAdminRoute) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.aal && session.aal !== 'aal2') {
+      try {
+        const { data: mfaData } = await supabase.auth.mfa.listFactors();
+        const hasVerifiedMfa =
+          mfaData?.all?.some((f) => f.status === 'verified') ?? false;
+        if (hasVerifiedMfa) {
+          const verifyUrl = new URL('/mfa/verify', request.url);
+          verifyUrl.searchParams.set('next', pathname + request.nextUrl.search);
+          return NextResponse.redirect(verifyUrl);
+        }
+      } catch {
+        // MFA API not available
+      }
+    }
+  }
+
   return supabaseResponse;
 }

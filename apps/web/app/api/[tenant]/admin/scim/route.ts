@@ -113,6 +113,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const { tenant: tenantSlug } = await params;
   const auth = await authorize(tenantSlug, false);
   if (auth.error) return auth.error;
@@ -140,13 +143,14 @@ export async function POST(
     .single();
 
   if (error) {
-    // Collision on token_hash (astronomically unlikely but handle gracefully)
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Token collision — please try again' }, { status: 409 });
     }
     console.error('scim create error:', error.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: auth.profile.tenant_id, user_id: auth.profile.id, action: 'scim_token_create', resource_type: 'scim_tokens', resource_id: data!.id, changes: {} });
 
   return NextResponse.json({ token: data, plaintext }, { status: 201 });
 }

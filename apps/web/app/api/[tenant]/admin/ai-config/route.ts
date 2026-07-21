@@ -8,6 +8,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -42,7 +45,6 @@ export async function POST(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
-  // Plan gate: AI config is Enterprise-only
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('subscription_plans!inner(features)')
@@ -83,6 +85,8 @@ export async function POST(
     .eq('tenant_id', profile.tenant_id)
     .maybeSingle();
 
+  let configId: string | undefined;
+
   if (existing) {
     const updatePayload = { ...payload };
     delete updatePayload.tenant_id;
@@ -96,20 +100,28 @@ export async function POST(
       console.error('ai-config error:', error.message);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+
+    configId = existing.id;
   } else {
     if (!api_key) {
       return NextResponse.json({ error: 'API Key is required for new configuration.' }, { status: 400 });
     }
 
-    const { error } = await adminClient
+    const { data: newConfig, error } = await adminClient
       .from('ai_config')
-      .insert(payload);
+      .insert(payload)
+      .select('id')
+      .single();
 
     if (error) {
       console.error('ai-config error:', error.message);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+
+    configId = newConfig!.id;
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'ai_config_upsert', resource_type: 'ai_config', resource_id: configId!, changes: {} });
 
   return NextResponse.json({ success: true, has_key: !!api_key || !!existing });
 }
@@ -118,5 +130,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   return POST(request, { params });
 }

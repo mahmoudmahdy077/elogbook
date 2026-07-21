@@ -34,6 +34,27 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
+function isValidEndpoint(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '[::1]') return false;
+    const ipv4Match = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (ipv4Match) {
+      const parts = ipv4Match.slice(1).map(Number);
+      if (parts[0] === 10) return false;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+      if (parts[0] === 192 && parts[1] === 168) return false;
+      if (parts[0] === 127) return false;
+      if (parts[0] === 169 && parts[1] === 254) return false;
+      if (parts[0] === 0 && parts[1] === 0 && parts[2] === 0 && parts[3] === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function callAiProvider(
   config: { provider: string; model: string; api_key: string; endpoint_url?: string },
   systemPrompt: string,
@@ -109,6 +130,7 @@ async function callAiProvider(
 
   if (provider === 'azure') {
     const baseUrl = endpoint_url?.replace(/\/$/, '') ?? `https://${model.split('.')[0]}.openai.azure.com`;
+    if (endpoint_url && !isValidEndpoint(endpoint_url)) throw new Error('INVALID_ENDPOINT');
     const res = await fetchWithTimeout(
       `${baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`,
       {
@@ -133,6 +155,7 @@ async function callAiProvider(
   }
 
   if (provider === 'custom' && endpoint_url) {
+    if (!isValidEndpoint(endpoint_url)) throw new Error('INVALID_ENDPOINT');
     const res = await fetchWithTimeout(endpoint_url, {
       method: 'POST',
       headers: {
@@ -340,10 +363,11 @@ Provide completeness, specificity, classification, and overall scores (0-100), a
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('AI provider call failed', { error: msg });
+    const status = msg === 'INVALID_ENDPOINT' ? 400 : 502;
+    if (status === 502) console.error('AI provider call failed', { error: msg });
     return new Response(
-      JSON.stringify({ error: 'AI provider error', detail: msg }),
-      { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: status === 400 ? 'Invalid endpoint URL' : 'AI provider error' }),
+      { status, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 

@@ -111,6 +111,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -151,20 +154,17 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  // --- Validation ---
   const { url, events, secret, description, is_active } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 });
   }
 
-  // Validate URL format
   try {
     const parsed = new URL(url);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return NextResponse.json({ error: 'URL must use http or https protocol' }, { status: 400 });
     }
-    // In production, only HTTPS allowed
     if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
       return NextResponse.json({ error: 'HTTPS is required in production' }, { status: 400 });
     }
@@ -187,7 +187,6 @@ export async function POST(
     return NextResponse.json({ error: 'Secret key is required (min 8 characters)' }, { status: 400 });
   }
 
-  // --- Rate limit: max 10 webhooks per tenant ---
   const { count, error: countError } = await supabase
     .from('tenant_webhooks')
     .select('id', { count: 'exact', head: true })
@@ -202,7 +201,6 @@ export async function POST(
     return NextResponse.json({ error: 'Maximum of 10 webhooks per tenant' }, { status: 400 });
   }
 
-  // --- Create ---
   const adminClient = createServiceRoleClient();
   const { data: newWebhook, error: insertError } = await adminClient
     .from('tenant_webhooks')
@@ -210,7 +208,7 @@ export async function POST(
       tenant_id: profile.tenant_id,
       url,
       events,
-      secret, // stored plaintext in dev; encrypted via DB trigger/migration in prod
+      secret,
       description: description ?? null,
       is_active: is_active ?? true,
     })
@@ -222,6 +220,8 @@ export async function POST(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_create', resource_type: 'tenant_webhooks', resource_id: newWebhook!.id, changes: {} });
+
   return NextResponse.json({ webhook: newWebhook }, { status: 201 });
 }
 
@@ -232,6 +232,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -275,7 +278,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Webhook ID is required' }, { status: 400 });
   }
 
-  // Verify ownership
   const adminClient = createServiceRoleClient();
   const { data: existing } = await adminClient
     .from('tenant_webhooks')
@@ -287,8 +289,6 @@ export async function PUT(
   if (!existing) {
     return NextResponse.json({ error: 'Webhook not found' }, { status: 404 });
   }
-
-  // --- Validation ---
   if (url) {
     try {
       const parsed = new URL(url);
@@ -341,6 +341,8 @@ export async function PUT(
     console.error('webhooks update error:', updateError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_update', resource_type: 'tenant_webhooks', resource_id: id!, changes: {} });
 
   return NextResponse.json({ success: true });
 }

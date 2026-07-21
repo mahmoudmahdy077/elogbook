@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { safeRelativePath } from '@/lib/safe-redirect';
+import { isMfaRequiredForRole, type UserRole } from '@/lib/supabase/auth';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -19,11 +20,27 @@ export async function GET(request: Request) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('tenant_id')
+          .select('tenant_id, role')
           .eq('user_id', user.id)
           .single();
 
         if (profile) {
+          if (isMfaRequiredForRole(profile.role as UserRole)) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.aal !== 'aal2') {
+              try {
+                const { data: mfaData } = await supabase.auth.mfa.listFactors();
+                const hasVerifiedMfa =
+                  mfaData?.all?.some((f) => f.status === 'verified') ?? false;
+                if (hasVerifiedMfa) {
+                  return NextResponse.redirect(`${origin}/mfa/verify`);
+                }
+              } catch {
+                // MFA API not available
+              }
+            }
+          }
+
           const { data: tenant } = await supabase
             .from('tenants')
             .select('slug')
