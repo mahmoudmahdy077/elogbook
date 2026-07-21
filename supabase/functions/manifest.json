@@ -10,7 +10,7 @@
     "ai-insights": {
       "public": false,
       "jwt_mode": "service_role",
-      "required_secrets": ["OPENAI_API_KEY"],
+      "required_secrets": ["OPENAI_API_KEY", "PLATFORM_OPENAI_KEY"],
       "owner": "ai"
     },
     "ai-quality": {
