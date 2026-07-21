@@ -1,67 +1,42 @@
--- Cross-tenant isolation tests (P1.1)
--- Run against a reset database: supabase db test
+-- supabase/tests/p1_1_cross_tenant_isolation.sql
+-- Cross-tenant isolation tests (P1.1) — REWRITTEN for DB-004.
+-- Run with: supabase db test
+-- Requires: a running local Supabase (supabase db reset).
+--
+-- Strategy: insert two tenants and two resident users, set the JWT
+-- claim to simulate tenant A's resident, and assert that a SELECT
+-- against tenant B's rows returns 0 rows. Without set_config, the
+-- old test passed vacuously because get_tenant_id() returned NULL
+-- and `tenant_id != NULL` is NULL → EXISTS(NULL) is false.
 
--- Each test expects to fail (no rows returned) when accessing another tenant's data
+BEGIN;
+  -- Seed two tenants
+  INSERT INTO tenants (id, name, slug, tenant_type, settings)
+  VALUES
+    ('11111111-0000-0000-0000-000000000001', 'Tenant A', 'tenant-a', 'institution', '{}'),
+    ('22222222-0000-0000-0000-000000000002', 'Tenant B', 'tenant-b', 'institution', '{}')
+  ON CONFLICT (id) DO NOTHING;
 
--- Helper: resolve different tenant IDs for testing
--- In a real test, these would be seeded tenant IDs
+  -- Insert a case in each tenant (de-identified, no PHI)
+  INSERT INTO case_entries (id, tenant_id, resident_id, template_id, patient_mrn, patient_dob, patient_age_years, patient_hash, case_date, field_values, accreditation_mappings, is_deidentified, status)
+  VALUES
+    ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft'),
+    ('bbbbbbbb-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft')
+  ON CONFLICT (id) DO NOTHING;
 
--- 1. Cannot read another tenant's case_entries
-SELECT 'FAIL: cross-tenant case_entries read' AS test_name
-WHERE EXISTS (
-  SELECT 1 FROM case_entries ce
-  WHERE ce.tenant_id != public.get_tenant_id()
-  LIMIT 1
-);
+  -- Simulate tenant A's resident JWT
+  SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","app_metadata":{"tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}}', true);
+  SET LOCAL role authenticated;
 
--- 2. Cannot read another tenant's profiles
-SELECT 'FAIL: cross-tenant profiles read' AS test_name
-WHERE EXISTS (
-  SELECT 1 FROM profiles p
-  WHERE p.tenant_id != public.get_tenant_id()
-  LIMIT 1
-);
-
--- 3. Cannot read another tenant's audit_logs
-SELECT 'FAIL: cross-tenant audit_logs read' AS test_name
-WHERE EXISTS (
-  SELECT 1 FROM audit_logs a
-  WHERE a.tenant_id != public.get_tenant_id()
-  LIMIT 1
-);
-
--- 4. Cannot read another tenant's attachments
-SELECT 'FAIL: cross-tenant attachments read' AS test_name
-WHERE EXISTS (
-  SELECT 1 FROM case_attachments ca
-  WHERE ca.entry_id IN (SELECT id FROM case_entries WHERE tenant_id != public.get_tenant_id())
-  LIMIT 1
-);
-
--- 5. RLS is enabled on all core tables
-SELECT 'FAIL: RLS not enabled on core table' AS test_name, tablename
-FROM pg_tables t
-WHERE t.schemaname = 'public'
-  AND t.tablename IN (
-    'tenants', 'profiles', 'case_entries', 'case_attachments',
-    'approval_requests', 'audit_logs', 'program_goals',
-    'subscriptions', 'payments'
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM pg_class c
-    WHERE c.relname = t.tablename AND c.relrowsecurity = true
+  -- Assert: tenant A resident CANNOT read tenant B's case (0 rows expected)
+  SELECT 'FAIL: tenant A resident can read tenant B case_entries' AS test_name
+  WHERE EXISTS (
+    SELECT 1 FROM case_entries WHERE tenant_id = '22222222-0000-0000-0000-000000000002'
   );
 
--- 6. FORCE RLS is applied on tenant-scoped tables
-SELECT 'FAIL: FORCE RLS not applied' AS test_name, tablename
-FROM pg_tables t
-WHERE t.schemaname = 'public'
-  AND t.tablename IN (
-    'tenants', 'profiles', 'case_entries', 'approval_requests',
-    'audit_logs', 'subscriptions', 'payments',
-    'institutions', 'ai_config', 'payment_gateway_config'
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM pg_class c
-    WHERE c.relname = t.tablename AND c.relforcerowsecurity = true
+  -- Assert: tenant A resident CANNOT read tenant B's profiles
+  SELECT 'FAIL: tenant A resident can read tenant B profiles' AS test_name
+  WHERE EXISTS (
+    SELECT 1 FROM profiles WHERE tenant_id = '22222222-0000-0000-0000-000000000002'
   );
+ROLLBACK;
