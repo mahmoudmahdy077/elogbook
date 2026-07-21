@@ -47,6 +47,18 @@ export async function GET(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
+  // Plan gate: webhooks is Enterprise-only
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.webhooks) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const adminClient = createServiceRoleClient();
   const { data: webhooks, error } = await adminClient
     .from('tenant_webhooks')

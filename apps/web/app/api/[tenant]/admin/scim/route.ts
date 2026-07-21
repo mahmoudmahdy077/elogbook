@@ -72,6 +72,19 @@ export async function GET(
   const auth = await authorize(tenantSlug, true);
   if (auth.error) return auth.error;
 
+  // Plan gate: SCIM is Enterprise-only
+  const supabase = await createServerSupabase();
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', auth.profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.scim) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const adminClient = createServiceRoleClient();
   const { data: tokens, error } = await adminClient
     .from('scim_tokens')

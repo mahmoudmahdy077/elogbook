@@ -41,6 +41,18 @@ export async function GET(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
+  // Plan gate: SSO is Enterprise-only
+  const { data: planCheck } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (planCheck as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.sso) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const adminClient = createServiceRoleClient();
   const { data: configs, error } = await adminClient
     .from('tenant_sso_configs')

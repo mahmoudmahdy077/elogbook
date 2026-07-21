@@ -4,19 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import TemplateEditor from '@/components/TemplateEditor';
 import UserManager from '@/components/UserManager';
-import AIConfigPanel from '@/components/AIConfigPanel';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
-
-interface AIConfigData {
-  id: string;
-  tenant_id: string;
-  provider: string;
-  model: string;
-  has_key: boolean;
-  endpoint_url: string | null;
-  is_active: boolean;
-}
 
 interface GatewayConfig {
   id: string;
@@ -35,7 +24,6 @@ interface AdminTabPanelProps {
   profileRole: string;
   templates: unknown[];
   users: unknown[];
-  aiConfig: AIConfigData | null;
   paymentConfig: GatewayConfig | null;
   totalCases: number;
   pendingCases: number;
@@ -47,9 +35,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'templates', label: 'Case Templates' },
   { id: 'users', label: 'Users & Roles' },
-  { id: 'ai', label: 'AI Config' },
   { id: 'payment', label: 'Payment Gateway' },
-  { id: 'webhooks', label: 'Webhooks' },
   { id: 'accreditation', label: 'Accreditation' },
 ] as const;
 
@@ -61,7 +47,6 @@ export default function AdminTabPanel({
   profileRole,
   templates,
   users,
-  aiConfig,
   paymentConfig,
   totalCases,
   pendingCases,
@@ -130,28 +115,8 @@ export default function AdminTabPanel({
         />
       )}
 
-      {activeTab === 'ai' && (
-        <AIConfigPanel tenantId={tenantId} config={aiConfig} />
-      )}
-
       {activeTab === 'payment' && (
         <PaymentGatewayPanel tenantId={tenantId} config={paymentConfig} />
-      )}
-
-      {activeTab === 'webhooks' && (
-        <div className="panel p-5">
-          <h2 className="text-lg font-heading font-semibold mb-2">Webhook Configuration</h2>
-          <p className="text-sm text-text-muted/60 mb-4">
-            Configure HTTP callbacks to receive real-time case event notifications
-            (submitted, approved, rejected, etc.).
-          </p>
-          <Link
-            href={`/${tenantSlug}/admin/webhooks`}
-            className="inline-flex items-center rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Manage Webhooks
-          </Link>
-        </div>
       )}
 
       {activeTab === 'accreditation' && (

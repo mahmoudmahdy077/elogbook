@@ -42,6 +42,18 @@ export async function POST(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
+  // Plan gate: AI config is Enterprise-only
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.ai_config) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const body = await request.json();
   const { provider, model, is_active, endpoint_url, api_key } = body;
 
