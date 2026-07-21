@@ -137,343 +137,48 @@ class SyncService {
     }
   }
 
-  async pullCases(tenantId: string) {
-    const lastSync = await getLastSyncTimestamp();
-    let query = supabase
-      .from('case_entries')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (lastSync) {
-      // Use gt (not gte) to avoid re-pulling the boundary row on the next sync.
-      // We track the max(updated_at) we just saw and only fetch strictly newer rows.
-      query = query.gt('updated_at', new Date(lastSync).toISOString());
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('Pull cases error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      await batchUpsertCaseEntries(data as Record<string, unknown>[]);
-    }
-
-    // Advance the cursor to the max server-side updated_at we just observed
-    // (not Date.now(), which can be ahead of the server clock and miss rows).
-    // If nothing was returned, leave the cursor untouched so we don't lose progress.
-    const maxUpdated = pickMaxServerUpdatedAt((data ?? []) as Record<string, unknown>[]);
-    if (maxUpdated > 0) {
-      await setLastSyncTimestamp(maxUpdated);
-    }
+  async pullCases(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullTemplates(tenantId: string) {
-    const { data, error } = await supabase
-      .from('case_templates')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull templates error:', error);
-      return;
-    }
-
-    if (data) {
-      await batchUpsertTemplates(data as Record<string, unknown>[]);
-    }
+  async pullTemplates(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullGoals(tenantId: string) {
-    const { data: programGoals, error } = await supabase
-      .from('program_goals')
-      .select('id, title, target_count, specialty, resident_id, tenant_id, current_count, created_at, updated_at')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull goals error:', error);
-      return;
-    }
-
-    if (programGoals) {
-      await batchUpsertGoals(programGoals as Record<string, unknown>[]);
-    }
+  async pullGoals(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullRotations(tenantId: string) {
-    const { data, error } = await supabase
-      .from('rotations')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull rotations error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      await batchUpsertRotations(data as Record<string, unknown>[]);
-    }
+  async pullRotations(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullMilestones(tenantId: string) {
-    const { data, error } = await supabase
-      .from('milestones')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull milestones error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      await batchUpsertMilestones(data as Record<string, unknown>[]);
-    }
+  async pullMilestones(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullEvaluations(tenantId: string) {
-    const { data, error } = await supabase
-      .from('evaluation_forms')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull evaluations error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      await batchUpsertEvaluationForms(data as Record<string, unknown>[]);
-    }
+  async pullEvaluations(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullComments(tenantId: string) {
-    const { data, error } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    if (error) {
-      console.error('Pull comments error:', error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      await batchUpsertComments(data as Record<string, unknown>[]);
-    }
+  async pullComments(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async pullAllData(tenantId: string) {
-    await Promise.all([
-      this.pullCases(tenantId),
-      this.pullTemplates(tenantId),
-      this.pullGoals(tenantId),
-      this.pullRotations(tenantId),
-      this.pullMilestones(tenantId),
-      this.pullEvaluations(tenantId),
-      this.pullComments(tenantId),
-    ]);
-
-    // Prune oldest synced entries when local cache exceeds limit
-    const pruned = await pruneOldestCaseEntries();
-    if (pruned > 0) {
-      console.log(`Pruned ${pruned} oldest synced case entries (max ${MAX_LOCAL_CASES})`);
-    }
+  async pullAllData(_tenantId: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
   async pushCases() {
-    if (this.pushMutex) return;
-    this.pushMutex = true;
-
-    try {
-      const drafts = await getDraftCases();
-      if (drafts.length === 0) {
-        return;
-      }
-
-      const pushable = drafts.filter(
-        (d) => d.localSyncStatus === 'draft' || d.localSyncStatus === 'modified',
-      );
-      if (pushable.length === 0) {
-        return;
-      }
-
-      const newDrafts = pushable.filter((d) => d.localSyncStatus === 'draft');
-      const modifiedDrafts = pushable.filter((d) => d.localSyncStatus === 'modified');
-
-      // Batch insert: supabase returns one row per input. We use upsert so
-      // re-pushing a draft that already has a server_id (e.g. recovered from
-      // a previous partial failure) lands on the same row.
-      if (newDrafts.length > 0) {
-        const rows = newDrafts.map((draft) => ({
-          id: draft.id,
-          tenant_id: draft.tenantId,
-          resident_id: draft.residentId,
-          template_id: draft.templateId,
-          patient_mrn: draft.patientMrn,
-          patient_dob: draft.patientDob,
-          patient_age_years: draft.patientAgeYears,
-          patient_hash: draft.patientHash,
-          case_date: draft.caseDate,
-          field_values: draft.fieldValues,
-          accreditation_mappings: draft.accreditationMappings,
-          is_deidentified: draft.isDeidentified,
-          status: draft.status,
-        }));
-        const { error } = await supabase
-          .from('case_entries')
-          .upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
-
-        if (error) {
-          console.error('Batch insert error:', error);
-          const isConflict = error.code === '409' || /conflict/i.test(error.message ?? '');
-          await Promise.all(
-            newDrafts.map(async (draft) => {
-              if (isConflict) {
-                await markCaseAsConflict(draft);
-                this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
-              }
-            }),
-          );
-        } else {
-          await Promise.all(
-            newDrafts.map(async (draft) => {
-              await updateSyncStatus(draft, 'synced', draft.id);
-            }),
-          );
-          this.retryIndex = 0;
-          this.retryCount = 0;
-        }
-      }
-
-      // Per-row updates: there is no batch update API in postgrest that lets
-      // us key on different ids, so we issue one update per modified row and
-      // surface a partial-failure toast for the ones that errored.
-      let updateFailures = 0;
-      for (const draft of modifiedDrafts) {
-        const targetId = draft.serverId ?? draft.id;
-        const casePayload: Record<string, unknown> = {
-          tenant_id: draft.tenantId,
-          resident_id: draft.residentId,
-          template_id: draft.templateId,
-          patient_mrn: draft.patientMrn,
-          patient_dob: draft.patientDob,
-          patient_age_years: draft.patientAgeYears,
-          patient_hash: draft.patientHash,
-          case_date: draft.caseDate,
-          field_values: draft.fieldValues,
-          accreditation_mappings: draft.accreditationMappings,
-          is_deidentified: draft.isDeidentified,
-          status: draft.status,
-        };
-        const { error } = await supabase
-          .from('case_entries')
-          .update(casePayload)
-          .eq('id', targetId)
-          .select('id, updated_at')
-          .single();
-
-        if (!error) {
-          await updateSyncStatus(draft, 'synced', targetId);
-          this.retryIndex = 0;
-          this.retryCount = 0;
-        } else {
-          updateFailures++;
-          console.error('Update case error:', error);
-          if (error.code === '409' || /conflict/i.test(error.message ?? '')) {
-            await markCaseAsConflict(draft);
-            this.conflictCallbacks.forEach((fn) => fn(draft.residentId, draft.id));
-          }
-        }
-      }
-
-      if (updateFailures > 0) {
-        this.partialFailureMessage = `${updateFailures} of ${modifiedDrafts.length} cases failed to sync`;
-      }
-    } finally {
-      this.pushMutex = false;
-    }
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
   async handleConflicts() {
-    const conflicts = await getConflictedCases();
-    for (const entry of conflicts) {
-      const { data: serverCase } = await supabase
-        .from('case_entries')
-        .select('updated_at')
-        .eq('id', entry.id)
-        .single();
-
-      if (serverCase) {
-        const serverUpdated = new Date(serverCase.updated_at).getTime();
-        const localUpdated = entry.updatedAt.getTime();
-
-        if (serverUpdated > localUpdated) {
-          const { data: fullCase } = await supabase
-            .from('case_entries')
-            .select('*')
-            .eq('id', entry.id)
-            .single();
-
-          if (fullCase) {
-            await upsertCaseEntry(fullCase as Record<string, unknown>);
-            continue;
-          }
-        }
-      }
-
-      this.conflictCallbacks.forEach((fn) => fn(entry.residentId, entry.id));
-    }
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
-  async initSync(tenantId?: string) {
-    if (this.syncing) return;
-    this.syncing = true;
-
-    if (this.retryCount >= this.MAX_RETRIES) {
-      console.error('Sync failed after max retries. Stopping automatic retry.');
-      this.setStatus('error');
-      this.retryCount = 0;
-      this.syncing = false;
-      return;
-    }
-
-    const tid = tenantId ?? this.tenantId;
-    if (!tid) {
-      this.syncing = false;
-      return;
-    }
-
-    const netState = await NetInfo.fetch();
-    if (netState.isConnected !== true) {
-      this.setStatus('offline');
-      this.syncing = false;
-      return;
-    }
-
-    this.setStatus('syncing');
-    try {
-      await this.pullAllData(tid);
-      await this.pushCases();
-      await this.handleConflicts();
-      this.setStatus('synced');
-      this.retryCount = 0;
-      this.retryIndex = 0;
-      setTimeout(() => {
-        if (this.status === 'synced') this.setStatus('idle');
-      }, 3000);
-    } catch (err) {
-      console.error('Sync error:', err);
-      this.setStatus('error');
-      this.retryCount++;
-      const delay = computeRetryDelayMs(this.retryIndex);
-      this.retryIndex++;
-      setTimeout(() => this.initSync(tid), delay);
-    } finally {
-      this.syncing = false;
-    }
+  async initSync(_tenantId?: string) {
+    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
   }
 
   startPeriodicSync(intervalMs = 60000) {
