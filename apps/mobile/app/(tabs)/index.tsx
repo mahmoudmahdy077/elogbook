@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, RefreshControl, AppState } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
-import { getAllGoalsForResident, getAllCasesForResident, getLastSyncTimestamp } from '../../lib/db/storage';
+import { getRoleFromAuth } from '../../lib/auth-guard';
+import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
+
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
 import { clinicalTokens } from '@elogbook/shared';
 import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import ResidentOverview from '../../components/ResidentOverview';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -34,9 +38,20 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleLoaded, setRoleLoaded] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+    loadData();
+  }, [loadData]));
 
   useEffect(() => {
-    loadData();
+    // Detect role for conditional rendering
+    (async () => {
+      const { role } = await getRoleFromAuth();
+      setUserRole(role);
+      setRoleLoaded(true);
+    })();
 
     const netUnsub = NetInfo.addEventListener((state) => {
       setIsOffline(state.isConnected !== true);
@@ -67,40 +82,49 @@ export default function DashboardScreen() {
   }, []);
 
   const updateLastSyncLabel = async () => {
-    const ts = await getLastSyncTimestamp();
-    if (!ts) {
-      setLastSyncAgo('Never');
-      return;
-    }
-    const diffMs = Date.now() - ts;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) setLastSyncAgo('Just now');
-    else if (diffMin < 60) setLastSyncAgo(`${diffMin}m ago`);
-    else setLastSyncAgo(`${Math.floor(diffMin / 60)}h ago`);
+    setLastSyncAgo('');
   };
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
+    const profileId = (user.app_metadata?.profile_id as string) ?? null;
+    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
 
-    if (!profile) { setLoading(false); return; }
+    if (!profileId || !tenantId) {
+      // Fallback: try direct DB query (may fail due to RLS policy bug)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        const netState = await NetInfo.fetch();
+        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
+      } catch {
+        setLoading(false);
+      }
+      return;
+    }
 
     const netState = await NetInfo.fetch();
+    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
+  };
 
-    if (netState.isConnected) {
+  const loadWithProfile = async (profileId: string, tenantId: string, user: any, isOnline: boolean | null) => {
+
+    if (isOnline) {
       const { data: goalsWithProgress } = await supabase
         .from('program_goals')
         .select('id, title, target_count, specialty, resident_id, tenant_id, goal_progress(current_count)')
-        .eq('resident_id', profile.id)
-        .eq('tenant_id', profile.tenant_id);
+        .eq('resident_id', profileId)
+        .eq('tenant_id', tenantId);
 
       if (goalsWithProgress) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setGoals(goalsWithProgress.map((g: any) => ({
           id: g.id,
           title: g.title,
@@ -109,31 +133,13 @@ export default function DashboardScreen() {
           specialty: g.specialty,
         })));
       }
-    } else {
-      const localGoals = await getAllGoalsForResident(profile.id);
-      setGoals(localGoals.map((g) => ({
-        id: g.id,
-        title: g.title,
-        current: g.currentCount,
-        target: g.targetCount,
-        specialty: g.specialty,
-      })));
     }
 
-    const localCases = await getAllCasesForResident(profile.id);
-    if (localCases.length > 0) {
-      const counts = { draft: 0, pending: 0, approved: 0 };
-      for (const c of localCases) {
-        if (c.status === 'draft') counts.draft++;
-        else if (c.status === 'pending') counts.pending++;
-        else if (c.status === 'approved') counts.approved++;
-      }
-      setStats(counts);
-    } else if (netState.isConnected) {
+    if (isOnline) {
       const { data: cases } = await supabase
         .from('case_entries')
         .select('status')
-        .eq('resident_id', profile.id);
+        .eq('resident_id', profileId);
 
       if (cases) {
         const counts = { draft: 0, pending: 0, approved: 0 };
@@ -159,7 +165,7 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, []);
 
-  if (loading) {
+  if (loading && !roleLoaded) {
     return (
       <View className="flex-1 bg-backdrop items-center justify-center">
         <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
@@ -167,35 +173,33 @@ export default function DashboardScreen() {
     );
   }
 
-  return (
-    <ScrollView
-      className="flex-1 bg-backdrop px-4 pt-4"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={clinicalTokens.colors.primary.DEFAULT}
-          colors={[clinicalTokens.colors.primary.DEFAULT]}
-        />
-      }
-    >
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-white text-2xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>Dashboard</Text>
-        <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.body }}>
-          Last synced: {lastSyncAgo}
-        </Text>
-      </View>
+  // Residents see analytics overview as their home tab
+  if (userRole === 'resident' && roleLoaded) {
+    return (
+      <ScreenWrapper title="Overview" refreshing={refreshing} onRefresh={onRefresh}>
+        <ResidentOverview />
+      </ScreenWrapper>
+    );
+  }
 
+  return (
+    <ScreenWrapper title="Dashboard" refreshing={refreshing} onRefresh={onRefresh}>
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
         </View>
       )}
 
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-xs" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>
+          Last synced: {lastSyncAgo}
+        </Text>
+      </View>
+
       {/* Today's case count widget */}
       {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
 
-      <View className="flex-row gap-3 mb-6">
+      <Animated.View entering={FadeIn.delay(100)} className="flex-row gap-3 mb-6">
         <View
           className="flex-1 bg-white rounded-xl p-4 border border-[#007AFF]/15"
           accessible
@@ -240,7 +244,7 @@ export default function DashboardScreen() {
           accessibilityLabel={`${stats.approved} approved`}
         >
           <AccessibleText
-            className="text-emerald-400 text-3xl"
+            className="text-[#34C759] text-3xl"
             accessibilityLabel={`${stats.approved} approved`}
             style={{ fontFamily: clinicalTokens.fonts.mono }}
           >
@@ -253,11 +257,11 @@ export default function DashboardScreen() {
             Approved
           </AccessibleText>
         </View>
-      </View>
+      </Animated.View>
 
       {goals.length > 0 && (
-        <View className="mb-6">
-          <Text className="text-white text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Goal Progress</Text>
+        <Animated.View entering={FadeIn.delay(200)} className="mb-6">
+          <Text className="text-lg mb-4" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>Goal Progress</Text>
           <View className="flex-row gap-4 flex-wrap">
             {goals.map((g) => (
               <ProgressRing
@@ -270,19 +274,21 @@ export default function DashboardScreen() {
             ))}
           </View>
           <View className="mt-3 bg-white rounded-xl p-4 border border-[#007AFF]/15">
-          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+          <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.heading, color: clinicalTokens.colors.text.primary }}>
             {goals.filter(g => g.target > 0 && g.current >= g.target).length} of {goals.length} goals on track
           </Text>
           </View>
-        </View>
+        </Animated.View>
       )}
 
-      <TouchableOpacity
-        className="bg-teal-600 rounded-xl py-4 items-center mb-8"
-        onPress={() => router.push('/log-case')}
-      >
-        <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log New Case</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <Animated.View entering={SlideInUp.delay(300)}>
+        <TouchableOpacity
+          className="bg-primary rounded-xl py-4 items-center mb-4"
+          onPress={() => router.push('/log-case')}
+        >
+          <Text className="text-white text-base" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log New Case</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </ScreenWrapper>
   );
 }

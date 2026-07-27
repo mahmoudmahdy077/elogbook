@@ -70,7 +70,7 @@ log() {
   local level="$1"
   local msg="$2"
   local ts
-  ts="$(date --iso-8601=seconds)"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "${ts} [${level}] ${msg}" >> "${LOG_FILE}"
   echo "${ts} [${level}] ${msg}"
 }
@@ -97,7 +97,7 @@ done
 run mkdir -p "${BACKUP_DIR}"
 
 # 2. Determine filename
-TIMESTAMP="$(date --utc +%Y%m%dT%H%M%SZ)"
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 DUMP_FILE="${BACKUP_DIR}/${BACKUP_PREFIX}-db-${TIMESTAMP}.sql"
 COMPRESSED_FILE="${DUMP_FILE}${COMPRESS_EXT}"
 
@@ -113,7 +113,7 @@ else
     if ${COMPRESS_CMD} "${DUMP_FILE}"; then
       # 6. Check resulting file
       if [[ -f "${COMPRESSED_FILE}" ]]; then
-        FILE_SIZE="$(stat --printf=%s "${COMPRESSED_FILE}")"
+        FILE_SIZE="$(stat -c %s "${COMPRESSED_FILE}")"
         log "INFO" "Backup complete: ${COMPRESSED_FILE} (${FILE_SIZE} bytes)"
       else
         log "WARN" "Compressed file not found after compression: ${COMPRESSED_FILE}"

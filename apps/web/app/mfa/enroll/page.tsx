@@ -88,7 +88,7 @@ function MfaEnrollInner() {
         {qr ? (
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-4">
-              <div className="bg-white p-4 rounded-lg">
+              <div className="bg-surface-solid p-4 rounded-lg">
                 <QRCodeSVG value={qr.uri} size={200} />
               </div>
               <p className="text-xs text-neutral-light/50">Scan with your authenticator app</p>

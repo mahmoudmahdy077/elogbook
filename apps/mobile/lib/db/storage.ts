@@ -619,19 +619,26 @@ export const MAX_LOCAL_CASES = 500;
 
 export async function pruneOldestCaseEntries(): Promise<number> {
   const db = getDatabase();
-  const all = await db.get<CaseEntry>('case_entries')
+  const baseQuery = db.get<CaseEntry>('case_entries')
     .query(
       Q.and(
         Q.where('_status', Q.notEq('deleted')),
         Q.where('local_sync_status', 'synced'),
       ),
       Q.sortBy('updated_at', Q.asc),
-    )
-    .fetch();
+    );
 
-  if (all.length <= MAX_LOCAL_CASES) return 0;
+  const count = await baseQuery.fetchCount();
+  if (count <= MAX_LOCAL_CASES) return 0;
 
-  const toDelete = all.slice(0, all.length - MAX_LOCAL_CASES);
+  const excess = count - MAX_LOCAL_CASES;
+
+  // Fetch only the oldest excess entries using Q.take() — avoids loading
+  // thousands of records into memory just to prune the tail.
+  const toDelete = await baseQuery.extend(Q.take(excess)).fetch();
+
+  // WatermelonDB batches all writes inside a single db.write() block,
+  // so individual markAsDeleted calls are coalesced into one batch op.
   await db.write(async () => {
     for (const entry of toDelete) {
       await entry.markAsDeleted();

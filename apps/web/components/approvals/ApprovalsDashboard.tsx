@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client'
 import ApprovalActions from '@/components/ApprovalActions';
 import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -35,7 +34,6 @@ interface RelationApprovalRequest {
 interface PendingEntry {
   id: string;
   case_date: string;
-  field_values: Record<string, unknown>;
   is_deidentified: boolean;
   status: string;
   resident_id: string;
@@ -45,11 +43,6 @@ interface PendingEntry {
   profiles: RelationProfile[];
   case_templates: RelationTemplate[];
   approval_requests: RelationApprovalRequest[];
-}
-
-interface AllEntry {
-  id: string;
-  status: string;
 }
 
 const itemVariants = {
@@ -66,7 +59,7 @@ function StatCard({ value, label, color }: { value: number; label: string; color
         <SimpleCounter value={value} />
         {label === 'Approval Rate' && <span className="text-base">%</span>}
       </p>
-      <p className="text-[0.7rem] font-semibold text-[#8E8E93] uppercase tracking-wider">{label}</p>
+      <p className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">{label}</p>
     </div>
   );
 }
@@ -84,7 +77,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  const fetchPending = async () => {
+  const fetchPending = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -92,11 +85,12 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
       supabase
         .from('case_entries')
         .select(
-          'id, case_date, field_values, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name)'
+          'id, case_date, is_deidentified, status, resident_id, template_id, tenant_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name), approval_requests(id, status, requested_at, comment)'
         )
         .eq('tenant_id', tenantId)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(50),
       supabase
         .from('case_entries')
         .select('id', { count: 'exact', head: true })
@@ -120,56 +114,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
     const approved = approvedCountRes.count ?? 0;
     if (mountedRef.current) setApprovalRate(total > 0 ? Math.round((approved / total) * 100) : 0);
 
-    const entries = (pendingRes.data || []) as Omit<PendingEntry, 'approval_requests'>[];
-    const entryIds = entries.map((e) => e.id);
-
-    if (entryIds.length > 0) {
-      const { data: approvalData, error: approvalError } = await supabase
-        .from('approval_requests')
-        .select('id, status, requested_at, comment, entry_id')
-        .in('entry_id', entryIds);
-
-      if (approvalError) {
-        setError(approvalError.message);
-        setLoading(false);
-        return;
-      }
-
-      interface ApprovalDataRaw {
-        id: string;
-        status: string;
-        requested_at: string;
-        comment: string | null;
-        entry_id: string;
-      }
-
-      const approvalMap = new Map<string, RelationApprovalRequest[]>();
-      for (const a of (approvalData || []) as ApprovalDataRaw[]) {
-        if (!approvalMap.has(a.entry_id)) approvalMap.set(a.entry_id, []);
-        approvalMap.get(a.entry_id)!.push({
-          id: a.id,
-          status: a.status,
-          requested_at: a.requested_at,
-          comment: a.comment,
-        });
-      }
-
-      const merged = entries.map((e) => ({
-        ...e,
-        approval_requests: approvalMap.get(e.id) || [],
-      })) as PendingEntry[];
-
-      setEntries(merged);
-    } else {
-      setEntries([]);
-    }
-
+    setEntries((pendingRes.data || []) as PendingEntry[]);
     setLoading(false);
-  };
+  }, [tenantId, supabase]);
 
   useEffect(() => {
     fetchPending();
-  }, [tenantId]);
+  }, [fetchPending]);
 
   const pendingCount = entries.length;
   const todayUTC = new Date().toISOString().split('T')[0];
@@ -185,7 +136,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   if (loading) {
     return (
       <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
-        <p className="text-[#8E8E93]">Loading...</p>
+        <p className="text-text-muted">Loading...</p>
       </div>
     );
   }
@@ -206,7 +157,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           Pending Approvals
         </h2>
         {pendingCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[rgba(255,149,0,0.12)] text-[#FF9500] border border-[rgba(255,149,0,0.20)]">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-50 text-warning border border-warning/20">
             {pendingCount}
           </span>
         )}
@@ -224,7 +175,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
       {entries.length === 0 ? (
         <EmptyState
           icon={
-            <svg className="w-5 h-5 text-[#8E8E93]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <svg className="w-5 h-5 text-text-muted" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
             </svg>
           }
@@ -238,9 +189,6 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
               const profile = entry.profiles[0];
               const template = entry.case_templates[0];
               const approvalRequest = entry.approval_requests[0];
-              const fields = entry.field_values || {};
-              const fieldEntries = Object.entries(fields).slice(0, 4);
-
               return (
                 <motion.div
                   key={entry.id}
@@ -260,7 +208,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                         <p className="text-sm font-semibold text-text-primary truncate">
                           {profile?.full_name || 'Unknown Resident'}
                         </p>
-                        <p className="text-xs text-[#8E8E93]">
+                        <p className="text-xs text-text-muted">
                           {profile?.specialty || 'No specialty'}
                         </p>
                       </div>
@@ -276,36 +224,19 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                     {/* Template + Case Date */}
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <span className="text-[#8E8E93] block text-xs">Template</span>
+                        <span className="text-text-muted block text-xs">Template</span>
                         <span className="font-medium text-text-primary">
                           {template?.specialty}
                           {template?.name ? ` \u2013 ${template.name}` : ''}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#8E8E93] block text-xs">Case Date</span>
-                        <span className="text-sm font-medium text-[#3C3C43]">
+                        <span className="text-text-muted block text-xs">Case Date</span>
+                        <span className="text-sm font-medium text-text-secondary">
                           {entry.case_date || '-'}
                         </span>
                       </div>
                     </div>
-
-                    {/* Field Values */}
-                    {fieldEntries.length > 0 && (
-                      <div className="border-t border-border pt-3">
-                        <span className="text-xs text-[#8E8E93] block mb-2">Field Values</span>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                          {fieldEntries.map(([key, value]) => (
-                            <div key={key} className="flex justify-between gap-2">
-                              <span className="text-xs text-[#8E8E93] truncate">{key}</span>
-                              <span className="text-xs font-medium text-[#3C3C43] truncate">
-                                {value === null || value === '' ? '-' : String(value)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Approval Actions */}
                     {approvalRequest && (

@@ -30,7 +30,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     { data: users, error: usersError },
     { data: aiConfigRaw, error: aiConfigError },
     { data: paymentConfigRaw, error: paymentConfigError },
-    { data: caseCounts, error: caseCountsError },
+    { count: totalCases, error: totalCountError },
+    { count: pendingCases, error: pendingCountError },
   ] = await Promise.all([
       supabase
         .from('case_templates')
@@ -54,15 +55,21 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .maybeSingle(),
       supabase
         .from('case_entries')
-        .select('status', { count: 'exact' })
+        .select('id', { count: 'exact', head: true })
         .eq('tenant_id', profile.tenant_id),
+      supabase
+        .from('case_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', profile.tenant_id)
+        .eq('status', 'pending'),
     ]);
 
   if (templatesError) return <ErrorDisplay message={templatesError.message} />;
   if (usersError) return <ErrorDisplay message={usersError.message} />;
   if (aiConfigError) return <ErrorDisplay message={aiConfigError.message} />;
   if (paymentConfigError) return <ErrorDisplay message={paymentConfigError.message} />;
-  if (caseCountsError) return <ErrorDisplay message={caseCountsError.message} />;
+  if (totalCountError) return <ErrorDisplay message={totalCountError.message} />;
+  if (pendingCountError) return <ErrorDisplay message={pendingCountError.message} />;
 
   interface AiConfigRaw {
     id: string;
@@ -110,9 +117,6 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
       }
     : null;
 
-  const totalCases = caseCounts?.length ?? 0;
-  const pendingCases = (caseCounts ?? []).filter((c: { status: string }) => c.status === 'pending').length;
-
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
@@ -124,8 +128,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         users={users ?? []}
         aiConfig={aiConfig}
         paymentConfig={paymentConfig}
-        totalCases={totalCases}
-        pendingCases={pendingCases}
+        totalCases={totalCases ?? 0}
+        pendingCases={pendingCases ?? 0}
       />
     </div>
   );

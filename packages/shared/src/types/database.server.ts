@@ -7,7 +7,7 @@
 export interface AIConfigServer {
   id: string;
   tenant_id: string;
-  provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'custom';
+  provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'aihubmix' | 'custom';
   model: string;
   /** AES-encrypted bytes (pgp_sym_encrypt output) — see migration 00053. */
   api_key_enc: Uint8Array;

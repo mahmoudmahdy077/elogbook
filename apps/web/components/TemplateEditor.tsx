@@ -187,7 +187,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
 
       {/* Create Template Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+        <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
           <div className="panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h3 className="text-lg font-semibold mb-4">Create Case Template</h3>
 
@@ -256,7 +256,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
               </button>
             </div>
           </div>
-        </div>
+        </button>
       )}
 
       <ImpactDialog

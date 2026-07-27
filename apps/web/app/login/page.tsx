@@ -2,16 +2,15 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, type FormEvent } from 'react';
-import Link from 'next/link';
+import { useState, type FormEvent } from 'react';
 import { APP_NAME } from '@elogbook/shared';
-import { FormField, FormDivider, Spinner } from '@elogbook/shared/components/web';
+import { FormField, FormDivider } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 function EyeIcon() {
   return (
-    <svg className="w-4 h-4 text-[#8E8E93] cursor-pointer hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -20,7 +19,7 @@ function EyeIcon() {
 
 function EyeOffIcon() {
   return (
-    <svg className="w-4 h-4 text-[#8E8E93] cursor-pointer hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
       <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
       <line x1="1" y1="1" x2="23" y2="23" />
@@ -51,9 +50,9 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
   if (sent) {
     return (
       <div className="text-center py-4">
-        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-2">Check your email</h2>
-        <p className="text-sm text-[#8E8E93]">
-          We sent password reset instructions to <strong className="text-black">{email}</strong>.
+        <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-2">Check your email</h2>
+        <p className="text-sm text-text-muted">
+          We sent password reset instructions to <strong className="text-text-primary">{email}</strong>.
         </p>
         <button onClick={onBack} className="mt-4 text-sm font-medium text-primary hover:opacity-80 transition-opacity">
           Back to sign in
@@ -64,8 +63,8 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-1">Reset password</h2>
-      <p className="text-sm text-[#8E8E93] mb-4">Enter your email and we&apos;ll send you a reset link.</p>
+      <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-1">Reset password</h2>
+      <p className="text-sm text-text-muted mb-4">Enter your email and we&apos;ll send you a reset link.</p>
       {error && (
         <div className="mb-4">
           <ErrorDisplay message={error} />
@@ -78,7 +77,7 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
       >
         {loading ? 'Sending...' : 'Send reset link'}
       </button>
-      <button onClick={onBack} className="mt-3 w-full text-sm text-[#8E8E93] hover:text-black transition-colors">
+      <button onClick={onBack} className="mt-3 w-full text-sm text-text-muted hover:text-text-primary transition-colors">
         Back to sign in
       </button>
     </div>
@@ -88,16 +87,16 @@ function ForgotPasswordForm({ email, onBack }: { email: string; onBack: () => vo
 function SuccessState({ email }: { email: string }) {
   return (
     <div className="text-center py-6">
-      <div className="w-12 h-12 rounded-full bg-[rgba(52,199,89,0.12)] border border-[rgba(52,199,89,0.20)] text-[#34C759] flex items-center justify-center mx-auto mb-4">
+      <div className="w-12 h-12 rounded-full bg-success/10 border border-success/20 text-success flex items-center justify-center mx-auto mb-4">
         <svg className="w-6 h-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-1">Check your email</h2>
-      <p className="text-sm text-[#8E8E93]">
-        We sent a magic link to <strong className="text-black">{email}</strong>.
+      <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-1">Check your email</h2>
+      <p className="text-sm text-text-muted">
+        We sent a magic link to <strong className="text-text-primary">{email}</strong>.
       </p>
-      <p className="text-xs text-[#8E8E93] mt-3">Click the link in the email to sign in. The link expires in 1 hour.</p>
+      <p className="text-xs text-text-muted mt-3">Click the link in the email to sign in. The link expires in 1 hour.</p>
     </div>
   );
 }
@@ -110,30 +109,8 @@ export default function LoginPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [ssoAvailable, setSsoAvailable] = useState<{ available: boolean; protocol?: string } | null>(null);
-  const [ssoChecking, setSsoChecking] = useState(false);
   const supabase = createClient();
   const router = useRouter();
-
-  // Check for SSO availability via ?tenant= param
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tenantSlug = params.get('tenant');
-    if (tenantSlug) {
-      setSsoChecking(true);
-      fetch(`/api/sso/check?tenant=${encodeURIComponent(tenantSlug)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setSsoAvailable(data);
-        })
-        .catch(() => {
-          setSsoAvailable({ available: false });
-        })
-        .finally(() => {
-          setSsoChecking(false);
-        });
-    }
-  }, []);
 
   const handleOtpLogin = async () => {
     setError('');
@@ -191,9 +168,9 @@ export default function LoginPage() {
 
   if (showForgot) {
     return (
-      <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm sm:max-w-md">
-          <div className="bg-white rounded-2xl border border-black/5 p-6 sm:p-8 md:p-10">
+          <div className="bg-surface-solid rounded-2xl border border-border p-6 sm:p-8 md:p-10">
             <ForgotPasswordForm email={email} onBack={() => setShowForgot(false)} />
           </div>
         </div>
@@ -202,61 +179,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F2F2F7] flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
+    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-black tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
-          <p className="text-sm sm:text-base text-[#8E8E93] mt-2">Sign in to your account</p>
+          <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-text-primary tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
+          <p className="text-sm sm:text-base text-text-muted mt-2">Sign in to your account</p>
         </div>
 
-        {/* Demo credentials banner */}
-        <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
-          <p className="text-xs font-semibold text-[#34C759] mb-1.5">🔐 Demo Accounts</p>
-          <div className="space-y-0.5">
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">resident@demo.com</code> — resident</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">director@demo.com</code> — director</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
-            <p className="text-[11px] text-[#34C759]/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+        {/* Demo credentials banner (dev/staging only) */}
+        {process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (
+          <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
+            <p className="text-xs font-semibold text-success mb-1.5">🔐 Demo Accounts</p>
+            <div className="space-y-0.5">
+              <p className="text-[11px] text-success/80"><code className="font-mono">resident@demo.com</code> — resident</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">supervisor@demo.com</code> — supervisor</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">director@demo.com</code> — director</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">admin@demo.com</code> — institution admin</p>
+              <p className="text-[11px] text-success/80"><code className="font-mono">platform@demo.com</code> — platform admin</p>
+            </div>
+            <p className="text-[11px] text-success/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
           </div>
-          <p className="text-[11px] text-[#34C759]/60 mt-1">Password: <code className="font-mono">password123!</code> for all</p>
-        </div>
+        )}
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/5 p-6 sm:p-8 md:p-10 shadow-sm">
+        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 shadow-sm">
           {sent ? (
             <SuccessState email={email} />
           ) : (
             <div className="space-y-5 sm:space-y-6">
-              {ssoChecking ? (
-                <div className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full border border-black/5 bg-[#F2F2F7] text-black/40 font-medium text-sm cursor-wait">
-                  <Spinner />
-                  Checking SSO…
-                </div>
-              ) : ssoAvailable?.available ? (
-                <Link
-                  href={`/login/sso?tenant=${new URLSearchParams(window.location.search).get('tenant') ?? ''}`}
-                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                  Sign in with SSO ({ssoAvailable.protocol?.toUpperCase() ?? ''})
-                </Link>
-              ) : (
-                <Link
-                  href="/login/sso"
-                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-full border border-black/5 bg-[#F2F2F7] text-black font-medium text-sm hover:bg-[#E5E5EA] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                  Sign in with SSO
-                </Link>
-              )}
+              {/* SSO login removed pending complete SAML/OIDC implementation (P1.4) */}
 
               <FormDivider label="or continue with email" />
 
@@ -283,7 +233,6 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOffIcon /> : <EyeIcon />}
@@ -291,7 +240,7 @@ export default function LoginPage() {
                   }
                 />
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-[#8E8E93]">Leave blank to receive a magic link.</p>
+                  <p className="text-xs text-text-muted">Leave blank to receive a magic link.</p>
                   <button
                     type="button"
                     onClick={() => setShowForgot(true)}
@@ -308,7 +257,7 @@ export default function LoginPage() {
                   disabled={!email || loading}
                   className="w-full py-3 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center justify-center gap-2"
                 >
-                  {loading ? <Spinner /> : null}
+                  {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
                   {loading
                     ? 'Signing in...'
                     : password
@@ -320,7 +269,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-[#8E8E93] mt-6 sm:mt-8">
+        <p className="text-center text-xs text-text-muted mt-6 sm:mt-8">
           By signing in, you agree to your institution&apos;s data handling policy.
         </p>
       </div>

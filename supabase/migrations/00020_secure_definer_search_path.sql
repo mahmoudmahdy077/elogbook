@@ -25,7 +25,7 @@ AS $$
 BEGIN
   RETURN COALESCE(
     current_setting('request.jwt.claims', true)::jsonb->>'tenant_id',
-    (auth.jwt() ->> 'tenant_id')::UUID
+    auth.jwt() ->> 'tenant_id'
   )::UUID;
 END;
 $$;

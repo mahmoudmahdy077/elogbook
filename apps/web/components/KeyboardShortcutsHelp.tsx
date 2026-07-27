@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useShortcuts, formatBinding } from '@/lib/shortcuts';
+import { motion } from 'framer-motion';
+import { useShortcuts } from '@/lib/shortcuts';
 
 const CATEGORY_ORDER = ['actions', 'navigation', 'list-navigation'] as const;
 const CATEGORY_LABEL: Record<string, string> = {
@@ -75,7 +75,7 @@ export default function KeyboardShortcutsHelp() {
           </div>
           <button
             onClick={() => setHelpOpen(false)}
-            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-text-muted hover:text-text-primary"
+            className="p-2 rounded-full hover:bg-neutral-dark transition-colors text-text-muted hover:text-text-primary"
             aria-label="Close shortcuts"
           >
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -95,7 +95,7 @@ export default function KeyboardShortcutsHelp() {
                 {group.items.map((shortcut) => (
                   <div
                     key={shortcut.id}
-                    className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-neutral-dark transition-colors"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm text-text-primary truncate">

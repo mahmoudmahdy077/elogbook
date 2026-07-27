@@ -94,8 +94,9 @@ export default function OnboardingPage() {
             <h2 className="text-lg font-semibold">Your Profile</h2>
             <p className="text-sm text-neutral-light/60">Enter your details.</p>
             <div>
-              <label className="block text-xs mb-1">Full Name</label>
+              <label htmlFor="full-name" className="block text-xs mb-1">Full Name</label>
               <input
+                id="full-name"
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -104,8 +105,9 @@ export default function OnboardingPage() {
               />
             </div>
             <div>
-              <label className="block text-xs mb-1">Specialty</label>
+              <label htmlFor="specialty" className="block text-xs mb-1">Specialty</label>
               <select
+                id="specialty"
                 value={specialty}
                 onChange={(e) => setSpecialty(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border"

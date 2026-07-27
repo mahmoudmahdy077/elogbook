@@ -1,17 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import { parseWebServerEnv, parseWebPublicEnv } from '@elogbook/env';
 
 export function createServiceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.');
-  }
-  if (!serviceKey) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable.');
-  }
-
-  return createClient(url, serviceKey, {
+  const env = parseWebServerEnv(process.env);
+  const publicEnv = parseWebPublicEnv(process.env);
+  return createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

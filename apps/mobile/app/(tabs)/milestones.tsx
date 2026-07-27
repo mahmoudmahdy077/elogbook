@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const MAX_LEVEL = 5;
 
@@ -69,26 +71,29 @@ function MilestoneMatrix({
 
   if (groups.length === 0) {
     return (
-      <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
-        <Text
-          className="text-gray-500 text-sm"
-          style={{ fontFamily: clinicalTokens.fonts.body }}
-        >
-          No milestones recorded yet.
-        </Text>
-      </View>
+      <Animated.View entering={FadeIn.delay(200).springify()}>
+        <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
+          <Text
+            className="text-[#8E8E93] text-sm"
+            style={{ fontFamily: clinicalTokens.fonts.body }}
+          >
+            No milestones recorded yet.
+          </Text>
+        </View>
+      </Animated.View>
     );
   }
 
   return (
     <View>
-      {groups.map((group) => (
-        <View
+      {groups.map((group, index) => (
+        <Animated.View
           key={group.area}
-          className="mb-4 bg-white/5 rounded-xl p-3 border border-gray-700/30"
+          entering={FadeInDown.delay(index * 80 + 200).springify()}
         >
+          <View className="mb-4 bg-white/5 rounded-xl p-3 border border-gray-700/30">
           <Text
-            className="text-teal-400 text-sm font-semibold mb-2"
+            className="text-primary text-sm font-semibold mb-2"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             {group.area}
@@ -100,7 +105,7 @@ function MilestoneMatrix({
               className="flex-row items-center py-2 border-b border-gray-800/50"
             >
               <Text
-                className="text-white text-sm flex-1 mr-2"
+                className="text-[#3C3C43] text-sm flex-1 mr-2"
                 style={{ fontFamily: clinicalTokens.fonts.body }}
                 numberOfLines={2}
               >
@@ -121,6 +126,7 @@ function MilestoneMatrix({
             </View>
           ))}
         </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -151,7 +157,7 @@ function ResidentPicker({
     return (
       <View className="bg-white/5 rounded-xl p-4 border border-gray-700/50 mb-4">
         <Text
-          className="text-gray-500 text-sm"
+          className="text-[#8E8E93] text-sm"
           style={{ fontFamily: clinicalTokens.fonts.body }}
         >
           No residents found in this tenant.
@@ -163,7 +169,7 @@ function ResidentPicker({
   return (
     <View className="mb-4">
       <Text
-        className="text-gray-400 text-xs mb-2"
+        className="text-[#8E8E93] text-xs mb-2"
         style={{ fontFamily: clinicalTokens.fonts.body }}
       >
         Select Resident
@@ -174,7 +180,7 @@ function ResidentPicker({
             key={r.id}
             className={`rounded-xl px-4 py-2 border ${
               selectedResident === r.id
-                ? 'bg-teal-600 border-teal-500'
+                ? 'bg-primary border-teal-500'
                 : 'bg-white/10 border-gray-700'
             }`}
             onPress={() => onSelect(r.id)}
@@ -183,7 +189,7 @@ function ResidentPicker({
           >
             <Text
               className={`text-sm ${
-                selectedResident === r.id ? 'text-white' : 'text-gray-300'
+                selectedResident === r.id ? 'text-white' : 'text-[#3C3C43]'
               }`}
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
@@ -312,11 +318,9 @@ export default function MilestonesScreen() {
     }
   }, [selectedResident, fetchMilestones]);
 
-  // loadData is intentionally omitted from deps — it's an inline function that changes every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -338,20 +342,16 @@ export default function MilestonesScreen() {
 
   if (loading) {
     return (
-      <View
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      >
-        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-      </View>
+      <ScreenWrapper title="Milestones" scroll={false}>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
+        </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-    >
+    <ScreenWrapper title="Milestones" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
@@ -362,21 +362,25 @@ export default function MilestonesScreen() {
           />
         }
       >
-        <Text
-          className="text-white text-2xl mb-4"
-          style={{ fontFamily: clinicalTokens.fonts.heading }}
-        >
-          Milestones
-        </Text>
+        <Animated.View entering={FadeIn.delay(100).springify()}>
+          <Text
+            className="text-[#000000] text-2xl mb-4"
+            style={{ fontFamily: clinicalTokens.fonts.heading }}
+          >
+            Milestones
+          </Text>
+        </Animated.View>
 
         {/* Resident picker for director+ and supervisors */}
         {(isDirectorPlus || role === 'supervisor') && (
-          <ResidentPicker
-            residents={residents}
-            selectedResident={selectedResident}
-            onSelect={handleResidentSelect}
-            loading={loading}
-          />
+          <Animated.View entering={FadeInDown.delay(150).springify()}>
+            <ResidentPicker
+              residents={residents}
+              selectedResident={selectedResident}
+              onSelect={handleResidentSelect}
+              loading={loading}
+            />
+          </Animated.View>
         )}
 
         {/* Milestone matrix */}
@@ -385,16 +389,18 @@ export default function MilestonesScreen() {
         )}
 
         {!selectedResident && !loading && (
-          <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
+          <Animated.View entering={FadeIn.delay(200).springify()}>
+            <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-gray-500 text-sm"
+              className="text-[#8E8E93] text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               Select a resident to view milestones.
             </Text>
           </View>
+          </Animated.View>
         )}
       </ScrollView>
-    </View>
+    </ScreenWrapper>
   );
 }

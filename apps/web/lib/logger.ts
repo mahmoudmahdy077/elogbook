@@ -3,7 +3,6 @@
  *
  * Rules:
  *   - Emits one JSON line per call.
- *   - In the browser, posts to /api/log via sendBeacon in production.
  *   - In Node, writes to stdout/stderr.
  *   - Recursively redacts known PHI keys in any object passed as `meta`.
  *
@@ -61,6 +60,7 @@ function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
   let tenantId: string | undefined;
   let userId: string | undefined;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { requestContext } = require('./request-context') as typeof import('./request-context');
     requestId = requestContext.getRequestId();
     tenantId = requestContext.getTenantId();
@@ -79,14 +79,6 @@ function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
     ...(redact(meta) as Record<string, unknown>),
   };
   const line = JSON.stringify(entry);
-
-  if (typeof window !== 'undefined' && level !== 'debug' && navigator?.sendBeacon) {
-    try {
-      navigator.sendBeacon('/api/log', new Blob([line], { type: 'application/json' }));
-    } catch {
-      /* best-effort */
-    }
-  }
 
   if (level === 'error' || level === 'warn') {
     console.error(line);

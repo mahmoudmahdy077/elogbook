@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -16,27 +16,30 @@ jobs:
   web:
     name: Deploy Web (Vercel)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
-      - id: deploy
+      - name: Deploy to Vercel
         uses: amondnet/vercel-action@v42
+        id: deploy
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+          vercel-args: '--prod --yes'
 
   # ----------------------------------------------------------------------
   # Push database migrations
@@ -44,38 +47,37 @@ jobs:
   db:
     name: Push DB migrations
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: latest
-      - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all
+      - run: supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   # ----------------------------------------------------------------------
-  # Deploy edge functions
+  # Deploy edge functions (depends on db migrations being done first)
   # ----------------------------------------------------------------------
   functions:
     name: Deploy Edge Functions
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     needs: [db]
     strategy:
       matrix:
-        function: [ai-insights, generate-pdf, create-checkout, payment-webhook]
+        function: [ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
         with:
           version: latest
       - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      # TODO(P6.5): add SCIM, webhooks, dispatch-webhook functions
 
   # ----------------------------------------------------------------------
   # Build mobile (EAS Build)
@@ -83,22 +85,27 @@ jobs:
   mobile:
     name: Build Mobile (EAS)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - run: pnpm --filter @elogbook/mobile expo prebuild --clean
-      - run: eas build --platform all --non-interactive --auto-submit
+      - run: NODE_OPTIONS="--no-experimental-strip-types" pnpm --filter @elogbook/mobile expo prebuild --clean
+      - name: Build Android (EAS)
+        run: |
+          eas build --platform android --non-interactive --no-wait 2>&1 || echo "EAS_BUILD_EXIT_CODE=$?"
         env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

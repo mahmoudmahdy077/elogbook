@@ -7,41 +7,8 @@
 -- ---------------------------------------------------------------------------
 -- P2.9 — Audit triggers for previously-uncovered tables
 -- ---------------------------------------------------------------------------
--- Generic audit function: writes OLD/NEW row JSON to audit_logs.
--- Secret columns are stripped (see 00050 for the same pattern).
-DO $$
-DECLARE
-  v_table TEXT;
-  v_tables TEXT[] := ARRAY[
-    'profiles', 'tenants', 'subscriptions', 'payments',
-    'consent_records', 'approval_requests', 'case_attachments',
-    'stripe_events', 'resident_ai_toggle',
-    'institutions', 'case_templates', 'program_goals'
-  ];
-  v_excluded_cols TEXT[] := ARRAY['password', 'encrypted_api_key', 'encrypted_secret_key', 'encrypted_webhook_secret', 'api_key_enc', 'secret_key_enc', 'webhook_secret_enc'];
-  v_col_list TEXT;
-BEGIN
-  FOREACH v_table IN ARRAY v_tables LOOP
-    -- Build a column-removal jsonb - each secret col stripped individually.
-    SELECT string_agg(format('- %L', c.column_name), ', ')
-      INTO v_col_list
-    FROM information_schema.columns c
-    WHERE c.table_schema = 'public' AND c.table_name = v_table
-      AND c.column_name = ANY(v_excluded_cols);
-
-    IF v_col_list IS NULL THEN v_col_list := ''; END IF;
-
-    EXECUTE format($f$
-      DROP TRIGGER IF EXISTS trg_audit_%I ON public.%I;
-      CREATE TRIGGER trg_audit_%I
-        AFTER INSERT OR UPDATE OR DELETE ON public.%I
-        FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(%L);
-    $f$, v_table, v_table, v_table, v_table, v_col_list);
-  END LOOP;
-END $$;
-
 -- Generic audit function (P2.9).
-CREATE OR REPLACE FUNCTION public.audit_table_change(p_excluded_cols TEXT DEFAULT '')
+CREATE OR REPLACE FUNCTION public.audit_table_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -52,8 +19,10 @@ DECLARE
   v_new jsonb;
   v_action TEXT;
   v_changes jsonb := '{}'::jsonb;
-  v_excluded TEXT[] := string_to_array(p_excluded_cols, ', ');
+  v_excluded TEXT[];
 BEGIN
+  IF TG_NARGS > 0 THEN v_excluded := string_to_array(TG_ARGV[0], ', '); ELSE v_excluded := '{}'::TEXT[]; END IF;
+
   IF TG_OP = 'INSERT' THEN
     v_action := 'insert';
     v_new := to_jsonb(NEW);
@@ -61,7 +30,6 @@ BEGIN
     v_action := 'update';
     v_old := to_jsonb(OLD);
     v_new := to_jsonb(NEW);
-    -- Capture only the changed columns to keep the audit row small.
     SELECT jsonb_object_agg(key, value)
       INTO v_changes
     FROM jsonb_each(v_new)
@@ -86,6 +54,20 @@ BEGIN
 END;
 $$;
 
+-- Create audit triggers for uncovered tables (one per table via DO block)
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_profiles ON public.profiles; CREATE TRIGGER trg_audit_profiles AFTER INSERT OR UPDATE OR DELETE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.audit_table_change('password'); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_tenants ON public.tenants; CREATE TRIGGER trg_audit_tenants AFTER INSERT OR UPDATE OR DELETE ON public.tenants FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_subscriptions ON public.subscriptions; CREATE TRIGGER trg_audit_subscriptions AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_payments ON public.payments; CREATE TRIGGER trg_audit_payments AFTER INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_consent_records ON public.consent_records; CREATE TRIGGER trg_audit_consent_records AFTER INSERT OR UPDATE OR DELETE ON public.consent_records FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_approval_requests ON public.approval_requests; CREATE TRIGGER trg_audit_approval_requests AFTER INSERT OR UPDATE OR DELETE ON public.approval_requests FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_case_attachments ON public.case_attachments; CREATE TRIGGER trg_audit_case_attachments AFTER INSERT OR UPDATE OR DELETE ON public.case_attachments FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_stripe_events ON public.stripe_events; CREATE TRIGGER trg_audit_stripe_events AFTER INSERT OR UPDATE OR DELETE ON public.stripe_events FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_resident_ai_toggle ON public.resident_ai_toggle; CREATE TRIGGER trg_audit_resident_ai_toggle AFTER INSERT OR UPDATE OR DELETE ON public.resident_ai_toggle FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_institutions ON public.institutions; CREATE TRIGGER trg_audit_institutions AFTER INSERT OR UPDATE OR DELETE ON public.institutions FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_case_templates ON public.case_templates; CREATE TRIGGER trg_audit_case_templates AFTER INSERT OR UPDATE OR DELETE ON public.case_templates FOR EACH ROW EXECUTE FUNCTION public.audit_table_change('encrypted_api_key, api_key_enc'); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN DROP TRIGGER IF EXISTS trg_audit_program_goals ON public.program_goals; CREATE TRIGGER trg_audit_program_goals AFTER INSERT OR UPDATE OR DELETE ON public.program_goals FOR EACH ROW EXECUTE FUNCTION public.audit_table_change(''); EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
 -- ---------------------------------------------------------------------------
 -- P2.14 — Provision pg_cron; make schedules idempotent; remove stale MV job
 -- ---------------------------------------------------------------------------
@@ -102,14 +84,14 @@ BEGIN
     PERFORM cron.schedule(
       'enforce-data-retention',
       '0 3 * * *',
-      $$SELECT enforce_data_retention()$$
+      $cron$SELECT enforce_data_retention()$cron$
     );
 
     -- Schedule AI response cache cleanup (every 6 hours).
     PERFORM cron.schedule(
       'cleanup-ai-response-cache',
       '0 */6 * * *',
-      $$SELECT cleanup_ai_response_cache()$$
+      $cron$SELECT cleanup_ai_response_cache()$cron$
     );
 
     RAISE NOTICE 'pg_cron jobs scheduled';

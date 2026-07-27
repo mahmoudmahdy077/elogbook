@@ -20,11 +20,9 @@ interface PaymentGatewayPanelProps {
   config: GatewayConfig | null;
 }
 
+// P1.5: Stripe-only until Paddle/LemonSqueezy have equivalent production support
 const PROVIDERS = [
   { key: 'stripe', label: 'Stripe' },
-  { key: 'paddle', label: 'Paddle' },
-  { key: 'lemonsqueezy', label: 'LemonSqueezy' },
-  { key: 'custom', label: 'Custom' },
 ];
 
 export default function PaymentGatewayPanel({ tenantId, config }: PaymentGatewayPanelProps) {
@@ -93,7 +91,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
 
       setSuccess('Payment gateway configuration saved successfully.');
       router.refresh();
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -108,7 +106,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
       <div className="pt-4 space-y-4">
         {error && <ErrorDisplay message={error} />}
         {success && (
-          <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+          <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
         )}
 
         <div>

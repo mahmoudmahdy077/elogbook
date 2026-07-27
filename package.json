@@ -10,31 +10,49 @@
     "pnpm": ">=9.0.0 <10"
   },
   "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp"]
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
   "dependencies": {
     "next": "^16.2.7",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "scripts": {
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
     "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm lint:all",
+    "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint",
+    "test": "pnpm test:unit",
+    "test:unit": "pnpm --filter @elogbook/web test && pnpm --filter @elogbook/mobile test",
+    "test:db": "supabase db test",
+    "test:watch": "pnpm --filter @elogbook/web test:watch",
+    "test:coverage": "pnpm --filter @elogbook/web test:coverage",
+    "test:e2e": "pnpm --filter @elogbook/web test:e2e",
     "dev:web": "pnpm --filter @elogbook/web dev",
     "dev:mobile": "pnpm --filter @elogbook/mobile start",
     "build:web": "pnpm --filter @elogbook/web build",
+    "build:mobile:validate": "pnpm --filter @elogbook/mobile expo prebuild --clean",
     "analyze": "ANALYZE=true pnpm build:web",
     "db:migrate": "supabase db push",
     "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
-    "test": "vitest run --exclude '**/e2e/**'",
-    "test:watch": "vitest --exclude '**/e2e/**'",
-    "test:coverage": "vitest run --coverage --exclude '**/e2e/**'",
-    "test:e2e": "pnpm --filter @elogbook/web test:e2e",
-    "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint"
+    "security:scan": "pnpm audit --prod --audit-level=high && trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed elogbook-web:scan",
+    "release:verify": "pnpm check && pnpm build:web && pnpm security:scan"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.9",
+    "@tailwindcss/postcss": "^4.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "babel-preset-expo": "^56.0.14",
     "eslint-plugin-react": "^7.37.5",
+    "framer-motion": "^12.40.0",
     "jsdom": "^29.1.1",
+    "tailwindcss": "^4.1.0",
     "typescript": "^6.0.0",
     "vitest": "^4.1.9"
   }

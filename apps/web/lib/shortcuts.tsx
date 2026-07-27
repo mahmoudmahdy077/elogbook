@@ -193,6 +193,11 @@ export function KeyboardShortcutsProvider({
     }
   }, []);
 
+  const unregisterShortcut = useCallback((id: string) => {
+    shortcutRegistry.current.delete(id);
+    setShortcuts(Array.from(shortcutRegistry.current.values()));
+  }, []);
+
   const registerShortcut = useCallback((shortcut: ShortcutDef) => {
     if (shortcutRegistry.current.has(shortcut.id)) {
       return () => unregisterShortcut(shortcut.id);
@@ -203,12 +208,7 @@ export function KeyboardShortcutsProvider({
       shortcutRegistry.current.delete(shortcut.id);
       setShortcuts(Array.from(shortcutRegistry.current.values()));
     };
-  }, []);
-
-  const unregisterShortcut = useCallback((id: string) => {
-    shortcutRegistry.current.delete(id);
-    setShortcuts(Array.from(shortcutRegistry.current.values()));
-  }, []);
+  }, [unregisterShortcut]);
 
   // Register default shortcuts on mount
   useEffect(() => {
@@ -370,7 +370,7 @@ export function KeyboardShortcutsProvider({
     }));
 
     // Add sequence navigation items
-    for (const [_firstKey, secondKeys] of Object.entries(SEQUENCE_MAP)) {
+    for (const secondKeys of Object.values(SEQUENCE_MAP)) {
       for (const [secondKey, action] of Object.entries(secondKeys)) {
         if (!items.some((i) => i.id === action.id)) {
           items.push({

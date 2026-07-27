@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import type { UserRole } from '@elogbook/shared';
 
 export type AuthGuardState = {
   isAuthenticated: boolean;
@@ -7,6 +8,30 @@ export type AuthGuardState = {
 };
 
 export type AuthStateListener = (state: AuthGuardState) => void;
+
+/**
+ * Extract role from JWT user_metadata (fast, no DB query).
+ * Falls back to reading from profiles table if metadata is missing.
+ */
+export async function getRoleFromAuth(): Promise<{
+  role: UserRole | null;
+  fullName: string | null;
+  tenantId: string | null;
+  profileId: string | null;
+}> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { role: null, fullName: null, tenantId: null, profileId: null };
+
+  const role = (user.user_metadata?.role as UserRole) ?? null;
+  const fullName = (user.user_metadata?.full_name as string) ?? null;
+  const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
+  const profileId = (user.app_metadata?.profile_id as string) ?? null;
+
+  return { role, fullName, tenantId, profileId };
+}
 
 export function subscribeToAuth(
   supabaseClient: Pick<typeof supabase, 'auth'> = supabase,

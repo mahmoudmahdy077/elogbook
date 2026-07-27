@@ -31,6 +31,12 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
   const isReadOnly = subscription?.status === 'past_due' || subscription?.status === 'unpaid';
   const initialStatus = tenant.tenant_type === 'individual' ? 'pending' : 'draft';
 
+  // Check case quota
+  const { data: quota } = await supabase
+    .rpc('check_case_quota', { p_tenant_id: profile.tenant_id });
+  const quotaInfo = quota?.[0];
+  const isOverQuota = quotaInfo && !quotaInfo.allowed;
+
   if (isReadOnly) {
     return (
       <div className="panel p-6">
@@ -38,6 +44,26 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-amber-200">
           <p className="font-semibold mb-1">Subscription renewal required</p>
           <p className="text-sm">New case logging is temporarily disabled because your institution subscription has lapsed. Please renew to restore full access.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isOverQuota) {
+    return (
+      <div className="panel p-6">
+        <h1 className="text-2xl font-bold mb-4">Log New Case</h1>
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-6 text-center">
+          <h2 className="text-xl font-semibold text-text-primary mb-2">Upgrade to log more cases</h2>
+          <p className="text-sm text-text-muted mb-4">
+            You&apos;ve reached the limit of your current plan ({quotaInfo?.max_cases} cases).
+          </p>
+          <Link
+            href={`/${tenantSlug}/billing`}
+            className="inline-block px-6 py-2.5 rounded-full bg-primary text-white font-medium text-sm hover:opacity-90 transition-opacity"
+          >
+            View upgrade options
+          </Link>
         </div>
       </div>
     );

@@ -24,18 +24,18 @@ export default function EmptyState({ icon, title, description, action, secondary
           {icon}
         </div>
       )}
-      <p className="text-sm font-medium text-neutral-light/70">{title}</p>
+      <p className="text-sm font-medium text-text-primary">{title}</p>
       {description && (
-        <p className="text-xs text-neutral-light/50 max-w-xs mx-auto">{description}</p>
+        <p className="text-xs text-text-secondary max-w-xs mx-auto">{description}</p>
       )}
       {(action || secondaryAction) && (
         <div className="flex items-center justify-center gap-3 pt-1">
           {action && (action.href ? (
-            <a href={action.href} className="inline-flex px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+            <a href={action.href} className="inline-flex px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
               {action.label}
             </a>
           ) : (
-            <button onClick={action.onClick} className="inline-flex px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+            <button onClick={action.onClick} className="inline-flex px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
               {action.label}
             </button>
           ))}

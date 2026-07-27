@@ -75,8 +75,8 @@ function DonutChart({ data, total }: { data: DonutData[]; total: number }) {
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: segment.color }}
             />
-            <span className="text-[#8E8E93]">{STATUS_LABELS[segment.status]}</span>
-            <span className="font-semibold text-black">{segment.count}</span>
+            <span className="text-text-muted">{STATUS_LABELS[segment.status]}</span>
+            <span className="font-semibold text-text-primary">{segment.count}</span>
           </div>
         ))}
       </div>
@@ -91,7 +91,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
   return (
     <div className="space-y-3">
       {data.length === 0 ? (
-        <p className="text-sm text-[#8E8E93]">No cases logged yet.</p>
+        <p className="text-sm text-text-muted">No cases logged yet.</p>
       ) : (
         data.map((item, index) => {
           const pct = max > 0 ? (item.count / max) * 100 : 0;
@@ -107,10 +107,10 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
               onMouseLeave={() => setHovered(null)}
             >
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-[#3C3C43] font-medium truncate pr-2">{item.specialty}</span>
-                <span className="text-[#8E8E93] clinical-data">{item.count}</span>
+                <span className="text-text-secondary font-medium truncate pr-2">{item.specialty}</span>
+                <span className="text-text-muted clinical-data">{item.count}</span>
               </div>
-              <div className="h-1 rounded-full bg-black/5 overflow-hidden">
+              <div className="h-1 rounded-full bg-neutral-dark overflow-hidden">
                 <motion.div
                   className="h-full rounded-full bg-primary"
                   initial={{ width: 0 }}
@@ -119,7 +119,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
                 />
               </div>
               {isHovered && (
-                <div className="absolute -top-8 right-0 px-2 py-1 rounded-lg bg-white border border-black/5 text-xs text-[#3C3C43] z-10 shadow-sm">
+                <div className="absolute -top-8 right-0 px-2 py-1 rounded-lg bg-surface-solid border border-border text-xs text-text-secondary z-10 shadow-sm">
                   {item.specialty}: {item.count}
                 </div>
               )}
@@ -152,13 +152,13 @@ export default function ProgramOverviewCharts({ statusCounts, specialtyCounts }:
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <div className="bg-white rounded-2xl border border-black/5 p-5">
-        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">Completion Rates by Status</h2>
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
+        <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">Completion Rates by Status</h2>
         <DonutChart data={donutData} total={total || 1} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-black/5 p-5">
-        <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans mb-4">Specialty Distribution</h2>
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
+        <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans mb-4">Specialty Distribution</h2>
         <BarChart data={barData} max={maxSpecialty} />
       </div>
     </div>

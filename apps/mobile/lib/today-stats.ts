@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getAllCasesForResident } from './db/storage';
+
 import NetInfo from '@react-native-community/netinfo';
 
 export interface TodayStats {
@@ -52,16 +52,7 @@ export async function fetchTodayStats(): Promise<TodayStats> {
     return countByStatus(cases.map((c) => c.status));
   }
 
-  // Offline: filter local records by today's date
-  const localCases = await getAllCasesForResident(profile.id);
-  const todayLocal = localCases.filter((c) => {
-    const caseDate = c.caseDate ?? '';
-    return caseDate.startsWith(today);
-  });
-
-  if (todayLocal.length === 0) return emptyStats;
-
-  return countByStatus(todayLocal.map((c) => c.status));
+  return emptyStats;
 }
 
 function countByStatus(statuses: string[]): TodayStats {

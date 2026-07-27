@@ -1,9 +1,8 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { authenticate } from '../_shared/auth.ts';
 
 interface GapAnalysisRequest {
   resident_id: string;
-  tenant_id: string;
 }
 
 interface GapResult {
@@ -23,36 +22,32 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get('Authorization') || '';
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const auth = await authenticate(req);
+    if (auth instanceof Response) return auth;
+    const { supabase, tenantId, role } = auth;
 
-    // Verify JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!['supervisor', 'director', 'institution_admin', 'admin'].includes(role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden: supervisor role or higher required' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { resident_id, tenant_id }: GapAnalysisRequest = await req.json();
-    if (!resident_id || !tenant_id) {
-      return new Response(JSON.stringify({ error: 'resident_id and tenant_id required' }), {
+    const { resident_id }: GapAnalysisRequest = await req.json();
+    if (!resident_id) {
+      return new Response(JSON.stringify({ error: 'resident_id required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Fetch resident's data
     const [casesRes, milestonesRes, goalsRes, dutyHoursRes] = await Promise.all([
-      supabase.from('case_entries').select('*, case_templates!inner(specialty, name), status')
-        .eq('resident_id', resident_id).eq('tenant_id', tenant_id).is('deleted_at', null),
-      supabase.from('milestones').select('*')
-        .eq('resident_id', resident_id).eq('tenant_id', tenant_id),
-      supabase.from('program_goals').select('*, goal_progress(current_count)')
-        .eq('resident_id', resident_id).eq('tenant_id', tenant_id),
-      supabase.from('duty_periods').select('*')
-        .eq('resident_id', resident_id).eq('tenant_id', tenant_id),
+      supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, case_date, status, created_at, updated_at, case_templates!inner(specialty, name)')
+        .eq('resident_id', resident_id).eq('tenant_id', tenantId).is('deleted_at', null),
+      supabase.from('milestones').select('id, tenant_id, resident_id, competency_area, sub_competency, level')
+        .eq('resident_id', resident_id).eq('tenant_id', tenantId),
+      supabase.from('program_goals').select('id, tenant_id, resident_id, title, target_count, deadline, goal_progress(current_count)')
+        .eq('resident_id', resident_id).eq('tenant_id', tenantId),
+      supabase.from('duty_periods').select('id, tenant_id, resident_id, shift_date, hours_worked, shift_type')
+        .eq('resident_id', resident_id).eq('tenant_id', tenantId),
     ]);
 
     const cases = casesRes.data || [];

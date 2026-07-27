@@ -86,9 +86,9 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
             const isComplete = current >= target;
 
             let barColor: string;
-            if (isComplete) barColor = 'bg-[#34C759]';
-            else if (isOverdue) barColor = 'bg-[#FF3B30]';
-            else barColor = 'bg-[#007AFF]';
+            if (isComplete) barColor = 'bg-success';
+            else if (isOverdue) barColor = 'bg-danger';
+            else barColor = 'bg-primary';
 
             return (
               <div key={goal.id} className="panel">
@@ -122,10 +122,10 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
                       </span>
                     </div>
                     {isComplete && (
-                      <p className="text-[#34C759] text-sm font-medium">Goal completed!</p>
+                      <p className="text-success text-sm font-medium">Goal completed!</p>
                     )}
                     {isOverdue && (
-                      <p className="text-[#FF3B30] text-sm font-medium">Overdue</p>
+                      <p className="text-danger text-sm font-medium">Overdue</p>
                     )}
                     {goal.description && (
                       <p className="text-sm text-text-muted mt-1">{goal.description}</p>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const SHIFT_TYPES = [
   { key: 'call', label: 'Call' },
@@ -65,12 +67,16 @@ export default function DutyHoursScreen() {
   };
 
   return (
-    <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-      <Text className="text-white text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
+    <ScreenWrapper title="Duty Hours" scroll={false}>
+      <Animated.View entering={FadeIn.delay(100).springify()}>
+        <Text className="text-[#000000] text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
+      </Animated.View>
 
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-gray-200 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
-        <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.body }}>{date.toLocaleDateString()}</Text>
-      </TouchableOpacity>
+      <Animated.View entering={FadeInDown.delay(150).springify()}>
+        <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-gray-200 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
+          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.body }}>{date.toLocaleDateString()}</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {showDatePicker && (
         <DateTimePicker
@@ -84,48 +90,56 @@ export default function DutyHoursScreen() {
         />
       )}
 
-      <TextInput
-        className="bg-white text-white rounded-xl px-4 py-3 mb-3 border border-[#007AFF]/15"
-        placeholder="Hours (e.g., 8.5)"
-        placeholderTextColor="#666"
-        value={hours}
-        onChangeText={setHours}
-        keyboardType="numeric"
-        accessibilityLabel="Hours worked"
-      />
+      <Animated.View entering={FadeInDown.delay(200).springify()}>
+        <TextInput
+          className="bg-white text-[#000000] rounded-xl px-4 py-3 mb-3 border border-[#007AFF]/15"
+          placeholder="Hours (e.g., 8.5)"
+          placeholderTextColor="#666"
+          value={hours}
+          onChangeText={setHours}
+          keyboardType="numeric"
+          accessibilityLabel="Hours worked"
+        />
+      </Animated.View>
 
-      <View className="flex-row flex-wrap gap-2 mb-3">
-        {SHIFT_TYPES.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-teal-600 border-teal-500' : 'bg-gray-200 border-[#007AFF]/15'}`}
-            onPress={() => setShiftType(t.key)}
-            accessibilityLabel={t.label}
-            accessibilityRole="button"
-          >
-            <Text className={shiftType === t.key ? 'text-white' : 'text-gray-900'} style={{ fontFamily: clinicalTokens.fonts.body }}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Animated.View entering={FadeInDown.delay(250).springify()}>
+        <View className="flex-row flex-wrap gap-2 mb-3">
+          {SHIFT_TYPES.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              className={`rounded-lg px-3 py-2 border ${shiftType === t.key ? 'bg-primary border-teal-500' : 'bg-gray-200 border-[#007AFF]/15'}`}
+              onPress={() => setShiftType(t.key)}
+              accessibilityLabel={t.label}
+              accessibilityRole="button"
+            >
+              <Text className={shiftType === t.key ? 'text-white' : 'text-gray-900'} style={{ fontFamily: clinicalTokens.fonts.body }}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Animated.View>
 
-      <TextInput
-        className="bg-white text-white rounded-xl px-4 py-3 mb-4 border border-[#007AFF]/15"
-        placeholder="Notes (optional)"
-        placeholderTextColor="#666"
-        value={notes}
-        onChangeText={setNotes}
-        accessibilityLabel="Notes"
-      />
+      <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <TextInput
+          className="bg-white text-white rounded-xl px-4 py-3 mb-4 border border-[#007AFF]/15"
+          placeholder="Notes (optional)"
+          placeholderTextColor="#666"
+          value={notes}
+          onChangeText={setNotes}
+          accessibilityLabel="Notes"
+        />
+      </Animated.View>
 
-      <TouchableOpacity
-        className={`bg-teal-600 rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
-        onPress={handleSave}
-        disabled={saving}
-        accessibilityLabel="Save duty hours"
-        accessibilityRole="button"
-      >
-        <Text className="text-white font-bold" style={{ fontFamily: clinicalTokens.fonts.heading }}>Save</Text>
-      </TouchableOpacity>
-    </View>
+      <Animated.View entering={FadeInDown.delay(350).springify()}>
+        <TouchableOpacity
+          className={`bg-primary rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
+          onPress={handleSave}
+          disabled={saving}
+          accessibilityLabel="Save duty hours"
+          accessibilityRole="button"
+        >
+          <Text className="text-white font-bold" style={{ fontFamily: clinicalTokens.fonts.heading }}>Save</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </ScreenWrapper>
   );
 }

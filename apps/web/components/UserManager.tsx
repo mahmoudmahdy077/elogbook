@@ -31,11 +31,11 @@ const ROLE_OPTIONS = [
 ];
 
 const ROLE_COLORS: Record<string, string> = {
-  resident: 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]',
-  supervisor: 'bg-[rgba(0,122,255,0.12)] text-[#007AFF]',
-  director: 'bg-[rgba(255,149,0,0.12)] text-[#FF9500]',
-  institution_admin: 'bg-[rgba(255,59,48,0.12)] text-[#FF3B30]',
-  admin: 'bg-[rgba(52,199,89,0.12)] text-[#34C759]',
+  resident: 'bg-primary/10 text-primary',
+  supervisor: 'bg-primary/10 text-primary',
+  director: 'bg-warning/10 text-warning',
+  institution_admin: 'bg-danger/10 text-danger',
+  admin: 'bg-success/10 text-success',
 };
 
 export default function UserManager({ tenantId, users, currentUserRole }: UserManagerProps) {
@@ -70,29 +70,36 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { error: inviteError } = await supabase.auth.signInWithOtp({
-      email: inviteEmail.trim(),
-      options: {
-        data: {
+    try {
+      const res = await fetch(`/api/${tenantId}/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
           full_name: inviteName.trim(),
+          role: inviteRole,
           specialty: inviteSpecialty || null,
-        },
-      },
-    });
+        }),
+      });
 
-    if (inviteError) {
-      setError(inviteError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send invitation.');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
+      setSuccess(data.message || `Invitation sent to ${inviteEmail}.`);
+      resetForm();
+      router.refresh();
+      setShowInviteModal(false);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSuccess(`Invitation sent to ${inviteEmail}. Role will need to be assigned separately.`);
-    resetForm();
-    router.refresh();
-    setShowInviteModal(false);
   }
 
   async function doRoleChange() {
@@ -117,7 +124,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       router.refresh();
       setShowRoleDialog(false);
       setRoleChangeTarget(null);
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -134,7 +141,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
       <div>
         {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm mb-4">{success}</div>
+        <div className="bg-success/10 text-success p-3 rounded-lg text-sm mb-4">{success}</div>
       )}
 
       <div className="flex justify-between items-center mb-4">
@@ -196,7 +203,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
 
       {/* Invite User Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInviteModal(false)}>
+        <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInviteModal(false)}>
           <div className="panel p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h3 className="text-lg font-semibold mb-4">Invite User</h3>
             <div className="space-y-4">
@@ -266,7 +273,7 @@ export default function UserManager({ tenantId, users, currentUserRole }: UserMa
               </button>
             </div>
           </div>
-        </div>
+        </button>
       )}
         <ImpactDialog
           isOpen={showRoleDialog}

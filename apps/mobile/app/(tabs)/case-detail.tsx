@@ -12,12 +12,13 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
-import { getDatabase } from '../../lib/db/database';
-import type { CaseEntry } from '../../lib/db/models/CaseEntry';
-import { upsertCaseEntry } from '../../lib/db/storage';
+
 import { useHaptics } from '../../lib/haptics';
+import Animated from 'react-native-reanimated';
+import { Entering } from '../../lib/animations';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
 interface CaseDetail {
@@ -74,33 +75,6 @@ export default function CaseDetailScreen() {
 
     setRole(profile.role as UserRole);
 
-    const db = getDatabase();
-    try {
-      const localEntry = await db.get<CaseEntry>('case_entries').find(caseId);
-      if (localEntry) {
-        setCaseDetail({
-          id: localEntry.id,
-          resident_name: '',
-          specialty: '',
-          template_name: '',
-          case_date: localEntry.caseDate ?? '',
-          status: (localEntry.status ?? 'draft') as CaseStatus,
-          is_deidentified: localEntry.isDeidentified ?? true,
-          patient_mrn: localEntry.patientMrn ?? null,
-          patient_dob: localEntry.patientDob ?? null,
-          patient_age_years: localEntry.patientAgeYears ?? null,
-          patient_hash: localEntry.patientHash ?? null,
-          field_values: localEntry.fieldValues ?? {},
-          rejection_comment: null,
-          created_at: localEntry.createdAt?.toISOString() ?? '',
-          updated_at: localEntry.updatedAt?.toISOString() ?? '',
-        });
-        setLoading(false);
-      }
-    } catch {
-      // Not in local DB — proceed to network fetch
-    }
-
     if (!isOffline) {
       const { data: entry } = await supabase
         .from('case_entries')
@@ -132,7 +106,7 @@ export default function CaseDetailScreen() {
           created_at: e.created_at as string,
           updated_at: e.updated_at as string,
         });
-        await upsertCaseEntry(entry as Record<string, unknown>);
+
       }
     }
 
@@ -221,14 +195,14 @@ export default function CaseDetailScreen() {
   if (!caseDetail) {
     return (
       <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-gray-500">Case not found.</Text>
+        <Text className="text-gray-500" style={{ fontFamily: clinicalTokens.fonts.body }}>Case not found.</Text>
         <TouchableOpacity
-          className="mt-4 bg-teal-600 px-6 py-2 rounded-lg"
+          className="mt-4 bg-primary px-6 py-2 rounded-lg"
           onPress={() => router.back()}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
-          <Text className="text-white">Go Back</Text>
+          <Text className="text-[#000000]">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -238,7 +212,7 @@ export default function CaseDetailScreen() {
   const canEdit = caseDetail.status === 'draft' || caseDetail.status === 'rejected';
 
   return (
-    <ScrollView className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScreenWrapper title="Case Detail">
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — actions require a connection</Text>
@@ -247,7 +221,7 @@ export default function CaseDetailScreen() {
 
       <View className="flex-row justify-between items-start mb-4">
         <View className="flex-1 mr-3">
-          <Text className="text-white text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
+          <Text className="text-[#000000] text-xl" style={{ fontFamily: clinicalTokens.fonts.heading }}>{caseDetail.specialty}</Text>
           <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {caseDetail.template_name}
           </Text>
@@ -255,8 +229,9 @@ export default function CaseDetailScreen() {
         <StatusBadge status={caseDetail.status} />
       </View>
 
-      <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
+      <Animated.View entering={Entering.staggeredFadeIn(0)}>
+        <GlassPanel style={{ marginBottom: 12 }}>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Patient Info</Text>
         {caseDetail.is_deidentified ? (
           <View>
             <Text className="text-gray-900 text-sm" style={{ fontFamily: 'Geist Mono' }}>
@@ -276,10 +251,12 @@ export default function CaseDetailScreen() {
             </Text>
           </View>
         )}
-      </GlassPanel>
+        </GlassPanel>
+      </Animated.View>
 
-      <GlassPanel style={{ marginBottom: 12 }}>
-        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
+      <Animated.View entering={Entering.staggeredFadeIn(1)}>
+        <GlassPanel style={{ marginBottom: 12 }}>
+          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Case Data</Text>
         <Text className="text-gray-900 text-sm mb-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Date: {caseDetail.case_date}
         </Text>
@@ -292,11 +269,13 @@ export default function CaseDetailScreen() {
         <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
           Updated: {new Date(caseDetail.updated_at).toLocaleString()}
         </Text>
-      </GlassPanel>
+        </GlassPanel>
+      </Animated.View>
 
       {Object.keys(caseDetail.field_values).length > 0 && (
-        <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
+        <Animated.View entering={Entering.staggeredFadeIn(2)}>
+          <GlassPanel style={{ marginBottom: 12 }}>
+            <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Fields</Text>
           {Object.entries(caseDetail.field_values).map(([key, value]) => (
             <View key={key} className="flex-row justify-between py-1 border-b border-gray-200/50">
               <Text className="text-gray-500 text-sm" style={{ fontFamily: clinicalTokens.fonts.mono }}>
@@ -308,71 +287,82 @@ export default function CaseDetailScreen() {
             </View>
           ))}
         </GlassPanel>
+        </Animated.View>
       )}
 
       {caseDetail.status === 'rejected' && caseDetail.rejection_comment && (
-        <GlassPanel style={{ marginBottom: 12 }}>
-          <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
-          <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
-        </GlassPanel>
+        <Animated.View entering={Entering.staggeredFadeIn(3)}>
+          <GlassPanel style={{ marginBottom: 12 }}>
+            <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
+            <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
+          </GlassPanel>
+        </Animated.View>
       )}
 
       {canEdit && (
-        <TouchableOpacity
-          className="bg-[#007AFF] rounded-xl py-4 items-center mb-3"
-          onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
-          accessibilityLabel="Edit this case"
-          accessibilityRole="button"
-        >
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Edit Case</Text>
-        </TouchableOpacity>
+        <Animated.View entering={Entering.staggeredSlideUp(0)}>
+          <TouchableOpacity
+            className="bg-[#007AFF] rounded-xl py-4 items-center mb-3"
+            onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
+            accessibilityLabel="Edit this case"
+            accessibilityRole="button"
+          >
+            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Edit Case</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
-      <TouchableOpacity
-        className="bg-gray-200 rounded-xl py-4 items-center mb-3 border border-[#007AFF]/15"
-        onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
-        accessibilityLabel="Duplicate this case"
-        accessibilityRole="button"
-      >
-        <Text className="text-teal-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
-      </TouchableOpacity>
+      <Animated.View entering={Entering.staggeredSlideUp(1)}>
+        <TouchableOpacity
+          className="bg-gray-200 rounded-xl py-4 items-center mb-3 border border-[#007AFF]/15"
+          onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: caseDetail.id } })}
+          accessibilityLabel="Duplicate this case"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate Case</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {canApprove && caseDetail.status === 'pending' && (
-        <View className="flex-row gap-3 mb-3">
-          <TouchableOpacity
-            className="flex-1 bg-emerald-600/20 rounded-xl py-4 items-center border border-emerald-500/40"
-            onPress={() => confirmAction('approve')}
-            disabled={processing || isOffline}
-            accessibilityLabel="Approve case"
-            accessibilityRole="button"
-          >
-            <Text className="text-emerald-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-              {processing ? 'Processing...' : 'Approve'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 bg-red-600/20 rounded-xl py-4 items-center border border-red-500/40"
-            onPress={() => confirmAction('reject')}
-            disabled={processing || isOffline}
-            accessibilityLabel="Reject case"
-            accessibilityRole="button"
-          >
-            <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-              {processing ? 'Processing...' : 'Reject'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Animated.View entering={Entering.staggeredSlideUp(2)}>
+          <View className="flex-row gap-3 mb-3">
+            <TouchableOpacity
+              className="flex-1 bg-primary/15 rounded-xl py-4 items-center border border-emerald-500/40"
+              onPress={() => confirmAction('approve')}
+              disabled={processing || isOffline}
+              accessibilityLabel="Approve case"
+              accessibilityRole="button"
+            >
+              <Text className="text-[#34C759]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                {processing ? 'Processing...' : 'Approve'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 bg-[#FF3B30]/15 rounded-xl py-4 items-center border border-red-500/40"
+              onPress={() => confirmAction('reject')}
+              disabled={processing || isOffline}
+              accessibilityLabel="Reject case"
+              accessibilityRole="button"
+            >
+              <Text className="text-red-400" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                {processing ? 'Processing...' : 'Reject'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       )}
 
       {caseDetail.status === 'rejected' && (
-        <TouchableOpacity
-          className="bg-teal-600 rounded-xl py-4 items-center mb-3"
-          onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
-          accessibilityLabel="Resubmit case"
-          accessibilityRole="button"
-        >
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
-        </TouchableOpacity>
+        <Animated.View entering={Entering.staggeredSlideUp(3)}>
+          <TouchableOpacity
+            className="bg-primary rounded-xl py-4 items-center mb-3"
+            onPress={() => router.push({ pathname: '/log-case', params: { editCaseId: caseDetail.id } })}
+            accessibilityLabel="Resubmit case"
+            accessibilityRole="button"
+          >
+            <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>Resubmit Case</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       <Modal transparent animationType="fade" visible={rejectModalOpen}>
@@ -407,7 +397,7 @@ export default function CaseDetailScreen() {
                 <Text className="text-gray-900" style={{ fontFamily: clinicalTokens.fonts.heading }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="flex-1 rounded-lg py-3 items-center bg-red-600"
+                className="flex-1 rounded-lg py-3 items-center bg-[#FF3B30]"
                 onPress={submitReject}
                 accessibilityLabel="Confirm rejection"
                 accessibilityRole="button"
@@ -418,6 +408,6 @@ export default function CaseDetailScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }

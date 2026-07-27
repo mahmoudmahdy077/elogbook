@@ -19,12 +19,13 @@ interface AIConfigPanelProps {
   config: AIConfigData | null;
 }
 
+// P1.6: Custom provider disabled — only approved providers allowed
 const PROVIDERS = [
   { key: 'openai', label: 'OpenAI' },
   { key: 'anthropic', label: 'Anthropic' },
   { key: 'azure', label: 'Azure' },
   { key: 'openrouter', label: 'OpenRouter' },
-  { key: 'custom', label: 'Custom' },
+  { key: 'aihubmix', label: 'AIHubMix' },
 ];
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -32,6 +33,7 @@ const DEFAULT_MODELS: Record<string, string> = {
   anthropic: 'claude-3-5-sonnet-latest',
   azure: 'gpt-4',
   openrouter: 'openai/gpt-4o',
+  aihubmix: 'coding-kimi-k3-free',
   custom: '',
 };
 
@@ -99,7 +101,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
 
       setSuccess('AI configuration saved successfully.');
       router.refresh();
-    } catch (_err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -114,7 +116,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
       <div className="pt-4 space-y-4">
         {error && <ErrorDisplay message={error} />}
         {success && (
-          <div className="bg-[rgba(52,199,89,0.10)] text-[#34C759] p-3 rounded-lg text-sm">{success}</div>
+          <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
         )}
 
         <div>
@@ -176,7 +178,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
               className="sr-only peer"
             />
             <div className="w-10 h-6 bg-default-300 rounded-full peer-checked:bg-primary transition-colors relative">
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-surface-solid rounded-full shadow transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
             </div>
           </div>
           <span className="text-sm font-medium text-text-secondary">Enable AI Insights</span>

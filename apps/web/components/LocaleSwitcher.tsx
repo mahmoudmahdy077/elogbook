@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 
 const SUPPORTED = [
@@ -12,7 +12,6 @@ const SUPPORTED = [
 
 export default function LocaleSwitcher() {
   const router = useRouter();
-  const pathname = usePathname() ?? '/';
   const currentLocale = useLocale();
   const [pending, startTransition] = useTransition();
   const [active, setActive] = useState(currentLocale);
@@ -42,7 +41,7 @@ export default function LocaleSwitcher() {
               'flex items-center gap-2 px-2 py-1.5 rounded-md border text-xs transition-colors ' +
               (active === l.code
                 ? 'border-primary text-primary bg-primary/5'
-                : 'border-border text-neutral-light/60 hover:text-neutral-light hover:bg-black/5 dark:hover:bg-white/5')
+                : 'border-border text-neutral-light/60 hover:text-neutral-light hover:bg-neutral-dark')
             }
             aria-label={`Switch to ${l.label}`}
             aria-pressed={active === l.code}

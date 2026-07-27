@@ -23,9 +23,7 @@ ALTER TABLE ai_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resident_ai_toggle ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_query_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_gateway_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE accreditation_frameworks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attachment_signatures ENABLE ROW LEVEL SECURITY;
-ALTER TABLE institution_billing ENABLE ROW LEVEL SECURITY;
+-- Tables created in later migrations have RLS enabled in their own migration files
 
 -- ============================================================================
 -- Helper Functions
@@ -602,80 +600,8 @@ CREATE POLICY "Admin can update payment gateway config"
     AND get_user_role() IN ('institution_admin', 'admin')
   );
 
--- ============================================================================
--- accreditation_frameworks
--- ============================================================================
+-- accreditation_frameworks policies are in the migration that creates the table
 
-CREATE POLICY "Tenant members can read accreditation frameworks"
-  ON accreditation_frameworks FOR SELECT
-  TO authenticated
-  USING (tenant_id = get_tenant_id());
+-- attachment_signatures policies are in the migration that creates the table
 
-CREATE POLICY "Director+ can create accreditation frameworks"
-  ON accreditation_frameworks FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('director', 'institution_admin', 'admin')
-  );
-
-CREATE POLICY "Director+ can update accreditation frameworks"
-  ON accreditation_frameworks FOR UPDATE
-  TO authenticated
-  USING (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('director', 'institution_admin', 'admin')
-  )
-  WITH CHECK (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('director', 'institution_admin', 'admin')
-  );
-
-CREATE POLICY "Director+ can delete accreditation frameworks"
-  ON accreditation_frameworks FOR DELETE
-  TO authenticated
-  USING (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('director', 'institution_admin', 'admin')
-  );
-
--- ============================================================================
--- attachment_signatures
--- ============================================================================
-
-CREATE POLICY "Tenant members can read attachment signatures"
-  ON attachment_signatures FOR SELECT
-  TO authenticated
-  USING (tenant_id = get_tenant_id());
-
-CREATE POLICY "Users can insert signature for own profile"
-  ON attachment_signatures FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    tenant_id = get_tenant_id()
-    AND resident_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-  );
-
--- ============================================================================
--- institution_billing
--- ============================================================================
-
-CREATE POLICY "Admin roles can read institution billing"
-  ON institution_billing FOR SELECT
-  TO authenticated
-  USING (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('director', 'institution_admin', 'admin')
-  );
-
-CREATE POLICY "Institution admin+ can manage institution billing"
-  ON institution_billing FOR ALL
-  TO authenticated
-  USING (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('institution_admin', 'admin')
-  )
-  WITH CHECK (
-    tenant_id = get_tenant_id()
-    AND get_user_role() IN ('institution_admin', 'admin')
-  );
+-- institution_billing policies are in the migration that creates the table

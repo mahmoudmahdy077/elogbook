@@ -41,6 +41,18 @@ export async function GET(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
+  // Plan gate: SSO is Enterprise-only
+  const { data: planCheck } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (planCheck as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.sso) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const adminClient = createServiceRoleClient();
   const { data: configs, error } = await adminClient
     .from('tenant_sso_configs')
@@ -63,6 +75,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -125,7 +140,6 @@ export async function POST(
     is_active,
   } = body;
 
-  // --- Validation ---
   if (!protocol || !ALLOWED_PROTOCOLS.includes(protocol as typeof ALLOWED_PROTOCOLS[number])) {
     return NextResponse.json({
       error: `Protocol must be one of: ${ALLOWED_PROTOCOLS.join(', ')}`,
@@ -138,7 +152,6 @@ export async function POST(
     }, { status: 400 });
   }
 
-  // Protocol-specific requirements
   if (protocol === 'saml' && !metadata_url) {
     return NextResponse.json({ error: 'SAML requires a metadata URL' }, { status: 400 });
   }
@@ -146,10 +159,9 @@ export async function POST(
     return NextResponse.json({ error: 'OIDC requires a discovery URL' }, { status: 400 });
   }
 
-  // Rate limit: max 1 config per protocol per tenant (unique constraint enforced by DB)
   const adminClient = createServiceRoleClient();
 
-  const { error: insertError } = await adminClient
+  const { data: insertedConfig, error: insertError } = await adminClient
     .from('tenant_sso_configs')
     .insert({
       tenant_id: profile.tenant_id,
@@ -166,7 +178,6 @@ export async function POST(
     .select('id, protocol, metadata_url, discovery_url, idp_entity_id, client_id, default_role, is_active, created_at');
 
   if (insertError) {
-    // Handle unique constraint violation
     if (insertError.code === '23505') {
       return NextResponse.json({
         error: `A ${protocol} configuration already exists for this institution. Edit it instead.`,
@@ -175,6 +186,8 @@ export async function POST(
     console.error('sso create error:', insertError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'tenant_sso_configs', resource_id: insertedConfig!.id, changes: {} });
 
   return NextResponse.json({ config: insertError ? null : body }, { status: 201 });
 }
@@ -186,6 +199,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -251,7 +267,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Config ID is required' }, { status: 400 });
   }
 
-  // Verify ownership
   const adminClient = createServiceRoleClient();
   const { data: existing } = await adminClient
     .from('tenant_sso_configs')
@@ -263,8 +278,6 @@ export async function PUT(
   if (!existing) {
     return NextResponse.json({ error: 'SSO config not found' }, { status: 404 });
   }
-
-  // Validation
   if (protocol && !ALLOWED_PROTOCOLS.includes(protocol as typeof ALLOWED_PROTOCOLS[number])) {
     return NextResponse.json({
       error: `Protocol must be one of: ${ALLOWED_PROTOCOLS.join(', ')}`,
@@ -302,6 +315,8 @@ export async function PUT(
     console.error('sso update error:', updateError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_update', resource_type: 'tenant_sso_configs', resource_id: id!, changes: {} });
 
   return NextResponse.json({ success: true });
 }

@@ -54,7 +54,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
       .from('case_templates')
       .select('specialty')
       .not('specialty', 'is', null)
-      .then(({ data }: { data: any }) => {
+      .then(({ data }: { data: { specialty: string }[] | null }) => {
         if (data) {
           const seen = new Set<string>();
           const extra: string[] = [];

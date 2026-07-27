@@ -74,11 +74,11 @@ export default function ApprovalActions({ requestId: _requestId, entryId, tenant
         placeholder="Add feedback (recommended for reject)..."
         rows={2}
         aria-label="Comment"
-        className="w-full px-3 py-2 text-sm text-black placeholder-[#C7C7CC] bg-[#F2F2F7] rounded-xl border border-black/10 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+        className="w-full px-3 py-2 text-sm text-text-primary placeholder-text-muted bg-backdrop rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
       />
       {error && <ErrorDisplay message={error} />}
       {confirmReject && (
-        <p className="text-xs text-[#FF9500]" role="alert">
+        <p className="text-xs text-warning" role="alert">
           Click Reject again to confirm. This action is irreversible.
         </p>
       )}
@@ -87,10 +87,10 @@ export default function ApprovalActions({ requestId: _requestId, entryId, tenant
           type="button"
           disabled={loading !== null}
           onClick={onRejectClick}
-          className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30] disabled:opacity-50 ${
+          className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 ${
             confirmReject
-              ? 'bg-[#FF3B30] text-white hover:opacity-90'
-              : 'bg-[rgba(255,59,48,0.10)] text-[#FF3B30] hover:bg-[rgba(255,59,48,0.15)]'
+              ? 'bg-danger text-white hover:opacity-90'
+              : 'bg-danger/10 text-danger hover:bg-danger/20'
           }`}
         >
           {loading === 'reject' ? 'Rejecting…' : confirmReject ? 'Confirm Reject' : 'Reject'}

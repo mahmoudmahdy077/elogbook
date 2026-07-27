@@ -306,7 +306,7 @@ BEGIN
     RAISE NOTICE 'tenants.mrn_hash_salt already exists';
   ELSE
     ALTER TABLE public.tenants ADD COLUMN mrn_hash_salt TEXT;
-    UPDATE public.tenants SET mrn_hash_salt = encode(gen_random_bytes(32), 'hex') WHERE mrn_hash_salt IS NULL;
+    UPDATE public.tenants SET mrn_hash_salt = encode(extensions.gen_random_bytes(32), 'hex') WHERE mrn_hash_salt IS NULL;
     ALTER TABLE public.tenants ALTER COLUMN mrn_hash_salt SET NOT NULL;
   END IF;
 END $$;
@@ -342,7 +342,8 @@ GRANT EXECUTE ON FUNCTION public.enforce_data_retention TO service_role;
 
 -- Expand the function to also purge ai_query_logs past retention,
 -- ai_response_cache past expires_at, and consent_records past retention.
-CREATE OR REPLACE FUNCTION public.enforce_data_retention()
+DROP FUNCTION IF EXISTS public.enforce_data_retention();
+CREATE FUNCTION public.enforce_data_retention()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER

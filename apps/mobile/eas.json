@@ -9,17 +9,19 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "ios": {
-        "buildType": "release"
-      },
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true"
+        "NODE_OPTIONS": "--max-old-space-size=4096",
+        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
       },
       "channel": "production",
       "autoIncrement": true,
-      "releaseChannel": "production",
-      "distribution": "store"
+      "distribution": "store",
+      "cache": {
+        "disabled": true
+      }
     },
     "preview": {
       "node": "22.14.0",
@@ -27,16 +29,19 @@
       "android": {
         "buildType": "apk"
       },
-      "ios": {
-        "buildType": "archive"
-      },
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false"
+        "NODE_OPTIONS": "--max-old-space-size=4096",
+        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
       },
       "channel": "preview",
       "distribution": "internal",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "cache": {
+        "disabled": true
+      }
     },
     "development": {
       "node": "22.14.0",
@@ -45,12 +50,11 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
       },
-      "ios": {
-        "buildType": "simulator"
-      },
       "env": {
         "NODE_ENV": "development",
-        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false"
+        "EXPO_PUBLIC_ENABLE_SQLCIPHER": "false",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://nuyedxkzaimlzaetbpaw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3"
       },
       "channel": "development",
       "distribution": "internal",
@@ -62,11 +66,6 @@
       "android": {
         "serviceAccountKeyPath": "./android/service-account-key.json",
         "track": "production"
-      },
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
       }
     }
   }

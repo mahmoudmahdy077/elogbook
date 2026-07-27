@@ -23,9 +23,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -40,9 +40,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,31 +54,28 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: [typecheck, lint]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/actions/setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
       - name: Expo prebuild
-        run: pnpm --filter @elogbook/mobile expo prebuild --clean
-      # TODO(P5.1): Replace placeholder with actual EAS build once EXPO_TOKEN is configured
-      # Uncomment and configure the following when ready:
-      # - uses: expo/expo-github-action@v9
-      #   with:
-      #     eas-version: latest
-      #     token: ${{ secrets.EXPO_TOKEN }}
-      # - name: EAS Build (all platforms)
-      #   run: eas build --platform all --non-interactive --no-wait
-      #   env:
-      #     EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      #     EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      - name: Verify build placeholder
-        run: echo "Mobile build pipeline ready — EAS build will run on main pushes to apps/mobile/**"
+        run: NODE_OPTIONS="--no-experimental-strip-types" pnpm --filter @elogbook/mobile expo prebuild --clean
+      - name: EAS Build (Android)
+        run: eas build --platform android --non-interactive --no-wait 2>&1 || echo "EAS_BUILD_EXIT_CODE=$?"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

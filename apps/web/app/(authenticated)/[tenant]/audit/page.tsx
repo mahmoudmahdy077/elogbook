@@ -239,7 +239,7 @@ export default async function AuditPage({
                     <td className="py-2.5">{log.ip_address || '—'}</td>
                     <td className="py-2.5">
                       {isSuspicious(log.action) && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-[rgba(255,59,48,0.20)] text-[#FF3B30]">suspicious</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-danger/20 text-danger">suspicious</span>
                       )}
                     </td>
                   </tr>

@@ -20,14 +20,14 @@
 
 - [x] Fix remaining 4 ESLint errors in web (jsx/global unknown properties, e2e hooks rule)
 - [x] Fix remaining 1 ESLint error in mobile (unescaped entity)
-- [ ] Address 34 remaining warnings (prefer type annotations over `any`, unused vars) — down from 177
+- [x] Address 34 remaining warnings (prefer type annotations over `any`, unused vars) — down from 177
 
 ## Phase: Apple Health Redesign — Visual Polish
 
-- [ ] Verify DashboardContent.tsx matches Apple Health prototype
-- [ ] Verify frosted glass Sidebar renders correctly
-- [ ] Verify StatusBadge pills (flat, no glow) on all pages
-- [ ] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
+- [x] Verify DashboardContent.tsx matches Apple Health prototype
+- [x] Verify frosted glass Sidebar renders correctly
+- [x] Verify StatusBadge pills (flat, no glow) on all pages
+- [x] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
 - [ ] Verify light theme is default, dark theme works via `.dark` class on `<html>`
 
 ## Phase: Mobile Alignment

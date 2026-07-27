@@ -19,11 +19,6 @@ import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
-interface NotificationResult {
-  newApprovals: number;
-  newRejections: Array<{ comment: string | null; entryId: string }>;
-}
-
 export function useCaseNotifications(
   residentId: string,
   onRejection?: (entryId: string, comment: string | null) => void
@@ -46,10 +41,10 @@ export function useCaseNotifications(
 
         if (!data) return;
 
-        const newApprovals = data.filter((r: any) => r.status === 'approved').length;
+        const newApprovals = data.filter((r: { status: string }) => r.status === 'approved').length;
         const newRejections = data
-          .filter((r: any) => r.status === 'rejected')
-          .map((r: any) => ({ comment: r.comment, entryId: r.entry_id }));
+          .filter((r: { status: string }) => r.status === 'rejected')
+          .map((r: { comment: string | null; entry_id: string }) => ({ comment: r.comment, entryId: r.entry_id }));
 
         if (newRejections.length > 0 && onRejection) {
           onRejection(newRejections[0].entryId, newRejections[0].comment);

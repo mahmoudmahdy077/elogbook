@@ -3,7 +3,7 @@
   "buildCommand": "pnpm --filter @elogbook/web build",
   "outputDirectory": "apps/web/.next",
   "devCommand": "pnpm --filter @elogbook/web dev",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/web/ packages/ pnpm-lock.yaml pnpm-workspace.yaml || exit 1",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/web/ packages/ pnpm-lock.yaml pnpm-workspace.yaml 2>/dev/null && exit 1 || exit 0",
 
   "rewrites": [
     {
@@ -34,13 +34,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
-    }
-  ],
-
-  "crons": [
-    {
-      "path": "/api/cron/daily-builder",
-      "schedule": "0 6 * * *"
     }
   ],
 

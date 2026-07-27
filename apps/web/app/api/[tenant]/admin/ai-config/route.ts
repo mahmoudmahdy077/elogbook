@@ -8,6 +8,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -42,6 +45,17 @@ export async function POST(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('status', 'active')
+    .maybeSingle();
+  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!features?.ai_config) {
+    return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
+  }
+
   const body = await request.json();
   const { provider, model, is_active, endpoint_url, api_key } = body;
 
@@ -49,62 +63,35 @@ export async function POST(
     return NextResponse.json({ error: 'Model is required.' }, { status: 400 });
   }
 
+  const { data: result, error } = await supabase.rpc('store_ai_config', {
+    p_provider: provider,
+    p_model: model,
+    p_api_key: api_key || '',
+    p_endpoint_url: endpoint_url || null,
+    p_is_active: is_active ?? false,
+  });
+
+  if (error) {
+    console.error('ai-config rpc error:', error.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+
+  if (result?.error) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
   const adminClient = createServiceRoleClient();
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'ai_config_upsert', resource_type: 'ai_config', resource_id: result.id, changes: {} });
 
-  const payload: Record<string, unknown> = {
-    tenant_id: profile.tenant_id,
-    provider,
-    model,
-    is_active: is_active ?? false,
-  };
-
-  if (api_key) {
-    payload.encrypted_api_key = api_key;
-  }
-  if (endpoint_url !== undefined) {
-    payload.endpoint_url = endpoint_url;
-  }
-
-  const { data: existing } = await adminClient
-    .from('ai_config')
-    .select('id')
-    .eq('tenant_id', profile.tenant_id)
-    .maybeSingle();
-
-  if (existing) {
-    const updatePayload = { ...payload };
-    delete updatePayload.tenant_id;
-
-    const { error } = await adminClient
-      .from('ai_config')
-      .update(updatePayload)
-      .eq('id', existing.id);
-
-    if (error) {
-      console.error('ai-config error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-  } else {
-    if (!api_key) {
-      return NextResponse.json({ error: 'API Key is required for new configuration.' }, { status: 400 });
-    }
-
-    const { error } = await adminClient
-      .from('ai_config')
-      .insert(payload);
-
-    if (error) {
-      console.error('ai-config error:', error.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-  }
-
-  return NextResponse.json({ success: true, has_key: !!api_key || !!existing });
+  return NextResponse.json({ success: true, config: { id: result.id } });
 }
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   return POST(request, { params });
 }

@@ -74,14 +74,17 @@ function notificationToRoute(
     case 'new.rejection':
       if (payload.caseId) {
         return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           pathname: '/(tabs)/case-detail' as any,
           params: { caseId: payload.caseId },
         };
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { pathname: '/(tabs)/my-cases' as any };
 
     case 'approval.pending':
     case 'approval.requested':
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { pathname: '/(tabs)/approvals' as any };
 
     case 'deep.link':
@@ -89,8 +92,10 @@ function notificationToRoute(
         const route = parseDeepLink(payload.url);
         if (route) {
           return route.params
-            ? { pathname: route.screen as any, params: route.params }
-            : { pathname: route.screen as any };
+            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { pathname: route.screen as any, params: route.params }
+            : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { pathname: route.screen as any };
         }
       }
       return null;

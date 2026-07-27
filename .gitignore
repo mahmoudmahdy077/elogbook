@@ -34,8 +34,17 @@ coverage/
 # Mobile
 *.apk
 *.ipa
+/apps/mobile/android
+/apps/mobile/ios
 
 # Supabase CLI local state (project ref, pooler URLs, etc.)
 supabase/.temp/
 *.temp/
 .vercel
+
+.vercel
+.env*
+
+# CI debug logs
+*_logs.zip
+*_logs/

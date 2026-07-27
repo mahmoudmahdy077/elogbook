@@ -29,9 +29,9 @@ interface CaseDetailsStepProps {
 
 /* Shared input base class matching Apple Health style */
 const inputBase =
-  'w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm text-black placeholder:text-[#C7C7CC] transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary';
+  'w-full rounded-xl border border-border bg-surface-solid px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary';
 const textareaBase =
-  'w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm text-black placeholder:text-[#C7C7CC] transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[80px] resize-y';
+  'w-full rounded-xl border border-border bg-surface-solid px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[80px] resize-y';
 
 /* Apple-style select dropdown */
 function SelectField({
@@ -49,7 +49,7 @@ function SelectField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-black">{label}</label>
+      <label className="block text-sm font-medium text-text-primary">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -82,12 +82,12 @@ export default function CaseDetailsStep({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">
+      <h3 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">
         Case Details
       </h3>
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-black">
+        <label className="block text-sm font-medium text-text-primary">
           Case Date<span className="text-danger ml-0.5">*</span>
         </label>
         <input
@@ -100,8 +100,8 @@ export default function CaseDetailsStep({
       </div>
 
       {template && fields.length > 0 && (
-        <div className="border-t border-black/5 pt-4 mt-2">
-          <h4 className="text-sm font-semibold text-black mb-3">Template Fields</h4>
+        <div className="border-t border-border pt-4 mt-2">
+          <h4 className="text-sm font-semibold text-text-primary mb-3">Template Fields</h4>
           <div className="space-y-3">
             {fields.map((field) => {
               const key = getFieldKey(field);
@@ -113,7 +113,7 @@ export default function CaseDetailsStep({
                 case 'textarea':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-black">{label}</label>
+                      <label className="block text-sm font-medium text-text-primary">{label}</label>
                       <textarea
                         value={(fieldValues[key] as string) || ''}
                         onChange={(e) => onFieldChange(key, e.target.value)}
@@ -139,7 +139,7 @@ export default function CaseDetailsStep({
                 case 'number':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-black">{label}</label>
+                      <label className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
                         type="number"
                         value={(fieldValues[key] as string) || ''}
@@ -152,7 +152,7 @@ export default function CaseDetailsStep({
                 case 'date':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-black">{label}</label>
+                      <label className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
                         type="date"
                         value={(fieldValues[key] as string) || ''}
@@ -173,7 +173,7 @@ export default function CaseDetailsStep({
                         className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary"
                         aria-label={label}
                       />
-                      <label htmlFor={`field-${key}`} className="text-sm text-[#3C3C43]">
+                      <label htmlFor={`field-${key}`} className="text-sm text-text-secondary">
                         {label}
                       </label>
                     </div>
@@ -181,7 +181,7 @@ export default function CaseDetailsStep({
                 default:
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-black">{label}</label>
+                      <label className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
                         type="text"
                         value={(fieldValues[key] as string) || ''}
@@ -197,7 +197,7 @@ export default function CaseDetailsStep({
         </div>
       )}
       {template && fields.length === 0 && (
-        <p className="text-sm text-[#8E8E93] italic">
+        <p className="text-sm text-text-muted italic">
           No fields defined for this template.
         </p>
       )}

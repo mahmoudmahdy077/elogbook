@@ -13,5 +13,5 @@ interface ClientChartsProps {
 }
 
 export default function ClientCharts({ statusCounts, specialtyCounts }: ClientChartsProps) {
-  return <ProgramOverviewCharts statusCounts={statusCounts as any} specialtyCounts={specialtyCounts as any} />;
+  return <ProgramOverviewCharts statusCounts={statusCounts} specialtyCounts={specialtyCounts} />;
 }

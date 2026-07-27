@@ -53,10 +53,6 @@ function formatDate(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-function isDateInRange(date: string, start: string, end: string): boolean {
-  return date >= start && date <= end;
-}
-
 export default function RotationCalendar({
   rotations,
   tenantSlug,

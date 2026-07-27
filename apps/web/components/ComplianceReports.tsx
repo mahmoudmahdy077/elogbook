@@ -77,11 +77,11 @@ function SectionCard({
   exporting?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-[rgba(255,255,255,0.72)] border border-[rgba(60,60,67,0.10)] p-5 mb-6">
+    <div className="rounded-xl bg-surface-solid border border-border p-5 mb-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-base font-semibold text-[#000000]">{title}</h2>
-          <p className="text-xs text-[#8E8E93] mt-0.5">{description}</p>
+          <h2 className="text-base font-semibold text-text-primary">{title}</h2>
+          <p className="text-xs text-text-muted mt-0.5">{description}</p>
         </div>
         {(onExportCsv || onExportPdf) && (
           <div className="flex gap-1.5 shrink-0 ml-4">
@@ -90,7 +90,7 @@ function SectionCard({
                 type="button"
                 onClick={onExportCsv}
                 disabled={exporting}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#F2F2F7] text-[#3C3C43] border border-[rgba(60,60,67,0.10)] hover:border-[rgba(60,60,67,0.20)] transition-all disabled:opacity-50"
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-backdrop text-text-secondary border border-border hover:border-border transition-all disabled:opacity-50"
               >
                 CSV
               </button>
@@ -100,7 +100,7 @@ function SectionCard({
                 type="button"
                 onClick={onExportPdf}
                 disabled={exporting}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#F2F2F7] text-[#3C3C43] border border-[rgba(60,60,67,0.10)] hover:border-[rgba(60,60,67,0.20)] transition-all disabled:opacity-50"
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-backdrop text-text-secondary border border-border hover:border-border transition-all disabled:opacity-50"
               >
                 PDF
               </button>
@@ -119,9 +119,9 @@ function SectionCard({
 
 function StatPill({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-full bg-[#F2F2F7] px-3 py-1.5 text-sm">
-      <span className="text-[#8E8E93] text-xs">{label}</span>
-      <span className={`font-semibold ${color ? `text-[${color}]` : 'text-[#000000]'}`}>{value}</span>
+    <div className="flex items-center gap-2 rounded-full bg-backdrop px-3 py-1.5 text-sm">
+      <span className="text-text-muted text-xs">{label}</span>
+      <span className={`font-semibold ${color ? `text-[${color}]` : 'text-text-primary'}`}>{value}</span>
     </div>
   );
 }
@@ -176,15 +176,15 @@ function DataAccessSection({ data, tenantSlug }: { data: DataAccessSummary; tena
 
       {/* Actions breakdown */}
       <div className="mb-4">
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">Actions</h3>
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {data.byAction.map((a) => (
             <div
               key={a.action}
-              className="flex items-center justify-between rounded-lg bg-[#F2F2F7] px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg bg-backdrop px-3 py-2 text-sm"
             >
-              <span className="text-[#3C3C43] truncate mr-2">{a.action}</span>
-              <span className="font-semibold text-[#007AFF]">{a.count}</span>
+              <span className="text-text-secondary truncate mr-2">{a.action}</span>
+              <span className="font-semibold text-primary">{a.count}</span>
             </div>
           ))}
         </div>
@@ -192,15 +192,15 @@ function DataAccessSection({ data, tenantSlug }: { data: DataAccessSummary; tena
 
       {/* Resource breakdown */}
       <div className="mb-4">
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">Resources</h3>
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">Resources</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {data.byResource.map((r) => (
             <div
               key={r.resource_type}
-              className="flex items-center justify-between rounded-lg bg-[#F2F2F7] px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg bg-backdrop px-3 py-2 text-sm"
             >
-              <span className="text-[#3C3C43] truncate mr-2">{r.resource_type}</span>
-              <span className="font-semibold text-[#007AFF]">{r.count}</span>
+              <span className="text-text-secondary truncate mr-2">{r.resource_type}</span>
+              <span className="font-semibold text-primary">{r.count}</span>
             </div>
           ))}
         </div>
@@ -208,38 +208,38 @@ function DataAccessSection({ data, tenantSlug }: { data: DataAccessSummary; tena
 
       {/* Recent events */}
       <div>
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
           Recent events (last 20)
         </h3>
         {data.recentEvents.length === 0 ? (
-          <p className="text-sm text-[#8E8E93]">No recent events.</p>
+          <p className="text-sm text-text-muted">No recent events.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[rgba(60,60,67,0.10)] text-left">
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Date</th>
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Action</th>
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Resource</th>
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">User</th>
-                  <th className="pb-2 text-xs font-medium text-[#8E8E93]">IP</th>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Date</th>
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Action</th>
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Resource</th>
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">User</th>
+                  <th className="pb-2 text-xs font-medium text-text-muted">IP</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recentEvents.map((e) => (
-                  <tr key={e.id} className="border-b border-[rgba(60,60,67,0.06)]">
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">
+                  <tr key={e.id} className="border-b border-border">
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">
                       {new Date(e.created_at).toLocaleString()}
                     </td>
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">{e.action}</td>
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">{e.action}</td>
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">
                       {e.resource_type}
                       {e.resource_id && ` / ${e.resource_id.slice(-8)}`}
                     </td>
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">
                       {e.user_id ? `…${e.user_id.slice(-8)}` : '—'}
                     </td>
-                    <td className="py-1.5 text-xs text-[#3C3C43]">{e.ip_address || '—'}</td>
+                    <td className="py-1.5 text-xs text-text-secondary">{e.ip_address || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -295,27 +295,27 @@ function PhiInventorySection({ data, tenantSlug }: { data: PhiInventoryRow[]; te
       exporting={exporting}
     >
       {data.length === 0 ? (
-        <p className="text-sm text-[#8E8E93]">No tables with PHI data found.</p>
+        <p className="text-sm text-text-muted">No tables with PHI data found.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[rgba(60,60,67,0.10)] text-left">
-                <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Table</th>
-                <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Total records</th>
-                <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">PHI present</th>
-                <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">PHI redacted</th>
-                <th className="pb-2 text-xs font-medium text-[#8E8E93]">% PHI</th>
+              <tr className="border-b border-border text-left">
+                <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Table</th>
+                <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Total records</th>
+                <th className="pb-2 pr-3 text-xs font-medium text-text-muted">PHI present</th>
+                <th className="pb-2 pr-3 text-xs font-medium text-text-muted">PHI redacted</th>
+                <th className="pb-2 text-xs font-medium text-text-muted">% PHI</th>
               </tr>
             </thead>
             <tbody>
               {data.map((row) => (
-                <tr key={row.table_name} className="border-b border-[rgba(60,60,67,0.06)]">
-                  <td className="py-2 pr-3 text-sm font-medium text-[#000000]">{row.table_name}</td>
-                  <td className="py-2 pr-3 text-sm text-[#3C3C43]">{row.total_records}</td>
-                  <td className="py-2 pr-3 text-sm text-[#FF3B30]">{row.phi_present}</td>
-                  <td className="py-2 pr-3 text-sm text-[#34C759]">{row.phi_redacted}</td>
-                  <td className="py-2 text-sm text-[#3C3C43]">{row.phi_percentage.toFixed(1)}%</td>
+                <tr key={row.table_name} className="border-b border-border">
+                  <td className="py-2 pr-3 text-sm font-medium text-text-primary">{row.table_name}</td>
+                  <td className="py-2 pr-3 text-sm text-text-secondary">{row.total_records}</td>
+                  <td className="py-2 pr-3 text-sm text-danger">{row.phi_present}</td>
+                  <td className="py-2 pr-3 text-sm text-success">{row.phi_redacted}</td>
+                  <td className="py-2 text-sm text-text-secondary">{row.phi_percentage.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
@@ -376,25 +376,25 @@ function ConsentSection({ data, tenantSlug }: { data: ConsentSummary; tenantSlug
 
       {/* By type */}
       <div className="mb-4">
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
           By consent type
         </h3>
         {data.byType.length === 0 ? (
-          <p className="text-sm text-[#8E8E93]">No consent records found.</p>
+          <p className="text-sm text-text-muted">No consent records found.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {data.byType.map((t) => (
               <div
                 key={t.consent_type}
-                className="flex items-center justify-between rounded-lg bg-[#F2F2F7] px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg bg-backdrop px-3 py-2 text-sm"
               >
                 <div>
-                  <span className="text-[#3C3C43] capitalize">{t.consent_type.replace(/_/g, ' ')}</span>
-                  <span className="text-xs text-[#8E8E93] ml-2">
+                  <span className="text-text-secondary capitalize">{t.consent_type.replace(/_/g, ' ')}</span>
+                  <span className="text-xs text-text-muted ml-2">
                     {t.granted} granted / {t.revoked} revoked
                   </span>
                 </div>
-                <span className="font-semibold text-[#007AFF]">{t.granted + t.revoked}</span>
+                <span className="font-semibold text-primary">{t.granted + t.revoked}</span>
               </div>
             ))}
           </div>
@@ -403,35 +403,35 @@ function ConsentSection({ data, tenantSlug }: { data: ConsentSummary; tenantSlug
 
       {/* Recent */}
       <div>
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
           Recent records (last 20)
         </h3>
         {data.recent.length === 0 ? (
-          <p className="text-sm text-[#8E8E93]">No recent consent records.</p>
+          <p className="text-sm text-text-muted">No recent consent records.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[rgba(60,60,67,0.10)] text-left">
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Type</th>
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Granted</th>
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Revoked</th>
-                  <th className="pb-2 text-xs font-medium text-[#8E8E93]">Version</th>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Type</th>
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Granted</th>
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Revoked</th>
+                  <th className="pb-2 text-xs font-medium text-text-muted">Version</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recent.map((c) => (
-                  <tr key={c.id} className="border-b border-[rgba(60,60,67,0.06)]">
-                    <td className="py-1.5 pr-3 text-sm text-[#000000] capitalize">
+                  <tr key={c.id} className="border-b border-border">
+                    <td className="py-1.5 pr-3 text-sm text-text-primary capitalize">
                       {c.consent_type.replace(/_/g, ' ')}
                     </td>
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">
                       {new Date(c.granted_at).toLocaleDateString()}
                     </td>
-                    <td className="py-1.5 pr-3 text-xs text-[#3C3C43]">
+                    <td className="py-1.5 pr-3 text-xs text-text-secondary">
                       {c.revoked_at ? new Date(c.revoked_at).toLocaleDateString() : '—'}
                     </td>
-                    <td className="py-1.5 text-xs text-[#3C3C43]">{c.version}</td>
+                    <td className="py-1.5 text-xs text-text-secondary">{c.version}</td>
                   </tr>
                 ))}
               </tbody>
@@ -499,25 +499,25 @@ function RetentionSection({ data, tenantSlug }: { data: RetentionSummary; tenant
 
       {/* By table */}
       <div>
-        <h3 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
           Soft-deleted records by table
         </h3>
         {data.byTable.length === 0 ? (
-          <p className="text-sm text-[#8E8E93]">No soft-deleted records found.</p>
+          <p className="text-sm text-text-muted">No soft-deleted records found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[rgba(60,60,67,0.10)] text-left">
-                  <th className="pb-2 pr-3 text-xs font-medium text-[#8E8E93]">Table</th>
-                  <th className="pb-2 text-xs font-medium text-[#8E8E93]">Deleted count</th>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-2 pr-3 text-xs font-medium text-text-muted">Table</th>
+                  <th className="pb-2 text-xs font-medium text-text-muted">Deleted count</th>
                 </tr>
               </thead>
               <tbody>
                 {data.byTable.map((row) => (
-                  <tr key={row.table_name} className="border-b border-[rgba(60,60,67,0.06)]">
-                    <td className="py-2 pr-3 text-sm text-[#000000]">{row.table_name}</td>
-                    <td className="py-2 text-sm text-[#FF9500]">{row.deleted_count}</td>
+                  <tr key={row.table_name} className="border-b border-border">
+                    <td className="py-2 pr-3 text-sm text-text-primary">{row.table_name}</td>
+                    <td className="py-2 text-sm text-warning">{row.deleted_count}</td>
                   </tr>
                 ))}
               </tbody>

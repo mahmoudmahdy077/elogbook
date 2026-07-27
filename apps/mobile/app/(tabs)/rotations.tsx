@@ -8,8 +8,10 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -165,39 +167,42 @@ function MonthCalendar({ year, month, rotations, onRotationTap }: MonthCalendarP
       {/* Rotation legend */}
       {visibleRotations.length > 0 && (
         <View className="mt-4 border-t border-gray-700 pt-3">
-          <Text
-            className="text-gray-400 text-sm mb-2"
-            style={{ fontFamily: clinicalTokens.fonts.body }}
-          >
-            Active Rotations
-          </Text>
-          {visibleRotations.slice(0, 6).map((r, i) => (
-            <TouchableOpacity
-              key={r.id}
-              className="flex-row items-center py-1.5"
-              onPress={() => onRotationTap(r)}
-              accessibilityLabel={`View rotation: ${r.title}`}
-              accessibilityRole="button"
+          <Animated.View entering={FadeIn.delay(100).springify()}>
+            <Text
+              className="text-gray-400 text-sm mb-2"
+              style={{ fontFamily: clinicalTokens.fonts.body }}
             >
-              <View
-                className="w-3 h-3 rounded-full mr-2"
-                style={{ backgroundColor: getRotationColor(i) }}
-              />
-              <Text
-                className="text-white text-sm flex-1"
-                style={{ fontFamily: clinicalTokens.fonts.body }}
+              Active Rotations
+            </Text>
+          </Animated.View>
+          {visibleRotations.slice(0, 6).map((r, i) => (
+            <Animated.View key={r.id} entering={FadeInDown.delay(i * 80 + 150).springify()}>
+              <TouchableOpacity
+                className="flex-row items-center py-1.5"
+                onPress={() => onRotationTap(r)}
+                accessibilityLabel={`View rotation: ${r.title}`}
+                accessibilityRole="button"
               >
-                {r.title}
-              </Text>
-              <Text
-                className="text-gray-500 text-xs"
-                style={{ fontFamily: clinicalTokens.fonts.mono }}
-              >
-                {new Date(r.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {' — '}
-                {new Date(r.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </Text>
-            </TouchableOpacity>
+                <View
+                  className="w-3 h-3 rounded-full mr-2"
+                  style={{ backgroundColor: getRotationColor(i) }}
+                />
+                <Text
+                  className="text-white text-sm flex-1"
+                  style={{ fontFamily: clinicalTokens.fonts.body }}
+                >
+                  {r.title}
+                </Text>
+                <Text
+                  className="text-gray-500 text-xs"
+                  style={{ fontFamily: clinicalTokens.fonts.mono }}
+                >
+                  {new Date(r.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' — '}
+                  {new Date(r.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           ))}
         </View>
       )}
@@ -248,7 +253,7 @@ function RotationDetailModal({
 
           {rotation.specialty && (
             <Text
-              className="text-teal-400 text-sm mb-4"
+              className="text-primary text-sm mb-4"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {rotation.specialty}
@@ -300,7 +305,7 @@ function RotationDetailModal({
                 Notes
               </Text>
               <Text
-                className="text-white text-sm"
+                className="text-sm"
                 style={{ fontFamily: clinicalTokens.fonts.body }}
               >
                 {rotation.notes}
@@ -309,7 +314,7 @@ function RotationDetailModal({
           )}
 
           <TouchableOpacity
-            className="bg-teal-600 rounded-xl py-3 items-center mt-2"
+            className="bg-primary rounded-xl py-3 items-center mt-2"
             onPress={onClose}
             accessibilityLabel="Close rotation details"
             accessibilityRole="button"
@@ -477,34 +482,39 @@ export default function RotationsScreen() {
           />
         }
       >
-        <Text
-          className="text-white text-2xl mb-4"
-          style={{ fontFamily: clinicalTokens.fonts.heading }}
-        >
-          Rotations
-        </Text>
+        <Animated.View entering={FadeIn.delay(100).springify()}>
+          <Text
+            className="text-white text-2xl mb-4"
+            style={{ fontFamily: clinicalTokens.fonts.heading }}
+          >
+            Rotations
+          </Text>
+        </Animated.View>
 
         {/* Error state */}
         {error && (
-          <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
-            <Text
-              className="text-red-400 text-sm"
-              style={{ fontFamily: clinicalTokens.fonts.body }}
-            >
-              {error}
-            </Text>
-          </View>
+          <Animated.View entering={FadeInDown.delay(150).springify()}>
+            <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
+              <Text
+                className="text-red-400 text-sm"
+                style={{ fontFamily: clinicalTokens.fonts.body }}
+              >
+                {error}
+              </Text>
+            </View>
+          </Animated.View>
         )}
 
         {/* Month header */}
-        <View className="flex-row items-center justify-between mb-4">
+        <Animated.View entering={FadeIn.delay(200).springify()}>
+          <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity
             onPress={goPrevMonth}
             className="p-2"
             accessibilityLabel="Previous month"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xl">{'◀'}</Text>
+            <Text className="text-primary text-xl">{'◀'}</Text>
           </TouchableOpacity>
 
           <Text
@@ -523,30 +533,35 @@ export default function RotationsScreen() {
             accessibilityLabel="Next month"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xl">{'▶'}</Text>
+            <Text className="text-primary text-xl">{'▶'}</Text>
           </TouchableOpacity>
         </View>
+        </Animated.View>
 
         {/* Empty state */}
         {rotations.length === 0 && !error && (
-          <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center mb-4">
-            <Text
-              className="text-gray-500 text-sm"
-              style={{ fontFamily: clinicalTokens.fonts.body }}
-            >
-              No rotations found for this period.
-            </Text>
-          </View>
+          <Animated.View entering={FadeInDown.delay(250).springify()}>
+            <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center mb-4">
+              <Text
+                className="text-gray-500 text-sm"
+                style={{ fontFamily: clinicalTokens.fonts.body }}
+              >
+                No rotations found for this period.
+              </Text>
+            </View>
+          </Animated.View>
         )}
 
         {/* Calendar */}
         {rotations.length > 0 && (
-          <MonthCalendar
-            year={currentYear}
-            month={currentMonth}
-            rotations={rotations}
-            onRotationTap={handleRotationTap}
-          />
+          <Animated.View entering={FadeInDown.delay(300).springify()}>
+            <MonthCalendar
+              year={currentYear}
+              month={currentMonth}
+              rotations={rotations}
+              onRotationTap={handleRotationTap}
+            />
+          </Animated.View>
         )}
       </ScrollView>
 

@@ -60,10 +60,11 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState<TemplateWithMeta[]>([]);
+  const [templateSearch, setTemplateSearch] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-  const [isDeidentified, setIsDeidentified] = useState(false);
+  const [isDeidentified, setIsDeidentified] = useState(true);
   // SECURITY: patientMrn and patientDob are PHI. They MUST NOT be persisted to
   // localStorage, sessionStorage, or any other client-side storage. They live
   // only in React state and are written to the server on save/submit.
@@ -73,6 +74,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   const [caseDate, setCaseDate] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
   const [accreditationMappings, setAccreditationMappings] = useState<AccreditationMapping[]>([]);
+
+  const handleIsDeidentifiedChange = (value: boolean) => {
+    if (isDeidentified && !value) {
+      const confirmed = window.confirm("You're about to store patient PHI. Continue?");
+      if (!confirmed) return;
+    }
+    setIsDeidentified(value);
+  };
 
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,10 +98,10 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     let cancelled = false;
 
     async function loadAllData() {
-      // Phase 1: Templates (parallel — tenant + global)
+      const searchPattern = `%${templateSearch}%`;
       const [tenantTemplatesRes, globalTemplatesRes] = await Promise.all([
-        supabase.from('case_templates').select('*').eq('tenant_id', tenantId),
-        supabase.from('case_templates').select('*').eq('tenant_id', GLOBAL_TENANT_ID),
+        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', tenantId).ilike('name', searchPattern).limit(30),
+        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', GLOBAL_TENANT_ID).ilike('name', searchPattern).limit(30),
       ]);
       if (cancelled) return;
 
@@ -102,7 +111,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       }
       const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
 
-      // Phase 2: User-dependent data (parallel with getUser)
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled) return;
 
@@ -111,10 +119,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       let tenantCounts = new Map<string, number>();
 
       if (user) {
-        const [favResult, profileResult, tenantEntriesResult, frameworkResult] = await Promise.allSettled([
+        const [favResult, profileResult, frameworkResult] = await Promise.allSettled([
           supabase.from('template_favorites').select('template_id').eq('user_id', user.id),
           supabase.from('profiles').select('id').eq('user_id', user.id).single(),
-          supabase.from('case_entries').select('template_id').eq('tenant_id', tenantId),
           supabase.from('accreditation_frameworks').select('*').eq('tenant_id', tenantId),
         ]);
         if (cancelled) return;
@@ -125,34 +132,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
         if (profileResult.status === 'fulfilled' && profileResult.value.data) {
           const profileId = (profileResult.value.data as { id: string }).id;
-          const { data: personalData } = await supabase
-            .from('case_entries')
-            .select('template_id')
-            .eq('resident_id', profileId);
-          if (personalData) {
-            personalCounts = new Map(
-              Array.from(
-                personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-                  acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-                  return acc;
-                }, new Map<string, number>())
-              )
-            );
+          const { data: countsData } = await supabase.rpc('get_template_usage_counts', { p_tenant_id: tenantId, p_resident_id: profileId });
+          if (countsData) {
+            personalCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.personal_count]));
+            tenantCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.tenant_count]));
           }
         }
 
-        if (tenantEntriesResult.status === 'fulfilled' && tenantEntriesResult.value.data) {
-          tenantCounts = new Map(
-            Array.from(
-              tenantEntriesResult.value.data.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-                acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-                return acc;
-              }, new Map<string, number>())
-            )
-          );
-        }
-
-        if (frameworkResult.status === 'fulfilled' && frameworkResult.value.data) {
+        if (frameworkResult.status === 'fulfilled') {
           // frameworks data available but not directly used
         }
       }
@@ -165,7 +152,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
     loadAllData();
     return () => { cancelled = true; };
-  }, [tenantId, supabase]);
+  }, [tenantId, templateSearch, supabase]);
 
   const toggleFavorite = useCallback(async (templateId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -370,7 +357,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
         if (e.key === 'Enter') {
           e.preventDefault();
           setSubmitted(false); setSubmittedCaseId(null); setStep(0); setSelectedTemplateId('');
-          setFieldValues({}); setIsDeidentified(false); setPatientMrn(''); setPatientDob('');
+          setFieldValues({}); setIsDeidentified(true); setPatientMrn(''); setPatientDob('');
           setPatientAgeYears(''); setCaseDate(''); setAccreditationMappings([]); setErrors([]);
         }
         return;
@@ -414,7 +401,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             <h3 className="text-xl font-semibold text-text-primary tracking-[-0.03em] font-sans mb-1">
               Case Logged Successfully
             </h3>
-            <p className="text-sm text-[#8E8E93]">
+            <p className="text-sm text-text-muted">
               Your case has been saved and is now visible in your logbook.
             </p>
           </div>
@@ -422,7 +409,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             {submittedCaseId && (
               <a
                 href={`/${tenantSlug}/cases/${submittedCaseId}`}
-                className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               >
                 View Case
               </a>
@@ -434,9 +421,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               Go to My Cases
             </a>
           </div>
-          <p className="text-xs text-[#8E8E93] pt-2">
+          <p className="text-xs text-text-muted pt-2">
             Press{' '}
-            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-xs text-[#3C3C43] dark:text-text-secondary font-mono">
+            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-border text-xs text-text-secondary font-mono">
               Enter
             </kbd>{' '}
             to log another case
@@ -459,6 +446,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   selectedTemplateId={selectedTemplateId}
                   onSelect={(id) => { setSelectedTemplateId(id); setFieldValues({}); }}
                   onToggleFavorite={toggleFavorite}
+                  onSearch={setTemplateSearch}
                 />
               )}
               {step === 1 && (
@@ -467,7 +455,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   patientMrn={patientMrn}
                   patientDob={patientDob}
                   patientAgeYears={patientAgeYears}
-                  onIsDeidentifiedChange={setIsDeidentified}
+                  onIsDeidentifiedChange={handleIsDeidentifiedChange}
                   onMrnChange={setPatientMrn}
                   onDobChange={setPatientDob}
                   onAgeChange={setPatientAgeYears}
@@ -504,7 +492,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               type="button"
               onClick={handleBack}
               disabled={step === 0}
-              className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Back
             </button>
@@ -514,7 +502,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={savingDraft}
-                  className="rounded-full bg-black/5 dark:bg-white/5 text-[#3C3C43] dark:text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
                   {savingDraft ? 'Saving...' : 'Save Draft'}
                 </button>

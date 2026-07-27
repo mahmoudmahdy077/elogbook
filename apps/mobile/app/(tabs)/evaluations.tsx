@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
 interface EvaluationData {
   id: string;
@@ -56,14 +58,14 @@ function EvaluationCard({
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-2">
           <Text
-            className="text-white text-sm"
+            className="text-[#000000] text-sm"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             {evaluation.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
           {evaluation.encounter_date && (
             <Text
-              className="text-gray-500 text-xs mt-1"
+              className="text-[#8E8E93] text-xs mt-1"
               style={{ fontFamily: clinicalTokens.fonts.mono }}
             >
               {new Date(evaluation.encounter_date).toLocaleDateString()}
@@ -71,7 +73,7 @@ function EvaluationCard({
           )}
           {evaluation.setting && (
             <Text
-              className="text-gray-400 text-xs mt-0.5"
+              className="text-[#8E8E93] text-xs mt-0.5"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {evaluation.setting}
@@ -92,7 +94,7 @@ function EvaluationCard({
           </View>
           {evaluation.overall_score != null && (
             <Text
-              className="text-teal-400 text-sm"
+              className="text-primary text-sm"
               style={{ fontFamily: clinicalTokens.fonts.heading }}
             >
               {evaluation.overall_score.toFixed(1)}
@@ -406,7 +408,7 @@ function NewEvaluationSheet({
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className={`flex-1 bg-teal-600 rounded-xl py-3 items-center ${saving ? 'opacity-50' : ''}`}
+                  className={`flex-1 bg-primary rounded-xl py-3 items-center ${saving ? 'opacity-50' : ''}`}
                   onPress={handleSave}
                   disabled={saving}
                   accessibilityLabel="Save evaluation"
@@ -517,20 +519,16 @@ export default function EvaluationsScreen() {
 
   if (loading) {
     return (
-      <View
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      >
-        <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
-      </View>
+      <ScreenWrapper title="Evaluations" scroll={false}>
+        <Animated.View entering={FadeIn} className="flex-1 items-center justify-center">
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
+        </Animated.View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-    >
+    <ScreenWrapper title="Evaluations" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
@@ -541,9 +539,9 @@ export default function EvaluationsScreen() {
           />
         }
       >
-        <View className="flex-row justify-between items-center mb-4">
+        <Animated.View entering={FadeInDown} className="flex-row justify-between items-center mb-4">
           <Text
-            className="text-white text-2xl"
+            className="text-[#000000] text-2xl"
             style={{ fontFamily: clinicalTokens.fonts.heading }}
           >
             Evaluations
@@ -551,7 +549,7 @@ export default function EvaluationsScreen() {
 
           {role !== 'resident' && (
             <TouchableOpacity
-              className="bg-teal-600 rounded-xl px-4 py-2"
+              className="bg-primary rounded-xl px-4 py-2"
               onPress={() => setShowNewEval(true)}
               accessibilityLabel="New evaluation"
               accessibilityRole="button"
@@ -564,33 +562,37 @@ export default function EvaluationsScreen() {
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
 
         {/* Empty state */}
         {groupedByType.length === 0 && (
-          <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
+          <Animated.View entering={FadeIn} className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-gray-500 text-sm"
+              className="text-[#8E8E93] text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
-            >
+              >
               No evaluations found.
             </Text>
-          </View>
+          </Animated.View>
         )}
 
         {/* Evaluations grouped by type */}
-        {groupedByType.map((group) => (
-          <View key={group.type} className="mb-5">
+        {groupedByType.map((group, groupIdx) => (
+          <Animated.View
+            key={group.type}
+            entering={FadeInDown.delay(groupIdx * 120).springify()}
+          >
+            <View className="mb-5">
             <View className="flex-row items-center mb-2">
               <Text
-                className="text-teal-400 text-sm font-semibold flex-1"
+                className="text-primary text-sm font-semibold flex-1"
                 style={{ fontFamily: clinicalTokens.fonts.heading }}
               >
                 {group.type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
               </Text>
-              <View className="bg-teal-600/20 rounded-full px-2 py-0.5">
+              <View className="bg-primary/20 rounded-full px-2 py-0.5">
                 <Text
-                  className="text-teal-400 text-xs"
+                  className="text-primary text-xs"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
                   {group.count}
@@ -598,27 +600,35 @@ export default function EvaluationsScreen() {
               </View>
             </View>
 
-            {group.evaluations.slice(0, 5).map((ev) => (
-              <EvaluationCard
+            {group.evaluations.slice(0, 5).map((ev, cardIdx) => (
+              <Animated.View
                 key={ev.id}
-                evaluation={ev}
-                onPress={() => {
-                  // Detail view could navigate to a full evaluation detail screen
-                }}
-              />
+                entering={FadeInRight.delay(cardIdx * 80).springify()}
+              >
+                <EvaluationCard
+                  key={ev.id}
+                  evaluation={ev}
+                  onPress={() => {
+                    // Detail view could navigate to a full evaluation detail screen
+                  }}
+                />
+              </Animated.View>
             ))}
 
             {group.evaluations.length > 5 && (
+              <Animated.View entering={FadeIn}>
               <TouchableOpacity className="py-2">
                 <Text
-                  className="text-teal-500 text-sm text-center"
+                  className="text-primary text-sm text-center"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
                   +{group.evaluations.length - 5} more
                 </Text>
               </TouchableOpacity>
+              </Animated.View>
             )}
-          </View>
+            </View>
+          </Animated.View>
         ))}
       </ScrollView>
 
@@ -631,6 +641,6 @@ export default function EvaluationsScreen() {
         tenantId={tenantId}
         onSaved={loadEvaluations}
       />
-    </View>
+    </ScreenWrapper>
   );
 }

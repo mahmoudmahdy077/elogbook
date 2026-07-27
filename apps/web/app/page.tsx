@@ -26,9 +26,14 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-backdrop text-text-primary flex flex-col">
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20">
+        <nav className="mb-8">
+          <Link href="/pricing" className="text-sm text-text-muted hover:text-text-primary transition-colors underline underline-offset-2">
+            Pricing
+          </Link>
+        </nav>
         <div className="max-w-3xl text-center">
           <h1 className="text-4xl font-heading font-bold mb-4 text-text-primary">
-            {APP_NAME} Enterprise
+{APP_NAME}
           </h1>
           <p className="text-lg text-text-secondary mb-2">
             The enterprise-grade electronic logbook for medical residents.
@@ -38,12 +43,20 @@ export default async function HomePage() {
             supervisor verifications — securely, offline-ready, and
             HIPAA-compliant.
           </p>
-          <Link
-            href="/login"
-            className="inline-block px-6 py-3 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
-          >
-            Sign in to your account
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/signup"
+              className="px-6 py-3 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow"
+            >
+              Sign up free
+            </Link>
+            <Link
+              href="/login"
+              className="px-6 py-3 rounded-lg border border-border text-text-primary font-medium text-sm hover:bg-surface-elevated transition-colors"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </main>
 
@@ -64,7 +77,7 @@ export default async function HomePage() {
 
       <footer className="px-4 py-6 border-t border-border text-center">
         <p className="text-xs text-text-muted">
-          &copy; 2026 {APP_NAME} Enterprise. HIPAA-compliant. SOC 2 ready.
+          &copy; 2026 {APP_NAME}. Built for medical residents.
         </p>
       </footer>
     </div>

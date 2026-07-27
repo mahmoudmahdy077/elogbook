@@ -109,7 +109,8 @@ export default async function AnalyticsPage({
   const { data: approvals } = await supabase
     .from('approval_requests')
     .select('supervisor_id, status')
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .limit(10000);
 
   const approvalRows: ApprovalRow[] = approvals ?? [];
 

@@ -48,7 +48,7 @@ export default async function CompliancePage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1 text-[#000000]">Compliance Reports</h1>
+      <h1 className="text-2xl font-bold mb-1 text-text-primary">Compliance Reports</h1>
       <p className="text-sm text-text-muted mb-6">
         HIPAA / GDPR / SCFHS compliance overview for {auth.tenant.slug}
       </p>
@@ -126,15 +126,22 @@ async function fetchPhiInventory(
   supabase: SupabaseClient,
   tenantId: string,
 ): Promise<PhiInventoryRow[]> {
-  // case_entries: fetch all to check is_deidentified
-  const { data: entries } = await supabase
-    .from('case_entries')
-    .select('is_deidentified')
-    .eq('tenant_id', tenantId);
-
-  const totalCaseEntries = entries?.length ?? 0;
-  const phiPresent = entries?.filter((c: Record<string, unknown>) => c.is_deidentified === false).length ?? 0;
-  const phiRedacted = entries?.filter((c: Record<string, unknown>) => c.is_deidentified === true).length ?? 0;
+  const [{ count: totalCaseEntries }, { count: phiPresent }, { count: phiRedacted }] = await Promise.all([
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('is_deidentified', false),
+    supabase
+      .from('case_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('is_deidentified', true),
+  ]);
 
   const rows: PhiInventoryRow[] = [];
 

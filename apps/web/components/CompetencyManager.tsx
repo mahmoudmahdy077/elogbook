@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -55,7 +55,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  async function fetchFrameworks() {
+  const fetchFrameworks = useCallback(async () => {
     setLoading(true);
     setError('');
     const supabase = createClient();
@@ -71,11 +71,11 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
       setFrameworks((data as AccreditationFramework[]) || []);
     }
     setLoading(false);
-  }
+  }, [tenantId]);
 
   useEffect(() => {
     fetchFrameworks();
-  }, [tenantId]);
+  }, [fetchFrameworks]);
 
   function resetForm() {
     setName('');

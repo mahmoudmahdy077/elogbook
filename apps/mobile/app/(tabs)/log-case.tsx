@@ -15,18 +15,17 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
-import { saveDraftCase, updateSyncStatus } from '../../lib/db/storage';
-import { getDatabase } from '../../lib/db/database';
-import type { CaseEntry } from '../../lib/db/models/CaseEntry';
+
 import { useHaptics } from '../../lib/haptics';
 import { generatePatientHash } from '../../lib/patient-hash';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
 import { DateField } from '../../components/DateField';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 const SPECIALTY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   surgery: 'cut',
@@ -62,7 +61,7 @@ export default function LogCaseScreen() {
   const [confirmationSuccess, setConfirmationSuccess] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const confirmationTypeRef = useRef<'offline' | 'submitted' | null>(null);
-  const editEntryRef = useRef<CaseEntry | null>(null);
+
   const syncColorMap: Record<string, string> = {
     // Intentional: sync status indicator colors — these are not UI theme colors
     // but data-driven mappings from sync state class names to icon colors.
@@ -70,7 +69,7 @@ export default function LogCaseScreen() {
     'text-green-400': '#34D399',
     'text-yellow-400': '#FBBF24',
     'text-red-400': '#F87171',
-    'text-emerald-400': '#34D399',
+    'text-[#34C759]': '#34D399',
     'text-amber-400': '#FBBF24',
   };
 
@@ -103,11 +102,9 @@ export default function LogCaseScreen() {
 
   const haptics = useHaptics();
 
-  // loadTemplates is intentionally omitted from deps — it's an inline function that changes every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     loadTemplates();
-  }, []);
+  }, [loadTemplates]));
 
   // When the route is opened with `editCaseId`, hydrate the form from the
   // local DB row (or fall back to Supabase if not cached). The submit path
@@ -115,43 +112,25 @@ export default function LogCaseScreen() {
   useEffect(() => {
     if (!editCaseId) return;
     (async () => {
-      const db = getDatabase();
-      let entry: CaseEntry | null = null;
-      try {
-        entry = await db.get<CaseEntry>('case_entries').find(editCaseId);
-      } catch {
-        // not in local cache — try server
-      }
-      if (!entry) {
-        const { data } = await supabase
-          .from('case_entries')
-          .select('*')
-          .eq('id', editCaseId)
-          .single();
-        if (data) {
-          setIsDeidentified(Boolean(data.is_deidentified));
-          setPatientMrn(data.patient_mrn ?? '');
-          setPatientDob(data.patient_dob ?? '');
-          setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-          setCaseDate(data.case_date ?? '');
-          setSelectedTemplateId(String(data.template_id ?? ''));
-          const fv = typeof data.field_values === 'string'
-            ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
-            : ((data.field_values as Record<string, string>) ?? {});
-          setFieldValues(fv);
-          return;
-        }
+      const { data } = await supabase
+        .from('case_entries')
+        .select('*')
+        .eq('id', editCaseId)
+        .single();
+      if (data) {
+        setIsDeidentified(Boolean(data.is_deidentified));
+        setPatientMrn(data.patient_mrn ?? '');
+        setPatientDob(data.patient_dob ?? '');
+        setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
+        setCaseDate(data.case_date ?? '');
+        setSelectedTemplateId(String(data.template_id ?? ''));
+        const fv = typeof data.field_values === 'string'
+          ? (() => { try { return JSON.parse(data.field_values) as Record<string, string>; } catch { return {}; } })()
+          : ((data.field_values as Record<string, string>) ?? {});
+        setFieldValues(fv);
+      } else {
         Alert.alert('Case not found', 'The case you tried to edit is no longer available.');
-        return;
       }
-      editEntryRef.current = entry;
-      setIsDeidentified(Boolean(entry.isDeidentified));
-      setPatientMrn(entry.patientMrn ?? '');
-      setPatientDob(entry.patientDob ?? '');
-      setPatientAge(entry.patientAgeYears != null ? String(entry.patientAgeYears) : '');
-      setCaseDate(entry.caseDate ?? '');
-      setSelectedTemplateId(entry.templateId ?? '');
-      setFieldValues((entry.fieldValues as Record<string, string>) ?? {});
     })();
   }, [editCaseId]);
 
@@ -363,7 +342,7 @@ export default function LogCaseScreen() {
         )
       );
     }
-  }, [favoriteIds, supabase]);
+  }, [favoriteIds]);
 
   const selectTemplate = useCallback((t: CaseTemplate) => {
     setSelectedTemplate(t);
@@ -445,31 +424,21 @@ export default function LogCaseScreen() {
       is_deidentified: isDeidentified,
     };
 
-    // Edit path: update the existing row in place (network first, fall back
-    // to marking the local row as `modified` so the next push picks it up).
     if (editCaseId) {
       try {
-        const targetId = editEntryRef.current?.serverId ?? editCaseId;
         const { error } = await supabase
           .from('case_entries')
           .update({
             ...caseData,
             status: 'pending',
           })
-          .eq('id', targetId);
+          .eq('id', editCaseId);
         if (error) throw error;
-        if (editEntryRef.current) {
-          await updateSyncStatus(editEntryRef.current, 'synced', targetId);
-        }
         haptics.submitSuccess();
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
         setShowConfirmation(true);
       } catch {
-        // Network failed — mark local row as `modified` so push resends.
-        if (editEntryRef.current) {
-          await updateSyncStatus(editEntryRef.current, 'modified');
-        }
         haptics.offlineSave();
         setConfirmationSuccess(false);
         confirmationTypeRef.current = 'offline';
@@ -493,22 +462,6 @@ export default function LogCaseScreen() {
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
     } catch {
-      const patientHashValue = isDeidentified
-        ? await generatePatientHash(profile.tenant_id, patientAge, '')
-        : undefined;
-      await saveDraftCase({
-        tenantId: profile.tenant_id,
-        residentId: profile.id,
-        templateId: selectedTemplate.id,
-        patientMrn: isDeidentified ? undefined : patientMrn,
-        patientDob: isDeidentified ? undefined : patientDob,
-        patientAgeYears: isDeidentified ? Number(patientAge) : undefined,
-        patientHash: patientHashValue,
-        caseDate: caseDate,
-        fieldValues: fieldValues,
-        isDeidentified: isDeidentified,
-        status,
-      });
       haptics.offlineSave();
       setConfirmationSuccess(false);
       confirmationTypeRef.current = 'offline';
@@ -539,21 +492,21 @@ export default function LogCaseScreen() {
     if (field.type === 'select' && field.options) {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+          <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <View className="flex-row flex-wrap gap-2">
             {field.options.map((opt) => (
               <TouchableOpacity
                 key={opt}
                 className={`rounded-lg px-3 py-2 border ${
                   value === opt
-                    ? 'bg-teal-600 border-teal-500'
+                    ? 'bg-primary border-teal-500'
                     : 'bg-gray-200 border-gray-300'
                 }`}
                 onPress={() => { setFieldValue(field.key, opt); haptics.selection(); }}
                 accessibilityLabel={opt}
                 accessibilityRole="button"
               >
-                <Text className="text-white text-sm">{opt}</Text>
+                <Text className={`text-sm ${value === opt ? 'text-white' : 'text-[#000000]'}`}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -564,9 +517,9 @@ export default function LogCaseScreen() {
     if (field.type === 'textarea') {
       return (
         <View key={field.key} className="mb-4">
-          <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+          <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
           <TextInput
-            className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
+            className="bg-white text-[#000000] rounded-xl px-4 py-3 border border-[#007AFF]/15 min-h-[100px]"
             multiline
             textAlignVertical="top"
             returnKeyType="next"
@@ -582,9 +535,9 @@ export default function LogCaseScreen() {
 
     return (
       <View key={field.key} className="mb-4">
-        <Text className="text-gray-400 mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
+        <Text className="text-[#3C3C43] mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>{field.label}</Text>
         <TextInput
-          className="bg-white text-white rounded-xl px-4 py-3 border border-[#007AFF]/15"
+          className="bg-white text-[#000000] rounded-xl px-4 py-3 border border-[#007AFF]/15"
           placeholder={field.label}
           placeholderTextColor="#666"
           returnKeyType="next"
@@ -604,7 +557,7 @@ export default function LogCaseScreen() {
       syncing: { bg: 'bg-blue-900/50', border: 'border-blue-500/30', text: 'Syncing...', icon: 'cloud-upload-outline' as const, color: 'text-blue-400' },
       error: { bg: 'bg-red-900/50', border: 'border-red-500/30', text: 'Sync failed — will retry', icon: 'alert-circle-outline' as const, color: 'text-red-400' },
       offline: { bg: 'bg-amber-900/50', border: 'border-amber-500/30', text: 'Offline Mode — cases saved locally', icon: 'cloud-offline-outline' as const, color: 'text-amber-400' },
-      synced: { bg: 'bg-emerald-900/50', border: 'border-emerald-500/30', text: 'Synced', icon: 'checkmark-circle-outline' as const, color: 'text-emerald-400' },
+      synced: { bg: 'bg-emerald-900/50', border: 'border-emerald-500/30', text: 'Synced', icon: 'checkmark-circle-outline' as const, color: 'text-[#34C759]' },
     };
         const c = config[syncStatus as keyof typeof config] ?? config.syncing;
     return (
@@ -658,7 +611,7 @@ export default function LogCaseScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <Text className="text-white mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+        <Text className="text-[#000000] mt-3" numberOfLines={2} style={{ fontFamily: clinicalTokens.fonts.heading }}>
           {t.specialty} - {t.name}
         </Text>
         <Text className="text-[#007AFF] text-xs mt-2 bg-[#007AFF]/10 self-start px-2 py-0.5 rounded-full" style={{ fontFamily: clinicalTokens.fonts.body }}>
@@ -670,8 +623,7 @@ export default function LogCaseScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 px-4 pt-4" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
-        <Text className="text-white text-2xl mb-6" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
+      <ScreenWrapper title="Log Case" scroll={false}>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
             <View key={i} className="bg-white rounded-xl p-4 border border-[#007AFF]/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
@@ -681,22 +633,22 @@ export default function LogCaseScreen() {
             </View>
           ))}
         </View>
-      </View>
+      </ScreenWrapper>
     );
   }
 
   if (!selectedTemplate) {
     return (
-      <View className="flex-1" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+      <ScreenWrapper title="Log Case" scroll={false}>
         {renderSyncBanner()}
         <FlatList
           data={templates}
           keyExtractor={(t) => t.id}
           renderItem={renderTemplateCard}
           numColumns={2}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           ListHeaderComponent={
-            <Text className="text-white text-2xl mb-4 px-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
+            <Text className="text-[#000000] text-2xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Select Template</Text>
           }
           ListEmptyComponent={
             <View className="items-center py-16">
@@ -712,33 +664,33 @@ export default function LogCaseScreen() {
             </View>
           }
         />
-      </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
-        {renderSyncBanner()}
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={24} color={clinicalTokens.colors.secondary.DEFAULT} />
-          </TouchableOpacity>
-          <Text className="text-white text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
-            {selectedTemplate.specialty} - {selectedTemplate.name}
-          </Text>
-          <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
-            <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
-          </TouchableOpacity>
-        </View>
+    <ScreenWrapper title="Log Case" scroll={false}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+          {renderSyncBanner()}
+          <View className="flex-row items-center mb-4">
+            <TouchableOpacity onPress={() => setSelectedTemplate(null)} className="mr-3" accessibilityLabel="Go back to template selection" accessibilityRole="button">
+              <Ionicons name="arrow-back" size={24} color={clinicalTokens.colors.secondary.DEFAULT} />
+            </TouchableOpacity>
+            <Text className="text-[#000000] text-xl flex-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {selectedTemplate.specialty} - {selectedTemplate.name}
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedTemplate(null)} accessibilityLabel="Change template" accessibilityRole="button">
+              <Text className="text-[#007AFF] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>Change Template</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View className="flex-row items-center justify-between mb-4 px-1">
-          <Text className="text-gray-300 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>De-identified entry</Text>
-          <Switch
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-[#3C3C43] text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>De-identified entry</Text>
+            <Switch
             value={isDeidentified}
             onValueChange={setIsDeidentified}
             trackColor={{ false: clinicalTokens.colors.neutral.light, true: clinicalTokens.colors.primary.DEFAULT }}
@@ -813,7 +765,7 @@ export default function LogCaseScreen() {
       )}
       <View className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#007AFF]/15" style={{ backgroundColor: 'rgba(6,8,20,0.9)', paddingBottom: Math.max(16, Platform.OS === 'ios' ? 34 : 16) }}>
         <TouchableOpacity
-          className={`bg-teal-600 rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
+          className={`bg-primary rounded-xl py-4 items-center ${submitting ? 'opacity-50' : ''}`}
           onPress={handleSubmit}
           disabled={submitting}
           accessibilityLabel="Submit case for verification"
@@ -831,5 +783,6 @@ export default function LogCaseScreen() {
 
       {renderConfirmation()}
     </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }

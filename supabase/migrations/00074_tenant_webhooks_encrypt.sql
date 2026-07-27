@@ -38,7 +38,7 @@ BEGIN
   END IF;
 
   UPDATE public.tenant_webhooks
-     SET secret_enc = pgp_sym_encrypt(secret, v_key)
+     SET secret_enc = extensions.pgp_sym_encrypt(secret, v_key)
    WHERE secret IS NOT NULL
      AND secret_enc IS NULL;
 END $$;
@@ -113,14 +113,14 @@ BEGIN
              description = p_description,
              is_active = p_is_active,
              secret = 'encrypted',  -- placeholder, real value in secret_enc
-             secret_enc = pgp_sym_encrypt(p_secret, v_key),
+             secret_enc = extensions.pgp_sym_encrypt(p_secret, v_key),
              updated_at = now()
        WHERE id = p_webhook_id
          AND tenant_id = v_tenant_id
       RETURNING id INTO v_id;
     ELSE
       INSERT INTO public.tenant_webhooks (tenant_id, url, events, secret, description, is_active, secret_enc)
-      VALUES (v_tenant_id, p_url, p_events, 'encrypted', p_description, p_is_active, pgp_sym_encrypt(p_secret, v_key))
+      VALUES (v_tenant_id, p_url, p_events, 'encrypted', p_description, p_is_active, extensions.pgp_sym_encrypt(p_secret, v_key))
       RETURNING id INTO v_id;
     END IF;
   END IF;
@@ -145,7 +145,7 @@ SELECT
   CASE
     WHEN current_setting('app.encryption_key', true) IS NOT NULL
          AND current_setting('app.encryption_key', true) != ''
-    THEN pgp_sym_decrypt(secret_enc, current_setting('app.encryption_key'))
+    THEN extensions.pgp_sym_decrypt(secret_enc, current_setting('app.encryption_key'))
     ELSE secret
   END AS secret
 FROM public.tenant_webhooks

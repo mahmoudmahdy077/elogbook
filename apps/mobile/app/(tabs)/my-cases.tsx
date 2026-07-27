@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
-import { getDatabase } from '../../lib/db/database';
-import { CaseEntry } from '../../lib/db/models/CaseEntry';
-import { getAllCasesForResident, getConflictedCases } from '../../lib/db/storage';
+
 import { syncService } from '../../lib/sync';
 import { supabase } from '../../lib/supabase';
 import { NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import type { CaseStatus } from '@elogbook/shared';
 
 interface CaseData {
@@ -57,20 +57,20 @@ const CaseCard = React.memo(function CaseCard({
     >
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.heading }}>
+          <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {item.template_specialty} - {item.template_name}
           </Text>
-          <Text className="text-gray-500 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
-          <Text className="text-gray-400 text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
         </View>
         <View className="flex-col items-end gap-1">
           <StatusBadge status={item.status} />
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
-            <Text className="text-xs text-gray-400" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+            <Text className="text-xs text-[#8E8E93]" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}
@@ -78,7 +78,7 @@ const CaseCard = React.memo(function CaseCard({
             accessibilityLabel="Duplicate this case"
             accessibilityRole="button"
           >
-            <Text className="text-teal-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate</Text>
+            <Text className="text-primary text-xs" style={{ fontFamily: clinicalTokens.fonts.heading }}>Duplicate</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -107,33 +107,25 @@ export default function MyCasesScreen() {
 
     if (!profile) { setLoading(false); return; }
 
-    const db = getDatabase();
-    const localEntries = await getAllCasesForResident(profile.id);
-    const localTemplates = await db.get<import('../../lib/db/models/CaseTemplate').CaseTemplate>('case_templates').query().fetch();
-    const templateMap = new Map(localTemplates.map((t) => [t.id, t]));
+    const { data: entries, error } = await supabase
+      .from('case_entries')
+      .select('id, patient_mrn, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
+      .eq('resident_id', profile.id);
 
-    const conflicts = await getConflictedCases();
-
-    const mapped: CaseData[] = localEntries.map((entry: CaseEntry) => {
-      const tmpl = templateMap.get(entry.templateId);
-      return {
-        id: entry.id,
-        patient_mrn: entry.patientMrn,
-        patient_dob: entry.patientDob,
-        case_date: entry.caseDate,
-        status: (entry.status ?? 'draft') as CaseStatus,
-        template_name: tmpl?.name ?? '',
-        template_specialty: tmpl?.specialty ?? '',
-        is_deidentified: entry.isDeidentified ?? true,
-        local_sync_status: entry.localSyncStatus,
-      };
-    });
+    const mapped: CaseData[] = (entries ?? []).map((entry: any) => ({
+      id: entry.id,
+      patient_mrn: entry.patient_mrn,
+      patient_dob: entry.patient_dob,
+      case_date: entry.case_date,
+      status: entry.status ?? ('draft' as CaseStatus),
+      template_name: entry.case_templates?.name ?? '',
+      template_specialty: entry.case_templates?.specialty ?? '',
+      is_deidentified: entry.is_deidentified ?? true,
+      local_sync_status: entry.local_sync_status ?? '',
+    }));
 
     setCases(mapped);
-
-    if (conflicts.length > 0) {
-      setConflictDrafts(conflicts.map((c) => ({ entryId: c.id, residentId: c.residentId })));
-    }
+    setConflictDrafts([]);
 
     setLoading(false);
   }, []);
@@ -178,7 +170,11 @@ export default function MyCasesScreen() {
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: CaseData }) => <CaseCard item={item} onPress={handleCaseTap} />,
+    ({ item, index }: { item: CaseData; index: number }) => (
+      <Animated.View entering={FadeInDown.delay(index * 80).springify()}>
+        <CaseCard item={item} onPress={handleCaseTap} />
+      </Animated.View>
+    ),
     [handleCaseTap],
   );
 
@@ -191,7 +187,7 @@ export default function MyCasesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-backdrop">
+    <ScreenWrapper title="My Cases" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
@@ -209,26 +205,23 @@ export default function MyCasesScreen() {
         </View>
       )}
 
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-white text-2xl mb-3" style={{ fontFamily: clinicalTokens.fonts.heading }}>My Cases</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2 mb-2">
-          {FILTER_CHIPS.map((chip) => (
-            <TouchableOpacity
-              key={chip.key}
-              className={`rounded-full px-4 py-1.5 mr-2 border ${
-                filter === chip.key
-                  ? 'bg-teal-600 border-teal-500'
-                  : 'bg-white border-[#007AFF]/15'
-              }`}
-              onPress={() => setFilter(chip.key)}
-            >
-              <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
-                {chip.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2 mb-3">
+        {FILTER_CHIPS.map((chip) => (
+          <TouchableOpacity
+            key={chip.key}
+            className={`rounded-full px-4 py-1.5 mr-2 border ${
+              filter === chip.key
+                ? 'bg-primary border-teal-500'
+                : 'bg-white border-[#007AFF]/15'
+            }`}
+            onPress={() => setFilter(chip.key)}
+          >
+            <Text className={`text-xs ${filter === chip.key ? 'text-white' : 'text-[#3C3C43]'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+              {chip.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <FlatList
         data={filteredCases}
@@ -236,7 +229,7 @@ export default function MyCasesScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={clinicalTokens.colors.primary.DEFAULT} />
         }
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={
           <View className="bg-white rounded-xl p-6 border border-[#007AFF]/15 items-center">
             <Text className="text-gray-500" style={{ fontFamily: clinicalTokens.fonts.body }}>No cases found.</Text>
@@ -244,6 +237,6 @@ export default function MyCasesScreen() {
         }
         renderItem={renderItem}
       />
-    </View>
+    </ScreenWrapper>
   );
 }

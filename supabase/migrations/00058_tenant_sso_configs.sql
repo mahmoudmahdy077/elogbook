@@ -7,6 +7,37 @@
 -- Each tenant may register at most one active SSO config. The actual
 -- handshake is brokered by the `sso-callback` edge function which reads
 -- the active row for the tenant slug and redirects to the IdP.
+
+-- Functions relied on by this migration (defined in 00078, but needed here)
+CREATE OR REPLACE FUNCTION public.current_role_global()
+RETURNS TEXT
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT NULLIF(current_setting('request.jwt.claims', true)::json->>'user_role', '')::TEXT;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_role_in_tenant(p_tenant_id UUID DEFAULT NULL, p_allowed_roles TEXT[] DEFAULT NULL)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN p_tenant_id IS NOT NULL AND get_tenant_id() != p_tenant_id THEN FALSE
+    WHEN p_allowed_roles IS NOT NULL AND current_role_global() = ANY(p_allowed_roles) THEN TRUE
+    ELSE NULL
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.touch_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
 --
 -- SECURITY: the metadata_url and discovery_url are stored as plain text
 -- because they are public IdP discovery endpoints, not secrets. The

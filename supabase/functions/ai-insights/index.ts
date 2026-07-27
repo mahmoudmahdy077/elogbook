@@ -266,14 +266,44 @@ serve(async (req) => {
     );
   }
 
-  const { data: aiConfig, error: configError } = await supabase
+  // Check plan gating: AI is only available if features.ai = true
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('subscription_plans!inner(features)')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .maybeSingle();
+  const planFeatures = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  if (!planFeatures || planFeatures.ai !== true) {
+    return new Response(
+      JSON.stringify({ error: 'AI features not available on your plan' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  let { data: aiConfig, error: configError } = await supabase
     .from('secret_ai_config')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (configError || !aiConfig) {
+  // Fallback to platform-default AI key
+  if (!aiConfig && !configError) {
+    const platformKey = Deno.env.get('PLATFORM_OPENAI_KEY');
+    if (platformKey) {
+      aiConfig = {
+        id: 'platform',
+        tenant_id: '00000000-0000-0000-0000-000000000000',
+        provider: 'openai',
+        api_key: platformKey,
+        model: 'gpt-4o-mini',
+        is_active: true,
+      } as any;
+    }
+  }
+
+  if (!aiConfig) {
     return new Response(
       JSON.stringify({ error: 'No active AI configuration found for this tenant' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }

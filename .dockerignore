@@ -10,7 +10,7 @@ coverage
 README.md
 DESIGN.md
 docs
-pnpm-lock.yaml
+# pnpm-lock.yaml is needed by Dockerfile for frozen install
 *.md
 .vscode
 .idea

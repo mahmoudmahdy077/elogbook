@@ -20,7 +20,8 @@
  */
 
 import { router } from 'expo-router';
-import { Platform } from 'react-native';
+import { Routes } from './routes';
+
 
 // ---------------------------------------------------------------------------
 // Route definitions — single source of truth for all deep-link → screen
@@ -123,13 +124,13 @@ export const linkingConfig = {
 // handlers, background listeners, etc.).
 // ---------------------------------------------------------------------------
 
-export function navigateToDeepLink(route: DeepLinkRoute): void {
-  if (route.params) {
+export function navigateToDeepLink(deepLink: DeepLinkRoute): void {
+  if (deepLink.params) {
     router.navigate({
-      pathname: route.screen as any,
-      params: route.params,
+      pathname: deepLink.screen as typeof Routes.HOME,
+      params: deepLink.params,
     });
   } else {
-    router.navigate(route.screen as any);
+    router.navigate(deepLink.screen as typeof Routes.HOME);
   }
 }

@@ -43,6 +43,8 @@ export default async function proxy(request: NextRequest) {
 
   const nonce = crypto.randomUUID();
 
+  request.headers.set('x-nonce', nonce);
+
   const response = await updateSession(request);
 
   response.headers.set('Content-Security-Policy', generateCsp(nonce));

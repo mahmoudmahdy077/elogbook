@@ -27,10 +27,10 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENV,
-    // P5.4: 20% performance tracing + 10% session replay sampling
+    // Session replay disabled until PHI masking review is complete
     tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
-    replaysSessionSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE ?? '0.1'),
-    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
     // M4: Deny sensitive routes from Sentry error reporting
     denyUrls: [
       /\/api\/auth\//i,

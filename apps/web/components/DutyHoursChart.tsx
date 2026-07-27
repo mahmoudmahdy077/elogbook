@@ -52,7 +52,6 @@ export default function DutyHoursChart({ periods }: { periods: DutyPeriod[] }) {
         {days.map((day) => {
           const key = day.toISOString().split('T')[0];
           const hours = periodMap.get(key) || 0;
-          const pct = Math.min((hours / 24) * 100, 100);
           return (
             <div key={key} className="bg-neutral-dark rounded p-1 text-center" title={`${key}: ${hours}h`}>
               <div className="h-12 bg-primary rounded" style={{ opacity: hours > 0 ? 0.8 : 0.2, height: '2rem' }} />

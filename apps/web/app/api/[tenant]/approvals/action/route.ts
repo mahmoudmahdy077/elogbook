@@ -94,7 +94,7 @@ export async function POST(
   // ---- Ensure the entry belongs to the same tenant ----
   const { data: entry } = await supabase
     .from('case_entries')
-    .select('id, tenant_id, status')
+    .select('id, tenant_id, resident_id, status')
     .eq('id', entry_id)
     .single();
 
@@ -120,6 +120,17 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  // Insert notification for resident
+  const approved = action === 'approve';
+  await supabase.from('notifications').insert({
+    tenant_id: profile.tenant_id,
+    user_id: entry.resident_id,
+    type: 'approval',
+    title: `Case ${approved ? 'approved' : 'rejected'}`,
+    body: comment || null,
+    link: `/${tenantSlug}/cases/${entry_id}`,
+  }).maybeSingle();
 
   // Fire webhook event after successful approval/rejection
   dispatchWebhookEvent({

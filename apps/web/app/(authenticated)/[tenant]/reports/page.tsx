@@ -82,10 +82,10 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const maxSpecialty = Math.max(1, ...Object.values(specialtyCounts));
 
   const statusColors: Record<string, string> = {
-    approved: 'bg-[#34C759]',
+    approved: 'bg-success',
     pending: 'bg-primary',
-    draft: 'bg-[#6D6D73]',
-    rejected: 'bg-[#FF3B30]',
+    draft: 'bg-text-muted',
+    rejected: 'bg-danger',
   };
 
   const statusLabels: Record<string, string> = {
@@ -100,7 +100,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
       {/* Header */}
       <div className="flex items-start justify-between mb-7 flex-wrap gap-4">
         <div>
-          <h1 className="text-[2rem] font-semibold text-black tracking-[-0.03em] font-sans">Reports &amp; Analytics</h1>
+          <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em] font-sans">Reports &amp; Analytics</h1>
           <p className="text-[0.9rem] text-text-muted mt-1">Review case statistics, specialty distribution, and evaluation summaries.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -109,18 +109,18 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
               type="date"
               name="date_from"
               defaultValue={date_from || ''}
-              className="px-3 py-2 rounded-full bg-white border border-black/5 text-sm text-[#3C3C43] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="px-3 py-2 rounded-full bg-surface-solid border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             <span className="text-xs text-text-muted font-medium">to</span>
             <input
               type="date"
               name="date_to"
               defaultValue={date_to || ''}
-              className="px-3 py-2 rounded-full bg-white border border-black/5 text-sm text-[#3C3C43] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="px-3 py-2 rounded-full bg-surface-solid border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             <button
               type="submit"
-              className="px-4 py-2 rounded-full border border-black/5 bg-white text-sm font-medium text-[#3C3C43] hover:bg-[#F2F2F7] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="px-4 py-2 rounded-full border border-border bg-surface-solid text-sm font-medium text-text-secondary hover:bg-backdrop transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Filter
             </button>
@@ -136,26 +136,26 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
-          <div className="w-[68px] h-[68px] rounded-full bg-[rgba(142,142,147,0.10)] flex items-center justify-center">
-            <span className="text-xl font-semibold text-black tracking-tight">{totalCount ?? 0}</span>
+        <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
+          <div className="w-[68px] h-[68px] rounded-full bg-backdrop flex items-center justify-center">
+            <span className="text-xl font-semibold text-text-primary tracking-tight">{totalCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Total</span>
         </div>
-        <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
-          <div className="w-[68px] h-[68px] rounded-full bg-[rgba(52,199,89,0.10)] flex items-center justify-center">
-            <span className="text-xl font-semibold text-[#34C759] tracking-tight">{approvedCount ?? 0}</span>
+        <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
+          <div className="w-[68px] h-[68px] rounded-full bg-success/10 flex items-center justify-center">
+            <span className="text-xl font-semibold text-success tracking-tight">{approvedCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Approved</span>
         </div>
-        <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
-          <div className="w-[68px] h-[68px] rounded-full bg-[rgba(255,149,0,0.10)] flex items-center justify-center">
-            <span className="text-xl font-semibold text-[#FF9500] tracking-tight">{pendingCount ?? 0}</span>
+        <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
+          <div className="w-[68px] h-[68px] rounded-full bg-warning/10 flex items-center justify-center">
+            <span className="text-xl font-semibold text-warning tracking-tight">{pendingCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Pending</span>
         </div>
-        <div className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col items-center gap-2.5">
-          <div className="w-[68px] h-[68px] rounded-full bg-[rgba(142,142,147,0.08)] flex items-center justify-center">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
+          <div className="w-[68px] h-[68px] rounded-full bg-backdrop flex items-center justify-center">
             <span className="text-xl font-semibold text-text-muted tracking-tight">{draftCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Drafts</span>
@@ -165,9 +165,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
       {/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Cases by Specialty */}
-        <div className="bg-white rounded-2xl border border-black/5 p-5">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Cases by Specialty</h2>
+            <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Cases by Specialty</h2>
             <Link
               href={`/api/${tenantSlug}/reports/specialty.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
               className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
@@ -184,7 +184,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
                 .map(([specialty, count]) => (
                   <div key={specialty}>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-[#3C3C43] font-medium truncate pr-2">{specialty}</span>
+                      <span className="text-text-secondary font-medium truncate pr-2">{specialty}</span>
                       <span className="text-text-muted font-medium">{count}</span>
                     </div>
                     <div className="h-1 rounded-full bg-black/5 overflow-hidden">
@@ -200,9 +200,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
 
         {/* Status Distribution */}
-        <div className="bg-white rounded-2xl border border-black/5 p-5">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Status Distribution</h2>
+            <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Status Distribution</h2>
             <Link
               href={`/api/${tenantSlug}/reports/status.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
               className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
@@ -214,10 +214,10 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             {Object.entries(statusCounts).map(([status, count]) => (
               <div key={status} className="flex flex-col items-center gap-1.5">
                 <div
-                  className={`w-6 h-6 rounded-full ${statusColors[status] || 'bg-[#6D6D73]'}`}
+                  className={`w-6 h-6 rounded-full ${statusColors[status] || 'bg-text-muted'}`}
                 />
                 <span className="text-xs text-text-muted font-medium">{statusLabels[status]}</span>
-                <span className="text-lg font-semibold text-black tracking-[-0.02em]">{count}</span>
+                <span className="text-lg font-semibold text-text-primary tracking-[-0.02em]">{count}</span>
               </div>
             ))}
           </div>
@@ -225,9 +225,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
 
         {/* Evaluation Averages — only for non-residents */}
         {!isResident && (
-          <div className="bg-white rounded-2xl border border-black/5 p-5 md:col-span-2">
+          <div className="bg-surface-solid rounded-2xl border border-border p-5 md:col-span-2">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-black tracking-[-0.02em] font-sans">Evaluation Averages</h2>
+              <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Evaluation Averages</h2>
               <Link
                 href={`/api/${tenantSlug}/reports/evaluations.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
                 className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
@@ -238,15 +238,15 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             <div className="grid grid-cols-3 gap-4 text-center py-4">
               <div>
                 <p className="text-xs text-text-muted font-medium mb-1">Clinical Skills</p>
-                <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.clinical}</p>
+                <p className="text-2xl font-semibold text-text-primary tracking-[-0.02em]">{evalStats.clinical}</p>
               </div>
               <div>
                 <p className="text-xs text-text-muted font-medium mb-1">Professionalism</p>
-                <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.prof}</p>
+                <p className="text-2xl font-semibold text-text-primary tracking-[-0.02em]">{evalStats.prof}</p>
               </div>
               <div>
                 <p className="text-xs text-text-muted font-medium mb-1">Procedures</p>
-                <p className="text-2xl font-semibold text-black tracking-[-0.02em]">{evalStats.proc}</p>
+                <p className="text-2xl font-semibold text-text-primary tracking-[-0.02em]">{evalStats.proc}</p>
               </div>
             </div>
           </div>
