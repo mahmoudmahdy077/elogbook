@@ -1,9 +1,8 @@
 packages:
   - apps/*
   - packages/*
-allowBuilds:
-  '@heroui/shared-utils': set this to true or false
-  msgpackr-extract: set this to true or false
-  sharp: set this to true or false
+onlyBuiltDependencies:
+  - sharp
 ignoredBuiltDependencies:
   - '@heroui/shared-utils'
+  - msgpackr-extract
