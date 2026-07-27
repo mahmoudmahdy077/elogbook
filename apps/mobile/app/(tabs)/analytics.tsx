@@ -262,7 +262,7 @@ export default function AnalyticsScreen() {
           className="text-sm"
           style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}
         >
-          Here's your case progress
+          {'Here\u2019s your case progress'}
         </Text>
       </View>
 

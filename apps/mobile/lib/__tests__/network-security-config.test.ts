@@ -64,8 +64,8 @@ describe('Android network_security_config', () => {
     expect(buildPropsPlugin).toBeDefined();
     const config = buildPropsPlugin?.[1] as Record<string, unknown> | undefined;
     expect(config?.android).toBeDefined();
-    expect((config?.android as Record<string, unknown>)?.networkSecurityConfig).toMatch(
-      /network_security_config\.xml$/,
-    );
+    const androidConfig = config?.android as Record<string, unknown> | undefined;
+    expect(androidConfig?.networkSecurityConfig).toBeDefined();
+    expect(androidConfig?.networkSecurityConfig).toMatch(/network_security_config\.xml$/);
   });
 });

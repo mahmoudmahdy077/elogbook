@@ -11,10 +11,11 @@
   },
   "packageManager": "pnpm@9.15.0",
   "pnpm": {
-    "overrides": {
-      "react": "19.2.3",
-      "react-dom": "19.2.3"
-    }
+    "onlyBuiltDependencies": ["sharp"]
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "dependencies": {
     "next": "^16.2.7",
@@ -27,10 +28,10 @@
     "lint": "pnpm lint:all",
     "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint",
     "test": "pnpm test:unit",
-    "test:unit": "vitest run --exclude '**/e2e/**'",
+    "test:unit": "pnpm --filter @elogbook/web test && pnpm --filter @elogbook/mobile test",
     "test:db": "supabase db test",
-    "test:watch": "vitest --exclude '**/e2e/**'",
-    "test:coverage": "vitest run --coverage --exclude '**/e2e/**'",
+    "test:watch": "pnpm --filter @elogbook/web test:watch",
+    "test:coverage": "pnpm --filter @elogbook/web test:coverage",
     "test:e2e": "pnpm --filter @elogbook/web test:e2e",
     "dev:web": "pnpm --filter @elogbook/web dev",
     "dev:mobile": "pnpm --filter @elogbook/mobile start",

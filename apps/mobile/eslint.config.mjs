@@ -44,7 +44,7 @@ export default [
     },
   },
   {
-    files: ['*.config.{js,mjs,cjs}', 'babel.config.js', 'metro.config.js', 'postcss.config.mjs'],
+    files: ['*.config.{js,mjs,cjs}', 'scripts/**/*.js', 'babel.config.js', 'metro.config.js', 'postcss.config.mjs'],
     languageOptions: {
       globals: globals.node,
     },

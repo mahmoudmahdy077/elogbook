@@ -83,7 +83,7 @@ export default function ResidentOverview() {
     <View className="flex-1 px-5">
       <View className="mb-5">
         <Text className="text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '700', color: clinicalTokens.colors.text.primary }}>Hey, {fullName.split(' ')[0]} 👋</Text>
-        <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Here's your case progress</Text>
+        <Text className="text-sm" style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>{'Here\u2019s your case progress'}</Text>
       </View>
 
       <View className="items-center mb-6">

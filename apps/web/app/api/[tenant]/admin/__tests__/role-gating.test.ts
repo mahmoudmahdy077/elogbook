@@ -14,7 +14,7 @@ describe('admin endpoint role gating', () => {
         })),
       })),
     }));
-    const mod = await import(`../../${endpoint}/route`);
+    const mod = await import(`../${endpoint}/route`);
     const req = new Request(`http://localhost/api/test-tenant/admin/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const res = await mod.POST(req, { params: { tenant: 'test-tenant' } });
     expect(res.status).toBe(403);
