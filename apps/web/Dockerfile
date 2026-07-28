@@ -2,8 +2,6 @@
 # Build context: repo root
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-# CVE-2026-59873: replace vulnerable bundled tar 6.x with patched 7.5.19
-RUN npm install -g tar@7.5.19 && find /usr/local/lib/node_modules/npm -path "*/tar/package.json" -type f -exec sh -c 'v=$(node -e "console.log(require(process.argv[1]).version)" "$1"); if echo "$v" | grep -q "^6\."; then d=$(dirname "$1"); rm -rf "$d"; cp -r /usr/local/lib/node_modules/tar "$d"; echo "Patched: $d"; fi' _ {} \;
 
 FROM base AS builder
 WORKDIR /app
@@ -18,7 +16,7 @@ COPY packages ./packages
 COPY apps/web ./apps/web
 RUN NEXT_OUTPUT=standalone pnpm --filter @elogbook/web build
 
-FROM base AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000

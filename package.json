@@ -10,6 +10,9 @@
     "pnpm": ">=9.0.0 <10"
   },
   "packageManager": "pnpm@9.15.0",
+  "overrides": {
+    "tar": "7.5.19"
+  },
   "dependencies": {
     "next": "^16.2.11",
     "react": "^19.2.8",
