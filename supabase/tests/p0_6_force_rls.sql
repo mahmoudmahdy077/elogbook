@@ -1,3 +1,4 @@
+SELECT plan(NO_PLAN);
 -- ============================================================================
 -- Phase 0 P0.6 Regression Test
 -- ============================================================================
@@ -98,3 +99,5 @@ BEGIN
 
   RAISE NOTICE 'PASS: all % tenant-scoped tables have RLS enabled AND forced', array_length(v_expected, 1);
 END $$;
+
+SELECT * FROM finish();

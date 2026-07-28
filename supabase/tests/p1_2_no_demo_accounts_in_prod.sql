@@ -1,3 +1,4 @@
+SELECT plan(NO_PLAN);
 -- supabase/tests/p1_2_no_demo_accounts_in_prod.sql
 -- Run with: supabase db test
 -- Asserts that no auth.users row has a @demo.com email when
@@ -6,3 +7,5 @@
 SELECT 'FAIL: demo account exists in production' AS test_name, email
 FROM auth.users
 WHERE email LIKE '%@demo.com';
+
+SELECT * FROM finish();

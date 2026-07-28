@@ -1,3 +1,4 @@
+SELECT plan(NO_PLAN);
 -- supabase/tests/rls-policies.sql
 -- RLS Policy Tests — REWRITTEN for DB-004.
 -- Run with: supabase db test
@@ -74,3 +75,5 @@ BEGIN;
     SELECT 1 FROM ai_config WHERE tenant_id = '00000000-0000-0000-0000-0000000000aa' LIMIT 1
   );
 ROLLBACK;
+
+SELECT * FROM finish();
