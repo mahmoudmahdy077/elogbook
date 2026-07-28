@@ -17,11 +17,18 @@ BEGIN;
     ('22222222-0000-0000-0000-000000000002', 'Tenant B', 'tenant-b', 'institution', '{}', encode(gen_random_bytes(32), 'hex'))
   ON CONFLICT (id) DO NOTHING;
 
+  -- Insert a profile in each tenant
+  INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
+  VALUES
+    ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'resident', 'Resident A'),
+    ('bbbbbbbb-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'resident', 'Resident B')
+  ON CONFLICT (id) DO NOTHING;
+
   -- Insert a case in each tenant (de-identified, no PHI)
   INSERT INTO case_entries (id, tenant_id, resident_id, template_id, patient_mrn, patient_dob, patient_age_years, patient_hash, case_date, field_values, accreditation_mappings, is_deidentified, status)
   VALUES
-    ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft'),
-    ('bbbbbbbb-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft')
+    ('aaaaaaaa-0000-0000-0000-000000000010', '11111111-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft'),
+    ('bbbbbbbb-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft')
   ON CONFLICT (id) DO NOTHING;
 
   -- Simulate tenant A's resident JWT

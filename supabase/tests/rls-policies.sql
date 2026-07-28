@@ -8,9 +8,9 @@ INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
 VALUES ('00000000-0000-0000-0000-0000000000aa', 'Test Tenant', 'test-tenant', 'institution', encode(gen_random_bytes(32), 'hex'))
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO auth.users (id, instance_id) VALUES ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-000000000000')
+INSERT INTO auth.users (id, instance_id, email) VALUES ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-000000000000', 'resident@example.com')
 ON CONFLICT (id) DO NOTHING;
-INSERT INTO auth.users (id, instance_id) VALUES ('00000000-0000-0000-0000-0000000000cc', '00000000-0000-0000-0000-000000000000')
+INSERT INTO auth.users (id, instance_id, email) VALUES ('00000000-0000-0000-0000-0000000000cc', '00000000-0000-0000-0000-000000000000', 'supervisor@example.com')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)

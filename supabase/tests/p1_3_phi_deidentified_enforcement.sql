@@ -7,7 +7,7 @@ DECLARE
   v_tenant_id UUID;
 BEGIN
   v_user_id := gen_random_uuid();
-  INSERT INTO auth.users (id, instance_id) VALUES (v_user_id, '00000000-0000-0000-0000-000000000000')
+  INSERT INTO auth.users (id, instance_id, email) VALUES (v_user_id, '00000000-0000-0000-0000-000000000000', 'test@example.com')
   ON CONFLICT (id) DO NOTHING;
   SELECT id INTO v_tenant_id FROM tenants LIMIT 1;
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)

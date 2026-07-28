@@ -43,7 +43,7 @@ BEGIN
 
   -- Fixture: supervisor (auth user + profile)
   v_supervisor_user := gen_random_uuid();
-  INSERT INTO auth.users (id, instance_id) VALUES (v_supervisor_user, '00000000-0000-0000-0000-000000000000')
+  INSERT INTO auth.users (id, instance_id, email) VALUES (v_supervisor_user, '00000000-0000-0000-0000-000000000000', 'supervisor@example.com')
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
@@ -54,7 +54,7 @@ BEGIN
 
   -- Fixture: resident (auth user + profile + pending case)
   v_resident_user := gen_random_uuid();
-  INSERT INTO auth.users (id, instance_id) VALUES (v_resident_user, '00000000-0000-0000-0000-000000000000')
+  INSERT INTO auth.users (id, instance_id, email) VALUES (v_resident_user, '00000000-0000-0000-0000-000000000000', 'resident@example.com')
   ON CONFLICT (id) DO NOTHING;
 
   v_resident_profile := gen_random_uuid();
