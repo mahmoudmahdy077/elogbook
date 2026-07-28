@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(3);
+SELECT plan(2);
 
 DO $$
 DECLARE

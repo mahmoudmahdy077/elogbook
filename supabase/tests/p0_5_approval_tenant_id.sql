@@ -75,10 +75,8 @@ BEGIN
     'request.jwt.claims',
     json_build_object(
       'sub',           v_supervisor_user::text,
-      'app_metadata',  json_build_object(
-        'tenant_id',  v_tenant_a,
-        'user_role',  'supervisor'
-      )
+      'tenant_id',     v_tenant_a,
+      'user_role',     'supervisor'
     )::text,
     true
   );

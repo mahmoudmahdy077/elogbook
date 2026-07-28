@@ -40,8 +40,11 @@ BEGIN;
     ('bbbbbbbb-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft')
   ON CONFLICT (id) DO NOTHING;
 
+  -- Grant table-level permissions so RLS policy subqueries on profiles work
+  GRANT SELECT ON profiles TO authenticated;
+
   -- Simulate tenant A's resident JWT
-  SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","app_metadata":{"tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}', true);
   SET LOCAL role authenticated;
 
   -- Assert: tenant A resident CANNOT read tenant B's case (0 rows expected)

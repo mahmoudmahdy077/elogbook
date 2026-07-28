@@ -24,11 +24,16 @@ INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, st
 VALUES (gen_random_uuid(), '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000dd', (SELECT id FROM public.case_templates LIMIT 1), CURRENT_DATE, 'draft')
 ON CONFLICT (id) DO NOTHING;
 
+GRANT SELECT ON case_entries TO authenticated;
+GRANT SELECT ON profiles TO authenticated;
+GRANT SELECT ON tenants TO authenticated;
+GRANT SELECT ON ai_config TO authenticated;
+
 -- ============================================================
 -- Test: Resident can only see own case_entries
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}', true);
   SET LOCAL role authenticated;
 
   -- Ensure no cross-tenant access: this should always return 0
@@ -43,7 +48,7 @@ ROLLBACK;
 -- Test: Supervisor sees all tenant cases
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000cc", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "supervisor"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000cc", "tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "supervisor"}', true);
   SET LOCAL role authenticated;
 
   -- Supervisor should see cases in their tenant (this will return 0
@@ -60,7 +65,7 @@ ROLLBACK;
 -- Test: Only admin/institution_admin can read ai_config
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}', true);
   SET LOCAL role authenticated;
 
   -- Resident should NOT be able to read ai_config
