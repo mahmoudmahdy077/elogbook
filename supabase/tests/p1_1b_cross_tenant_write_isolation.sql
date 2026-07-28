@@ -19,6 +19,11 @@ GRANT SELECT ON case_templates TO authenticated;
 GRANT SELECT ON subscriptions TO authenticated;
 GRANT INSERT ON case_entries TO authenticated;
 
+-- Insert a template for tenant B (RLS would hide global templates)
+INSERT INTO case_templates (id, tenant_id, specialty, name, fields, required_fields)
+VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000002', 'surgery', 'Test Template', '[]'::jsonb, '[]'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000002","tenant_id":"00000000-0000-0000-0000-000000000002","user_role":"resident"}';
 SELECT lives_ok(
