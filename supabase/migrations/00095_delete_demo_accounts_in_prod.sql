@@ -38,9 +38,11 @@ BEGIN
     v_old := to_jsonb(OLD);
   END IF;
 
+  IF auth.uid() IS NULL THEN RETURN COALESCE(NEW, OLD); END IF;
+
   INSERT INTO public.audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes)
   VALUES (
-    CASE WHEN TG_TABLE_NAME = 'tenants' THEN COALESCE(NEW.id, OLD.id) ELSE COALESCE(NEW.tenant_id, OLD.tenant_id) END,
+    COALESCE((to_jsonb(NEW) ->> 'tenant_id')::uuid, (to_jsonb(OLD) ->> 'tenant_id')::uuid),
     auth.uid(),
     v_action,
     TG_TABLE_NAME,
