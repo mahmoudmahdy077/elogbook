@@ -11,3 +11,4 @@ jobs:
       - run: bash ./scripts/backup-db.sh
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
