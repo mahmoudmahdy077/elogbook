@@ -16,6 +16,7 @@ VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-0000000
 
 GRANT SELECT ON profiles TO authenticated;
 GRANT SELECT ON case_templates TO authenticated;
+GRANT SELECT ON subscriptions TO authenticated;
 GRANT INSERT ON case_entries TO authenticated;
 
 SET LOCAL ROLE authenticated;
