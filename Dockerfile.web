@@ -6,8 +6,17 @@
 # ─── Stage 1: Base ────────────────────────────────────────────
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-# CVE-2026-59873: upgrade npm to latest 10.x which bundles patched tar
-RUN npm install -g npm@10.9.2
+# CVE-2026-59873: replace vulnerable bundled tar 6.x with patched 7.5.19
+RUN npm install -g tar@7.5.19 && \
+    find /usr/local/lib/node_modules/npm -path "*/tar/package.json" -type f -exec sh -c '
+      v=$(node -e "console.log(require(process.argv[1]).version)" "$1")
+      if echo "$v" | grep -q "^6\."; then
+        d=$(dirname "$1")
+        rm -rf "$d"
+        cp -r /usr/local/lib/node_modules/tar "$d"
+        echo "Patched: $d"
+      fi
+    ' _ {} \;
 
 # Install wget for healthcheck
 RUN apk add --no-cache wget
