@@ -55,6 +55,7 @@ $$;
 -- Temporarily disable triggers that would block cleanup
 ALTER TABLE stripe_events DISABLE TRIGGER trg_audit_stripe_events;
 ALTER TABLE audit_logs DISABLE TRIGGER trg_reject_audit_delete;
+ALTER TABLE tenants DISABLE TRIGGER trg_audit_tenants;
 
 DO $$
 DECLARE
@@ -98,3 +99,4 @@ END $$;
 
 ALTER TABLE stripe_events ENABLE TRIGGER trg_audit_stripe_events;
 ALTER TABLE audit_logs ENABLE TRIGGER trg_reject_audit_delete;
+ALTER TABLE tenants ENABLE TRIGGER trg_audit_tenants;
