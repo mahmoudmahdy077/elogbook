@@ -9,9 +9,10 @@ INSERT INTO auth.users (id, instance_id, email)
 VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'residentb@example.com')
 ON CONFLICT (id) DO NOTHING;
 
+-- Delete auto-created profile from handle_new_user trigger, then insert our own
+DELETE FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000002';
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'resident', 'Resident B')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'resident', 'Resident B');
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000002","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000002","role":"resident"}}';

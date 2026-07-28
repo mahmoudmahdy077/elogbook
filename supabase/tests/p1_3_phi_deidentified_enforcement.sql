@@ -10,9 +10,9 @@ BEGIN
   INSERT INTO auth.users (id, instance_id, email) VALUES (v_user_id, '00000000-0000-0000-0000-000000000000', 'test@example.com')
   ON CONFLICT (id) DO NOTHING;
   SELECT id INTO v_tenant_id FROM tenants LIMIT 1;
+  DELETE FROM profiles WHERE user_id = v_user_id;
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-  VALUES (gen_random_uuid(), v_tenant_id, v_user_id, 'resident', 'Test Resident')
-  ON CONFLICT (id) DO NOTHING;
+  VALUES (gen_random_uuid(), v_tenant_id, v_user_id, 'resident', 'Test Resident');
 END $$;
 
 SELECT throws_ok(

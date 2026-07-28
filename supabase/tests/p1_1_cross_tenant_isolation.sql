@@ -17,6 +17,15 @@ BEGIN;
     ('22222222-0000-0000-0000-000000000002', 'Tenant B', 'tenant-b', 'institution', '{}', encode(gen_random_bytes(32), 'hex'))
   ON CONFLICT (id) DO NOTHING;
 
+  -- Insert users in auth.users first (so profile FK references work)
+  INSERT INTO auth.users (id, instance_id, email) VALUES
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'residenta@example.com'),
+    ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'residentb@example.com')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Delete auto-created profiles from handle_new_user trigger
+  DELETE FROM profiles WHERE user_id IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');
+
   -- Insert a profile in each tenant
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
   VALUES

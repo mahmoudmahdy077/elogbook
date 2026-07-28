@@ -181,7 +181,9 @@ END $$;
 -- 8. Cleanup
 DELETE FROM public.ai_config WHERE provider = 'openai';
 DELETE FROM public.payment_gateway_config WHERE provider = 'stripe';
+ALTER TABLE public.audit_logs DISABLE TRIGGER trg_reject_audit_delete;
 DELETE FROM public.tenants WHERE slug = 'p77-test';
+ALTER TABLE public.audit_logs ENABLE TRIGGER trg_reject_audit_delete;
 
 RAISE NOTICE 'All P7.7 key-rotation assertions passed.';
 

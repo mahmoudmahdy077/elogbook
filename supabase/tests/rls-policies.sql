@@ -13,12 +13,12 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO auth.users (id, instance_id, email) VALUES ('00000000-0000-0000-0000-0000000000cc', '00000000-0000-0000-0000-000000000000', 'supervisor@example.com')
 ON CONFLICT (id) DO NOTHING;
 
+-- Delete auto-created profiles from handle_new_user trigger
+DELETE FROM profiles WHERE user_id IN ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-0000000000cc');
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-VALUES ('00000000-0000-0000-0000-0000000000dd', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000bb', 'resident', 'Test Resident')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('00000000-0000-0000-0000-0000000000dd', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000bb', 'resident', 'Test Resident');
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-VALUES ('00000000-0000-0000-0000-0000000000ee', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000cc', 'supervisor', 'Test Supervisor')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('00000000-0000-0000-0000-0000000000ee', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000cc', 'supervisor', 'Test Supervisor');
 
 INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, status)
 VALUES (gen_random_uuid(), '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000dd', (SELECT id FROM public.case_templates LIMIT 1), CURRENT_DATE, 'draft')

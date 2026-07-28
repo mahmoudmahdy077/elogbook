@@ -46,9 +46,11 @@ BEGIN
   INSERT INTO auth.users (id, instance_id, email) VALUES (v_supervisor_user, '00000000-0000-0000-0000-000000000000', 'supervisor@example.com')
   ON CONFLICT (id) DO NOTHING;
 
+  -- handle_new_user trigger created a profile; delete it so we can insert our own
+  DELETE FROM profiles WHERE user_id = v_supervisor_user;
+
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-  VALUES (v_supervisor_user, v_tenant_a, v_supervisor_user, 'supervisor', 'Test Supervisor')
-  ON CONFLICT (id) DO NOTHING;
+  VALUES (v_supervisor_user, v_tenant_a, v_supervisor_user, 'supervisor', 'Test Supervisor');
 
   v_supervisor := v_supervisor_user;
 
@@ -57,10 +59,12 @@ BEGIN
   INSERT INTO auth.users (id, instance_id, email) VALUES (v_resident_user, '00000000-0000-0000-0000-000000000000', 'resident@example.com')
   ON CONFLICT (id) DO NOTHING;
 
+  -- handle_new_user trigger created a profile; delete it so we can insert our own
+  DELETE FROM profiles WHERE user_id = v_resident_user;
+
   v_resident_profile := gen_random_uuid();
   INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
-  VALUES (v_resident_profile, v_tenant_a, v_resident_user, 'resident', 'Test Resident')
-  ON CONFLICT (id) DO NOTHING;
+  VALUES (v_resident_profile, v_tenant_a, v_resident_user, 'resident', 'Test Resident');
 
   INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, status)
   VALUES (gen_random_uuid(), v_tenant_a, v_resident_profile, (SELECT id FROM case_templates LIMIT 1), CURRENT_DATE, 'pending')
