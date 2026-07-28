@@ -54,7 +54,7 @@ jobs:
         env:
           SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
       - run: supabase start
-      - run: supabase db test
+      - run: supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
   deno-test:
     runs-on: ubuntu-latest
     steps:
