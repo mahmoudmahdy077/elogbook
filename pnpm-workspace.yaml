@@ -6,3 +6,4 @@ onlyBuiltDependencies:
 ignoredBuiltDependencies:
   - '@heroui/shared-utils'
   - msgpackr-extract
+
