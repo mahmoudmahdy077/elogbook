@@ -40,8 +40,9 @@ BEGIN;
     ('bbbbbbbb-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010', NULL, NULL, NULL, NULL, '2026-01-01', '{}'::JSONB, '[]'::JSONB, true, 'draft')
   ON CONFLICT (id) DO NOTHING;
 
-  -- Grant table-level permissions so RLS policy subqueries on profiles work
+  -- Grant table-level permissions so RLS policies work for authenticated role
   GRANT SELECT ON profiles TO authenticated;
+  GRANT SELECT ON case_entries TO authenticated;
 
   -- Simulate tenant A's resident JWT
   SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}', true);

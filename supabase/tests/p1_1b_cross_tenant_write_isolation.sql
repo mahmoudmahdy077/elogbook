@@ -15,6 +15,7 @@ INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
 VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'resident', 'Resident B');
 
 GRANT SELECT ON profiles TO authenticated;
+GRANT SELECT ON case_templates TO authenticated;
 GRANT INSERT ON case_entries TO authenticated;
 
 SET LOCAL ROLE authenticated;
