@@ -51,7 +51,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 403 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   const { tenant: tenantSlug } = await params;
 
   // ---- P1.6: Tenant-slug URL validation ----

@@ -45,7 +45,7 @@ async function authorize(
     return { profile: null, error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== slug) {
     return { profile: null, error: NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 }) };
   }

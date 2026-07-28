@@ -72,7 +72,7 @@ async function getUserTenantSlug(
 
   if (!data) return null;
 
-  const tenants = data.tenants as { slug: string } | null;
+  const tenants = data.tenants as unknown as { slug: string } | null;
   return { slug: tenants?.slug ?? '', role: data.role };
 }
 
@@ -171,7 +171,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isAdminRoute) {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.aal && session.aal !== 'aal2') {
+    if ((session as { aal?: string } | null)?.aal && (session as { aal?: string } | null)?.aal !== 'aal2') {
       try {
         const { data: mfaData } = await supabase.auth.mfa.listFactors();
         const hasVerifiedMfa =

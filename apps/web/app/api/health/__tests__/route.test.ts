@@ -4,7 +4,7 @@ const { GET } = await import('../route');
 
 describe('GET /api/health', () => {
   it('returns 200 with status healthy', async () => {
-    const res = await GET(new Request('http://app.elogbook.dev/api/health'));
+    const res = await GET();
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -13,7 +13,7 @@ describe('GET /api/health', () => {
   });
 
   it('returns valid JSON with timestamp', async () => {
-    const res = await GET(new Request('http://app.elogbook.dev/api/health'));
+    const res = await GET();
     const body = await res.json();
 
     expect(() => new Date(body.timestamp)).not.toThrow();

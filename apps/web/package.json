@@ -16,7 +16,7 @@
     "@elogbook/shared": "workspace:*",
     "@sentry/nextjs": "^10.62.0",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.43.0",
+    "@supabase/supabase-js": "2.43.0",
     "date-fns": "^4.4.0",
     "next": "^16.2.7",
     "next-intl": "^4.13.0",

@@ -229,7 +229,7 @@ describe('logger interface', () => {
     expect(parsed.correlationId).toBe('abc-123');
   });
 
-  it.skipIf(typeof window !== 'undefined', 'skips pid check in jsdom', () => {
+  it.skipIf(typeof window !== 'undefined')('skips pid check in jsdom', () => {
     logger.info('check pid');
     const line = consoleLogSpy.mock.calls[0][0];
     const parsed = JSON.parse(line);

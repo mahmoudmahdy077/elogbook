@@ -21,7 +21,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
   const [plansResult, subscriptionResult, gatewayResult, purchasesResult, caseCountResult, residentCountResult, paymentsResult] = await Promise.all([
     supabase
       .from('subscription_plans')
-      .select('name, price_monthly')
+      .select('id, name, slug, price_monthly, features, tenant_type, max_residents')
       .eq('tenant_type', auth.tenant.tenant_type)
       .order('price_monthly', { ascending: true }),
     supabase

@@ -12,7 +12,7 @@ interface EvalFormRow {
   total_score: number | null;
   completed_at: string | null;
   evaluator_notes: string | null;
-  profiles: { full_name: string } | null;
+  profiles: { full_name: string }[] | null;
   created_at: string;
 }
 
@@ -244,7 +244,7 @@ export default async function EvaluationsPage({
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-text-primary truncate">
-                          {form.profiles?.full_name ?? 'Unknown'}
+                          {form.profiles?.[0]?.full_name ?? 'Unknown'}
                         </p>
                       </div>
                       <div className="flex items-center">
