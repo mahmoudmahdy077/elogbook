@@ -36,5 +36,4 @@ SELECT throws_ok(
     VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000099', (SELECT id FROM public.case_templates LIMIT 1), 'draft', now())$$,
   NULL, 'RLS should block cross-tenant INSERT'
 );
-SELECT * FROM finish();
 ROLLBACK;

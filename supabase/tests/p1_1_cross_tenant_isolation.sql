@@ -1,4 +1,3 @@
-SELECT plan(NO_PLAN);
 -- supabase/tests/p1_1_cross_tenant_isolation.sql
 -- Cross-tenant isolation tests (P1.1) — REWRITTEN for DB-004.
 -- Run with: supabase db test
@@ -61,5 +60,3 @@ BEGIN;
     SELECT 1 FROM profiles WHERE tenant_id = '22222222-0000-0000-0000-000000000002'
   );
 ROLLBACK;
-
-SELECT * FROM finish();

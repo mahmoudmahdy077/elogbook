@@ -25,5 +25,4 @@ SELECT lives_ok(
     VALUES ((SELECT id FROM public.tenants LIMIT 1), (SELECT id FROM public.profiles WHERE role='resident' LIMIT 1), (SELECT id FROM public.case_templates LIMIT 1), 'draft', NULL, NULL, true, now())$$,
   'deidentified case without PHI should succeed'
 );
-SELECT * FROM finish();
 ROLLBACK;

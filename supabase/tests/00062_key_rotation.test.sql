@@ -1,4 +1,3 @@
-SELECT plan(NO_PLAN);
 -- ============================================================================
 -- 00062_key_rotation.test.sql
 --
@@ -189,5 +188,3 @@ ALTER TABLE public.audit_logs ENABLE TRIGGER trg_reject_audit_delete;
 SELECT 'All P7.7 key-rotation assertions passed.' AS notice;
 
 ROLLBACK;
-
-SELECT * FROM finish();
