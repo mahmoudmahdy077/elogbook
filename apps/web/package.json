@@ -18,7 +18,7 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.43.0",
     "date-fns": "^4.4.0",
-    "next": "^16.2.7",
+    "next": "^16.2.11",
     "next-intl": "^4.13.0",
     "posthog-js": "^1.396.2",
     "qrcode.react": "^4.2.0",

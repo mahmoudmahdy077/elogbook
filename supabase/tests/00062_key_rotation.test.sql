@@ -31,8 +31,8 @@ DO $$
 DECLARE
   v_tenant_id UUID;
 BEGIN
-  INSERT INTO public.tenants (id, name, slug, tenant_type)
-    VALUES (gen_random_uuid(), 'P7.7 Test Tenant', 'p77-test', 'institution')
+  INSERT INTO public.tenants (id, name, slug, tenant_type, mrn_hash_salt)
+    VALUES (gen_random_uuid(), 'P7.7 Test Tenant', 'p77-test', 'institution', encode(gen_random_bytes(32), 'hex'))
     RETURNING id INTO v_tenant_id;
 
   INSERT INTO public.ai_config (tenant_id, provider, model, api_key_enc, key_version, is_active)

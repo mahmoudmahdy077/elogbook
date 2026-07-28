@@ -3,18 +3,39 @@
 -- Run with: supabase db test
 -- Requires: a running local Supabase with seeded data (supabase db reset).
 
+-- Fixture: insert a test tenant and data used by all three test blocks
+INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
+VALUES ('00000000-0000-0000-0000-0000000000aa', 'Test Tenant', 'test-tenant', 'institution', encode(gen_random_bytes(32), 'hex'))
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.users (id, instance_id) VALUES ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-000000000000')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO auth.users (id, instance_id) VALUES ('00000000-0000-0000-0000-0000000000cc', '00000000-0000-0000-0000-000000000000')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
+VALUES ('00000000-0000-0000-0000-0000000000dd', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000bb', 'resident', 'Test Resident')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
+VALUES ('00000000-0000-0000-0000-0000000000ee', '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000cc', 'supervisor', 'Test Supervisor')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, status)
+VALUES (gen_random_uuid(), '00000000-0000-0000-0000-0000000000aa', '00000000-0000-0000-0000-0000000000dd', (SELECT id FROM public.case_templates LIMIT 1), CURRENT_DATE, 'draft')
+ON CONFLICT (id) DO NOTHING;
+
 -- ============================================================
 -- Test: Resident can only see own case_entries
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "resident-1-uuid", "app_metadata": {"tenant_id": "test-tenant-uuid", "user_role": "resident"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}}', true);
   SET LOCAL role authenticated;
 
   -- Ensure no cross-tenant access: this should always return 0
   -- for tenant B's data since we seeded tenant B with different IDs
   SELECT 'FAIL: resident can read another tenants data' AS test_name
   WHERE EXISTS (
-    SELECT 1 FROM case_entries WHERE tenant_id != 'test-tenant-uuid'
+    SELECT 1 FROM case_entries WHERE tenant_id != '00000000-0000-0000-0000-0000000000aa'
   );
 ROLLBACK;
 
@@ -22,16 +43,16 @@ ROLLBACK;
 -- Test: Supervisor sees all tenant cases
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "supervisor-1-uuid", "app_metadata": {"tenant_id": "test-tenant-uuid", "user_role": "supervisor"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000cc", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "supervisor"}}', true);
   SET LOCAL role authenticated;
 
   -- Supervisor should see cases in their tenant (this will return 0
   -- if seed data doesn't exist — that's OK, it's a smoke test)
   SELECT 'FAIL: supervisor cannot see tenant cases' AS test_name
   WHERE NOT EXISTS (
-    SELECT 1 FROM case_entries WHERE tenant_id = 'test-tenant-uuid' LIMIT 1
+    SELECT 1 FROM case_entries WHERE tenant_id = '00000000-0000-0000-0000-0000000000aa' LIMIT 1
   ) AND EXISTS (
-    SELECT 1 FROM tenants WHERE id = 'test-tenant-uuid'
+    SELECT 1 FROM tenants WHERE id = '00000000-0000-0000-0000-0000000000aa'
   );
 ROLLBACK;
 
@@ -39,12 +60,12 @@ ROLLBACK;
 -- Test: Only admin/institution_admin can read ai_config
 -- ============================================================
 BEGIN;
-  SELECT set_config('request.jwt.claims', '{"sub": "resident-1-uuid", "app_metadata": {"tenant_id": "test-tenant-uuid", "user_role": "resident"}}', true);
+  SELECT set_config('request.jwt.claims', '{"sub": "00000000-0000-0000-0000-0000000000bb", "app_metadata": {"tenant_id": "00000000-0000-0000-0000-0000000000aa", "user_role": "resident"}}', true);
   SET LOCAL role authenticated;
 
   -- Resident should NOT be able to read ai_config
   SELECT 'FAIL: resident can read ai_config' AS test_name
   WHERE EXISTS (
-    SELECT 1 FROM ai_config WHERE tenant_id = 'test-tenant-uuid' LIMIT 1
+    SELECT 1 FROM ai_config WHERE tenant_id = '00000000-0000-0000-0000-0000000000aa' LIMIT 1
   );
 ROLLBACK;

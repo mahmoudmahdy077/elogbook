@@ -18,52 +18,66 @@
 BEGIN;
 
 -- --------------------------------------------------------------------
--- Setup: pretend we are a supervisor in tenant-A
--- --------------------------------------------------------------------
-SELECT set_config(
-  'request.jwt.claims',
-  json_build_object(
-    'sub', 'supervisor-a-user-id',
-    'app_metadata', json_build_object(
-      'tenant_id', (SELECT id FROM tenants WHERE slug = 'tenant-a' LIMIT 1),
-      'user_role', 'supervisor'
-    )
-  )::text,
-  true
-);
-
--- --------------------------------------------------------------------
--- Sanity: pick a pending case in tenant-A and a supervisor profile
+-- Self-contained fixture + test in one DO block so JWT claims can
+-- reference the freshly-inserted supervisor profile.
 -- --------------------------------------------------------------------
 DO $$
 DECLARE
-  v_entry_id   UUID;
-  v_supervisor UUID;
-  v_tenant_a   UUID;
-  v_before_count BIGINT;
-  v_after_count  BIGINT;
-  v_tenant_on_row UUID;
-  v_approve_result JSONB;
+  v_entry_id          UUID;
+  v_supervisor        UUID;
+  v_tenant_a          UUID;
+  v_before_count      BIGINT;
+  v_after_count       BIGINT;
+  v_tenant_on_row     UUID;
+  v_approve_result    JSONB;
+  v_supervisor_user   UUID;
+  v_resident_user     UUID;
+  v_resident_profile  UUID;
 BEGIN
+  -- Fixture: tenant
+  INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
+  VALUES (gen_random_uuid(), 'Tenant A', 'tenant-a', 'institution', encode(gen_random_bytes(32), 'hex'))
+  ON CONFLICT (slug) DO NOTHING;
+
   SELECT id INTO v_tenant_a FROM tenants WHERE slug = 'tenant-a' LIMIT 1;
-  IF v_tenant_a IS NULL THEN
-    RAISE EXCEPTION 'tenant-a not seeded - run supabase db reset first';
-  END IF;
 
-  SELECT id INTO v_entry_id
-    FROM case_entries
-   WHERE tenant_id = v_tenant_a AND status = 'pending'
-   ORDER BY created_at DESC
-   LIMIT 1;
+  -- Fixture: supervisor (auth user + profile)
+  v_supervisor_user := gen_random_uuid();
+  INSERT INTO auth.users (id, instance_id) VALUES (v_supervisor_user, '00000000-0000-0000-0000-000000000000')
+  ON CONFLICT (id) DO NOTHING;
 
-  SELECT id INTO v_supervisor
-    FROM profiles
-   WHERE tenant_id = v_tenant_a AND role = 'supervisor'
-   LIMIT 1;
+  INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
+  VALUES (v_supervisor_user, v_tenant_a, v_supervisor_user, 'supervisor', 'Test Supervisor')
+  ON CONFLICT (id) DO NOTHING;
 
-  IF v_entry_id IS NULL OR v_supervisor IS NULL THEN
-    RAISE EXCEPTION 'missing fixture: need a pending case and a supervisor in tenant-a';
-  END IF;
+  v_supervisor := v_supervisor_user;
+
+  -- Fixture: resident (auth user + profile + pending case)
+  v_resident_user := gen_random_uuid();
+  INSERT INTO auth.users (id, instance_id) VALUES (v_resident_user, '00000000-0000-0000-0000-000000000000')
+  ON CONFLICT (id) DO NOTHING;
+
+  v_resident_profile := gen_random_uuid();
+  INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
+  VALUES (v_resident_profile, v_tenant_a, v_resident_user, 'resident', 'Test Resident')
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, status)
+  VALUES (gen_random_uuid(), v_tenant_a, v_resident_profile, (SELECT id FROM case_templates LIMIT 1), CURRENT_DATE, 'pending')
+  RETURNING id INTO v_entry_id;
+
+  -- Set JWT claims so approve_case() can resolve auth.uid() and get_tenant_id()
+  PERFORM set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'sub',           v_supervisor_user::text,
+      'app_metadata',  json_build_object(
+        'tenant_id',  v_tenant_a,
+        'user_role',  'supervisor'
+      )
+    )::text,
+    true
+  );
 
   -- Baseline: count approval_requests for this case before call
   SELECT COUNT(*) INTO v_before_count
@@ -95,15 +109,9 @@ BEGIN
   END IF;
 
   -- Mirror the same checks for reject_case on a fresh pending case
-  SELECT id INTO v_entry_id
-    FROM case_entries
-   WHERE tenant_id = v_tenant_a AND status = 'pending'
-   ORDER BY created_at DESC
-   LIMIT 1;
-
-  IF v_entry_id IS NULL THEN
-    RAISE EXCEPTION 'no second pending case to exercise reject_case';
-  END IF;
+  INSERT INTO case_entries (id, tenant_id, resident_id, template_id, case_date, status)
+  VALUES (gen_random_uuid(), v_tenant_a, v_resident_profile, (SELECT id FROM case_templates LIMIT 1), CURRENT_DATE, 'pending')
+  RETURNING id INTO v_entry_id;
 
   PERFORM reject_case(v_entry_id, v_supervisor, 'p0.5 test reject');
 

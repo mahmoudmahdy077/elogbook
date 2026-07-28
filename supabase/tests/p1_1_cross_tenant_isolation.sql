@@ -11,10 +11,10 @@
 
 BEGIN;
   -- Seed two tenants
-  INSERT INTO tenants (id, name, slug, tenant_type, settings)
+  INSERT INTO tenants (id, name, slug, tenant_type, settings, mrn_hash_salt)
   VALUES
-    ('11111111-0000-0000-0000-000000000001', 'Tenant A', 'tenant-a', 'institution', '{}'),
-    ('22222222-0000-0000-0000-000000000002', 'Tenant B', 'tenant-b', 'institution', '{}')
+    ('11111111-0000-0000-0000-000000000001', 'Tenant A', 'tenant-a', 'institution', '{}', encode(gen_random_bytes(32), 'hex')),
+    ('22222222-0000-0000-0000-000000000002', 'Tenant B', 'tenant-b', 'institution', '{}', encode(gen_random_bytes(32), 'hex'))
   ON CONFLICT (id) DO NOTHING;
 
   -- Insert a case in each tenant (de-identified, no PHI)
