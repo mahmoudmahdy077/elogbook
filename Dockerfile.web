@@ -18,6 +18,7 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/env/package.json ./packages/env/
 COPY packages/supabase/package.json ./packages/supabase/ 2>/dev/null || true
 
 RUN pnpm install --frozen-lockfile
@@ -30,6 +31,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules 2>/dev/null || true
+COPY --from=deps /app/packages/env/node_modules ./packages/env/node_modules 2>/dev/null || true
 COPY --from=deps /app/packages/supabase/node_modules ./packages/supabase/node_modules 2>/dev/null || true
 
 # Copy source code
