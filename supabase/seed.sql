@@ -52,7 +52,8 @@ VALUES
     '{"max_cases": -1, "templates": "custom", "ai": true, "pdf_export": true, "approval_workflow": true, "goal_tracking": true, "audit_trail": true, "sso": true, "dedicated_support": true, "baa": true}',
     'institution',
     NULL
-  );
+  )
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Default Case Templates (global, no tenant — null tenant_id means global)
@@ -62,13 +63,14 @@ VALUES
 -- We'll use a special "global" tenant approach instead.
 
 -- Global templates tenant (shared across all tenants for default templates)
-INSERT INTO tenants (id, name, slug, tenant_type, settings)
+INSERT INTO tenants (id, name, slug, tenant_type, settings, mrn_hash_salt)
 VALUES (
   '00000000-0000-0000-0000-000000000000',
   'Global Templates',
   'global-templates',
   'institution',
-  '{"system": true}'
+  '{"system": true}',
+  encode(gen_random_bytes(32), 'hex')
 ) ON CONFLICT (slug) DO NOTHING;
 
 -- Surgery template
