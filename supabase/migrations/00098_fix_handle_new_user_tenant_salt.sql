@@ -60,7 +60,7 @@ BEGIN
     NULLIF(current_setting('app.user_id', true), '')::UUID,
     'key_rotation',
     'encryption_keys',
-    NULL,
+    '00000000-0000-0000-0000-000000000000'::uuid,
     jsonb_build_object(
       'old_version', p_old_version,
       'new_version', p_new_version,
@@ -93,7 +93,7 @@ BEGIN
   END IF;
 
   INSERT INTO tenants (name, slug, tenant_type, mrn_hash_salt)
-  VALUES (NEW.email, 'user-' || NEW.id, 'individual', encode(gen_random_bytes(32), 'hex'))
+  VALUES (NEW.email, 'user-' || NEW.id, 'individual', encode(extensions.gen_random_bytes(32), 'hex'))
   RETURNING id INTO new_tenant_id;
 
   INSERT INTO profiles (tenant_id, user_id, role, full_name)
