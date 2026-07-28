@@ -17,6 +17,7 @@ COPY apps/web ./apps/web
 RUN NEXT_OUTPUT=standalone pnpm --filter @elogbook/web build
 
 FROM node:22-alpine AS runner
+RUN npm install -g tar@7.5.19 && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/tar
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
