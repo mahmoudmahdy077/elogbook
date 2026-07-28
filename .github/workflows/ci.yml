@@ -50,7 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
-        with: { version: latest }
+        with: { version: 2.109.1 }
+        env:
+          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
       - run: supabase start
       - run: supabase db test
   deno-test:
