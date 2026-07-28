@@ -40,7 +40,7 @@ BEGIN
 
   INSERT INTO public.audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes)
   VALUES (
-    COALESCE(NEW.tenant_id, OLD.tenant_id),
+    CASE WHEN TG_TABLE_NAME = 'tenants' THEN COALESCE(NEW.id, OLD.id) ELSE COALESCE(NEW.tenant_id, OLD.tenant_id) END,
     auth.uid(),
     v_action,
     TG_TABLE_NAME,
