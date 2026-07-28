@@ -2,10 +2,10 @@
 # Build context: repo root
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-# CVE-2026-59873: upgrade npm's bundled tar
-RUN npm install --location=global tar@7.5.19 && \
-    rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && \
-    ln -s /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/tar
+# CVE-2026-59873: replace all copies of bundled tar with patched version
+RUN npm install -g tar@7.5.19 && \
+    find /usr/local/lib/node_modules/npm -path "*/node_modules/tar" -type d \
+      -exec sh -c 'for d; do rm -rf "$d" && cp -r /usr/local/lib/node_modules/tar "$d"; done' _ {} +
 
 FROM base AS builder
 WORKDIR /app
