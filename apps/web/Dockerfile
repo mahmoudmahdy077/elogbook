@@ -10,7 +10,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/env/package.json ./packages/env/
 COPY apps/web/package.json ./apps/web/
 COPY packages/supabase/package.json ./packages/supabase/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 COPY packages ./packages
 COPY apps/web ./apps/web
