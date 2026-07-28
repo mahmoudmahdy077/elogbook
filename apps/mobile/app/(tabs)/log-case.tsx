@@ -102,6 +102,69 @@ export default function LogCaseScreen() {
 
   const haptics = useHaptics();
 
+  const loadTemplates = async () => {
+    setLoading(true);
+    setFetchError(false);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, tenant_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile) { setLoading(false); return; }
+
+    const { data, error } = await supabase
+      .from('case_templates')
+      .select('*')
+      .eq('tenant_id', profile.tenant_id);
+
+    if (error) { setFetchError(true); setLoading(false); return; }
+    if (data) {
+      const allTemplates = data as unknown as CaseTemplate[];
+      let favIds = new Set<string>();
+      let personalCounts = new Map<string, number>();
+
+      const { data: favData } = await supabase
+        .from('template_favorites')
+        .select('template_id')
+        .eq('user_id', user.id);
+      if (favData) {
+        favIds = new Set(favData.map((r: { template_id: string }) => r.template_id));
+      }
+
+      const { data: personalData } = await supabase
+        .from('case_entries')
+        .select('template_id')
+        .eq('resident_id', profile.id);
+      if (personalData) {
+        personalCounts = new Map(
+          Array.from(
+            personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+              acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
+              return acc;
+            }, new Map<string, number>())
+          )
+        );
+      }
+
+      setFavoriteIds(favIds);
+      const sorted = sortTemplates(allTemplates, favIds, personalCounts, new Map());
+      setTemplates(sorted as unknown as CaseTemplate[]);
+
+      const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
+      if (autoSelectId) {
+        const t = sorted.find((x) => x.id === autoSelectId);
+        if (t) setSelectedTemplate(t);
+      }
+    }
+    setLoading(false);
+  };
+
   useFocusEffect(useCallback(() => {
     loadTemplates();
   }, [loadTemplates]));
@@ -241,69 +304,6 @@ export default function LogCaseScreen() {
   useEffect(() => {
     return syncService.onStatusChange(setSyncStatus);
   }, []);
-
-  const loadTemplates = async () => {
-    setLoading(true);
-    setFetchError(false);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, tenant_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) { setLoading(false); return; }
-
-    const { data, error } = await supabase
-      .from('case_templates')
-      .select('*')
-      .eq('tenant_id', profile.tenant_id);
-
-    if (error) { setFetchError(true); setLoading(false); return; }
-    if (data) {
-      const allTemplates = data as unknown as CaseTemplate[];
-      let favIds = new Set<string>();
-      let personalCounts = new Map<string, number>();
-
-      const { data: favData } = await supabase
-        .from('template_favorites')
-        .select('template_id')
-        .eq('user_id', user.id);
-      if (favData) {
-        favIds = new Set(favData.map((r: { template_id: string }) => r.template_id));
-      }
-
-      const { data: personalData } = await supabase
-        .from('case_entries')
-        .select('template_id')
-        .eq('resident_id', profile.id);
-      if (personalData) {
-        personalCounts = new Map(
-          Array.from(
-            personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-              acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-              return acc;
-            }, new Map<string, number>())
-          )
-        );
-      }
-
-      setFavoriteIds(favIds);
-      const sorted = sortTemplates(allTemplates, favIds, personalCounts, new Map());
-      setTemplates(sorted as unknown as CaseTemplate[]);
-
-      const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
-      if (autoSelectId) {
-        const t = sorted.find((x) => x.id === autoSelectId);
-        if (t) setSelectedTemplate(t);
-      }
-    }
-    setLoading(false);
-  };
 
   const toggleFavorite = useCallback(async (templateId: string) => {
     const { data: { user } } = await supabase.auth.getUser();

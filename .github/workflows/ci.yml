@@ -12,8 +12,8 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --no-frozen-lockfile
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
   lint:
     runs-on: ubuntu-latest
@@ -22,8 +22,8 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --no-frozen-lockfile
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
       - run: pnpm lint:all
   test:
     runs-on: ubuntu-latest
@@ -32,8 +32,8 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --no-frozen-lockfile
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
       - run: pnpm test
   build-web:
     runs-on: ubuntu-latest
@@ -42,8 +42,8 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --no-frozen-lockfile
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
   db-tests:
     runs-on: ubuntu-latest
