@@ -1,4 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('@/lib/supabase/server', () => ({
+  createServerSupabase: vi.fn(async () => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        limit: vi.fn(() => ({
+          single: vi.fn(async () => ({ data: { id: 't-1' }, error: null })),
+        })),
+      })),
+    })),
+  })),
+}));
 
 const { GET } = await import('../route');
 
