@@ -8,6 +8,15 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - name: Install PostgreSQL 17 client (pg_dump)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
       # GitHub-hosted runners are IPv4-only, but Supabase direct connections
       # (db.<ref>.supabase.co) are IPv6-only and unreachable from the runner.
       # Resolve the project's IPv4-reachable pooler host via the Management API.
