@@ -23,10 +23,11 @@ jobs:
           echo "service_role key fetched (length ${#KEY}) — not printing it"
           npx --yes vercel link --yes --project elogbook-web --token "${VERCEL_TOKEN}" >/dev/null 2>&1
           for env in production preview development; do
+            npx --yes vercel env rm SUPABASE_SERVICE_ROLE_KEY "${env}" --yes --token "${VERCEL_TOKEN}" >/dev/null 2>&1 || true
             if printf '%s' "${KEY}" | npx --yes vercel env add SUPABASE_SERVICE_ROLE_KEY "${env}" --yes --token "${VERCEL_TOKEN}" 2>/dev/null; then
               echo "set SUPABASE_SERVICE_ROLE_KEY for ${env}"
             else
-              echo "existing or failed for ${env}"
+              echo "failed for ${env}"
             fi
           done
           echo "---VERCEL ENV LIST---"
