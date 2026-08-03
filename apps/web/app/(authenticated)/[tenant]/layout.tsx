@@ -41,10 +41,8 @@ export default async function TenantLayout({
   let auth;
   try {
     auth = await getAuthContext();
-  } catch (err) {
-    // TEMP DEBUG: surface the auth failure for the redirect-loop hunt
-    console.error('[TENANT-LAYOUT] getAuthContext failed:', err);
-    redirect(`/login?err=${encodeURIComponent((err as Error).message ?? String(err))}`);
+  } catch {
+    redirect('/login');
   }
 
   // P6.1: onboarding guard
