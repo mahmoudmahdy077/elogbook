@@ -42,4 +42,13 @@ jobs:
             echo "ERROR: could not rewrite db.${SUPABASE_PROJECT_REF}.supabase.co in SUPABASE_DB_URL" >&2
             exit 1
           fi
+          if [[ "${DB_URL}" =~ ^([a-z]+)://([^:]+):([^@]*)@(.*)$ ]]; then
+            USERNAME="${BASH_REMATCH[2]}"
+            if [[ "${USERNAME}" != *.${SUPABASE_PROJECT_REF} ]]; then
+              DB_URL="${BASH_REMATCH[1]}://${USERNAME}.${SUPABASE_PROJECT_REF}:${BASH_REMATCH[3]}@${BASH_REMATCH[4]}"
+            fi
+          else
+            echo "ERROR: unexpected SUPABASE_DB_URL format" >&2
+            exit 1
+          fi
           DB_URL="${DB_URL}" bash ./scripts/backup-db.sh
