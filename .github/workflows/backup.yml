@@ -8,7 +8,38 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - run: bash ./scripts/backup-db.sh
+      # GitHub-hosted runners are IPv4-only, but Supabase direct connections
+      # (db.<ref>.supabase.co) are IPv6-only and unreachable from the runner.
+      # Resolve the project's IPv4-reachable pooler host via the Management API.
+      - name: Resolve Supabase pooler host
+        id: pooler
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          PROJECT_JSON="$(curl -fsSL \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}")"
+          REGION="$(echo "${PROJECT_JSON}" | jq -r '.region // empty')"
+          POOLER_HOST="$(echo "${PROJECT_JSON}" | jq -r '.pooler.host // empty')"
+          if [[ -z "${POOLER_HOST}" && -n "${REGION}" ]]; then
+            POOLER_HOST="aws-0-${REGION}.pooler.supabase.com"
+          fi
+          if [[ -z "${POOLER_HOST}" ]]; then
+            echo "ERROR: could not resolve pooler host for ${SUPABASE_PROJECT_REF}" >&2
+            exit 1
+          fi
+          echo "pooler-host=${POOLER_HOST}" >> "${GITHUB_OUTPUT}"
+      - name: Run backup via pooler
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          POOLER_HOST: ${{ steps.pooler.outputs.pooler-host }}
+        run: |
+          DB_URL="${SUPABASE_DB_URL/db.${SUPABASE_PROJECT_REF}.supabase.co/${POOLER_HOST}}"
+          if [[ "${DB_URL}" == "${SUPABASE_DB_URL}" ]]; then
+            echo "ERROR: could not rewrite db.${SUPABASE_PROJECT_REF}.supabase.co in SUPABASE_DB_URL" >&2
+            exit 1
+          fi
+          DB_URL="${DB_URL}" bash ./scripts/backup-db.sh
