@@ -117,7 +117,12 @@ export async function updateSession(request: NextRequest) {
   const isHomePage = pathname === '/';
   const isLoginPage = pathname === '/login' || pathname.startsWith('/login/');
   const isAuthRoute = pathname.startsWith('/auth');
-  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute;
+  // /onboarding and /mfa are top-level, self-guarding flows that the
+  // authenticated layout redirects INTO — treating them as tenant-scoped
+  // routes would bounce them back and create a redirect loop.
+  const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
+  const isMfaRoute = pathname === '/mfa' || pathname.startsWith('/mfa/');
+  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute;
 
   // Only call getUser() for non-public routes (saves a network
   // round-trip on every static page load).

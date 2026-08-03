@@ -58,7 +58,7 @@ export default async function TenantLayout({
   // The /mfa/* pages live at the top level (outside this layout), so
   // no recursion guard is needed here.
   if (auth.mfaRequired) {
-    redirect(`/${auth.tenant.slug}/mfa/verify?next=/${auth.tenant.slug}/dashboard`);
+    redirect(`/mfa/verify?next=/${auth.tenant.slug}/dashboard`);
   }
 
   const userRole = auth.profile.role;
