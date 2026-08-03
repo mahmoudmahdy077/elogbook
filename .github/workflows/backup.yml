@@ -42,10 +42,18 @@ jobs:
             echo "ERROR: could not rewrite db.${SUPABASE_PROJECT_REF}.supabase.co in SUPABASE_DB_URL" >&2
             exit 1
           fi
-          if [[ "${DB_URL}" =~ ^([a-z]+)://([^:]+):([^@]*)@(.*)$ ]]; then
+          if [[ "${DB_URL}" =~ ^([a-z]+)://([^:/@]+)(:([^@]*))?@(.*)$ ]]; then
+            SCHEME="${BASH_REMATCH[1]}"
             USERNAME="${BASH_REMATCH[2]}"
+            PASSWORD="${BASH_REMATCH[4]:-}"
+            REST="${BASH_REMATCH[5]}"
             if [[ "${USERNAME}" != *.${SUPABASE_PROJECT_REF} ]]; then
-              DB_URL="${BASH_REMATCH[1]}://${USERNAME}.${SUPABASE_PROJECT_REF}:${BASH_REMATCH[3]}@${BASH_REMATCH[4]}"
+              USERNAME="${USERNAME}.${SUPABASE_PROJECT_REF}"
+            fi
+            if [[ -n "${PASSWORD}" ]]; then
+              DB_URL="${SCHEME}://${USERNAME}:${PASSWORD}@${REST}"
+            else
+              DB_URL="${SCHEME}://${USERNAME}@${REST}"
             fi
           else
             echo "ERROR: unexpected SUPABASE_DB_URL format" >&2
