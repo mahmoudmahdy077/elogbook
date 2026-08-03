@@ -68,4 +68,4 @@ jobs:
             echo "ERROR: unexpected SUPABASE_DB_URL format" >&2
             exit 1
           fi
-          DB_URL="${DB_URL}" bash ./scripts/backup-db.sh
+          PATH="/usr/lib/postgresql/17/bin:${PATH}" DB_URL="${DB_URL}" bash ./scripts/backup-db.sh

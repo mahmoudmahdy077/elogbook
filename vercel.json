@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "NODE_ENV=development pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @elogbook/web build",
   "outputDirectory": ".next",
   "devCommand": "pnpm --filter @elogbook/web dev",
