@@ -6,31 +6,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Seed demo accounts, enable gate, verify
+      - name: Inspect NOT NULL columns and run seed
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          SQL="$(awk '/^DO \$\$$/{flag=1} flag{print} /^END \$\$$;/{exit}' supabase/migrations/00006_demo_accounts.sql)"
-          jq -n --arg q "${SQL}" '{query: $q}' > /tmp/seed.json
-          echo "---SEED (00006 block)---"
-          curl -sS -w "\nHTTP_CODE:%{http_code}\n" -X POST \
+          q() { curl -sS -w "\nHTTP_CODE:%{http_code}\n" -X POST \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/vnd.management.v1+json" \
             "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            --data-binary @/tmp/seed.json
-          echo "---ENABLE GATE---"
-          curl -sS -w "\nHTTP_CODE:%{http_code}\n" -X POST \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/vnd.management.v1+json" \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -d "{\"query\":\"ALTER DATABASE postgres SET app.enable_demo_migrations = 'on';\"}"
-          echo "---VERIFY USERS---"
-          curl -sS -w "\nHTTP_CODE:%{http_code}\n" -X POST \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/vnd.management.v1+json" \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -d "{\"query\":\"SELECT email, raw_user_meta_data->>'role' AS role FROM auth.users WHERE email LIKE '%@demo.com' ORDER BY email;\"}"
+            -d "$1"; }
+          echo "---TENANTS NOT-NULL COLS---"
+          q "{\"query\":\"SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='tenants' AND is_nullable='NO' AND column_default IS NULL ORDER BY ordinal_position;\"}"
+          echo "---PROFILES NOT-NULL COLS---"
+          q "{\"query\":\"SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND is_nullable='NO' AND column_default IS NULL ORDER BY ordinal_position;\"}"
