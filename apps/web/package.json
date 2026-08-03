@@ -41,7 +41,6 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "framer-motion": "^12.40.0",
     "globals": "^17.6.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^4.3.0",
