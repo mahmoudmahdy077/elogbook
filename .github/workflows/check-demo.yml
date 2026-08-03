@@ -13,6 +13,7 @@ jobs:
           curl -fsSL -X POST \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.management.v1+json" \
             "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
             -d '{"query":"SELECT email, created_at, banned_until FROM auth.users WHERE email LIKE ''%@demo.com'' ORDER BY email;"}'
           echo ""
@@ -20,5 +21,6 @@ jobs:
           curl -fsSL -X POST \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.management.v1+json" \
             "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
             -d '{"query":"SELECT current_setting(''app.enable_demo_migrations'', true);"}'
