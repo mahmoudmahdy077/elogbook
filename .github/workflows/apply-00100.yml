@@ -1,0 +1,25 @@
+name: Apply 00100 (temp)
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply get_tenant_id / get_user_role fix
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          q() { curl -sS -w "\nHTTP_CODE:%{http_code}\n" -X POST \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.management.v1+json" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -d "$1"; }
+          FN1="$(awk '/^CREATE OR REPLACE FUNCTION get_tenant_id/{flag=1} flag{print} /^\$\$;/{exit}' supabase/migrations/00100_fix_jwt_claim_paths.sql)"
+          FN2="$(awk '/^CREATE OR REPLACE FUNCTION get_user_role/{flag=1} flag{print} /^\$\$;/{exit}' supabase/migrations/00100_fix_jwt_claim_paths.sql)"
+          echo "---APPLY get_tenant_id---"
+          jq -n --arg q "${FN1}" '{query: $q}' | q "$(cat)"
+          echo "---APPLY get_user_role---"
+          jq -n --arg q "${FN2}" '{query: $q}' | q "$(cat)"
