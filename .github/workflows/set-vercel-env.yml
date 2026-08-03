@@ -1,0 +1,33 @@
+name: Set Vercel Env (temp)
+on:
+  workflow_dispatch:
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch service_role key and set Vercel env
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          KEY="$(curl -fsSL \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Accept: application/vnd.management.v1+json" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/api-keys" \
+            | jq -r '.[] | select(.name == "service_role") | .api_key')"
+          if [[ -z "${KEY}" || "${KEY}" == "null" ]]; then
+            echo "ERROR: could not fetch service_role key" >&2
+            exit 1
+          fi
+          echo "service_role key fetched (length ${#KEY}) — not printing it"
+          npx --yes vercel link --yes --project elogbook-web --token "${VERCEL_TOKEN}" >/dev/null 2>&1
+          for env in production preview development; do
+            if printf '%s' "${KEY}" | npx --yes vercel env add SUPABASE_SERVICE_ROLE_KEY "${env}" --yes --token "${VERCEL_TOKEN}" 2>/dev/null; then
+              echo "set SUPABASE_SERVICE_ROLE_KEY for ${env}"
+            else
+              echo "existing or failed for ${env}"
+            fi
+          done
+          echo "---VERCEL ENV LIST---"
+          npx --yes vercel env ls --token "${VERCEL_TOKEN}" 2>&1 | sed 's/=.*/=***/' || true
