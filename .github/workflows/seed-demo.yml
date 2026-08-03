@@ -29,6 +29,14 @@ jobs:
             "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
             -d "$1"; }
 
+          echo "---CURRENT FUNCTION (diagnostic)---"
+          q "{\"query\":\"SELECT pg_get_functiondef('public.audit_table_change()'::regprocedure);\"}"
+
+          echo "---APPLY COMMITTED 00095 audit_table_change---"
+          FN="$(awk '/^CREATE OR REPLACE FUNCTION public.audit_table_change/{flag=1} flag{print} /^\$\$;/{exit}' supabase/migrations/00095_delete_demo_accounts_in_prod.sql)"
+          jq -n --arg q "${FN}" '{query: $q}' > /tmp/fn.json
+          q "$(cat /tmp/fn.json)"
+
           echo "---SEED---"
           jq -n --arg q "$(cat .github/workflows/seed-demo.sql)" '{query: $q}' > /tmp/seed.json
           q "$(cat /tmp/seed.json)"
