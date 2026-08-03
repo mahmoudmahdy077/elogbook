@@ -19,6 +19,10 @@ DECLARE
   v_name TEXT;
   i INT;
 BEGIN
+  -- Demo seeding predates MFA enforcement (00086): disable the trigger for
+  -- the duration of this block. Transactional — restored on error or exit.
+  ALTER TABLE public.profiles DISABLE TRIGGER trg_enforce_mfa;
+
   -- 1. Create the demo institution tenant
   INSERT INTO tenants (id, name, slug, tenant_type, settings, mrn_hash_salt)
   VALUES (
@@ -116,4 +120,6 @@ BEGIN
     )
     WHERE id = v_user_id;
   END LOOP;
+
+  ALTER TABLE public.profiles ENABLE TRIGGER trg_enforce_mfa;
 END $$;
