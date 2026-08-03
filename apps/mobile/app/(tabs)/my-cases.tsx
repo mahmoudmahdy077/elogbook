@@ -60,17 +60,17 @@ const CaseCard = React.memo(function CaseCard({
           <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {item.template_specialty} - {item.template_name}
           </Text>
-          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
-          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
         </View>
         <View className="flex-col items-end gap-1">
           <StatusBadge status={item.status} />
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
-            <Text className="text-xs text-[#8E8E93]" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+            <Text className="text-xs text-text-muted" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}

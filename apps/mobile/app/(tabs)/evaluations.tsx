@@ -65,7 +65,7 @@ function EvaluationCard({
           </Text>
           {evaluation.encounter_date && (
             <Text
-              className="text-[#8E8E93] text-xs mt-1"
+              className="text-text-muted text-xs mt-1"
               style={{ fontFamily: clinicalTokens.fonts.mono }}
             >
               {new Date(evaluation.encounter_date).toLocaleDateString()}
@@ -73,7 +73,7 @@ function EvaluationCard({
           )}
           {evaluation.setting && (
             <Text
-              className="text-[#8E8E93] text-xs mt-0.5"
+              className="text-text-muted text-xs mt-0.5"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {evaluation.setting}
@@ -568,7 +568,7 @@ export default function EvaluationsScreen() {
         {groupedByType.length === 0 && (
           <Animated.View entering={FadeIn} className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-[#8E8E93] text-sm"
+              className="text-text-muted text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
               >
               No evaluations found.
