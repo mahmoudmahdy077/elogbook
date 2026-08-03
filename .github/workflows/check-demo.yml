@@ -1,0 +1,24 @@
+name: Check Demo Accounts (temp)
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query auth.users for demo accounts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -d '{"query":"SELECT email, created_at, banned_until FROM auth.users WHERE email LIKE ''%@demo.com'' ORDER BY email;"}'
+          echo ""
+          echo "---GUC---"
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -d '{"query":"SELECT current_setting(''app.enable_demo_migrations'', true);"}'
