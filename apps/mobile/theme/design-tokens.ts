@@ -42,8 +42,8 @@ export const colors = {
   textPrimary: '#000000' as const,
   /** Secondary text (#3C3C43) */
   textSecondary: '#3C3C43' as const,
-  /** Muted / tertiary text (#8E8E93) */
-  textMuted: '#8E8E93' as const,
+  /** Muted / tertiary text (#6D6D73 — WCAG AA on backdrop) */
+  textMuted: '#6D6D73' as const,
   /** Text on primary backgrounds (#FFFFFF) */
   textOnPrimary: '#FFFFFF' as const,
 

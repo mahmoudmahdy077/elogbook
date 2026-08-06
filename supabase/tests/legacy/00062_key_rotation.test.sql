@@ -31,8 +31,8 @@ DO $$
 DECLARE
   v_tenant_id UUID;
 BEGIN
-  INSERT INTO public.tenants (id, name, slug, tenant_type)
-    VALUES (gen_random_uuid(), 'P7.7 Test Tenant', 'p77-test', 'institution')
+  INSERT INTO public.tenants (id, name, slug, tenant_type, mrn_hash_salt)
+    VALUES (gen_random_uuid(), 'P7.7 Test Tenant', 'p77-test', 'institution', encode(gen_random_bytes(32), 'hex'))
     RETURNING id INTO v_tenant_id;
 
   INSERT INTO public.ai_config (tenant_id, provider, model, api_key_enc, key_version, is_active)
@@ -181,8 +181,10 @@ END $$;
 -- 8. Cleanup
 DELETE FROM public.ai_config WHERE provider = 'openai';
 DELETE FROM public.payment_gateway_config WHERE provider = 'stripe';
+ALTER TABLE public.audit_logs DISABLE TRIGGER trg_reject_audit_delete;
 DELETE FROM public.tenants WHERE slug = 'p77-test';
+ALTER TABLE public.audit_logs ENABLE TRIGGER trg_reject_audit_delete;
 
-RAISE NOTICE 'All P7.7 key-rotation assertions passed.';
+SELECT 'All P7.7 key-rotation assertions passed.' AS notice;
 
 ROLLBACK;

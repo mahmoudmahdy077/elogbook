@@ -76,7 +76,20 @@ log() {
 }
 
 # ── Ensure log directory exists before any log calls ──────────────────────
-mkdir -p "$(dirname "${LOG_FILE}")"
+# Fall back to a writable temp location when the default (e.g. /var/log)
+# is not writable — e.g. unprivileged CI runners.
+if ! mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null; then
+  LOG_FILE="${TMPDIR:-/tmp}/elogbook-backup.log"
+  echo "WARN: default log dir not writable; using ${LOG_FILE}" >&2
+  mkdir -p "$(dirname "${LOG_FILE}")"
+fi
+
+# ── Ensure backup directory is writable (fallback for CI/unprivileged) ─────
+if ! mkdir -p "${BACKUP_DIR}" 2>/dev/null; then
+  BACKUP_DIR="${TMPDIR:-/tmp}/elogbook-backups"
+  echo "WARN: default backup dir not writable; using ${BACKUP_DIR}" >&2
+  mkdir -p "${BACKUP_DIR}"
+fi
 
 # ── Pre-flight checks ──────────────────────────────────────────────────────
 if [[ -z "${DB_URL}" ]]; then

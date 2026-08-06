@@ -159,7 +159,7 @@ export default function AIInsightsScreen() {
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           <Animated.View entering={FadeIn.delay(100).springify()}>
             <Text className="text-[#000000] text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
-            <Text className="text-[#8E8E93] text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            <Text className="text-text-muted text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {quotaUsed} of {MAX_QUERIES} queries used today
           </Text>
           </Animated.View>

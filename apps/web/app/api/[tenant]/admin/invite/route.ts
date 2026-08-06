@@ -36,7 +36,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -63,7 +63,7 @@ export async function POST(
     email,
     user_metadata: { full_name, specialty: specialty || null, tenant_id: profile.tenant_id, role: inviteRole },
     email_redirect_to: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
-  });
+  } as Parameters<typeof adminClient.auth.admin.createUser>[0]);
 
   if (createError) {
     return NextResponse.json({ error: createError.message }, { status: 400 });

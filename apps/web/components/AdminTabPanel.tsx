@@ -18,12 +18,23 @@ interface GatewayConfig {
   is_active: boolean;
 }
 
+interface AiConfigData {
+  id: string;
+  tenant_id: string;
+  provider: string;
+  model: string;
+  endpoint_url: string | null;
+  is_active: boolean;
+  has_key: boolean;
+}
+
 interface AdminTabPanelProps {
   tenantSlug: string;
   tenantId: string;
   profileRole: string;
   templates: unknown[];
   users: unknown[];
+  aiConfig: AiConfigData | null;
   paymentConfig: GatewayConfig | null;
   totalCases: number;
   pendingCases: number;

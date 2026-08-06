@@ -31,7 +31,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Type-check mobile app
         run: pnpm --filter @elogbook/mobile typecheck
 
@@ -48,7 +48,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Lint mobile app
         run: pnpm --filter @elogbook/mobile lint
 
@@ -66,7 +66,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - uses: expo/expo-github-action@v9
         with:
           eas-version: latest

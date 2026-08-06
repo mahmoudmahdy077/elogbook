@@ -145,13 +145,13 @@ async function fetchPhiInventory(
 
   const rows: PhiInventoryRow[] = [];
 
-  if (totalCaseEntries > 0) {
+  if ((totalCaseEntries ?? 0) > 0) {
     rows.push({
       table_name: 'case_entries',
-      total_records: totalCaseEntries,
-      phi_present: phiPresent,
-      phi_redacted: phiRedacted,
-      phi_percentage: totalCaseEntries > 0 ? (phiPresent / totalCaseEntries) * 100 : 0,
+      total_records: totalCaseEntries ?? 0,
+      phi_present: phiPresent ?? 0,
+      phi_redacted: phiRedacted ?? 0,
+      phi_percentage: (totalCaseEntries ?? 0) > 0 ? ((phiPresent ?? 0) / (totalCaseEntries ?? 0)) * 100 : 0,
     });
   }
 

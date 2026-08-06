@@ -83,9 +83,11 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const off = onScreenshotAttempt(() => {
       const msg = 'Screenshots are disabled to protect patient data.';
-      Platform.OS === 'android'
-        ? ToastAndroid.show(msg, ToastAndroid.LONG)
-        : Alert.alert('Screenshots blocked', msg);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(msg, ToastAndroid.LONG);
+      } else {
+        Alert.alert('Screenshots blocked', msg);
+      }
     });
     return () => off();
   }, []);

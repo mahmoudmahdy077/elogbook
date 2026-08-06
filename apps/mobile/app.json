@@ -79,6 +79,7 @@
         {
           "android": {
             "usesCleartextTraffic": false,
+            "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
             "extraGradleProperties": [
               "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m",
               "hermes.bytecode.limit=65536",

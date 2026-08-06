@@ -28,13 +28,13 @@
 - [x] Verify frosted glass Sidebar renders correctly
 - [x] Verify StatusBadge pills (flat, no glow) on all pages
 - [x] Verify KPI rings (thin SVG, Apple Watch style) in DashboardContent
-- [ ] Verify light theme is default, dark theme works via `.dark` class on `<html>`
+- [x] Verify light theme is default, dark theme works via `.dark` class on `<html>`
 
 ## Phase: Mobile Alignment
 
-- [ ] Sync mobile tailwind config with web token values
-- [ ] Delete duplicate components (ProgressRing.tsx, StatusBadge.tsx, GlassPanel.tsx) in mobile — use shared package versions
-- [ ] Verify mobile Expo build with new tokens
+- [x] Sync mobile tailwind config with web token values (global.css @theme synced to clinicalTokens: surface/glow/border/text tokens, HeroUI semantic scales; muted text → #6D6D73 WCAG AA; hardcoded text-[#8E8E93] → text-text-muted in 5 tab screens)
+- [x] Delete duplicate components (ProgressRing.tsx, StatusBadge.tsx, GlassPanel.tsx) in mobile — use shared package versions
+- [x] Verify mobile Expo build with new tokens — `npx expo export --platform android` succeeds (Hermes bytecode bundle 7.9MB, all fonts/assets resolved); mobile typecheck, 104 tests, lint all pass (Aug 6)
 
 ## Phase: Testing & Quality
 

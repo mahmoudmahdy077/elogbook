@@ -47,7 +47,7 @@ async function handleSubmit(
     .single();
 
   if (callerProfile) {
-    const callerTenant = callerProfile.tenants as { slug: string } | null;
+    const callerTenant = callerProfile.tenants as unknown as { slug: string } | null;
     if (callerTenant && callerTenant.slug !== tenantSlug) {
       return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
     }

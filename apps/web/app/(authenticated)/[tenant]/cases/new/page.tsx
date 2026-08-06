@@ -19,7 +19,7 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
 
   if (!profile) redirect('/login');
 
-  const tenant = profile.tenants as { slug: string; tenant_type: string };
+  const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   const { data: subscription } = await supabase

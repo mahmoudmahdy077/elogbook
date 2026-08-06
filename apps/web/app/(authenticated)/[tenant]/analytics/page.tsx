@@ -11,7 +11,7 @@ import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 interface CaseRow {
   case_date: string;
   status: string;
-  case_templates: { specialty: string } | null;
+  case_templates: { specialty: string }[] | null;
 }
 
 interface ApprovalRow {
@@ -74,7 +74,7 @@ export default async function AnalyticsPage({
   // Specialty breakdown
   const specialtyMap = new Map<string, number>();
   for (const c of caseRows) {
-    const spec = c.case_templates?.specialty ?? 'Unspecified';
+    const spec = c.case_templates?.[0]?.specialty ?? 'Unspecified';
     specialtyMap.set(spec, (specialtyMap.get(spec) ?? 0) + 1);
   }
   const specialtyBreakdown = Array.from(specialtyMap.entries())

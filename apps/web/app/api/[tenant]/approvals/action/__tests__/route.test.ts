@@ -119,6 +119,13 @@ describe('POST /api/[tenant]/approvals/action', () => {
           }),
         };
       }
+      if (table === 'notifications') {
+        return {
+          insert: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        };
+      }
       return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) };
     });
     mockRpc.mockResolvedValue({ error: null });

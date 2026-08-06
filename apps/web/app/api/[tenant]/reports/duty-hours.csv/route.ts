@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     .eq('tenant_id', profile.tenant_id);
 
   if (profile.role === 'resident') {
-    query = query.eq('resident_id', profile.id as string);
+    query = query.eq('resident_id', user.id);
   }
 
   if (date_from) query = query.gte('shift_date', date_from);

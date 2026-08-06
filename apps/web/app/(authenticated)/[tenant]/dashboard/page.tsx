@@ -83,8 +83,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const totalResidents = dashboard.total_residents ?? 0;
 
   // ── Remaining queries (not covered by RPC) ──────────────────────────
-  type SupabaseQuery = ReturnType<ReturnType<SupabaseClient['from']>['select']>;
-  const queries: SupabaseQuery[] = [
+  const queries: any[] = [
     supabase
       .from('program_goals')
       .select('id, title, target_count, deadline, specialty')

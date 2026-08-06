@@ -44,7 +44,8 @@ describe('audit export route — SEC-003', () => {
     const { GET } = await import('../route');
     const req = new Request('https://x/api/demo/audit/export?format=pdf', { method: 'GET' });
     await GET(req as any, { params: Promise.resolve({ tenant: 'demo' }) } as any);
-    const authHeader = fetchMock.mock.calls[0]?.[1]?.headers?.['Authorization'] || '';
+    const calls = fetchMock.mock.calls as unknown as [RequestInfo, RequestInit][];
+    const authHeader = (calls[0]?.[1]?.headers as Record<string, string>)?.['Authorization'] || '';
     expect(authHeader).not.toContain('shhh-platform-secret');
     expect(authHeader).toContain('user-jwt-token');
   });

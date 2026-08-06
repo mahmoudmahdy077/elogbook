@@ -72,7 +72,7 @@ async function getUserTenantSlug(
 
   if (!data) return null;
 
-  const tenants = data.tenants as { slug: string } | null;
+  const tenants = data.tenants as unknown as { slug: string } | null;
   return { slug: tenants?.slug ?? '', role: data.role };
 }
 
@@ -117,7 +117,12 @@ export async function updateSession(request: NextRequest) {
   const isHomePage = pathname === '/';
   const isLoginPage = pathname === '/login' || pathname.startsWith('/login/');
   const isAuthRoute = pathname.startsWith('/auth');
-  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute;
+  // /onboarding and /mfa are top-level, self-guarding flows that the
+  // authenticated layout redirects INTO — treating them as tenant-scoped
+  // routes would bounce them back and create a redirect loop.
+  const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
+  const isMfaRoute = pathname === '/mfa' || pathname.startsWith('/mfa/');
+  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute;
 
   // Only call getUser() for non-public routes (saves a network
   // round-trip on every static page load).
@@ -171,7 +176,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isAdminRoute) {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.aal && session.aal !== 'aal2') {
+    if ((session as { aal?: string } | null)?.aal && (session as { aal?: string } | null)?.aal !== 'aal2') {
       try {
         const { data: mfaData } = await supabase.auth.mfa.listFactors();
         const hasVerifiedMfa =

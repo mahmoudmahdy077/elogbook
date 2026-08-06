@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import * as Svg from 'react-native-svg';
 import { clinicalTokens } from '@elogbook/shared';
+import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import type { TodayStats } from '../lib/today-stats';
 
 export interface CaseCountWidgetProps {
@@ -32,7 +32,7 @@ export function CaseCountWidget({ stats, dailyGoal = 10 }: CaseCountWidgetProps)
       <View style={styles.body}>
         {/* Circular progress ring */}
         <View style={styles.ringContainer}>
-          <ProgressRing percentage={displayPercent} size={104} strokeWidth={8} />
+          <ProgressRing value={displayPercent} size={104} strokeWidth={8} />
         </View>
 
         {/* Stats breakdown */}
@@ -58,63 +58,6 @@ export function CaseCountWidget({ stats, dailyGoal = 10 }: CaseCountWidgetProps)
 }
 
 // ── Sub-components ──────────────────────────────────────────
-
-/** Inline circular progress ring drawn with SVG. */
-function ProgressRing({
-  percentage,
-  size,
-  strokeWidth,
-}: {
-  percentage: number;
-  size: number;
-  strokeWidth: number;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - percentage / 100);
-  const center = size / 2;
-  const fontSize = size * 0.24;
-
-  return (
-    <Svg.Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Background track */}
-      <Svg.Circle
-        cx={center}
-        cy={center}
-        r={radius}
-        stroke={clinicalTokens.colors.neutral.light}
-        strokeWidth={strokeWidth}
-        fill="none"
-      />
-      {/* Foreground arc */}
-      <Svg.Circle
-        cx={center}
-        cy={center}
-        r={radius}
-        stroke={clinicalTokens.colors.primary.DEFAULT}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        fill="none"
-        rotation={-90}
-        origin={`${center}, ${center}`}
-      />
-      {/* Percentage label */}
-      <Svg.Text
-        x={center}
-        y={center + fontSize * 0.35}
-        textAnchor="middle"
-        fill={clinicalTokens.colors.text.primary}
-        fontSize={fontSize}
-        fontFamily={clinicalTokens.fonts.heading}
-        fontWeight="600"
-      >
-        {Math.round(percentage)}%
-      </Svg.Text>
-    </Svg.Svg>
-  );
-}
 
 /** A single row in the stats list: label + value + colour dot. */
 function StatRow({

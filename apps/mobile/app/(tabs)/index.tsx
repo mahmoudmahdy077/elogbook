@@ -41,77 +41,8 @@ export default function DashboardScreen() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
-  useFocusEffect(useCallback(() => {
-    loadData();
-  }, [loadData]));
-
-  useEffect(() => {
-    // Detect role for conditional rendering
-    (async () => {
-      const { role } = await getRoleFromAuth();
-      setUserRole(role);
-      setRoleLoaded(true);
-    })();
-
-    const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected !== true);
-    });
-
-    const syncUnsub = syncService.onStatusChange((status) => {
-      if (status === 'synced' || status === 'idle') {
-        loadData();
-        updateLastSyncLabel();
-      }
-    });
-
-    const appStateSub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        loadData();
-      }
-    });
-
-    updateLastSyncLabel();
-    const interval = setInterval(updateLastSyncLabel, 60000);
-
-    return () => {
-      netUnsub();
-      syncUnsub();
-      appStateSub.remove();
-      clearInterval(interval);
-    };
-  }, []);
-
   const updateLastSyncLabel = async () => {
     setLastSyncAgo('');
-  };
-
-  const loadData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
-    const profileId = (user.app_metadata?.profile_id as string) ?? null;
-    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
-
-    if (!profileId || !tenantId) {
-      // Fallback: try direct DB query (may fail due to RLS policy bug)
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, tenant_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!profile) { setLoading(false); return; }
-        const netState = await NetInfo.fetch();
-        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
-      } catch {
-        setLoading(false);
-      }
-      return;
-    }
-
-    const netState = await NetInfo.fetch();
-    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
   };
 
   const loadWithProfile = async (profileId: string, tenantId: string, user: any, isOnline: boolean | null) => {
@@ -158,6 +89,75 @@ export default function DashboardScreen() {
 
     setLoading(false);
   };
+
+  const loadData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
+    const profileId = (user.app_metadata?.profile_id as string) ?? null;
+    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
+
+    if (!profileId || !tenantId) {
+      // Fallback: try direct DB query (may fail due to RLS policy bug)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        const netState = await NetInfo.fetch();
+        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
+      } catch {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const netState = await NetInfo.fetch();
+    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
+  };
+
+  useFocusEffect(useCallback(() => {
+    loadData();
+  }, [loadData]));
+
+  useEffect(() => {
+    // Detect role for conditional rendering
+    (async () => {
+      const { role } = await getRoleFromAuth();
+      setUserRole(role);
+      setRoleLoaded(true);
+    })();
+
+    const netUnsub = NetInfo.addEventListener((state) => {
+      setIsOffline(state.isConnected !== true);
+    });
+
+    const syncUnsub = syncService.onStatusChange((status) => {
+      if (status === 'synced' || status === 'idle') {
+        loadData();
+        updateLastSyncLabel();
+      }
+    });
+
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        loadData();
+      }
+    });
+
+    updateLastSyncLabel();
+    const interval = setInterval(updateLastSyncLabel, 60000);
+
+    return () => {
+      netUnsub();
+      syncUnsub();
+      appStateSub.remove();
+      clearInterval(interval);
+    };
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
