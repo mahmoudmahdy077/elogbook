@@ -34,7 +34,7 @@
 
 - [x] Sync mobile tailwind config with web token values (global.css @theme synced to clinicalTokens: surface/glow/border/text tokens, HeroUI semantic scales; muted text → #6D6D73 WCAG AA; hardcoded text-[#8E8E93] → text-text-muted in 5 tab screens)
 - [x] Delete duplicate components (ProgressRing.tsx, StatusBadge.tsx, GlassPanel.tsx) in mobile — use shared package versions
-- [ ] Verify mobile Expo build with new tokens
+- [x] Verify mobile Expo build with new tokens — `npx expo export --platform android` succeeds (Hermes bytecode bundle 7.9MB, all fonts/assets resolved); mobile typecheck, 104 tests, lint all pass (Aug 6)
 
 ## Phase: Testing & Quality
 
