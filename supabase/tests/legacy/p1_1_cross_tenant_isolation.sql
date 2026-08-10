@@ -45,7 +45,7 @@ BEGIN;
   GRANT SELECT ON case_entries TO authenticated;
 
   -- Simulate tenant A's resident JWT
-  SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}', true);
+  SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","app_metadata":{"tenant_id":"11111111-0000-0000-0000-000000000001","user_role":"resident"}}', true);
   SET LOCAL role authenticated;
 
   -- Assert: tenant A resident CANNOT read tenant B's case (0 rows expected)
