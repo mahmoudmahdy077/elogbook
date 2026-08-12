@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { authenticate } from '../_shared/auth.ts';
+import { authenticate, corsHeaders } from '../_shared/auth.ts';
 
 interface GapAnalysisRequest {
   resident_id: string;
@@ -13,13 +13,9 @@ interface GapResult {
   recommendation: string;
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const headers = corsHeaders(req.headers.get('Origin'));
+  if (req.method === 'OPTIONS') return new Response('ok', { headers });
 
   try {
     const auth = await authenticate(req);
@@ -28,14 +24,14 @@ serve(async (req) => {
 
     if (!['supervisor', 'director', 'institution_admin', 'admin'].includes(role)) {
       return new Response(JSON.stringify({ error: 'Forbidden: supervisor role or higher required' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
     const { resident_id }: GapAnalysisRequest = await req.json();
     if (!resident_id) {
       return new Response(JSON.stringify({ error: 'resident_id required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -125,11 +121,11 @@ serve(async (req) => {
       : 'No significant gaps found. Resident is meeting all minimum requirements.';
 
     return new Response(JSON.stringify({ gaps: gaps.slice(0, 20), summary }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 });
