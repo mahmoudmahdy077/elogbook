@@ -112,3 +112,12 @@ VALUES (
   ]'::JSONB,
   '["modality", "body_part", "findings", "impression"]'::JSONB
 ) ON CONFLICT DO NOTHING;
+
+-- SCFHS Competency Framework (global templates tenant) — Task 8.2
+INSERT INTO accreditation_frameworks (tenant_id, name, version, framework_type, milestones)
+SELECT '00000000-0000-0000-0000-000000000000', 'SCFHS Competency Framework', '1.0', 'scfhs', '[]'::jsonb
+WHERE NOT EXISTS (
+  SELECT 1 FROM accreditation_frameworks
+  WHERE tenant_id = '00000000-0000-0000-0000-000000000000'
+    AND framework_type = 'scfhs'
+);
