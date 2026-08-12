@@ -21,6 +21,7 @@ import { syncService } from '../../lib/sync';
 
 import { useHaptics } from '../../lib/haptics';
 import { generatePatientHash } from '../../lib/patient-hash';
+import { buildCasePayload } from '../../lib/case-payload';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
@@ -365,7 +366,7 @@ export default function LogCaseScreen() {
       ? {
           template_id: selectedTemplate.id,
           patient_age_years: Number(patientAge) || 0,
-          patient_hash: '',
+          patient_hash: null as string | null,
           case_date: caseDate,
           field_values: fieldValues,
           is_deidentified: true as const,
@@ -411,18 +412,34 @@ export default function LogCaseScreen() {
     // 'draft' for the supervisor queue). New cases follow the same rule.
     const status = tenant?.tenant_type === 'individual' ? 'pending' : 'draft';
 
-    const caseData = {
-      tenant_id: profile.tenant_id,
-      resident_id: profile.id,
-      template_id: selectedTemplate.id,
-      patient_mrn: isDeidentified ? undefined : patientMrn,
-      patient_dob: isDeidentified ? undefined : patientDob,
-      patient_age_years: isDeidentified ? Number(patientAge) : undefined,
-      case_date: caseDate,
-      field_values: fieldValues,
+    let patientHash: string | null = null;
+    if (!isDeidentified && patientMrn) {
+      const { data: hashData, error: hashError } = await supabase.rpc('hash_patient_mrn', {
+        p_mrn: patientMrn,
+        p_tenant_id: profile.tenant_id,
+      });
+      if (hashError || !hashData) {
+        setSubmitting(false);
+        isSubmitting.current = false;
+        setValidationError('Could not compute patient hash. Please try again.');
+        return;
+      }
+      patientHash = hashData as string;
+    }
+
+    const caseData = buildCasePayload({
+      tenantId: profile.tenant_id,
+      residentId: profile.id,
+      templateId: selectedTemplate.id,
+      patientMrn,
+      patientDob,
+      patientAge,
+      caseDate,
+      fieldValues,
+      isDeidentified,
       status,
-      is_deidentified: isDeidentified,
-    };
+      patientHash,
+    });
 
     if (editCaseId) {
       try {

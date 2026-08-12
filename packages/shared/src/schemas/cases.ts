@@ -34,7 +34,7 @@ export const accreditationMappingSchema = z.object({
 export const caseEntryDeidentifiedSchema = z.object({
   template_id: z.string().uuid(),
   patient_age_years: z.number().int().min(0).max(150),
-  patient_hash: z.string().min(1).max(128),
+  patient_hash: z.string().max(128).nullable().optional(),
   case_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   field_values: z.record(z.string(), z.unknown()),
   accreditation_mappings: z.array(accreditationMappingSchema).default([]),

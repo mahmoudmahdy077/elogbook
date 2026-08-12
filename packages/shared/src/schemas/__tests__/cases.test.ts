@@ -77,6 +77,12 @@ describe('caseEntryDeidentifiedSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('should accept a deidentified case without a patient hash', () => {
+    const { patient_hash: _hash, ...rest } = validDeidentified;
+    const result = caseEntryDeidentifiedSchema.safeParse(rest);
+    expect(result.success).toBe(true);
+  });
+
   it('should reject negative age', () => {
     const result = caseEntryDeidentifiedSchema.safeParse({
       ...validDeidentified,
