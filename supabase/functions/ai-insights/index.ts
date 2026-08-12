@@ -200,6 +200,14 @@ serve(async (req) => {
   if (authResult instanceof Response) return authResult;
   const { supabase, user, tenantId, role } = authResult;
 
+  // Config reads use the service client: the secret views are role-gated to
+  // tenant admins (Task 1.1), so resident/supervisor callers can no longer
+  // read them with their own token.
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
+
   let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
   try {
     body = await req.json();
@@ -281,12 +289,35 @@ serve(async (req) => {
     );
   }
 
-  let { data: aiConfig, error: configError } = await supabase
-    .from('secret_ai_config')
-    .select('*')
+  let aiConfig: { id: string; tenant_id: string; provider: string; model: string; endpoint_url: string | null; api_key: string } | null = null;
+  let configError: unknown = null;
+
+  const { data: rawConfig, error: rawConfigError } = await serviceSupabase
+    .from('ai_config')
+    .select('id, tenant_id, provider, model, endpoint_url, api_key_enc, key_version, is_active')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .maybeSingle();
+  configError = rawConfigError;
+
+  if (rawConfig && !rawConfigError) {
+    const { data: decrypted, error: decError } = await serviceSupabase.rpc('decrypt_with_version', {
+      p_encrypted: rawConfig.api_key_enc,
+      p_version: rawConfig.key_version,
+    });
+    if (decError || !decrypted) {
+      configError = decError ?? new Error('decrypt failed');
+    } else {
+      aiConfig = {
+        id: rawConfig.id,
+        tenant_id: rawConfig.tenant_id,
+        provider: rawConfig.provider,
+        model: rawConfig.model,
+        endpoint_url: rawConfig.endpoint_url,
+        api_key: decrypted as string,
+      };
+    }
+  }
 
   // Fallback to platform-default AI key
   if (!aiConfig && !configError) {
@@ -298,8 +329,8 @@ serve(async (req) => {
         provider: 'openai',
         api_key: platformKey,
         model: 'gpt-4o-mini',
-        is_active: true,
-      } as any;
+        endpoint_url: null,
+      } as unknown as { id: string; tenant_id: string; provider: string; model: string; endpoint_url: string | null; api_key: string };
     }
   }
 
