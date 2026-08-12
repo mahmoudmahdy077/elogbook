@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { notifyCaseApproval } from '@/lib/notifications';
 
 const ALLOWED_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
 
@@ -43,7 +44,7 @@ export async function POST(
   // ---- Get caller's profile + tenant ----
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
+    .select('id, tenant_id, role, full_name, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
 
@@ -141,6 +142,10 @@ export async function POST(
   }).catch((err) => {
     console.error('[webhooks] Approval dispatch error:', err);
   });
+
+  // Push notification to the resident (fire-and-forget; failures are logged).
+  notifyCaseApproval(entry_id, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name)
+    .catch((err) => console.error('[push] approval push failed:', err));
 
   return NextResponse.json({ success: true, action });
 }
