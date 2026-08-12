@@ -240,7 +240,7 @@ export default async function EvaluationsPage({
                   {grouped[formType].map((form) => (
                     <div
                       key={form.id}
-                      className="sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3.5 flex flex-col hover:bg-black/[0.02] transition-colors"
+                      className="sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 flex flex-col hover:bg-black/[0.02] transition-colors"
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-text-primary truncate">
@@ -271,14 +271,6 @@ export default async function EvaluationsPage({
                         >
                           {form.completed_at ? 'Completed' : 'In Progress'}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Link
-                          href={`/${tenantSlug}/evaluations/${form.id}`}
-                          className="px-3 py-1.5 rounded-full text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          View
-                        </Link>
                       </div>
                     </div>
                   ))}
