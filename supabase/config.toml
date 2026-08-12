@@ -9,3 +9,6 @@ major_version = 17
 [edge_runtime]
 enabled = true
 deno_version = 2
+
+[auth.session]
+time_validity = "3600"
