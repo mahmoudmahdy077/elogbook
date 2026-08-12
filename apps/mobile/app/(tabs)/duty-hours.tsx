@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
+import { buildDutyPeriodPayload } from '../../lib/duty-payload';
 import { clinicalTokens } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
@@ -37,7 +38,7 @@ export default function DutyHoursScreen() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tenant_id')
+      .select('id, tenant_id')
       .eq('user_id', user.id)
       .single();
 
@@ -47,14 +48,9 @@ export default function DutyHoursScreen() {
       return;
     }
 
-    const { error } = await supabase.from('duty_periods').insert({
-      tenant_id: profile.tenant_id,
-      resident_id: (profile as unknown as { id: string }).id,
-      shift_date: date.toISOString().slice(0, 10),
-      hours_worked: Number(hours),
-      shift_type: shiftType,
-      notes: notes || null,
-    });
+    const { error } = await supabase
+      .from('duty_periods')
+      .insert(buildDutyPeriodPayload(profile as { id: string; tenant_id: string }, date, hours, shiftType, notes));
 
     setSaving(false);
     if (error) {
