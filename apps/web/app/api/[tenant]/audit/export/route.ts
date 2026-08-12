@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { escapeCsvCell } from '@/lib/csv';
 import type { UserRole } from '@/lib/supabase/auth';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
@@ -192,20 +193,22 @@ export async function GET(
 
 function rowToCsv(r: AuditLogRow): string {
   const csvHeaders = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  };
-  return csvHeaders.map((h) => escape((r as unknown as Record<string, unknown>)[h])).join(',');
+  return csvHeaders.map((h) => escapeCsvCell((r as unknown as Record<string, unknown>)[h])).join(',');
 }
 
-function generateAuditHtml(rows: AuditLogRow[]): string {
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+export function generateAuditHtml(rows: AuditLogRow[]): string {
   const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
   const rowsHtml = rows.map(r =>
-    `<tr>${headers.map(h => `<td>${String((r as unknown as Record<string, unknown>)[h] ?? '')}</td>`).join('')}</tr>`
+    `<tr>${headers.map(h => `<td>${escapeHtml(String((r as unknown as Record<string, unknown>)[h] ?? ''))}</td>`).join('')}</tr>`
   ).join('\n      ');
   return `<!DOCTYPE html>
 <html lang="en">
