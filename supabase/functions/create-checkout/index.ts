@@ -33,6 +33,35 @@ serve(async (req) => {
   if (authResult instanceof Response) return authResult;
   const { supabase, tenantId, role } = authResult;
 
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
+
+  async function readGatewayConfig(targetTenantId: string) {
+    const { data: cfg, error } = await serviceSupabase
+      .from('payment_gateway_config')
+      .select('id, tenant_id, secret_key_enc, publishable_key, mode, webhook_secret_enc, key_version')
+      .eq('tenant_id', targetTenantId)
+      .eq('provider', 'stripe')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error || !cfg) return null;
+    const { data: secretKey, error: decError } = await serviceSupabase.rpc('decrypt_with_version', {
+      p_encrypted: cfg.secret_key_enc,
+      p_version: cfg.key_version,
+    });
+    if (decError || !secretKey) return null;
+    return {
+      id: cfg.id,
+      tenant_id: cfg.tenant_id,
+      secret_key: secretKey as string,
+      publishable_key: cfg.publishable_key,
+      mode: cfg.mode,
+      webhook_secret: '',
+    };
+  }
+
   if (!AUTHORIZED_ROLES.includes(role)) {
     return new Response(
       JSON.stringify({ error: 'Insufficient permissions: requires director, institution_admin, or admin role' }),
@@ -79,27 +108,18 @@ serve(async (req) => {
     );
   }
 
-  let { data: gwConfig, error: gwError } = await supabase
-    .from('secret_payment_gateway_config')
-    .select('id, tenant_id, secret_key, publishable_key, mode, webhook_secret')
-    .eq('tenant_id', tenantId)
-    .eq('provider', 'stripe')
-    .eq('is_active', true)
-    .maybeSingle();
+  // Config reads use the service client: the secret views are role-gated to
+  // tenant admins (Task 1.1) and the global tenant's platform-default config
+  // must remain readable for director+ callers.
+  let gwConfig = await readGatewayConfig(tenantId);
 
   // Fallback to platform-default gateway
   if (!gwConfig) {
-    ({ data: gwConfig, error: gwError } = await supabase
-      .from('secret_payment_gateway_config')
-      .select('id, tenant_id, secret_key, publishable_key, mode, webhook_secret')
-      .eq('tenant_id', '00000000-0000-0000-0000-000000000000')
-      .eq('provider', 'stripe')
-      .eq('is_active', true)
-      .maybeSingle());
+    gwConfig = await readGatewayConfig('00000000-0000-0000-0000-000000000000');
   }
 
   // Final fallback: STRIPE_SECRET_KEY from env (for platform-level billing)
-  if (!gwConfig && !gwError) {
+  if (!gwConfig) {
     const envKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (envKey) {
       gwConfig = { id: 'env', tenant_id: '00000000-0000-0000-0000-000000000000', secret_key: envKey, publishable_key: '', mode: 'live', webhook_secret: '' };
@@ -107,7 +127,7 @@ serve(async (req) => {
   }
 
   if (!gwConfig) {
-    console.error('Gateway config lookup failed', { tenant_id: tenantId, error: gwError?.message });
+    console.error('Gateway config lookup failed', { tenant_id: tenantId });
     return new Response(
       JSON.stringify({ error: 'Gateway not configured' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
