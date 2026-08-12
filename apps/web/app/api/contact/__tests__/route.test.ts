@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 import { POST } from '../route';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit-redis';
@@ -22,8 +23,8 @@ beforeEach(() => {
   insertMock.mockReset();
 });
 
-function makeRequest(body: unknown): Request {
-  return new Request('http://localhost/api/contact', {
+function makeRequest(body: unknown): NextRequest {
+  return new NextRequest('http://localhost/api/contact', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
