@@ -96,8 +96,7 @@
     "extra": {
       "eas": {
         "projectId": "c0d8281c-0fae-4a16-b7ba-0b7a4a170bb7"
-      },
-      "sentryDsn": "https://example@sentry.io/0"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"
