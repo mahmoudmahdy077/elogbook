@@ -29,7 +29,6 @@ import {
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
 import { supabase } from '../lib/supabase';
-import { initDatabase } from '../lib/db/database';
 import { Sentry } from '../lib/sentry';
 
 // Font assets
@@ -152,7 +151,6 @@ export default function RootLayout() {
   }, [router]);
 
   // ── Init ────────────────────────────────────────────────────────
-  useEffect(() => { initDatabase().catch(console.error); }, []);
   useSyncInit();
   useNotificationNavigation();
 
