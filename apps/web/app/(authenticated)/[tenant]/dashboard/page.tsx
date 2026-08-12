@@ -36,6 +36,7 @@ interface DashboardRpcResult {
     template_name: string;
     template_specialty: string;
   }[];
+  resident_counts: { resident_id: string; total: number; approved: number }[];
   pending_approvals: number;
   total_residents: number;
 }
@@ -155,38 +156,25 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     specialty: g.specialty,
   }));
 
-  let residents: { id: string; full_name: string; specialty: string | null; total_cases: number; approved: number }[] = [];
-  const total_cases_by_resident: Record<string, number> = {};
-  const approved_by_resident: Record<string, number> = {};
+  const residents: { id: string; full_name: string; specialty: string | null; total_cases: number; approved: number }[] = [];
 
   if (isDirectorPlus) {
     const residentProfiles = residentsDataResult.data;
 
     if (residentProfiles && residentProfiles.length > 0) {
-      // Fetch per-resident case counts for the overview table
-      const { data: residentCaseCounts } = await supabase
-        .from('case_entries')
-        .select('resident_id, status')
-        .eq('tenant_id', tenantId)
-        .is('deleted_at', null)
-        .limit(10000);
-
-      if (residentCaseCounts) {
-        for (const c of residentCaseCounts) {
-          total_cases_by_resident[c.resident_id] = (total_cases_by_resident[c.resident_id] || 0) + 1;
-          if (c.status === 'approved') {
-            approved_by_resident[c.resident_id] = (approved_by_resident[c.resident_id] || 0) + 1;
-          }
-        }
+      // Per-resident counts come pre-aggregated from get_dashboard_data
+      // (SQL GROUP BY) instead of fetching every row into JS.
+      const countsById = new Map((dashboard.resident_counts ?? []).map((c) => [c.resident_id, c]));
+      for (const rp of residentProfiles) {
+        const c = countsById.get(rp.id);
+        residents.push({
+          id: rp.id,
+          full_name: rp.full_name,
+          specialty: rp.specialty,
+          total_cases: c?.total ?? 0,
+          approved: c?.approved ?? 0,
+        });
       }
-
-      residents = residentProfiles.map((rp: ResidentProfileRow) => ({
-        id: rp.id,
-        full_name: rp.full_name,
-        specialty: rp.specialty,
-        total_cases: total_cases_by_resident[rp.id] || 0,
-        approved: approved_by_resident[rp.id] || 0,
-      }));
     }
   }
 
