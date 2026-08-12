@@ -22,6 +22,9 @@ vi.mock('@react-native-community/netinfo', () => ({
 }));
 
 vi.mock('../db/database', () => ({ getDatabase: () => ({}) }));
+vi.mock('../offline-queue', () => ({
+  flushQueue: async () => ({ synced: 0, failed: 0, lastError: null }),
+}));
 vi.mock('../db/storage', () => ({
   getDraftCases: () => mockGetDraftCases(),
   getConflictedCases: async () => [],

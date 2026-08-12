@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
+import { flushQueue } from './offline-queue';
 import { RETRY_DELAYS_MS } from './sync-retry';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
@@ -159,7 +160,23 @@ class SyncService {
   }
 
   async initSync(_tenantId?: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
+    // WatermelonDB full sync remains disabled (UXM-001). The light offline
+    // queue IS live: flush encrypted queued cases when we have a session.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const result = await flushQueue();
+      if (result.synced > 0) {
+        this.setStatus('synced');
+        this.emitStatus();
+      }
+      if (result.failed > 0 && result.lastError) {
+        this.partialFailureMessage = result.lastError;
+        this.consumePartialFailure();
+      }
+    } catch {
+      // stay quiet; next periodic tick retries
+    }
   }
 
   startPeriodicSync(intervalMs = 60000) {

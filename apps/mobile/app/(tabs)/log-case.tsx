@@ -22,6 +22,7 @@ import { syncService } from '../../lib/sync';
 import { useHaptics } from '../../lib/haptics';
 import { generatePatientHash } from '../../lib/patient-hash';
 import { buildCasePayload } from '../../lib/case-payload';
+import { enqueueCase } from '../../lib/offline-queue';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
@@ -455,11 +456,12 @@ export default function LogCaseScreen() {
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
         setShowConfirmation(true);
-      } catch {
-        haptics.offlineSave();
-        setConfirmationSuccess(false);
-        confirmationTypeRef.current = 'offline';
-        setShowConfirmation(true);
+      } catch (err) {
+        // Edits cannot be queued safely offline — surface the real error.
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setSubmitting(false);
+        isSubmitting.current = false;
+        setValidationError(`Could not save this case (${msg}). Check your connection and try again.`);
       }
       setTimeout(() => {
         setShowConfirmation(false);
@@ -478,11 +480,22 @@ export default function LogCaseScreen() {
       setConfirmationSuccess(true);
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
-    } catch {
-      haptics.offlineSave();
-      setConfirmationSuccess(false);
-      confirmationTypeRef.current = 'offline';
-      setShowConfirmation(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const isNetworkError = /network|fetch|timeout|abort|connect/i.test(msg);
+      if (isNetworkError) {
+        try {
+          await enqueueCase(caseData);
+          haptics.offlineSave();
+          setConfirmationSuccess(false);
+          confirmationTypeRef.current = 'offline';
+          setShowConfirmation(true);
+        } catch {
+          setValidationError('Could not save this case. Check your connection and try again.');
+        }
+      } else {
+        setValidationError(`Could not save this case (${msg}). Please try again.`);
+      }
     }
 
     setTimeout(() => {
