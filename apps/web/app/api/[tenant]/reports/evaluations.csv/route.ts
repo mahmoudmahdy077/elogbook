@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { escapeCsvCell } from '@/lib/csv';
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   const lines = ['Resident ID,Evaluator ID,Date,Clinical Skills,Professionalism,Procedures,Comments'];
   for (const e of (evals ?? [])) {
-    lines.push(`"${e.resident_id}","${e.evaluator_id || ''}","${e.evaluation_date}",${e.clinical_skills || ''},${e.professionalism || ''},${e.procedures || ''},"${e.comments || ''}"`);
+    lines.push([e.resident_id, e.evaluator_id || '', e.evaluation_date, e.clinical_skills || '', e.professionalism || '', e.procedures || '', e.comments || ''].map(escapeCsvCell).join(','));
   }
 
   const csv = lines.join('\n');

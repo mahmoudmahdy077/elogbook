@@ -3,6 +3,7 @@ import { getAuthContext, type UserRole } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { escapeCsvCell } from '@/lib/csv';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -19,19 +20,11 @@ const SUSPICIOUS_ACTIONS = [
   'sso_start',
 ];
 
-function escapeCsv(v: unknown): string {
-  const s = v === null || v === undefined ? '' : String(v);
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
-  return s;
-}
-
 function toCsv(rows: Record<string, unknown>[]): string {
   const headers = ['id', 'created_at', 'action', 'resource_type', 'resource_id', 'user_id', 'ip_address'];
   const lines = [headers.join(',')];
   for (const r of rows) {
-    lines.push(headers.map((h) => escapeCsv(r[h])).join(','));
+    lines.push(headers.map((h) => escapeCsvCell(r[h])).join(','));
   }
   return lines.join('\n');
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { escapeCsvCell } from '@/lib/csv';
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     statusCounts[status] = (statusCounts[status] || 0) + 1;
   }
 
-  const csv = ['Status,Count', ...Object.entries(statusCounts).map(([s, c]) => `"${s}",${c}`)].join('\n');
+  const csv = ['Status,Count', ...Object.entries(statusCounts).map(([s, c]) => [s, c].map(escapeCsvCell).join(','))].join('\n');
 
   return new NextResponse(csv, {
     headers: {
