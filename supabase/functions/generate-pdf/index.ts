@@ -1,4 +1,5 @@
 import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
 interface CaseData {
@@ -27,6 +28,13 @@ Deno.serve(async (req: Request) => {
   const authResult = await authenticate(req);
   if (authResult instanceof Response) return authResult;
   const { supabase, tenantId } = authResult;
+
+  // Audit rows must be written with a client that can bypass the
+  // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
 
   let payload: GeneratePdfPayload;
   try {
@@ -193,7 +201,7 @@ Deno.serve(async (req: Request) => {
   const pdfBytes = await pdfDoc.save();
 
   // P2.10: write an audit log entry for every PDF export.
-  await supabase.from('audit_logs').insert({
+  await serviceSupabase.from('audit_logs').insert({
     tenant_id: tenantId,
     user_id: userId,
     action: 'pdf_export',
