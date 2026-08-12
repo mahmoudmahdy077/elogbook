@@ -53,12 +53,13 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Build profile from JWT metadata with DB fallback for specialty
-      const profileId = user.id;
+      // Build profile from JWT metadata with DB fallback for specialty.
+      // Use app_metadata.profile_id (the profiles row id), not user.id.
+      const profileId = (user.app_metadata?.profile_id as string | null) ?? null;
 
       if (role && fullName && tenantId) {
         setProfile({
-          id: profileId,
+          id: profileId ?? '',
           full_name: fullName,
           role,
           specialty: null,
