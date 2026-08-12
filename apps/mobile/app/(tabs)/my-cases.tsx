@@ -14,6 +14,7 @@ import type { CaseStatus } from '@elogbook/shared';
 interface CaseData {
   id: string;
   patient_mrn: string | null;
+  patient_hash: string | null;
   patient_dob: string | null;
   case_date: string;
   status: CaseStatus;
@@ -61,7 +62,7 @@ const CaseCard = React.memo(function CaseCard({
             {item.template_specialty} - {item.template_name}
           </Text>
           <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-            {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
+            {item.is_deidentified ? `Hash: ${item.patient_hash?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
           <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
@@ -109,12 +110,13 @@ export default function MyCasesScreen() {
 
     const { data: entries, error } = await supabase
       .from('case_entries')
-      .select('id, patient_mrn, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
+      .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
       .eq('resident_id', profile.id);
 
     const mapped: CaseData[] = (entries ?? []).map((entry: any) => ({
       id: entry.id,
       patient_mrn: entry.patient_mrn,
+      patient_hash: entry.patient_hash,
       patient_dob: entry.patient_dob,
       case_date: entry.case_date,
       status: entry.status ?? ('draft' as CaseStatus),
