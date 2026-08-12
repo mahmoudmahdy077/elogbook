@@ -45,12 +45,12 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .order('created_at', { ascending: false }),
       supabase
         .from('ai_config')
-        .select('id, tenant_id, provider, model, endpoint_url, is_active, encrypted_api_key')
+        .select('id, tenant_id, provider, model, endpoint_url, is_active, api_key_enc')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
       supabase
         .from('payment_gateway_config')
-        .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, encrypted_secret_key, encrypted_webhook_secret')
+        .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, secret_key_enc, webhook_secret_enc')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
       supabase
@@ -78,7 +78,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     model: string;
     endpoint_url: string | null;
     is_active: boolean;
-    encrypted_api_key?: string;
+    api_key_enc?: string | null;
   }
 
   interface PaymentConfigRaw {
@@ -88,8 +88,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     publishable_key: string;
     endpoint_url: string | null;
     is_active: boolean;
-    encrypted_secret_key?: string;
-    encrypted_webhook_secret?: string;
+    secret_key_enc?: string | null;
+    webhook_secret_enc?: string | null;
   }
 
   const aiConfig = aiConfigRaw
@@ -100,7 +100,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         model: (aiConfigRaw as AiConfigRaw).model,
         endpoint_url: (aiConfigRaw as AiConfigRaw).endpoint_url,
         is_active: (aiConfigRaw as AiConfigRaw).is_active,
-        has_key: !!((aiConfigRaw as AiConfigRaw).encrypted_api_key),
+        has_key: !!((aiConfigRaw as AiConfigRaw).api_key_enc),
       }
     : null;
 
@@ -112,8 +112,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         publishable_key: (paymentConfigRaw as PaymentConfigRaw).publishable_key,
         endpoint_url: (paymentConfigRaw as PaymentConfigRaw).endpoint_url,
         is_active: (paymentConfigRaw as PaymentConfigRaw).is_active,
-        has_secret_key: !!((paymentConfigRaw as PaymentConfigRaw).encrypted_secret_key),
-        has_webhook_secret: !!((paymentConfigRaw as PaymentConfigRaw).encrypted_webhook_secret),
+        has_secret_key: !!((paymentConfigRaw as PaymentConfigRaw).secret_key_enc),
+        has_webhook_secret: !!((paymentConfigRaw as PaymentConfigRaw).webhook_secret_enc),
       }
     : null;
 
