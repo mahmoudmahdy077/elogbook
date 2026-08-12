@@ -130,17 +130,20 @@ async function fetchPhiInventory(
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .eq('is_deidentified', false),
+      .eq('is_deidentified', false)
+      .is('deleted_at', null),
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .eq('is_deidentified', true),
+      .eq('is_deidentified', true)
+      .is('deleted_at', null),
   ]);
 
   const rows: PhiInventoryRow[] = [];
