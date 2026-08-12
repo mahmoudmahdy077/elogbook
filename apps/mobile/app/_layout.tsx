@@ -21,7 +21,8 @@ import { clinicalTokens } from '@elogbook/shared';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 import { useSyncInit } from '../lib/sync';
 import { parseDeepLink, navigateToDeepLink } from '../lib/linking';
-import { useNotificationNavigation } from '../hooks/useNotificationNavigation';
+import { registerNotificationHandler, handleColdStartNotification } from '../lib/notification-handler';
+import { registerPushToken, configureForegroundNotifications, clearBadge } from '../lib/push';
 import { useAuthGuard } from '../lib/auth-guard';
 import {
   getEffectiveSkipWindow,
@@ -152,7 +153,22 @@ export default function RootLayout() {
 
   // ── Init ────────────────────────────────────────────────────────
   useSyncInit();
-  useNotificationNavigation();
+
+  // Single notification-navigation path: register tap/cold-start handlers
+  // (M9 — the duplicate useNotificationNavigation hook is deleted in Task 8.6).
+  useEffect(() => {
+    const unsubscribe = registerNotificationHandler();
+    handleColdStartNotification();
+    return unsubscribe;
+  }, []);
+
+  // Register the device push token once authenticated.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    configureForegroundNotifications();
+    registerPushToken().catch(() => undefined);
+    clearBadge();
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     const handler = ({ url }: { url: string }) => {

@@ -74,6 +74,7 @@
         }
       ],
       "expo-font",
+      "expo-notifications",
       [
         "expo-build-properties",
         {
