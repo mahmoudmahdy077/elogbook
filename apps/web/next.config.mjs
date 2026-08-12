@@ -23,7 +23,7 @@ const nextConfig = {
     root: process.env.TURBOPACK_ROOT ?? '../..',
   },
   experimental: {
-    optimizePackageImports: ['@heroui/react', 'framer-motion', '@sentry/nextjs'],
+    optimizePackageImports: ['framer-motion', '@sentry/nextjs'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],
