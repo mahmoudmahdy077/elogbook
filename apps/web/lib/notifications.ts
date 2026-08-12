@@ -1,4 +1,4 @@
-import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 
 interface NotificationPayload {
   title: string;
@@ -14,7 +14,7 @@ export async function sendPushNotification(
   userId: string,
   { title, body, data }: NotificationPayload,
 ): Promise<void> {
-  const supabase = await createServerSupabase();
+  const supabase = createServiceRoleClient();
 
   // Get user's push tokens
   const { data: tokens, error } = await supabase
