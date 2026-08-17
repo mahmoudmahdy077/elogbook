@@ -122,7 +122,8 @@ export async function updateSession(request: NextRequest) {
   // routes would bounce them back and create a redirect loop.
   const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
   const isMfaRoute = pathname === '/mfa' || pathname.startsWith('/mfa/');
-  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute;
+  const isPublicApiRoute = pathname === '/api/health' || pathname === '/api/contact';
+  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute || isPublicApiRoute;
 
   // Only call getUser() for non-public routes (saves a network
   // round-trip on every static page load).

@@ -135,26 +135,36 @@ export default function LoginPage() {
   const handlePasswordLogin = async () => {
     setError('');
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError('Invalid email or password. Please try again.');
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError('Invalid email or password. Please try again.');
+        setLoading(false);
+        return;
+      }
+      const params = new URLSearchParams(window.location.search);
+      const next = safeRelativePath(params.get('next'));
+      if (next !== '/') {
+        router.push(next);
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setError('Session error. Please try again.');
+        setLoading(false);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenants!inner(slug)')
+        .eq('user_id', session.user.id)
+        .single();
+      const tenants = profile?.tenants as { slug: string } | null;
+      router.push(tenants?.slug ? `/${tenants.slug}/dashboard` : '/dashboard');
+    } catch {
+      setError('Network error. Check your connection and try again.');
       setLoading(false);
-      return;
     }
-    const params = new URLSearchParams(window.location.search);
-    const next = safeRelativePath(params.get('next'));
-    if (next !== '/') {
-      router.push(next);
-      return;
-    }
-    const { data: { session } } = await supabase.auth.getSession();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tenants!inner(slug)')
-      .eq('user_id', session?.user?.id ?? '')
-      .single();
-    const tenants = profile?.tenants as { slug: string } | null;
-    router.push(tenants?.slug ? `/${tenants.slug}/dashboard` : '/dashboard');
   };
 
   const handleSubmit = (e: FormEvent) => {
