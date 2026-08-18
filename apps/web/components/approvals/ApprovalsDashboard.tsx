@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import { SimpleCounter } from './SimpleCounter';
+import { useToast } from '@/components/Toast';
 
 interface Props {
   tenantId: string;
@@ -74,6 +75,65 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   const [supabase] = useState(() => createClient());
   const mountedRef = useRef(true);
   const reduceMotion = useReducedMotion();
+  const { show } = useToast();
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState<'approve' | 'reject' | null>(null);
+  const [confirmBulkReject, setConfirmBulkReject] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === entries.length
+        ? new Set()
+        : new Set(entries.map((e) => e.id))
+    );
+  };
+
+  const handleBulkAction = async (action: 'approve' | 'reject') => {
+    if (action === 'reject' && !confirmBulkReject) {
+      setConfirmBulkReject(true);
+      return;
+    }
+    setBulkLoading(action);
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of selectedIds) {
+      try {
+        const res = await fetch(`/api/${tenantSlug}/approvals/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, entry_id: id, comment: null }),
+        });
+        if (res.ok) successCount++;
+        else failCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBulkLoading(null);
+    setConfirmBulkReject(false);
+    setSelectedIds(new Set());
+    if (failCount === 0) {
+      show(
+        action === 'approve'
+          ? `${successCount} case${successCount !== 1 ? 's' : ''} approved`
+          : `${successCount} case${successCount !== 1 ? 's' : ''} rejected`,
+        action === 'approve' ? 'success' : 'error',
+      );
+    } else {
+      show(`${successCount} succeeded, ${failCount} failed`, 'error');
+    }
+    fetchPending();
+  };
 
   useEffect(() => {
     return () => { mountedRef.current = false; };
@@ -154,7 +214,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   return (
     <div className="space-y-7">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">
           Pending Approvals
         </h2>
@@ -163,7 +223,52 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
             {pendingCount}
           </span>
         )}
+        {pendingCount > 0 && (
+          <label className="inline-flex items-center gap-1.5 ml-auto cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedIds.size === entries.length && entries.length > 0}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary"
+            />
+            <span className="text-xs text-text-muted">Select All</span>
+          </label>
+        )}
+        {selectedIds.size > 0 && (
+          <>
+            <span className="text-sm text-text-muted">{selectedIds.size} selected</span>
+            <button
+              type="button"
+              disabled={bulkLoading !== null}
+              onClick={() => handleBulkAction('approve')}
+              className="inline-flex items-center px-3 py-1.5 rounded-full bg-success text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {bulkLoading === 'approve' ? 'Approving…' : 'Approve Selected'}
+            </button>
+            <button
+              type="button"
+              disabled={bulkLoading !== null}
+              onClick={() => handleBulkAction('reject')}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-opacity disabled:opacity-50 ${
+                confirmBulkReject
+                  ? 'bg-danger text-white hover:opacity-90'
+                  : 'bg-danger/10 text-danger hover:bg-danger/20'
+              }`}
+            >
+              {bulkLoading === 'reject'
+                ? 'Rejecting…'
+                : confirmBulkReject
+                  ? 'Confirm Reject'
+                  : 'Reject Selected'}
+            </button>
+          </>
+        )}
       </div>
+      {confirmBulkReject && (
+        <p className="text-xs text-warning" role="alert">
+          Click Reject Selected again to confirm. This action is irreversible.
+        </p>
+      )}
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -206,13 +311,21 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                   <div className="bg-surface-solid rounded-2xl border border-border p-5 space-y-4">
                     {/* Top row: resident info + badges */}
                     <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1 min-w-0">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(entry.id)}
+                          onChange={() => toggleSelect(entry.id)}
+                          className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary shrink-0"
+                        />
+                        <div className="space-y-1 min-w-0">
                         <p className="text-sm font-semibold text-text-primary truncate">
                           {profile?.full_name || 'Unknown Resident'}
                         </p>
                         <p className="text-xs text-text-muted">
                           {profile?.specialty || 'No specialty'}
                         </p>
+                      </div>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
