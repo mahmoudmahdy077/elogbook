@@ -71,6 +71,9 @@ export default function UserTable({ tenantSlug }: UserTableProps) {
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await fetch(`/api/${tenantSlug}/admin/users?${params}`);
+      if (!res.ok) return;
+      const contentType = res.headers.get('content-type');
+      if (!contentType?.includes('application/json')) return;
       const data = await res.json();
       setUsers(data.users ?? []);
       setTotalPages(data.pages ?? 1);

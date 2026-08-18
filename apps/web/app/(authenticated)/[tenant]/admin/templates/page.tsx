@@ -37,6 +37,16 @@ export default function TemplatesPage() {
   const loadTemplates = useCallback(async () => {
     try {
       const res = await fetch(`/api/${tenantSlug}/templates`);
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          setError(data.error || `Server error (${res.status})`);
+        } catch {
+          setError(`Server error (${res.status}). Check if the server is running.`);
+        }
+        return;
+      }
       const data = await res.json();
       setTemplates(data.templates ?? []);
     } catch (err) {

@@ -39,6 +39,15 @@ export default function SubscriptionManager({ tenantSlug }: SubscriptionManagerP
     setLoading(true);
     try {
       const res = await fetch(`/api/${tenantSlug}/admin/subscription`);
+      if (!res.ok) {
+        // API returned error, silently ignore (Supabase may not be running)
+        return;
+      }
+      const contentType = res.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        // Response is not JSON (e.g., HTML error page)
+        return;
+      }
       const data = await res.json();
       setSubscription(data.subscription);
       setPlans(data.plans ?? []);
