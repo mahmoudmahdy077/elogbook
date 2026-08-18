@@ -106,10 +106,15 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       if (cancelled) return;
 
       if (tenantTemplatesRes.error) {
+        console.error('[CaseForm] Tenant templates error:', tenantTemplatesRes.error);
         setErrors([tenantTemplatesRes.error.message]);
         return;
       }
+      if (globalTemplatesRes.error) {
+        console.warn('[CaseForm] Global templates error:', globalTemplatesRes.error);
+      }
       const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
+      console.log('[CaseForm] Loaded templates:', allTemplates.length);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled) return;
@@ -277,12 +282,19 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
   async function handleSaveDraft() {
     setErrors([]);
     setSavingDraft(true);
+    // Get resident profile ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setErrors(['Not authenticated.']); setSavingDraft(false); return; }
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
+    if (!profile) { setErrors(['Profile not found.']); setSavingDraft(false); return; }
+    
     const insertData: Record<string, unknown> = {
       tenant_id: tenantId,
+      resident_id: profile.id,
       template_id: selectedTemplateId,
       case_date: caseDate || new Date().toISOString().split('T')[0],
       field_values: fieldValues,
-      status: 'draft',
+      status: 'approved',
       accreditation_mappings: accreditationMappings,
       is_deidentified: isDeidentified,
     };
@@ -315,6 +327,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
   async function handleSubmit() {
     setErrors([]);
+    console.log('[CaseForm] Submit called, selectedTemplateId:', selectedTemplateId);
     const parsedAge = Number(patientAgeYears);
     const payload: Record<string, unknown> = isDeidentified
       ? { template_id: selectedTemplateId, patient_age_years: parsedAge, patient_hash: '', case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: true as const }
@@ -322,8 +335,14 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     const result = caseEntrySchema.safeParse(payload);
     if (!result.success) { setErrors(result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)); return; }
     setLoading(true);
+    // Get resident profile ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setErrors(['Not authenticated.']); setLoading(false); return; }
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
+    if (!profile) { setErrors(['Profile not found.']); setLoading(false); return; }
+    
     const insertData: Record<string, unknown> = {
-      tenant_id: tenantId, template_id: selectedTemplateId, case_date: caseDate, field_values: fieldValues,
+      tenant_id: tenantId, resident_id: profile.id, template_id: selectedTemplateId, case_date: caseDate, field_values: fieldValues,
       status: initialStatus, accreditation_mappings: accreditationMappings, is_deidentified: isDeidentified,
     };
     if (isDeidentified) {

@@ -63,12 +63,15 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
     if (!user) { setLoadingTemplates(false); return; }
     const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('user_id', user.id).single();
     if (!profile) { setLoadingTemplates(false); return; }
-    const { data: rows } = await supabase
-      .from('case_templates')
-      .select('id, name, specialty, fields')
-      .eq('tenant_id', profile.tenant_id)
-      .order('name');
-    setTemplates((rows as Template[]) || []);
+    
+    // Fetch both tenant-specific AND global templates
+    const [tenantRes, globalRes] = await Promise.all([
+      supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', profile.tenant_id).order('name'),
+      supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', '00000000-0000-0000-0000-000000000000').order('name'),
+    ]);
+    
+    const allTemplates = [...(tenantRes.data || []), ...(globalRes.data || [])];
+    setTemplates((allTemplates as Template[]) || []);
     setLoadingTemplates(false);
   }, [supabase]);
 
@@ -107,15 +110,16 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErrors(['Not authenticated.']); setSaving(false); return; }
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('user_id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('id, tenant_id').eq('user_id', user.id).single();
     if (!profile) { setErrors(['Profile not found.']); setSaving(false); return; }
 
     const insertData: Record<string, unknown> = {
       tenant_id: profile.tenant_id,
+      resident_id: profile.id,
       template_id: selectedTemplateId,
       case_date: caseDate,
       field_values: fieldValues,
-      status: 'draft',
+      status: 'approved',
       is_deidentified: isDeidentified,
     };
 

@@ -34,7 +34,8 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
     .maybeSingle();
 
   const isReadOnly = subscription?.status === 'past_due' || subscription?.status === 'unpaid';
-  const initialStatus = tenant.tenant_type === 'individual' ? 'pending' : 'draft';
+  // Allow direct logging: cases are auto-approved for residents
+  const initialStatus = 'approved';
 
   // Check case quota
   const { data: quota } = await supabase

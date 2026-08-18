@@ -45,6 +45,7 @@ export default function Sidebar({
     'Billing': { path: 'M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z M4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z', type: 'fill' },
     'Audit': { path: 'M9 12.75L11.25 15 15 10.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z', type: 'stroke' },
     'Admin': { path: 'M3.75 6.75h8.5M3.75 12h8.5M3.75 17.25h8.5M17.25 6.75v-1.5a1.5 1.5 0 00-1.5-1.5h-1.5M17.25 17.25v1.5a1.5 1.5 0 01-1.5 1.5h-1.5', type: 'stroke' },
+    'Invites': { path: 'M21.75 9v.906a2.25 2.25 0 01-1.183 2.019l-5.71 2.855a2.25 2.25 0 01-2.244 0L7.773 11.463a2.25 2.25 0 01-1.183-2.02V9m13.5-6.75H2.25m19.5 0v9.75m-19.5 0h19.5', type: 'stroke' },
   };
 
   function renderIcon(icon: { path: string; type: 'fill' | 'stroke' }, className: string) {

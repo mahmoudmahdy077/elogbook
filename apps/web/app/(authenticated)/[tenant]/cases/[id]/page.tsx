@@ -3,7 +3,6 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import { PhiFields } from '@/components/PhiFields';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -90,13 +89,10 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
         </div>
         <div className="pt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <PhiFields
-              mrn={entry.patient_mrn}
-              dob={entry.patient_dob}
-              entryId={entry.id}
-              tenantId={auth.tenant.id}
-              userId={auth.profile.id}
-            />
+            <div>
+              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient MRN</dt><dd className="text-text-primary">{entry.patient_mrn || '—'}</dd></dl>
+              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient DOB</dt><dd className="text-text-primary">{entry.patient_dob || '—'}</dd></dl>
+            </div>
             <div>
               <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Date</dt><dd className="text-text-primary">{entry.case_date}</dd></dl>
             </div>
@@ -117,15 +113,39 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
               ))}
           </div>
 
-          {entry.status === 'draft' && (
-            <form action={`/${tenantSlug}/cases/${id}/submit`} method="POST">
-              <button
-                type="submit"
+          {entry.status === 'draft' && isResident && (
+            <div className="pt-4 flex items-center gap-3">
+              <Link
+                href={`/${tenantSlug}/cases/${id}/edit`}
                 className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
               >
-                Submit for Approval
-              </button>
-            </form>
+                Edit Case
+              </Link>
+            </div>
+          )}
+          {entry.status === 'approved' && isResident && (
+            <div className="pt-4 flex items-center gap-3">
+              <div className="bg-success/10 border border-success/30 text-success text-sm rounded-lg p-3 flex-1">
+                This case has been logged and is part of your permanent record.
+              </div>
+              {(!approvals || approvals.length === 0) && (
+                <form action={`/${tenantSlug}/cases/${id}/request-verification`} method="POST">
+                  <button
+                    type="submit"
+                    className="rounded-full border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors"
+                  >
+                    Request Verification
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+          {entry.status === 'approved' && !isResident && (
+            <div className="pt-4">
+              <div className="bg-success/10 border border-success/30 text-success text-sm rounded-lg p-3">
+                This case has been logged and is part of the resident&apos;s permanent record.
+              </div>
+            </div>
           )}
           <div className="pt-4">
             <Link

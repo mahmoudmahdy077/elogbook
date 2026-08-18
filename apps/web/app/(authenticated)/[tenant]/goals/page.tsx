@@ -1,6 +1,7 @@
 import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import GoalForm from '@/components/GoalForm';
+import GoalActions from '@/components/GoalActions';
 import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
@@ -11,6 +12,7 @@ interface GoalRow {
   deadline: string;
   specialty: string | null;
   description: string | null;
+  resident_id: string;
   goal_progress: { current_count: number } | null;
   profiles: { full_name: string } | null;
 }
@@ -94,7 +96,17 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
               <div key={goal.id} className="panel">
                 <div className="pb-4 border-b border-border">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-semibold">{goal.title}</h3>
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-lg font-semibold">{goal.title}</h3>
+                      {isDirector && (
+                        <GoalActions
+                          goal={goal}
+                          tenantId={auth.profile.tenant_id}
+                          directorId={auth.profile.id}
+                          residents={residents}
+                        />
+                      )}
+                    </div>
                     {isDirector && (
                       <p className="text-sm text-text-muted">
                         {(goal.profiles)?.full_name}
