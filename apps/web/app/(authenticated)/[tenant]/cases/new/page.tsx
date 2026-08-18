@@ -13,7 +13,7 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, tenant_id, tenants!inner(slug, tenant_type)')
+    .select('id, tenant_id, role, tenants!inner(slug, tenant_type)')
     .eq('user_id', user.id)
     .single();
 
@@ -21,6 +21,11 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
 
   const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
+
+  const CASE_CREATE_ROLES = ['resident', 'supervisor'];
+  if (!CASE_CREATE_ROLES.includes(profile.role)) {
+    redirect(`/${tenantSlug}/cases`);
+  }
 
   const { data: subscription } = await supabase
     .from('subscriptions')

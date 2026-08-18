@@ -14,7 +14,7 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ tena
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || !['supervisor', 'director', 'admin'].includes(profile.role)) notFound();
+  if (!profile || !['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role)) notFound();
 
   return (
     <div>

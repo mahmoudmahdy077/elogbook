@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';
+  const pathParts = request.nextUrl.pathname.split('/');
+  const tenantSlug = pathParts[2];
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -18,11 +20,18 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id, role')
+    .select('tenant_id, role, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
 
-  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!profile || !profile.tenants || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
+    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  }
+
+  const REPORT_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
+  if (!REPORT_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  }
 
   let query = supabase
     .from('duty_periods')

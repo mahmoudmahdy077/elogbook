@@ -16,6 +16,11 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
   if (auth.tenant.slug !== tenantSlug) redirect('/login');
 
+  const BILLING_ROLES = ['institution_admin', 'admin'];
+  if (!BILLING_ROLES.includes(auth.profile.role)) {
+    redirect(`/${tenantSlug}/dashboard`);
+  }
+
   const supabase = await createServerSupabase();
 
   const [plansResult, subscriptionResult, gatewayResult, purchasesResult, caseCountResult, residentCountResult, paymentsResult] = await Promise.all([

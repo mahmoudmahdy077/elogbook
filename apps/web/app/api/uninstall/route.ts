@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase/server';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
@@ -6,9 +7,27 @@ import { createFullBackup } from '@/lib/setup/backup-manager';
 
 export const runtime = 'nodejs';
 
+const ADMIN_ROLES = ['director', 'institution_admin', 'admin'];
+
 export async function POST(request: Request) {
   if (!existsSync('/app/data/.setup-complete')) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
+  }
+
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!profile || !ADMIN_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
   const body = await request.json();

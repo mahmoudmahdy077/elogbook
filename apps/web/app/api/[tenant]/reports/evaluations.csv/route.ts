@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
 
-  if (profile.role === 'resident') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const REPORT_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
+  if (!REPORT_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
   let query = supabase
