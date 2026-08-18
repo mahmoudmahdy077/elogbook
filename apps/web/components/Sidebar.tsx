@@ -16,10 +16,12 @@ type NavLink = {
 export default function Sidebar({
   visibleLinks,
   tenantSlug,
+  pendingCount,
   user,
 }: {
   visibleLinks: NavLink[];
   tenantSlug: string;
+  pendingCount?: number;
   user?: { name: string; role: string; tenantName: string };
 }) {
   const pathname = usePathname();
@@ -160,8 +162,8 @@ export default function Sidebar({
               >
                 {icon && renderIcon(icon, `w-4 h-4 shrink-0`)}
                 {!collapsed && <span>{link.label}</span>}
-                {!collapsed && link.label === 'Approvals' && (
-                  <span className="ml-auto bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">3</span>
+                {!collapsed && link.label === 'Approvals' && (pendingCount ?? 0) > 0 && (
+                  <span className="ml-auto bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{pendingCount}</span>
                 )}
               </Link>
             );

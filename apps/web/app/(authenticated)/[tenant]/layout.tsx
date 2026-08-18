@@ -1,4 +1,5 @@
 import { getAuthContext, canAccessTenant } from '@/lib/supabase/auth';
+import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
@@ -67,11 +68,25 @@ export default async function TenantLayout({
 
   const visibleLinks = NAV_LINKS.filter((link) => link.roles.includes(userRole));
 
+  let pendingApprovals = 0;
+  if (visibleLinks.some((l) => l.label === 'Approvals')) {
+    const supabase = await createServerSupabase();
+    const { data } = await supabase.rpc('get_dashboard_data', {
+      p_tenant_id: auth.profile.tenant_id,
+      p_resident_id: auth.profile.id,
+      p_role: userRole,
+    });
+    if (data) {
+      pendingApprovals = (data as Record<string, unknown>).pending_approvals as number ?? 0;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-backdrop flex">
       <Sidebar
         visibleLinks={visibleLinks}
         tenantSlug={tenantSlug}
+        pendingCount={pendingApprovals}
         user={{
           name: auth.profile.full_name,
           role: auth.profile.role,
