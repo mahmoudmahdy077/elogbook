@@ -62,12 +62,25 @@ export interface CaseTemplate {
   deleted_at: string | null;
 }
 
+export interface FieldValidation {
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  patternMessage?: string;
+}
+
 export interface TemplateField {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'select' | 'number' | 'date' | 'checkbox';
   options?: string[];
   required?: boolean;
+  description?: string;
+  defaultValue?: unknown;
+  order?: number;
+  validation?: FieldValidation;
 }
 
 export interface TemplateFavorite {

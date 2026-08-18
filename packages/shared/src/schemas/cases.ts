@@ -1,12 +1,31 @@
 import { z } from 'zod';
 
+export const fieldValidationSchema = z.object({
+  minLength: z.number().int().min(0).optional(),
+  maxLength: z.number().int().min(0).optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  pattern: z.string().optional(),
+  patternMessage: z.string().optional(),
+}).refine(
+  (v) => v.minLength === undefined || v.maxLength === undefined || v.minLength <= v.maxLength,
+  { message: 'minLength must be <= maxLength' }
+);
+
 export const templateFieldSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
+  key: z.string().min(1, 'Field key is required'),
+  label: z.string().min(1, 'Field label is required'),
   type: z.enum(['text', 'textarea', 'select', 'number', 'date', 'checkbox']),
   options: z.array(z.string()).optional(),
   required: z.boolean().optional(),
-});
+  description: z.string().optional(),
+  defaultValue: z.unknown().optional(),
+  order: z.number().int().min(0).optional(),
+  validation: fieldValidationSchema.optional(),
+}).refine(
+  (field) => field.type !== 'select' || (field.options && field.options.length > 0),
+  { message: 'Select fields must have at least one option' }
+);
 
 export const caseTemplateSchema = z.object({
   specialty: z.string().min(1),
@@ -21,6 +40,15 @@ export const caseTemplateSchema = z.object({
   {
     message: 'All required_fields must exist in fields[].key',
     path: ['required_fields'],
+  }
+).refine(
+  (data) => {
+    const keys = data.fields.map(f => f.key);
+    return keys.length === new Set(keys).size;
+  },
+  {
+    message: 'Duplicate field keys are not allowed',
+    path: ['fields'],
   }
 );
 
