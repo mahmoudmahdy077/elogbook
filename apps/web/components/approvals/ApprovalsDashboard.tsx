@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client'
 import ApprovalActions from '@/components/ApprovalActions';
+import CasePreviewModal from '@/components/CasePreviewModal';
 import EmptyState from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { StatusBadge } from '@elogbook/shared/components/web';
@@ -69,6 +70,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
   const [approvalRate, setApprovalRate] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previewEntryId, setPreviewEntryId] = useState<string | null>(null);
   const [supabase] = useState(() => createClient());
   const mountedRef = useRef(true);
   const reduceMotion = useReducedMotion();
@@ -238,16 +240,23 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                       </div>
                     </div>
 
-                    {/* Approval Actions */}
-                    {approvalRequest && (
-                      <div className="border-t border-border pt-4">
+                    {/* View + Approval Actions */}
+                    <div className="border-t border-border pt-4 space-y-4">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewEntryId(entry.id)}
+                        className="inline-flex items-center px-4 py-2 rounded-full border border-border text-sm font-medium text-text-secondary hover:bg-neutral-dark transition-colors"
+                      >
+                        View
+                      </button>
+                      {approvalRequest && (
                         <ApprovalActions
                           requestId={approvalRequest.id}
                           entryId={entry.id}
                           tenant={tenantSlug}
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -255,6 +264,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           </AnimatePresence>
         </div>
       )}
+
+      <CasePreviewModal
+        isOpen={previewEntryId !== null}
+        entryId={previewEntryId}
+        tenantSlug={tenantSlug}
+        onClose={() => setPreviewEntryId(null)}
+      />
     </div>
   );
 }
