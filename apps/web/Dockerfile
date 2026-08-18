@@ -2,6 +2,7 @@
 # Build context: repo root
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN apk add --no-cache bash curl postgresql-client
 
 FROM base AS builder
 WORKDIR /app
