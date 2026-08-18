@@ -17,7 +17,7 @@ export async function GET(
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || (profile.tenants as { slug: string }).slug !== tenantSlug) {
+  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
 

@@ -16,11 +16,11 @@ export async function GET(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id, tenants!inner(slug)')
+    .select('id, tenant_id, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || (profile.tenants as { slug: string }).slug !== tenantSlug) {
+  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
 
@@ -40,7 +40,7 @@ export async function GET(
     });
 
   const usageMap = new Map(
-    (usageCounts ?? []).map((u: { template_id: string; personal_count: number; tenant_count: number }) => [u.template_id, u])
+    ((usageCounts as unknown as { template_id: string; personal_count: number; tenant_count: number }[]) ?? []).map(u => [u.template_id, u])
   );
 
   const enriched = (templates ?? []).map(t => ({
@@ -68,7 +68,7 @@ export async function POST(
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || (profile.tenants as { slug: string }).slug !== tenantSlug) {
+  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
 
