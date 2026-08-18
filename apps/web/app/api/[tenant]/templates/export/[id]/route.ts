@@ -2,12 +2,24 @@ import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { GLOBAL_TENANT_ID } from '@elogbook/shared';
 
+async function safeCreateSupabase() {
+  try {
+    return await createServerSupabase();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
   const { tenant: tenantSlug, id } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = await safeCreateSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
