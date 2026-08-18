@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import TemplateEditor from '@/components/TemplateEditor';
 import UserManager from '@/components/UserManager';
+import UserTable from '@/components/UserTable';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
+import SubscriptionManager from '@/components/SubscriptionManager';
 
 interface GatewayConfig {
   id: string;
@@ -40,12 +42,11 @@ interface AdminTabPanelProps {
   pendingCases: number;
 }
 
-// SSO and SCIM tabs hidden: pending complete SAML/OIDC/SCIM implementation
-// See P1.4 in ENTERPRISE_TRANSFORMATION_PLAN.md
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'templates', label: 'Case Templates' },
   { id: 'users', label: 'Users & Roles' },
+  { id: 'subscriptions', label: 'Subscriptions' },
   { id: 'payment', label: 'Payment Gateway' },
   { id: 'accreditation', label: 'Accreditation' },
 ] as const;
@@ -66,7 +67,7 @@ export default function AdminTabPanel({
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-border mb-6" role="tablist">
+      <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto" role="tablist">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -74,7 +75,7 @@ export default function AdminTabPanel({
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors rounded-t-lg ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors rounded-t-lg whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-text-muted hover:text-text-secondary'
@@ -132,11 +133,24 @@ export default function AdminTabPanel({
       )}
 
       {activeTab === 'users' && (
-        <UserManager
-          tenantId={tenantId}
-          users={users as never[]}
-          currentUserRole={profileRole}
-        />
+        <div>
+          <div className="mb-4">
+            <h3 className="font-semibold text-sm text-text-muted mb-2">Quick Invite (Legacy)</h3>
+            <UserManager
+              tenantId={tenantId}
+              users={users as never[]}
+              currentUserRole={profileRole}
+            />
+          </div>
+          <div className="mt-6">
+            <h3 className="font-semibold text-sm text-text-muted mb-2">User Management</h3>
+            <UserTable tenantSlug={tenantSlug} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'subscriptions' && (
+        <SubscriptionManager tenantSlug={tenantSlug} />
       )}
 
       {activeTab === 'payment' && (
@@ -146,8 +160,6 @@ export default function AdminTabPanel({
       {activeTab === 'accreditation' && (
         <CompetencyManager tenantId={tenantId} />
       )}
-
-      {/* SSO and SCIM tabs removed pending complete implementation (P1.4) */}
     </div>
   );
 }
