@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import EmptyState from '@/components/EmptyState';
 import QuickAddWrapper from '@/components/QuickAddWrapper';
 import { useSubscriptionStatus } from '@/components/SubscriptionStatusProvider';
@@ -149,6 +150,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
   const role = profile.role;
   const totalCases = stats.draft + stats.pending + stats.approved + stats.rejected;
   const { isReadOnly } = useSubscriptionStatus();
+  const router = useRouter();
 
   return (
     <div className="space-y-7">
@@ -187,6 +189,30 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         <KpiRing value={stats.approved} max={totalCases || 1} label="Approved" color="#34C759" delay={180} />
         <KpiRing value={stats.rejected} max={totalCases || 1} label="Rejected" color="#FF3B30" delay={240} />
       </div>
+
+      {/* Recent Cases Row */}
+      {recentCases && recentCases.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-text-muted mb-3">Recent Cases</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {recentCases.slice(0, 5).map((c: RecentCase) => (
+              <div key={c.id} className="flex-shrink-0 w-48 p-3 rounded-xl border border-border bg-surface">
+                <p className="text-sm font-medium text-text-primary truncate">{c.template_name || 'Case'}</p>
+                <p className="text-xs text-text-muted mt-1">{new Date(c.case_date).toLocaleDateString()}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <StatusBadge status={c.status} />
+                  <button
+                    onClick={() => router.push(`/${tenantSlug}/cases/new?duplicateFrom=${c.id}`)}
+                    className="text-xs text-primary hover:opacity-80"
+                  >
+                    Duplicate
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Upgrade prompt for Free plan near limit */}
       {data.planSlug === 'free' && totalCases >= 18 && totalCases < 20 && (
