@@ -39,9 +39,11 @@ export async function GET(
     template,
   };
 
+  const safeName = template.name.replace(/[^a-z0-9]/gi, '_').replace(/"/g, '');
+
   return NextResponse.json(exportData, {
     headers: {
-      'Content-Disposition': `attachment; filename="${template.name.replace(/[^a-z0-9]/gi, '_')}.json"`,
+      'Content-Disposition': `attachment; filename="${safeName}.json"`,
     },
   });
 }

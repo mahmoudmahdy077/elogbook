@@ -27,8 +27,26 @@ export async function POST(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const templateData = body.template_data?.template || body;
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  // Handle both formats: direct template object and export wrapper
+  let templateData: Record<string, unknown>;
+  if (body.template && typeof body.template === 'object') {
+    // Export wrapper format: { elogbook_template_version, exported_at, template }
+    templateData = body.template as Record<string, unknown>;
+  } else if (body.template_data && typeof body.template_data === 'object') {
+    // Client wrapper format: { template_data: { template: {...} } }
+    const td = body.template_data as Record<string, unknown>;
+    templateData = (td.template as Record<string, unknown>) || body.template_data as Record<string, unknown>;
+  } else {
+    // Direct template object
+    templateData = body;
+  }
 
   const parsed = caseTemplateSchema.safeParse(templateData);
   if (!parsed.success) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { GLOBAL_TENANT_ID } from '@elogbook/shared';
 
 const DIRECTOR_ROLES = ['director', 'institution_admin', 'admin'];
 
@@ -30,6 +31,7 @@ export async function POST(
     .from('case_templates')
     .select('*')
     .eq('id', id)
+    .or(`tenant_id.eq.${profile.tenant_id},tenant_id.eq.${GLOBAL_TENANT_ID}`)
     .is('deleted_at', null)
     .single();
 
@@ -37,8 +39,13 @@ export async function POST(
     return NextResponse.json({ error: 'Source template not found' }, { status: 404 });
   }
 
-  const body = await request.json();
-  const newName = body.name || `${source.name} (Copy)`;
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const newName = (body.name as string) || `${source.name} (Copy)`;
 
   const { data: existing } = await supabase
     .from('case_templates')

@@ -134,10 +134,12 @@ export async function DELETE(
     }, { status: 409 });
   }
 
+  // Soft delete with tenant check
   const { error } = await supabase
     .from('case_templates')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', profile.tenant_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

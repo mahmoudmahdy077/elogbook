@@ -32,6 +32,7 @@ export default function TemplatesPage() {
   const [editing, setEditing] = useState<Template | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadTemplates = useCallback(async () => {
     try {
@@ -75,36 +76,47 @@ export default function TemplatesPage() {
   }, [editing, tenantSlug, loadTemplates]);
 
   const handleDuplicate = useCallback(async (template: Template) => {
-    const res = await fetch(`/api/${tenantSlug}/templates/${template.id}/duplicate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: `${template.name} (Copy)` }),
-    });
+    if (actionLoading) return;
+    setActionLoading(template.id);
+    try {
+      const res = await fetch(`/api/${tenantSlug}/templates/${template.id}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `${template.name} (Copy)` }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || 'Failed to duplicate');
-      return;
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to duplicate');
+        return;
+      }
+
+      loadTemplates();
+    } finally {
+      setActionLoading(null);
     }
-
-    loadTemplates();
-  }, [tenantSlug, loadTemplates]);
+  }, [tenantSlug, loadTemplates, actionLoading]);
 
   const handleDelete = useCallback(async (template: Template) => {
     if (!confirm(`Delete "${template.name}"? This cannot be undone.`)) return;
+    if (actionLoading) return;
+    setActionLoading(template.id);
+    try {
+      const res = await fetch(`/api/${tenantSlug}/templates/${template.id}`, {
+        method: 'DELETE',
+      });
 
-    const res = await fetch(`/api/${tenantSlug}/templates/${template.id}`, {
-      method: 'DELETE',
-    });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete');
+        return;
+      }
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || 'Failed to delete');
-      return;
+      loadTemplates();
+    } finally {
+      setActionLoading(null);
     }
-
-    loadTemplates();
-  }, [tenantSlug, loadTemplates]);
+  }, [tenantSlug, loadTemplates, actionLoading]);
 
   if (loading) return <div className="p-6">Loading templates...</div>;
 

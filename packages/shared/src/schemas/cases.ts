@@ -10,6 +10,9 @@ export const fieldValidationSchema = z.object({
 }).refine(
   (v) => v.minLength === undefined || v.maxLength === undefined || v.minLength <= v.maxLength,
   { message: 'minLength must be <= maxLength' }
+).refine(
+  (v) => v.min === undefined || v.max === undefined || v.min <= v.max,
+  { message: 'min must be <= max' }
 );
 
 export const templateFieldSchema = z.object({
