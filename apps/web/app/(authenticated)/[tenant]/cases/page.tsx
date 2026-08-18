@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import EmptyState from '@/components/EmptyState';
 import CaseFilters from '@/components/CaseFilters';
+import QuickAddWrapper from '@/components/QuickAddWrapper';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import type { StatusVariant } from '@elogbook/shared/components/web';
 
@@ -79,6 +80,7 @@ export default async function CasesPage({
 
   return (
     <div className="space-y-7">
+      <QuickAddWrapper tenantSlug={tenantSlug} />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

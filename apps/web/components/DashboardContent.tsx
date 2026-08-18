@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
+import QuickAddWrapper from '@/components/QuickAddWrapper';
 import { useSubscriptionStatus } from '@/components/SubscriptionStatusProvider';
 import { StatusBadge } from '@elogbook/shared/components/web';
 
@@ -151,6 +152,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
 
   return (
     <div className="space-y-7">
+      <QuickAddWrapper tenantSlug={tenantSlug} />
       {/* Header */}
       <div
         className="flex items-start justify-between"
