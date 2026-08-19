@@ -60,6 +60,10 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
 
   const fields = entry.case_templates?.fields || [];
 
+  function getFieldKey(f: TemplateField): string {
+    return f.key || f.name || '';
+  }
+
   async function handleSave() {
     setErrors([]);
     setSaving(true);

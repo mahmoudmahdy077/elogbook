@@ -24,8 +24,8 @@ export async function loginAction(email: string, password: string) {
       .eq('user_id', data.user.id)
       .single();
 
-    const tenants = profile?.tenants as { slug: string } | null;
-    const slug = tenants?.slug ?? 'demo';
+    const tenants = profile?.tenants as { slug: string }[] | null;
+    const slug = tenants?.[0]?.slug ?? 'demo';
 
     return { redirectUrl: `/${slug}/dashboard` };
   } catch (err) {

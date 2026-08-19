@@ -57,8 +57,8 @@ function readPackage(pkg, context) {
 
   // nanoid v3 (expo-router) — GHSA-28wg-ghj8-5hjv / GHSA-2v37-7h3g-55p8
   if (pkg.dependencies && pkg.dependencies['nanoid'] && /^(\^|~)?3\./.test(pkg.dependencies['nanoid'])) {
-    pkg.dependencies['nanoid'] = '3.3.17'
-    context.log('override nanoid to 3.3.17 in ' + pkg.name)
+    pkg.dependencies['nanoid'] = '3.3.18'
+    context.log('override nanoid to 3.3.18 in ' + pkg.name)
   }
 
   // undici (@sentry/cli ^6, others ^7) — GHSA-8xcm-r25x-g524 / GHSA-1130718
