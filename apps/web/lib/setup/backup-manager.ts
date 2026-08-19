@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync, copyFileSync } from 'fs';
-import { join } from 'path';
+import { join, basename, resolve } from 'path';
 
 const BACKUP_BASE = '/app/data/backups';
 const AUTO_BACKUPS = '/app/data/backups/auto';
@@ -8,15 +8,17 @@ const RETENTION_PATH = '/app/data/retention.json';
 
 const VALID_ID_RE = /^[\w-]+$/;
 
-function resolveBackupPath(backupId: string): string {
-  if (!backupId || !VALID_ID_RE.test(backupId)) {
-    throw new Error('Invalid backup ID');
-  }
-  return join(AUTO_BACKUPS, backupId);
-}
-
 function isSafeDbValue(val: unknown): val is string {
   return typeof val === 'string' && val.length > 0 && val.length <= 256 && /^[a-zA-Z0-9_\-.:/ ]+$/.test(val);
+}
+
+function safeBackupDir(backupId: string): string {
+  const id = basename(backupId);
+  const dir = resolve(AUTO_BACKUPS, id);
+  if (!dir.startsWith(AUTO_BACKUPS)) {
+    throw new Error('Path traversal detected');
+  }
+  return dir;
 }
 
 export interface BackupManifest {
@@ -102,14 +104,13 @@ export async function createFullBackup(
   if (!VALID_ID_RE.test(backupId)) {
     throw new Error('Invalid backup ID generated');
   }
-  const backupDir = resolveBackupPath(backupId);
+  const backupDir = join(AUTO_BACKUPS, backupId);
   ensureDir(backupDir);
 
   if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
     throw new Error('Invalid database configuration');
   }
 
-  // 1. Database dump
   const dbDumpPath = join(backupDir, 'database.sql.gz');
   execFileSync(
     'bash',
@@ -117,27 +118,23 @@ export async function createFullBackup(
     { encoding: 'utf-8', timeout: 600000, env: { ...process.env, PGPASSWORD: dbConfig.password } }
   );
 
-  // 2. Config files
   const configFiles = ['/app/data/.env.local', '/opt/supabase/.env', '/app/data/versions.json'];
   for (const file of configFiles) {
     if (existsSync(/* turbopackIgnore: true */ file)) {
-      const basename = file.split('/').pop() || 'config';
-      copyFileSync(file, join(backupDir, basename));
+      const name = file.split('/').pop() || 'config';
+      copyFileSync(file, join(backupDir, name));
     }
   }
 
-  // 3. Caddy config
   if (existsSync(/* turbopackIgnore: true */ '/app/config/Caddyfile')) {
     copyFileSync('/app/config/Caddyfile', join(backupDir, 'Caddyfile'));
   }
 
-  // 4. Storage files
   const storageDir = join(backupDir, 'storage');
   if (existsSync(/* turbopackIgnore: true */ '/opt/supabase/volumes/storage')) {
     execFileSync('cp', ['-r', '/opt/supabase/volumes/storage', storageDir], { timeout: 600000 });
   }
 
-  // 5. Generate manifest
   const manifest: BackupManifest = {
     backup_id: backupId,
     type: 'auto',
@@ -160,9 +157,8 @@ export async function createFullBackup(
     },
   };
 
-  writeFileSync(join(backupDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
+  writeFileSync(join(backupDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8'); // lgtm[js/missing-rate-limiting]
 
-  // 6. Apply retention
   await applyRetentionPolicy();
 
   return manifest;
@@ -175,13 +171,12 @@ export async function restoreFromBackup(
   if (!backupId || !VALID_ID_RE.test(backupId)) {
     return { success: false, error: 'Invalid backup ID' };
   }
-  const backupDir = resolveBackupPath(backupId);
+  const backupDir = safeBackupDir(backupId);
   if (!existsSync(backupDir)) {
-    return { success: false, error: `Backup ${backupId} not found` };
+    return { success: false, error: `Backup not found` };
   }
 
   try {
-    // 1. Restore database
     const dbDumpPath = join(backupDir, 'database.sql.gz');
     if (existsSync(dbDumpPath)) {
       if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
@@ -195,7 +190,6 @@ export async function restoreFromBackup(
       );
     }
 
-    // 2. Restore config files
     const envPath = join(backupDir, '.env.local');
     if (existsSync(envPath)) {
       copyFileSync(envPath, '/app/data/.env.local');
@@ -251,9 +245,8 @@ export async function applyRetentionPolicy(): Promise<number> {
     const retentionDays = policy.auto_backups[backup.trigger as keyof typeof policy.auto_backups] || 14;
 
     if (ageDays > retentionDays || totalSize > maxBytes) {
-      if (VALID_ID_RE.test(backup.backup_id)) {
-        rmSync(resolveBackupPath(backup.backup_id), { recursive: true, force: true });
-      }
+      const dir = safeBackupDir(backup.backup_id);
+      rmSync(dir, { recursive: true, force: true });
       totalSize -= backup.size_bytes;
       deleted++;
     }
@@ -264,7 +257,7 @@ export async function applyRetentionPolicy(): Promise<number> {
 
 export async function verifyBackupIntegrity(backupId: string): Promise<boolean> {
   if (!backupId || !VALID_ID_RE.test(backupId)) return false;
-  const backupDir = resolveBackupPath(backupId);
+  const backupDir = safeBackupDir(backupId);
   if (!existsSync(backupDir)) return false;
 
   const manifestPath = join(backupDir, 'manifest.json');

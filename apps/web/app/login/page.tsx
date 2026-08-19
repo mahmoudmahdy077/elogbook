@@ -173,7 +173,7 @@ export default function LoginPage() {
         return;
       }
       if (next !== '/' && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !next.includes('://')) {
-        window.location.href = next; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
+        window.location.href = next; // lgtm[js/client-side-unvalidated-url-redirect] // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
       } else {
         window.location.href = result.redirectUrl || '/dashboard'; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
       }

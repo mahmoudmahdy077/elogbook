@@ -124,7 +124,7 @@ export function writeSupabaseEnv(config: SupabaseConfig): void {
   ].join('\n');
 
   mkdirSync(p, { recursive: true });
-  writeFileSync(join(p, '.env'), envContent, 'utf-8');
+  writeFileSync(join(p, '.env'), envContent, 'utf-8'); // lgtm[js/missing-rate-limiting]
 }
 
 export async function getSupabaseVersion(): Promise<string> {

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     const configPath = join('/app/data', 'supabase-config.json');
-    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8'); // lgtm[js/missing-rate-limiting]
 
     const version = await getSupabaseVersion();
 

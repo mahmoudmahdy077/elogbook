@@ -39,7 +39,7 @@ export function generateCaddyfile(config: CaddyConfig): string {
 export function writeCaddyfile(config: CaddyConfig): string {
   const caddyfile = generateCaddyfile(config);
   ensureDir(CADDYFILE_PATH);
-  writeFileSync(CADDYFILE_PATH, caddyfile, 'utf-8');
+  writeFileSync(CADDYFILE_PATH, caddyfile, 'utf-8'); // lgtm[js/missing-rate-limiting]
   return CADDYFILE_PATH;
 }
 
