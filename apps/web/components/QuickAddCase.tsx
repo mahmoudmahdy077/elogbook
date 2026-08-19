@@ -71,7 +71,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
     ]);
     
     const allTemplates = [...(tenantRes.data || []), ...(globalRes.data || [])];
-    setTemplates((allTemplates as Template[]) || []);
+    setTemplates(allTemplates as Template[]);
     setLoadingTemplates(false);
   }, [supabase]);
 

@@ -1,9 +1,20 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync, copyFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import crypto from 'crypto';
 
 const BACKUP_BASE = '/app/data/backups';
 const RETENTION_PATH = '/app/data/retention.json';
+
+function assertSafeBackupId(backupId: string): void {
+  if (!/^[\w-]+$/.test(backupId)) {
+    throw new Error(`Invalid backup ID: ${backupId}`);
+  }
+  const resolved = resolve(BACKUP_BASE, 'auto', backupId);
+  if (!resolved.startsWith(BACKUP_BASE)) {
+    throw new Error(`Path traversal detected in backup ID: ${backupId}`);
+  }
+}
 
 export interface BackupManifest {
   backup_id: string;
@@ -145,6 +156,7 @@ export async function restoreFromBackup(
   backupId: string,
   dbConfig: { host: string; port: number; database: string; user: string; password: string }
 ): Promise<{ success: boolean; error?: string }> {
+  assertSafeBackupId(backupId);
   const backupDir = join(BACKUP_BASE, 'auto', backupId);
   if (!existsSync(backupDir)) {
     return { success: false, error: `Backup ${backupId} not found` };
@@ -226,6 +238,7 @@ export async function applyRetentionPolicy(): Promise<number> {
 }
 
 export async function verifyBackupIntegrity(backupId: string): Promise<boolean> {
+  assertSafeBackupId(backupId);
   const backupDir = join(BACKUP_BASE, 'auto', backupId);
   if (!existsSync(backupDir)) return false;
 

@@ -1,10 +1,17 @@
 import { execSync } from 'child_process';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve, normalize } from 'path';
 import crypto from 'crypto';
 
 const SUPABASE_REPO = 'https://github.com/supabase/supabase.git';
 const SUPABASE_DEFAULT_PATH = '/opt/supabase';
+
+function assertSafePath(base: string, target: string): void {
+  const resolved = resolve(base, target);
+  if (!resolved.startsWith(base)) {
+    throw new Error(`Path traversal detected: ${target}`);
+  }
+}
 
 export interface SupabaseConfig {
   installPath: string;
@@ -65,6 +72,7 @@ export function generateSupabaseSecrets(): SupabaseConfig {
 }
 
 export async function cloneSupabase(installPath: string): Promise<void> {
+  assertSafePath(SUPABASE_DEFAULT_PATH, installPath);
   if (existsSync(join(installPath, '.git'))) {
     execSync('git pull origin master', { cwd: installPath, encoding: 'utf-8', timeout: 120000 });
   } else {
@@ -73,6 +81,7 @@ export async function cloneSupabase(installPath: string): Promise<void> {
 }
 
 export function writeSupabaseEnv(installPath: string, config: SupabaseConfig): void {
+  assertSafePath(SUPABASE_DEFAULT_PATH, installPath);
   const envContent = [
     `POSTGRES_PASSWORD=${config.postgresPassword}`,
     `POSTGRES_DB=${config.postgresDb}`,
@@ -132,6 +141,7 @@ export function getSupabaseEnvPath(installPath: string): string {
 }
 
 export async function getSupabaseVersion(installPath: string): Promise<string> {
+  assertSafePath(SUPABASE_DEFAULT_PATH, installPath);
   try {
     const version = execSync('git describe --tags --abbrev=0', { cwd: installPath, encoding: 'utf-8', timeout: 10000 });
     return version.trim();

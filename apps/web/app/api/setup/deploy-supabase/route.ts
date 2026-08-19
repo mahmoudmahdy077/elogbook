@@ -3,9 +3,18 @@ import { generateSupabaseSecrets, cloneSupabase, writeSupabaseEnv, getSupabaseVe
 import { isDockerAvailable, pullImage, networkExists } from '@/lib/setup/docker-api';
 import { execSync } from 'child_process';
 import { existsSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 
 export const runtime = 'nodejs';
+
+const ALLOWED_INSTALL_BASE = '/opt/supabase';
+
+function assertInstallPath(path: string): void {
+  const resolved = resolve(ALLOWED_INSTALL_BASE, path);
+  if (!resolved.startsWith(ALLOWED_INSTALL_BASE)) {
+    throw new Error(`Invalid install path: ${path}`);
+  }
+}
 
 function isSetupAllowed(): boolean {
   if (process.env.SETUP_MODE !== 'true') return false;
@@ -27,6 +36,7 @@ export async function POST(request: Request) {
   try {
     const config = generateSupabaseSecrets();
     config.installPath = installPath || '/opt/supabase';
+    assertInstallPath(config.installPath);
     if (postgresPassword) config.postgresPassword = postgresPassword;
     if (postgresDb) config.postgresDb = postgresDb;
     if (siteUrl) config.siteUrl = siteUrl;

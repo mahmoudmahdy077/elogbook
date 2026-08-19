@@ -9,6 +9,10 @@ import { FormField, FormDivider } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
+function isSafeRedirect(url: string): boolean {
+  return url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\') && !url.includes('://');
+}
+
 function EyeIcon() {
   return (
     <svg className="w-4 h-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -172,7 +176,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      if (next !== '/') {
+      if (next !== '/' && isSafeRedirect(next)) {
         window.location.href = next;
       } else {
         window.location.href = result.redirectUrl || '/dashboard';

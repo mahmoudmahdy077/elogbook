@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 const ADMIN_ROLES = ['institution_admin', 'admin'];
 
@@ -91,7 +92,7 @@ export async function POST(
     });
 
     // Alternative: use updateUser to set a temporary password
-    const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
+    const tempPassword = crypto.randomBytes(16).toString('base64url').slice(0, 12) + 'A1!';
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       targetProfile.user_id,
       { password: tempPassword }
