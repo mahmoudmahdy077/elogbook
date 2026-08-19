@@ -172,7 +172,7 @@ export async function restoreFromBackup(
       // Validate dbConfig values - ensure they contain only safe characters
       const validateDbValue = (val: string, _name: string): boolean => {
         if (!val || typeof val !== 'string') return false;
-        if (!/^[a-zA-Z0-9_\-.\/: ]+$/.test(val)) return false;
+        if (!/^[a-zA-Z0-9_\-./: ]+$/.test(val)) return false;
         return true;
       };
       
