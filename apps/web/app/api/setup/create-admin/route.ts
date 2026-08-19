@@ -30,8 +30,6 @@ export async function POST(request: Request) {
   const config = JSON.parse(readFileSync(configPath, 'utf-8'));
 
   try {
-    // Semgrep false positive: HTTP is acceptable for internal Docker services
-    // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const authResponse = await fetch('http://auth:9999/admin/users', {
       method: 'POST',
@@ -45,7 +43,7 @@ export async function POST(request: Request) {
         email_confirm: true,
         user_metadata: { full_name: fullName },
       }),
-    });
+    }); // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
 
     if (!authResponse.ok) {
       const error = await authResponse.text();

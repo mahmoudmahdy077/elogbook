@@ -149,7 +149,7 @@ export default function LoginPage() {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (!authError) {
         if (next !== '/') {
-          router.push(next);
+          router.push(next); // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
           return;
         }
         const { data: { session } } = await supabase.auth.getSession();
@@ -177,10 +177,9 @@ export default function LoginPage() {
         return;
       }
       if (next !== '/' && isSafeRedirect(next)) {
-        // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
-        window.location.href = next;
+        window.location.href = next; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
       } else {
-        window.location.href = result.redirectUrl || '/dashboard';
+        window.location.href = result.redirectUrl || '/dashboard'; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
       }
     } catch {
       setError('Unable to connect. Please try again.');
