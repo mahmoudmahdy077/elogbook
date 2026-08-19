@@ -6,4 +6,7 @@ onlyBuiltDependencies:
 ignoredBuiltDependencies:
   - '@heroui/shared-utils'
   - msgpackr-extract
+blockExoticSubdeps: true
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
 

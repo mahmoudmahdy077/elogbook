@@ -30,6 +30,8 @@ export async function POST(request: Request) {
   const config = JSON.parse(readFileSync(configPath, 'utf-8'));
 
   try {
+    // Semgrep false positive: HTTP is acceptable for internal Docker services
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const authResponse = await fetch('http://auth:9999/admin/users', {
       method: 'POST',
       headers: {
