@@ -1,19 +1,11 @@
 import { NextResponse } from 'next/server';
 import { generateSupabaseSecrets, cloneSupabase, writeSupabaseEnv, getSupabaseVersion } from '@/lib/setup/supabase-installer';
 import { isDockerAvailable, pullImage, networkExists } from '@/lib/setup/docker-api';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 
 export const runtime = 'nodejs';
-
-const ALLOWED_BASE = '/opt/supabase';
-
-function isSafePath(userPath: string): boolean {
-  if (!userPath || typeof userPath !== 'string') return false;
-  const resolved = resolve(ALLOWED_BASE, userPath);
-  return resolved === ALLOWED_BASE || resolved.startsWith(ALLOWED_BASE + '/');
-}
 
 function isSetupAllowed(): boolean {
   if (process.env.SETUP_MODE !== 'true') return false;
@@ -26,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { installPath, postgresPassword, postgresDb, siteUrl } = body;
+  const { postgresPassword, postgresDb, siteUrl } = body;
 
   if (!(await isDockerAvailable())) {
     return NextResponse.json({ error: 'Docker is not available' }, { status: 500 });
@@ -34,19 +26,12 @@ export async function POST(request: Request) {
 
   try {
     const config = generateSupabaseSecrets();
-    config.installPath = installPath || '/opt/supabase';
-
-    if (!isSafePath(config.installPath)) {
-      return NextResponse.json({ error: 'Invalid install path' }, { status: 400 });
-    }
-    const resolvedPath = resolve(ALLOWED_BASE, config.installPath);
-
     if (postgresPassword) config.postgresPassword = postgresPassword;
     if (postgresDb) config.postgresDb = postgresDb;
     if (siteUrl) config.siteUrl = siteUrl;
 
-    await cloneSupabase(resolvedPath);
-    writeSupabaseEnv(resolvedPath, config);
+    await cloneSupabase();
+    writeSupabaseEnv(config);
 
     const images = [
       'supabase/postgres:17',
@@ -66,7 +51,7 @@ export async function POST(request: Request) {
       await pullImage(image);
     }
 
-    execSync('docker compose up -d', { cwd: resolvedPath, encoding: 'utf-8', timeout: 120000 });
+    execFileSync('docker', ['compose', 'up', '-d'], { cwd: '/opt/supabase', encoding: 'utf-8', timeout: 120000 });
 
     let retries = 30;
     while (retries > 0 && !(await networkExists('supabase_default'))) {
@@ -77,12 +62,11 @@ export async function POST(request: Request) {
     const configPath = join('/app/data', 'supabase-config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
-    const version = await getSupabaseVersion(resolvedPath);
+    const version = await getSupabaseVersion();
 
     return NextResponse.json({
       success: true,
       config: {
-        installPath: resolvedPath,
         apiUrl: config.apiUrl,
         anonKey: config.anonKey,
         serviceRoleKey: config.serviceRoleKey,

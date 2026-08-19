@@ -53,8 +53,6 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
   const [patientMrn, setPatientMrn] = useState(entry.patient_mrn || '');
   const [patientDob, setPatientDob] = useState(entry.patient_dob || '');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(entry.field_values || {});
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
 
   const fields = entry.case_templates?.fields || [];
 
@@ -63,16 +61,12 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
   }
 
   async function handleSave() {
-    setErrors([]);
-    setSaving(true);
-
     // Validate required fields
     const requiredFields = fields.filter(f => f.required);
     for (const field of requiredFields) {
       const key = getFieldKey(field);
       if (!fieldValues[key]) {
-        setErrors([`${field.label} is required.`]);
-        setSaving(false);
+        showToast(`${field.label} is required.`, 'error');
         return;
       }
     }

@@ -1,20 +1,12 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import crypto from 'crypto';
 
 const SUPABASE_REPO = 'https://github.com/supabase/supabase.git';
-const ALLOWED_BASE = '/opt/supabase';
-
-function isSafePath(userPath: string): boolean {
-  if (!userPath || typeof userPath !== 'string') return false;
-  if (!/^[a-zA-Z0-9_\-/\\:. ]+$/.test(userPath)) return false;
-  const resolved = resolve(ALLOWED_BASE, userPath);
-  return resolved === ALLOWED_BASE || resolved.startsWith(ALLOWED_BASE + '/');
-}
+const SUPABASE_PATH = '/opt/supabase';
 
 export interface SupabaseConfig {
-  installPath: string;
   postgresPassword: string;
   postgresDb: string;
   jwtSecret: string;
@@ -57,7 +49,6 @@ export function generateSupabaseSecrets(): SupabaseConfig {
   });
 
   return {
-    installPath: ALLOWED_BASE,
     postgresPassword: generateHex(16),
     postgresDb: 'supabase',
     jwtSecret,
@@ -71,23 +62,17 @@ export function generateSupabaseSecrets(): SupabaseConfig {
   };
 }
 
-export async function cloneSupabase(installPath: string): Promise<void> {
-  if (!isSafePath(installPath)) {
-    throw new Error('Invalid install path');
-  }
-  const resolvedPath = resolve(ALLOWED_BASE, installPath);
-  if (existsSync(join(resolvedPath, '.git'))) {
-    execSync('git pull origin master', { cwd: resolvedPath, encoding: 'utf-8', timeout: 120000 });
+export async function cloneSupabase(): Promise<void> {
+  const p = SUPABASE_PATH;
+  if (existsSync(join(p, '.git'))) {
+    execFileSync('git', ['pull', 'origin', 'master'], { cwd: p, encoding: 'utf-8', timeout: 120000 });
   } else {
-    execSync(`git clone --depth 1 ${SUPABASE_REPO} ${resolvedPath}`, { encoding: 'utf-8', timeout: 300000 });
+    execFileSync('git', ['clone', '--depth', '1', SUPABASE_REPO, p], { encoding: 'utf-8', timeout: 300000 });
   }
 }
 
-export function writeSupabaseEnv(installPath: string, config: SupabaseConfig): void {
-  if (!isSafePath(installPath)) {
-    throw new Error('Invalid install path');
-  }
-  const resolvedPath = resolve(ALLOWED_BASE, installPath);
+export function writeSupabaseEnv(config: SupabaseConfig): void {
+  const p = SUPABASE_PATH;
   const envContent = [
     `POSTGRES_PASSWORD=${config.postgresPassword}`,
     `POSTGRES_DB=${config.postgresDb}`,
@@ -138,21 +123,14 @@ export function writeSupabaseEnv(installPath: string, config: SupabaseConfig): v
     'POOLER_DB_POOL_SIZE=10',
   ].join('\n');
 
-  mkdirSync(resolvedPath, { recursive: true });
-  writeFileSync(join(resolvedPath, '.env'), envContent, 'utf-8');
+  mkdirSync(p, { recursive: true });
+  writeFileSync(join(p, '.env'), envContent, 'utf-8');
 }
 
-export function getSupabaseEnvPath(installPath: string): string {
-  return join(installPath, '.env');
-}
-
-export async function getSupabaseVersion(installPath: string): Promise<string> {
-  if (!isSafePath(installPath)) {
-    throw new Error('Invalid install path');
-  }
-  const resolvedPath = resolve(ALLOWED_BASE, installPath);
+export async function getSupabaseVersion(): Promise<string> {
+  const p = SUPABASE_PATH;
   try {
-    const version = execSync('git describe --tags --abbrev=0', { cwd: resolvedPath, encoding: 'utf-8', timeout: 10000 });
+    const version = execFileSync('git', ['describe', '--tags', '--abbrev=0'], { cwd: p, encoding: 'utf-8', timeout: 10000 });
     return version.trim();
   } catch {
     return 'unknown';

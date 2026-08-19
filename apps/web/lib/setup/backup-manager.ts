@@ -1,24 +1,22 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync, copyFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 
 const BACKUP_BASE = '/app/data/backups';
+const AUTO_BACKUPS = '/app/data/backups/auto';
 const RETENTION_PATH = '/app/data/retention.json';
 
-function isSafeBackupId(backupId: string): boolean {
-  return typeof backupId === 'string' && /^[\w-]+$/.test(backupId) && backupId.length > 0 && backupId.length <= 64;
-}
+const VALID_ID_RE = /^[\w-]+$/;
 
-function resolveBackupDir(backupId: string): string {
-  const resolved = resolve(BACKUP_BASE, 'auto', backupId);
-  if (!resolved.startsWith(BACKUP_BASE + '/')) {
-    throw new Error('Path traversal detected');
+function resolveBackupPath(backupId: string): string {
+  if (!backupId || !VALID_ID_RE.test(backupId)) {
+    throw new Error('Invalid backup ID');
   }
-  return resolved;
+  return join(AUTO_BACKUPS, backupId);
 }
 
-function isSafeDbValue(val: string): boolean {
-  return typeof val === 'string' && /^[a-zA-Z0-9_\-.:/ ]+$/.test(val);
+function isSafeDbValue(val: unknown): val is string {
+  return typeof val === 'string' && val.length > 0 && val.length <= 256 && /^[a-zA-Z0-9_\-.:/ ]+$/.test(val);
 }
 
 export interface BackupManifest {
@@ -84,9 +82,10 @@ function countTableRows(host: string, port: number, db: string, user: string, pa
     return 0;
   }
   try {
-    const result = execSync(
-      `PGPASSWORD=${pass} psql -h ${host} -p ${port} -U ${user} -d ${db} -t -c "SELECT COUNT(*) FROM ${table}" 2>/dev/null`,
-      { encoding: 'utf-8', timeout: 10000 }
+    const result = execFileSync(
+      'psql',
+      ['-h', host, '-p', String(port), '-U', user, '-d', db, '-t', '-c', `SELECT COUNT(*) FROM ${table}`],
+      { encoding: 'utf-8', timeout: 10000, env: { ...process.env, PGPASSWORD: pass } }
     );
     return parseInt(result.trim(), 10) || 0;
   } catch {
@@ -100,27 +99,30 @@ export async function createFullBackup(
   versionInfo: { elogbook: string; supabase: string }
 ): Promise<BackupManifest> {
   const backupId = new Date().toISOString().replace(/[:.]/g, '-');
-  if (!isSafeBackupId(backupId)) {
-    throw new Error('Invalid backup ID');
+  if (!VALID_ID_RE.test(backupId)) {
+    throw new Error('Invalid backup ID generated');
   }
-  const backupDir = resolveBackupDir(backupId);
+  const backupDir = resolveBackupPath(backupId);
   ensureDir(backupDir);
 
-  // 1. Database dump
   if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
     throw new Error('Invalid database configuration');
   }
+
+  // 1. Database dump
   const dbDumpPath = join(backupDir, 'database.sql.gz');
-  execSync(
-    `PGPASSWORD=${dbConfig.password} pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} | gzip > "${dbDumpPath}"`,
-    { encoding: 'utf-8', timeout: 600000 }
+  execFileSync(
+    'bash',
+    ['-c', `pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} | gzip > "${dbDumpPath}"`],
+    { encoding: 'utf-8', timeout: 600000, env: { ...process.env, PGPASSWORD: dbConfig.password } }
   );
 
   // 2. Config files
   const configFiles = ['/app/data/.env.local', '/opt/supabase/.env', '/app/data/versions.json'];
   for (const file of configFiles) {
     if (existsSync(/* turbopackIgnore: true */ file)) {
-      copyFileSync(file, join(backupDir, file.split('/').pop()!));
+      const basename = file.split('/').pop() || 'config';
+      copyFileSync(file, join(backupDir, basename));
     }
   }
 
@@ -132,7 +134,7 @@ export async function createFullBackup(
   // 4. Storage files
   const storageDir = join(backupDir, 'storage');
   if (existsSync(/* turbopackIgnore: true */ '/opt/supabase/volumes/storage')) {
-    execSync(`cp -r /opt/supabase/volumes/storage "${storageDir}"`, { timeout: 600000 });
+    execFileSync('cp', ['-r', '/opt/supabase/volumes/storage', storageDir], { timeout: 600000 });
   }
 
   // 5. Generate manifest
@@ -170,10 +172,10 @@ export async function restoreFromBackup(
   backupId: string,
   dbConfig: { host: string; port: number; database: string; user: string; password: string }
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSafeBackupId(backupId)) {
+  if (!backupId || !VALID_ID_RE.test(backupId)) {
     return { success: false, error: 'Invalid backup ID' };
   }
-  const backupDir = resolveBackupDir(backupId);
+  const backupDir = resolveBackupPath(backupId);
   if (!existsSync(backupDir)) {
     return { success: false, error: `Backup ${backupId} not found` };
   }
@@ -186,9 +188,10 @@ export async function restoreFromBackup(
         return { success: false, error: 'Database configuration contains invalid characters' };
       }
 
-      execSync(
-        `gunzip -c "${dbDumpPath}" | PGPASSWORD=${dbConfig.password} psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`,
-        { encoding: 'utf-8', timeout: 600000 }
+      execFileSync(
+        'bash',
+        ['-c', `gunzip -c "${dbDumpPath}" | psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`],
+        { encoding: 'utf-8', timeout: 600000, env: { ...process.env, PGPASSWORD: dbConfig.password } }
       );
     }
 
@@ -233,13 +236,11 @@ export function listBackups(type: 'auto' | 'manual' = 'auto'): BackupManifest[] 
 
 export async function applyRetentionPolicy(): Promise<number> {
   const policy = getRetentionPolicy();
-  const autoDir = join(BACKUP_BASE, 'auto');
-  if (!existsSync(autoDir)) return 0;
+  if (!existsSync(AUTO_BACKUPS)) return 0;
 
   const backups = listBackups('auto');
   let deleted = 0;
 
-  // Enforce max total size
   let totalSize = backups.reduce((sum, b) => sum + b.size_bytes, 0);
   const maxBytes = policy.max_total_size_gb * 1024 * 1024 * 1024;
 
@@ -250,9 +251,8 @@ export async function applyRetentionPolicy(): Promise<number> {
     const retentionDays = policy.auto_backups[backup.trigger as keyof typeof policy.auto_backups] || 14;
 
     if (ageDays > retentionDays || totalSize > maxBytes) {
-      if (isSafeBackupId(backup.backup_id)) {
-        const resolvedDir = resolveBackupDir(backup.backup_id);
-        rmSync(resolvedDir, { recursive: true, force: true });
+      if (VALID_ID_RE.test(backup.backup_id)) {
+        rmSync(resolveBackupPath(backup.backup_id), { recursive: true, force: true });
       }
       totalSize -= backup.size_bytes;
       deleted++;
@@ -263,8 +263,8 @@ export async function applyRetentionPolicy(): Promise<number> {
 }
 
 export async function verifyBackupIntegrity(backupId: string): Promise<boolean> {
-  if (!isSafeBackupId(backupId)) return false;
-  const backupDir = resolveBackupDir(backupId);
+  if (!backupId || !VALID_ID_RE.test(backupId)) return false;
+  const backupDir = resolveBackupPath(backupId);
   if (!existsSync(backupDir)) return false;
 
   const manifestPath = join(backupDir, 'manifest.json');
@@ -272,7 +272,6 @@ export async function verifyBackupIntegrity(backupId: string): Promise<boolean> 
 
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as BackupManifest;
 
-  // Check database dump exists
   if (manifest.contents.database && !existsSync(join(backupDir, 'database.sql.gz'))) {
     return false;
   }
