@@ -104,19 +104,19 @@ export async function createFullBackup(
   // 2. Config files
   const configFiles = ['/app/data/.env.local', '/opt/supabase/.env', '/app/data/versions.json'];
   for (const file of configFiles) {
-    if (existsSync(file)) {
+    if (existsSync(/* turbopackIgnore: true */ file)) {
       copyFileSync(file, join(backupDir, file.split('/').pop()!));
     }
   }
 
   // 3. Caddy config
-  if (existsSync('/app/config/Caddyfile')) {
+  if (existsSync(/* turbopackIgnore: true */ '/app/config/Caddyfile')) {
     copyFileSync('/app/config/Caddyfile', join(backupDir, 'Caddyfile'));
   }
 
   // 4. Storage files
   const storageDir = join(backupDir, 'storage');
-  if (existsSync('/opt/supabase/volumes/storage')) {
+  if (existsSync(/* turbopackIgnore: true */ '/opt/supabase/volumes/storage')) {
     execSync(`cp -r /opt/supabase/volumes/storage "${storageDir}"`, { timeout: 600000 });
   }
 
@@ -170,9 +170,9 @@ export async function restoreFromBackup(
     const dbDumpPath = join(backupDir, 'database.sql.gz');
     if (existsSync(dbDumpPath)) {
       // Validate dbConfig values - ensure they contain only safe characters
-      const validateDbValue = (val: string, name: string): boolean => {
+      const validateDbValue = (val: string, _name: string): boolean => {
         if (!val || typeof val !== 'string') return false;
-        if (!/^[a-zA-Z0-9_\-\.\/: ]+$/.test(val)) return false;
+        if (!/^[a-zA-Z0-9_\-.\/: ]+$/.test(val)) return false;
         return true;
       };
       
