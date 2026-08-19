@@ -5,14 +5,20 @@ import { join, resolve } from 'path';
 const BACKUP_BASE = '/app/data/backups';
 const RETENTION_PATH = '/app/data/retention.json';
 
-function assertSafeBackupId(backupId: string): void {
-  if (!/^[\w-]+$/.test(backupId)) {
-    throw new Error(`Invalid backup ID: ${backupId}`);
-  }
+function isSafeBackupId(backupId: string): boolean {
+  return typeof backupId === 'string' && /^[\w-]+$/.test(backupId) && backupId.length > 0 && backupId.length <= 64;
+}
+
+function resolveBackupDir(backupId: string): string {
   const resolved = resolve(BACKUP_BASE, 'auto', backupId);
-  if (!resolved.startsWith(BACKUP_BASE)) {
-    throw new Error(`Path traversal detected in backup ID: ${backupId}`);
+  if (!resolved.startsWith(BACKUP_BASE + '/')) {
+    throw new Error('Path traversal detected');
   }
+  return resolved;
+}
+
+function isSafeDbValue(val: string): boolean {
+  return typeof val === 'string' && /^[a-zA-Z0-9_\-.:/ ]+$/.test(val);
 }
 
 export interface BackupManifest {
@@ -74,6 +80,9 @@ function getDirSize(dir: string): number {
 }
 
 function countTableRows(host: string, port: number, db: string, user: string, pass: string, table: string): number {
+  if (!isSafeDbValue(host) || !isSafeDbValue(String(port)) || !isSafeDbValue(db) || !isSafeDbValue(user) || !isSafeDbValue(pass) || !isSafeDbValue(table)) {
+    return 0;
+  }
   try {
     const result = execSync(
       `PGPASSWORD=${pass} psql -h ${host} -p ${port} -U ${user} -d ${db} -t -c "SELECT COUNT(*) FROM ${table}" 2>/dev/null`,
@@ -91,10 +100,16 @@ export async function createFullBackup(
   versionInfo: { elogbook: string; supabase: string }
 ): Promise<BackupManifest> {
   const backupId = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = join(BACKUP_BASE, 'auto', backupId);
+  if (!isSafeBackupId(backupId)) {
+    throw new Error('Invalid backup ID');
+  }
+  const backupDir = resolveBackupDir(backupId);
   ensureDir(backupDir);
 
   // 1. Database dump
+  if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
+    throw new Error('Invalid database configuration');
+  }
   const dbDumpPath = join(backupDir, 'database.sql.gz');
   execSync(
     `PGPASSWORD=${dbConfig.password} pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} | gzip > "${dbDumpPath}"`,
@@ -155,12 +170,10 @@ export async function restoreFromBackup(
   backupId: string,
   dbConfig: { host: string; port: number; database: string; user: string; password: string }
 ): Promise<{ success: boolean; error?: string }> {
-  assertSafeBackupId(backupId);
-  const backupDir = join(BACKUP_BASE, 'auto', backupId);
-  // Validate backupId contains only safe characters
-  if (!/^[a-zA-Z0-9_-]+$/.test(backupId)) {
+  if (!isSafeBackupId(backupId)) {
     return { success: false, error: 'Invalid backup ID' };
   }
+  const backupDir = resolveBackupDir(backupId);
   if (!existsSync(backupDir)) {
     return { success: false, error: `Backup ${backupId} not found` };
   }
@@ -169,21 +182,10 @@ export async function restoreFromBackup(
     // 1. Restore database
     const dbDumpPath = join(backupDir, 'database.sql.gz');
     if (existsSync(dbDumpPath)) {
-      // Validate dbConfig values - ensure they contain only safe characters
-      const validateDbValue = (val: string, _name: string): boolean => {
-        if (!val || typeof val !== 'string') return false;
-        if (!/^[a-zA-Z0-9_\-./: ]+$/.test(val)) return false;
-        return true;
-      };
-      
-      if (!validateDbValue(dbConfig.host, 'host') ||
-          !validateDbValue(String(dbConfig.port), 'port') ||
-          !validateDbValue(dbConfig.user, 'user') ||
-          !validateDbValue(dbConfig.database, 'database') ||
-          !validateDbValue(dbConfig.password, 'password')) {
+      if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
         return { success: false, error: 'Database configuration contains invalid characters' };
       }
-      
+
       execSync(
         `gunzip -c "${dbDumpPath}" | PGPASSWORD=${dbConfig.password} psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`,
         { encoding: 'utf-8', timeout: 600000 }
@@ -248,7 +250,10 @@ export async function applyRetentionPolicy(): Promise<number> {
     const retentionDays = policy.auto_backups[backup.trigger as keyof typeof policy.auto_backups] || 14;
 
     if (ageDays > retentionDays || totalSize > maxBytes) {
-      rmSync(join(autoDir, backup.backup_id), { recursive: true, force: true });
+      if (isSafeBackupId(backup.backup_id)) {
+        const resolvedDir = resolveBackupDir(backup.backup_id);
+        rmSync(resolvedDir, { recursive: true, force: true });
+      }
       totalSize -= backup.size_bytes;
       deleted++;
     }
@@ -258,8 +263,8 @@ export async function applyRetentionPolicy(): Promise<number> {
 }
 
 export async function verifyBackupIntegrity(backupId: string): Promise<boolean> {
-  assertSafeBackupId(backupId);
-  const backupDir = join(BACKUP_BASE, 'auto', backupId);
+  if (!isSafeBackupId(backupId)) return false;
+  const backupDir = resolveBackupDir(backupId);
   if (!existsSync(backupDir)) return false;
 
   const manifestPath = join(backupDir, 'manifest.json');

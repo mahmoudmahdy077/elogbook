@@ -29,6 +29,11 @@ export async function POST(request: Request) {
 
   const config = JSON.parse(readFileSync(configPath, 'utf-8'));
 
+  // Validate serviceRoleKey is a JWT (starts with eyJ)
+  if (typeof config.serviceRoleKey !== 'string' || !config.serviceRoleKey.startsWith('eyJ')) {
+    return NextResponse.json({ error: 'Invalid service role key in config' }, { status: 500 });
+  }
+
   try {
     // HTTP is acceptable for internal Docker services (auth:9999 is local)
     // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request

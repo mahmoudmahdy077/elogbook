@@ -52,9 +52,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
   const [caseDate, setCaseDate] = useState(entry.case_date);
   const [patientMrn, setPatientMrn] = useState(entry.patient_mrn || '');
   const [patientDob, setPatientDob] = useState(entry.patient_dob || '');
-  const [patientAgeYears, setPatientAgeYears] = useState(entry.patient_age_years?.toString() || '');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(entry.field_values || {});
-  const [isDeidentified, setIsDeidentified] = useState(entry.is_deidentified);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -82,13 +80,13 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
     const updateData: Record<string, unknown> = {
       case_date: caseDate,
       field_values: fieldValues,
-      is_deidentified: isDeidentified,
+      is_deidentified: entry.is_deidentified,
     };
 
-    if (isDeidentified) {
+    if (entry.is_deidentified) {
       updateData.patient_mrn = null;
       updateData.patient_dob = null;
-      updateData.patient_age_years = Number(patientAgeYears) || null;
+      updateData.patient_age_years = entry.patient_age_years ?? null;
     } else {
       updateData.patient_mrn = patientMrn || null;
       updateData.patient_dob = patientDob || null;

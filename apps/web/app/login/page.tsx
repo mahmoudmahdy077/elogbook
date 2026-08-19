@@ -148,7 +148,7 @@ export default function LoginPage() {
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (!authError) {
-        if (next !== '/') {
+        if (next !== '/' && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !next.includes('://')) {
           router.push(next); // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
           return;
         }
@@ -176,7 +176,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      if (next !== '/' && isSafeRedirect(next)) {
+      if (next !== '/' && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !next.includes('://')) {
         window.location.href = next; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
       } else {
         window.location.href = result.redirectUrl || '/dashboard'; // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect

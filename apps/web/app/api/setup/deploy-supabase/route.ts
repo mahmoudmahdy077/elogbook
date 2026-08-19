@@ -7,13 +7,12 @@ import { join, resolve } from 'path';
 
 export const runtime = 'nodejs';
 
-const ALLOWED_INSTALL_BASE = '/opt/supabase';
+const ALLOWED_BASE = '/opt/supabase';
 
-function assertInstallPath(path: string): void {
-  const resolved = resolve(ALLOWED_INSTALL_BASE, path);
-  if (!resolved.startsWith(ALLOWED_INSTALL_BASE)) {
-    throw new Error(`Invalid install path: ${path}`);
-  }
+function isSafePath(userPath: string): boolean {
+  if (!userPath || typeof userPath !== 'string') return false;
+  const resolved = resolve(ALLOWED_BASE, userPath);
+  return resolved === ALLOWED_BASE || resolved.startsWith(ALLOWED_BASE + '/');
 }
 
 function isSetupAllowed(): boolean {
@@ -36,13 +35,18 @@ export async function POST(request: Request) {
   try {
     const config = generateSupabaseSecrets();
     config.installPath = installPath || '/opt/supabase';
-    assertInstallPath(config.installPath);
+
+    if (!isSafePath(config.installPath)) {
+      return NextResponse.json({ error: 'Invalid install path' }, { status: 400 });
+    }
+    const resolvedPath = resolve(ALLOWED_BASE, config.installPath);
+
     if (postgresPassword) config.postgresPassword = postgresPassword;
     if (postgresDb) config.postgresDb = postgresDb;
     if (siteUrl) config.siteUrl = siteUrl;
 
-    await cloneSupabase(config.installPath);
-    writeSupabaseEnv(config.installPath, config);
+    await cloneSupabase(resolvedPath);
+    writeSupabaseEnv(resolvedPath, config);
 
     const images = [
       'supabase/postgres:17',
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
       await pullImage(image);
     }
 
-    execSync('docker compose up -d', { cwd: config.installPath, encoding: 'utf-8', timeout: 120000 });
+    execSync('docker compose up -d', { cwd: resolvedPath, encoding: 'utf-8', timeout: 120000 });
 
     let retries = 30;
     while (retries > 0 && !(await networkExists('supabase_default'))) {
@@ -73,12 +77,12 @@ export async function POST(request: Request) {
     const configPath = join('/app/data', 'supabase-config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
-    const version = await getSupabaseVersion(config.installPath);
+    const version = await getSupabaseVersion(resolvedPath);
 
     return NextResponse.json({
       success: true,
       config: {
-        installPath: config.installPath,
+        installPath: resolvedPath,
         apiUrl: config.apiUrl,
         anonKey: config.anonKey,
         serviceRoleKey: config.serviceRoleKey,
