@@ -114,7 +114,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
         console.warn('[CaseForm] Global templates error:', globalTemplatesRes.error);
       }
       const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
-      console.log('[CaseForm] Loaded templates:', allTemplates.length);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled) return;
@@ -327,7 +326,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
   async function handleSubmit() {
     setErrors([]);
-    console.log('[CaseForm] Submit called, selectedTemplateId:', selectedTemplateId);
     const parsedAge = Number(patientAgeYears);
     const payload: Record<string, unknown> = isDeidentified
       ? { template_id: selectedTemplateId, patient_age_years: parsedAge, patient_hash: '', case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: true as const }
