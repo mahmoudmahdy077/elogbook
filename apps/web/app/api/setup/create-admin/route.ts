@@ -31,6 +31,7 @@ export async function POST(request: Request) {
 
   try {
     // Semgrep false positive: HTTP is acceptable for internal Docker services
+    // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const authResponse = await fetch('http://auth:9999/admin/users', {
       method: 'POST',

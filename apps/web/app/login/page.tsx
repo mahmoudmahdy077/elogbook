@@ -177,6 +177,7 @@ export default function LoginPage() {
         return;
       }
       if (next !== '/' && isSafeRedirect(next)) {
+        // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
         window.location.href = next;
       } else {
         window.location.href = result.redirectUrl || '/dashboard';
