@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -38,7 +37,7 @@ function getFieldKey(f: TemplateField): string {
   return f.key || f.name || '';
 }
 
-export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: QuickAddCaseProps) {
+export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _tenantSlug }: QuickAddCaseProps) {
   const [supabase] = useState(() => createClient());
   const { show: showToast } = useToast();
   const prefersReduced = useReducedMotion();

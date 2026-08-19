@@ -20,7 +20,7 @@ interface UserManagerProps {
   currentUserRole: string;
 }
 
-export default function UserManager({ tenantId, users: initialUsers, currentUserRole }: UserManagerProps) {
+export default function UserManager({ tenantId, users: initialUsers, currentUserRole: _currentUserRole }: UserManagerProps) {
   const [users, setUsers] = useState<User[]>(initialUsers || []);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
