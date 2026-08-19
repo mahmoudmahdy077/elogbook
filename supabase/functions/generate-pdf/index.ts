@@ -168,7 +168,6 @@ Deno.serve(async (req: Request) => {
 
   const rowH = 20;
   const dateColW = 100;
-  const templateColW = contentWidth - dateColW;
 
   drawCellBg(marginLeft, y, contentWidth, rowH, lightGray);
   page.drawLine({ start: { x: marginLeft, y }, end: { x: pageWidth - marginRight, y }, thickness: 0.5, color: mediumGray });

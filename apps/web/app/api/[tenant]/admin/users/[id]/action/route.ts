@@ -86,7 +86,7 @@ export async function POST(
 
   if (action === 'reset-password') {
     // Generate password reset link
-    const { error } = await adminClient.auth.admin.generateLink({
+    await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email: '', // We need the email
     });

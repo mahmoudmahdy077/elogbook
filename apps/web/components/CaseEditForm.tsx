@@ -52,11 +52,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
   const [caseDate, setCaseDate] = useState(entry.case_date);
   const [patientMrn, setPatientMrn] = useState(entry.patient_mrn || '');
   const [patientDob, setPatientDob] = useState(entry.patient_dob || '');
-  const [patientAgeYears, setPatientAgeYears] = useState(entry.patient_age_years?.toString() || '');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(entry.field_values || {});
-  const [isDeidentified, setIsDeidentified] = useState(entry.is_deidentified);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
 
   const fields = entry.case_templates?.fields || [];
 

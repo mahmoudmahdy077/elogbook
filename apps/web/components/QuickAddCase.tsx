@@ -39,7 +39,6 @@ function getFieldKey(f: TemplateField): string {
 }
 
 export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: QuickAddCaseProps) {
-  const router = useRouter();
   const [supabase] = useState(() => createClient());
   const { show: showToast } = useToast();
   const prefersReduced = useReducedMotion();

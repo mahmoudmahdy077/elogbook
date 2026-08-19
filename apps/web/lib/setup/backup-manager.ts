@@ -1,7 +1,6 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync, copyFileSync } from 'fs';
 import { join, resolve } from 'path';
-import crypto from 'crypto';
 
 const BACKUP_BASE = '/app/data/backups';
 const RETENTION_PATH = '/app/data/retention.json';
@@ -170,10 +169,21 @@ export async function restoreFromBackup(
     // 1. Restore database
     const dbDumpPath = join(backupDir, 'database.sql.gz');
     if (existsSync(dbDumpPath)) {
-      // Validate dbConfig values
-      if (!dbConfig.host || !dbConfig.port || !dbConfig.user || !dbConfig.database || !dbConfig.password) {
-        return { success: false, error: 'Database configuration incomplete' };
+      // Validate dbConfig values - ensure they contain only safe characters
+      const validateDbValue = (val: string, name: string): boolean => {
+        if (!val || typeof val !== 'string') return false;
+        if (!/^[a-zA-Z0-9_\-\.\/: ]+$/.test(val)) return false;
+        return true;
+      };
+      
+      if (!validateDbValue(dbConfig.host, 'host') ||
+          !validateDbValue(String(dbConfig.port), 'port') ||
+          !validateDbValue(dbConfig.user, 'user') ||
+          !validateDbValue(dbConfig.database, 'database') ||
+          !validateDbValue(dbConfig.password, 'password')) {
+        return { success: false, error: 'Database configuration contains invalid characters' };
       }
+      
       execSync(
         `gunzip -c "${dbDumpPath}" | PGPASSWORD=${dbConfig.password} psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`,
         { encoding: 'utf-8', timeout: 600000 }

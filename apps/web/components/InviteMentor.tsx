@@ -11,7 +11,6 @@ interface InviteMentorProps {
 
 export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps) {
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const [role, setRole] = useState('resident');
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');

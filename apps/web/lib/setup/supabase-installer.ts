@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, resolve, normalize } from 'path';
+import { join, resolve } from 'path';
 import crypto from 'crypto';
 
 const SUPABASE_REPO = 'https://github.com/supabase/supabase.git';
