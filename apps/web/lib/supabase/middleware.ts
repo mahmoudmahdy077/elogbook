@@ -122,8 +122,22 @@ export async function updateSession(request: NextRequest) {
   // routes would bounce them back and create a redirect loop.
   const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
   const isMfaRoute = pathname === '/mfa' || pathname.startsWith('/mfa/');
-  const isPublicApiRoute = pathname === '/api/health' || pathname === '/api/contact' || pathname.startsWith('/api/auth');
-  const isPublicRoute = isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute || isPublicApiRoute;
+  // Public marketing/support surface: the signup funnel (pricing →
+  // signup), the contact-sales page, and the swagger API docs must render
+  // for anonymous visitors. The public API endpoints (health check, contact
+  // form, SSO probe, auth) must answer JSON instead of redirecting to
+  // /login — a healthcheck that bounces to the login page breaks uptime
+  // monitoring.
+  const isPricingRoute = pathname === '/pricing' || pathname.startsWith('/pricing/');
+  const isSignupRoute = pathname === '/signup' || pathname.startsWith('/signup/');
+  const isContactRoute = pathname === '/contact' || pathname.startsWith('/contact/');
+  const isApiDocsRoute = pathname === '/api-docs' || pathname.startsWith('/api-docs/');
+  const isPublicApiRoute =
+    pathname === '/api/health' || pathname === '/api/contact' || pathname === '/api/sso/check' ||
+    pathname.startsWith('/api/auth');
+  const isPublicRoute =
+    isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute ||
+    isPricingRoute || isSignupRoute || isContactRoute || isApiDocsRoute || isPublicApiRoute;
 
   // Only call getUser() for non-public routes (saves a network
   // round-trip on every static page load).
