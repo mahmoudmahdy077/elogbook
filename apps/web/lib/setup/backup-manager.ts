@@ -159,7 +159,7 @@ export async function restoreFromBackup(
   assertSafeBackupId(backupId);
   const backupDir = join(BACKUP_BASE, 'auto', backupId);
   // Validate backupId contains only safe characters
-  if (!/^[a-zA-Z0-9_\-]+$/.test(backupId)) {
+  if (!/^[a-zA-Z0-9_-]+$/.test(backupId)) {
     return { success: false, error: 'Invalid backup ID' };
   }
   if (!existsSync(backupDir)) {
