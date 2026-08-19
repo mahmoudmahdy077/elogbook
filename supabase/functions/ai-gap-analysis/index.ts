@@ -35,21 +35,18 @@ serve(async (req) => {
       });
     }
 
-    const [casesRes, milestonesRes, goalsRes, dutyHoursRes] = await Promise.all([
+    const [casesRes, milestonesRes, goalsRes] = await Promise.all([
       supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, case_date, status, created_at, updated_at, case_templates!inner(specialty, name)')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId).is('deleted_at', null),
       supabase.from('milestones').select('id, tenant_id, resident_id, competency_area, sub_competency, level')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId),
       supabase.from('program_goals').select('id, tenant_id, resident_id, title, target_count, deadline, goal_progress(current_count)')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId),
-      supabase.from('duty_periods').select('id, tenant_id, resident_id, shift_date, hours_worked, shift_type')
-        .eq('resident_id', resident_id).eq('tenant_id', tenantId),
     ]);
 
     const cases = casesRes.data || [];
     const milestones = milestonesRes.data || [];
     const goals = goalsRes.data || [];
-    const dutyHours = dutyHoursRes.data || [];
 
     // Compute gaps from case volume by specialty
     const specialtyCounts: Record<string, number> = {};
