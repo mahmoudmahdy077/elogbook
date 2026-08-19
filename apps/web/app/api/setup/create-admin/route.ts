@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 
 export const runtime = 'nodejs';
@@ -29,34 +30,29 @@ export async function POST(request: Request) {
 
   const config = JSON.parse(readFileSync(configPath, 'utf-8'));
 
-    // Validate serviceRoleKey is a JWT (starts with eyJ)
-    if (typeof config.serviceRoleKey !== 'string' || !config.serviceRoleKey.startsWith('eyJ')) {
-      return NextResponse.json({ error: 'Invalid service role key in config' }, { status: 500 });
-    }
+  if (typeof config.serviceRoleKey !== 'string' || !config.serviceRoleKey.startsWith('eyJ')) {
+    return NextResponse.json({ error: 'Invalid service role key in config' }, { status: 500 });
+  }
 
-    try {
-      // HTTP is acceptable for internal Docker services (auth:9999 is local)
-      // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
-      const authResponse = await fetch('http://auth:9999/admin/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.serviceRoleKey}`, // lgtm[js/missing-token-validation]
-        },
-      body: JSON.stringify({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName },
-      }),
+  try {
+    const adminClient = createClient('http://auth:9999', config.serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    if (!authResponse.ok) {
-      const error = await authResponse.text();
-      return NextResponse.json({ error: `Auth error: ${error}` }, { status: 500 });
+    const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    } as Parameters<typeof adminClient.auth.admin.createUser>[0]);
+
+    if (createError) {
+      return NextResponse.json({ error: `Auth error: ${createError.message}` }, { status: 500 });
     }
 
-    const authUser = await authResponse.json() as { id: string };
+    if (!authUser?.user?.id) {
+      return NextResponse.json({ error: 'User creation returned no ID' }, { status: 500 });
+    }
 
     const pool = new Pool({
       host: 'db',
@@ -76,10 +72,10 @@ export async function POST(request: Request) {
 
       await pool.query(
         "INSERT INTO profiles (id, user_id, tenant_id, role, full_name) VALUES ($1, $2, $3, 'admin', $4)",
-        [authUser.id, authUser.id, tenantId, fullName]
+        [authUser.user.id, authUser.user.id, tenantId, fullName]
       );
 
-      return NextResponse.json({ success: true, userId: authUser.id, tenantId });
+      return NextResponse.json({ success: true, userId: authUser.user.id, tenantId });
     } finally {
       await pool.end();
     }
