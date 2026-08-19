@@ -73,6 +73,10 @@ export function generateSupabaseSecrets(): SupabaseConfig {
 
 export async function cloneSupabase(installPath: string): Promise<void> {
   assertSafePath(SUPABASE_DEFAULT_PATH, installPath);
+  // Validate installPath contains only safe characters (no shell metacharacters)
+  if (!/^[a-zA-Z0-9_\-\/\\:. ]+$/.test(installPath)) {
+    throw new Error('Invalid install path: contains unsafe characters');
+  }
   if (existsSync(join(installPath, '.git'))) {
     execSync('git pull origin master', { cwd: installPath, encoding: 'utf-8', timeout: 120000 });
   } else {

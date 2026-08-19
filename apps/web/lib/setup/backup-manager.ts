@@ -158,6 +158,10 @@ export async function restoreFromBackup(
 ): Promise<{ success: boolean; error?: string }> {
   assertSafeBackupId(backupId);
   const backupDir = join(BACKUP_BASE, 'auto', backupId);
+  // Validate backupId contains only safe characters
+  if (!/^[a-zA-Z0-9_\-]+$/.test(backupId)) {
+    return { success: false, error: 'Invalid backup ID' };
+  }
   if (!existsSync(backupDir)) {
     return { success: false, error: `Backup ${backupId} not found` };
   }
@@ -166,6 +170,10 @@ export async function restoreFromBackup(
     // 1. Restore database
     const dbDumpPath = join(backupDir, 'database.sql.gz');
     if (existsSync(dbDumpPath)) {
+      // Validate dbConfig values
+      if (!dbConfig.host || !dbConfig.port || !dbConfig.user || !dbConfig.database || !dbConfig.password) {
+        return { success: false, error: 'Database configuration incomplete' };
+      }
       execSync(
         `gunzip -c "${dbDumpPath}" | PGPASSWORD=${dbConfig.password} psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`,
         { encoding: 'utf-8', timeout: 600000 }
@@ -173,11 +181,13 @@ export async function restoreFromBackup(
     }
 
     // 2. Restore config files
-    if (existsSync(join(backupDir, '.env.local'))) {
-      copyFileSync(join(backupDir, '.env.local'), '/app/data/.env.local');
+    const envPath = join(backupDir, '.env.local');
+    if (existsSync(envPath)) {
+      copyFileSync(envPath, '/app/data/.env.local');
     }
-    if (existsSync(join(backupDir, 'versions.json'))) {
-      copyFileSync(join(backupDir, 'versions.json'), '/app/data/versions.json');
+    const versionsPath = join(backupDir, 'versions.json');
+    if (existsSync(versionsPath)) {
+      copyFileSync(versionsPath, '/app/data/versions.json');
     }
 
     return { success: true };
