@@ -1,19 +1,25 @@
-// Light offline queue: encrypted case payloads stored in AsyncStorage.
-// Each item is AES-256-CBC encrypted with the SecureStore-backed device key
-// (lib/db/encryption-key.ts) and a fresh random IV. Flushed on reconnect /
-// app foreground via SyncService.initSync.
+/**
+ * Light offline queue v2 — encrypted case payloads stored in AsyncStorage.
+ *
+ * Replaces crypto-js with the dependency-free AEAD module (AES-256-CBC +
+ * HMAC-SHA-256 EtM). Flushed on reconnect / app foreground via SyncService.
+ *
+ * SECURITY: each payload is individually authenticated with HMAC before
+ * decryption, so tampered/corrupted items are rejected.
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CryptoJS from 'crypto-js';
-import * as Crypto from 'expo-crypto';
+import { encryptText, decryptText, CryptoError } from './crypto/aead';
 import { getOrCreateDbEncryptionKey } from './db/encryption-key';
 import { supabase } from './supabase';
 
-export const OFFLINE_QUEUE_KEY = 'offline_case_queue_v1';
+export const OFFLINE_QUEUE_KEY = 'offline_case_queue_v2';
 
 export interface QueuedCasePayload {
   id: string;
   iv: string;
   ciphertext: string;
+  tag: string;
   createdAt: number;
 }
 
@@ -43,18 +49,16 @@ async function writeQueue(items: QueuedCasePayload[]): Promise<void> {
   await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(items));
 }
 
+/**
+ * Enqueue a case payload for later sync. The payload is encrypted with
+ * AES-256-CBC + HMAC-SHA-256 before being written to AsyncStorage.
+ */
 export async function enqueueCase(caseData: QueueCaseData): Promise<void> {
   const key = await getOrCreateDbEncryptionKey();
-  const ivBytes = await Crypto.getRandomBytesAsync(16);
-  const ivHex = Array.from(ivBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-  const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(caseData), key, {
-    iv: CryptoJS.enc.Hex.parse(ivHex),
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.Pkcs7,
-  }).toString();
-
+  const keyBytes = hexToBytes(key);
+  const envelope = encryptText(keyBytes, JSON.stringify(caseData));
   const items = await readQueue();
-  items.push({ id: uuidv4(), iv: ivHex, ciphertext, createdAt: Date.now() });
+  items.push({ id: uuidv4(), iv: '', ciphertext: envelope, tag: '', createdAt: Date.now() });
   await writeQueue(items);
 }
 
@@ -72,11 +76,17 @@ export interface FlushResult {
   lastError: string | null;
 }
 
+/**
+ * Flush the queue: decrypt each item and insert into Supabase.
+ * Items that fail due to network errors are kept for later retry.
+ * Items that fail due to tamper/corruption are dropped (MAC failed).
+ */
 export async function flushQueue(): Promise<FlushResult> {
   const items = await readQueue();
   if (items.length === 0) return { synced: 0, failed: 0, lastError: null };
 
   const key = await getOrCreateDbEncryptionKey();
+  const keyBytes = hexToBytes(key);
   const remaining: QueuedCasePayload[] = [];
   let synced = 0;
   let failed = 0;
@@ -84,16 +94,10 @@ export async function flushQueue(): Promise<FlushResult> {
 
   for (const item of items) {
     try {
-      const plaintext = CryptoJS.AES.decrypt(item.ciphertext, key, {
-        iv: CryptoJS.enc.Hex.parse(item.iv),
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7,
-      }).toString(CryptoJS.enc.Utf8);
+      const plaintext = decryptText(keyBytes, item.ciphertext);
       const caseData = JSON.parse(plaintext) as QueueCaseData;
       const { error } = await supabase.from('case_entries').insert(caseData);
       if (error) {
-        // Network/transient errors: keep the item for a later retry.
-        // RLS/validation errors are permanent for this payload: drop it.
         const isTransient = /network|fetch|timeout|abort|connect/i.test(error.message);
         if (isTransient) remaining.push(item);
         failed++;
@@ -101,13 +105,27 @@ export async function flushQueue(): Promise<FlushResult> {
       } else {
         synced++;
       }
-    } catch {
-      // Decrypt/parse failure = corrupted item; drop it so the queue drains.
-      failed++;
-      lastError = 'corrupted queue item dropped';
+    } catch (err) {
+      if (err instanceof CryptoError) {
+        // Tamper/corruption = permanently bad item → drop it
+        failed++;
+        lastError = 'corrupted queue item dropped';
+      } else {
+        // Other errors (parse, network) → keep for retry
+        remaining.push(item);
+        failed++;
+        lastError = String(err);
+      }
     }
   }
 
   await writeQueue(remaining);
   return { synced, failed, lastError };
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) throw new Error('invalid hex');
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
 }

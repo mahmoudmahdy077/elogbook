@@ -1,7 +1,16 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
+/**
+ * WatermelonDB schema v5 — offline-first.
+ *
+ * Changes from v4:
+ *  - Added `server_updated_at` (number, optional) to all 8 tables for LWW conflict detection.
+ *  - Added `server_id` (string, optional) to all tables for idempotent server ↔ local mapping.
+ *  - Added `local_sync_status` (string) to all tables: 'synced' | 'pending_create' | 'pending_update' | 'pending_delete'.
+ *  - Added `is_deleted` (boolean, default false) for tombstone-based soft-delete support.
+ */
 export const schema = appSchema({
-  version: 4,
+  version: 5,
   tables: [
     tableSchema({
       name: 'case_entries',
@@ -20,6 +29,8 @@ export const schema = appSchema({
         { name: 'status', type: 'string' },
         { name: 'local_sync_status', type: 'string' },
         { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -32,6 +43,10 @@ export const schema = appSchema({
         { name: 'name', type: 'string' },
         { name: 'fields', type: 'string' },
         { name: 'required_fields', type: 'string' },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -46,6 +61,9 @@ export const schema = appSchema({
         { name: 'current_count', type: 'number' },
         { name: 'specialty', type: 'string', isOptional: true },
         { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -63,6 +81,10 @@ export const schema = appSchema({
         { name: 'supervisor_id', type: 'string', isOptional: true },
         { name: 'status', type: 'string' },
         { name: 'notes', type: 'string', isOptional: true },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -79,6 +101,10 @@ export const schema = appSchema({
         { name: 'assessment_date', type: 'string' },
         { name: 'evidence_entry_id', type: 'string', isOptional: true },
         { name: 'comments', type: 'string', isOptional: true },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -98,6 +124,10 @@ export const schema = appSchema({
         { name: 'feedback', type: 'string', isOptional: true },
         { name: 'action_plan', type: 'string', isOptional: true },
         { name: 'status', type: 'string' },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -111,6 +141,10 @@ export const schema = appSchema({
         { name: 'author_id', type: 'string' },
         { name: 'body', type: 'string' },
         { name: 'parent_id', type: 'string', isOptional: true },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -124,6 +158,10 @@ export const schema = appSchema({
         { name: 'hours_worked', type: 'number' },
         { name: 'shift_type', type: 'string' },
         { name: 'notes', type: 'string', isOptional: true },
+        { name: 'local_sync_status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'server_updated_at', type: 'number', isOptional: true },
+        { name: 'is_deleted', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

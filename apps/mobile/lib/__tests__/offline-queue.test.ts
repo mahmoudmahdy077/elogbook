@@ -32,19 +32,42 @@ beforeEach(async () => {
   await AsyncStorage.removeItem(OFFLINE_QUEUE_KEY);
 });
 
-describe('offline queue', () => {
-  it('encrypts payloads at rest', async () => {
+describe('offline queue v2 (AEAD)', () => {
+  it('encrypts payloads at rest (no plaintext in storage)', async () => {
     await enqueueCase({ patient_mrn: 'SECRET-MRN', tenant_id: 't1' });
     const raw = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
     expect(raw).toBeTruthy();
     expect(raw).not.toContain('SECRET-MRN');
     expect(await getPendingCount()).toBe(1);
   });
+
   it('flushes items and clears the queue', async () => {
     await enqueueCase({ tenant_id: 't1', status: 'draft' });
     const result = await flushQueue();
     expect(result.synced).toBe(1);
     expect(result.failed).toBe(0);
     expect(await readQueue()).toHaveLength(0);
+  });
+
+  it('rejects tampered ciphertext (MAC fails, item dropped)', async () => {
+    await enqueueCase({ tenant_id: 't1', secret: 'PHI' });
+    // Tamper with the ciphertext in storage
+    const raw = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+    const items = JSON.parse(raw!);
+    // Corrupt the ciphertext string
+    items[0].ciphertext = items[0].ciphertext.slice(0, -4) + 'ffff';
+    await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(items));
+
+    const result = await flushQueue();
+    expect(result.synced).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.lastError).toContain('corrupted');
+  });
+
+  it('multiple enqueues accumulate correctly', async () => {
+    await enqueueCase({ a: 1 });
+    await enqueueCase({ b: 2 });
+    await enqueueCase({ c: 3 });
+    expect(await getPendingCount()).toBe(3);
   });
 });
