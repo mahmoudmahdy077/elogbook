@@ -134,7 +134,9 @@ async function loadMetrics(): Promise<SyncMetrics> {
   try {
     const raw = await AsyncStorage.getItem(METRICS_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {
+    // Best-effort read: corrupt or missing metrics should not throw.
+  }
   return {
     totalSyncs: 0, successfulSyncs: 0, failedSyncs: 0,
     totalPulled: 0, totalPushed: 0, totalConflicts: 0,
@@ -195,7 +197,9 @@ async function loadEventQueue(): Promise<TelemetryEvent[]> {
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     }
-  } catch {}
+  } catch {
+    // Best-effort read: corrupt or missing history should not throw.
+  }
   return [];
 }
 

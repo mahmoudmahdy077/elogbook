@@ -186,7 +186,7 @@ export class SyncEngine {
     const pendingDeletes = await this.repo.findByStatus(table, 'pending_delete');
     const errors: string[] = [];
     let pushed = 0;
-    let conflicts = 0;
+    const conflicts = 0;
 
     // Push creates and updates together
     const toUpsert = [...pending, ...pendingUpdates];
