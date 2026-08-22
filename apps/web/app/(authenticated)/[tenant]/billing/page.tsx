@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ClientSubscriptionPlans from '@/components/ClientSubscriptionPlans';
 import ManageSubscriptionButton from '@/components/ManageSubscriptionButton';
+import InvoiceHistory from '@/components/InvoiceHistory';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface SubscriptionPlan {
@@ -139,6 +140,8 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
           </div>
         </div>
       )}
+      {subscription && <InvoiceHistory />}
+
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
         <h2 className="text-lg font-semibold mb-3">Usage This Period</h2>

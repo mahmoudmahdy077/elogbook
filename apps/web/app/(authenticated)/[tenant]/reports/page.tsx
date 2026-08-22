@@ -3,6 +3,8 @@ import { getAuthContext } from '@/lib/supabase/auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import WebAdsExportButton from '@/components/WebAdsExportButton';
+import GapAnalysisRunner from '@/components/GapAnalysisRunner';
 
 export default async function ReportsPage({ params, searchParams }: { params: Promise<{ tenant: string }>; searchParams: Promise<{ date_from?: string; date_to?: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -12,6 +14,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const supabase = await createServerSupabase();
   const tenantId = auth.tenant.id;
   const isResident = auth.profile.role === 'resident';
+  const isDirectorPlus = ['supervisor', 'director', 'institution_admin', 'admin'].includes(auth.profile.role);
 
   const { data: reportData, error: reportError } = await supabase.rpc('get_report_counts', {
     p_tenant_id: tenantId,
@@ -20,6 +23,18 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   });
 
   if (reportError) return <ErrorDisplay message={reportError.message} />;
+
+  // Residents list for the gap-analysis runner (director+ only)
+  let residentOptions: { id: string; full_name: string }[] = [];
+  if (isDirectorPlus) {
+    const { data: residentRows } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'resident')
+      .order('full_name');
+    residentOptions = residentRows ?? [];
+  }
 
   const rpc = reportData as unknown as {
     status_counts: Record<string, number>;
@@ -98,6 +113,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
           >
             Export PDF
           </Link>
+          {isDirectorPlus && (
+            <WebAdsExportButton tenantSlug={tenantSlug} dateFrom={date_from} dateTo={date_to} />
+          )}
         </div>
       </div>
 
@@ -129,7 +147,10 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
       </div>
 
-      {/* Charts Grid */}
+            {/* Competency Gap Analysis (director+) */}
+      {isDirectorPlus && <GapAnalysisRunner tenantSlug={tenantSlug} residents={residentOptions} />}
+
+{/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Cases by Specialty */}
         <div className="bg-surface-solid rounded-2xl border border-border p-5">
