@@ -517,6 +517,16 @@ export default function EvaluationsScreen() {
       .sort((a, b) => b.count - a.count);
   }, [evaluations]);
 
+  // Group types expanded past the 5-card preview ("+N more")
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = useCallback((type: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type); else next.add(type);
+      return next;
+    });
+  }, []);
+
   if (loading) {
     return (
       <ScreenWrapper title="Evaluations" scroll={false}>
@@ -600,7 +610,7 @@ export default function EvaluationsScreen() {
               </View>
             </View>
 
-            {group.evaluations.slice(0, 5).map((ev, cardIdx) => (
+            {group.evaluations.slice(0, expandedGroups.has(group.type) ? undefined : 5).map((ev, cardIdx) => (
               <Animated.View
                 key={ev.id}
                 entering={FadeInRight.delay(cardIdx * 80).springify()}
@@ -609,7 +619,16 @@ export default function EvaluationsScreen() {
                   key={ev.id}
                   evaluation={ev}
                   onPress={() => {
-                    // Detail view could navigate to a full evaluation detail screen
+                    // Show full score + metadata inline (no detail screen exists yet)
+                    Alert.alert(
+                      ev.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                      [
+                        `Status: ${ev.status}`,
+                        `Overall score: ${ev.overall_score ?? '—'}`,
+                        ev.encounter_date ? `Encounter: ${new Date(ev.encounter_date).toLocaleDateString()}` : null,
+                        ev.setting ? `Setting: ${ev.setting}` : null,
+                      ].filter(Boolean).join('\n')
+                    );
                   }}
                 />
               </Animated.View>
@@ -617,12 +636,19 @@ export default function EvaluationsScreen() {
 
             {group.evaluations.length > 5 && (
               <Animated.View entering={FadeIn}>
-              <TouchableOpacity className="py-2">
+              <TouchableOpacity
+                className="py-2"
+                onPress={() => toggleGroup(group.type)}
+                accessibilityRole="button"
+                accessibilityLabel={expandedGroups.has(group.type) ? 'Show fewer' : `Show ${group.evaluations.length - 5} more`}
+              >
                 <Text
                   className="text-primary text-sm text-center"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
-                  +{group.evaluations.length - 5} more
+                  {expandedGroups.has(group.type)
+                    ? 'Show less'
+                    : `+${group.evaluations.length - 5} more`}
                 </Text>
               </TouchableOpacity>
               </Animated.View>

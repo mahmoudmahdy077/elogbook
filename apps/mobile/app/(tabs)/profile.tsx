@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
@@ -254,8 +254,21 @@ export default function ProfileScreen() {
           )}
           <TouchableOpacity
             className="mt-3 bg-primary/10 rounded-lg py-2.5 items-center border border-primary/30"
-            onPress={() => {
-              Alert.alert('Coming Soon', 'Subscription management will be available in a future update.');
+            onPress={async () => {
+              // Real billing lives on the web app (Stripe portal via
+              // create-portal-session edge function); deep-link to it.
+              const webUrl = process.env.EXPO_PUBLIC_SITE_URL ?? 'https://elogbook-two.vercel.app';
+              const url = `${webUrl}/dashboard`;
+              try {
+                const canOpen = await Linking.canOpenURL(url);
+                if (canOpen) {
+                  await Linking.openURL(url);
+                } else {
+                  Alert.alert('Open on web', `Manage your subscription at ${url}`);
+                }
+              } catch {
+                Alert.alert('Open on web', `Manage your subscription at ${url}`);
+              }
             }}
             accessibilityLabel="Manage subscription"
             accessibilityRole="button"

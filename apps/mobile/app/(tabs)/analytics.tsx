@@ -121,6 +121,7 @@ interface GoalData {
 export default function AnalyticsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [fullName, setFullName] = useState('');
   const [totalCases, setTotalCases] = useState(0);
   const [approvedCases, setApprovedCases] = useState(0);
@@ -130,6 +131,7 @@ export default function AnalyticsScreen() {
   const [sharing, setSharing] = useState(false);
 
   const loadData = useCallback(async () => {
+    setLoadError(false);
     const { profileId, fullName: name } = await getRoleFromAuth();
     setFullName(name ?? 'User');
 
@@ -190,7 +192,8 @@ export default function AnalyticsScreen() {
         );
       }
     } catch {
-      // silent
+      // Surface the failure instead of rendering zeros as if they were real
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -241,6 +244,27 @@ export default function AnalyticsScreen() {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
         <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+        <Text
+          className="text-text-muted text-sm text-center mb-4"
+          style={{ fontFamily: clinicalTokens.fonts.body }}
+        >
+          Couldn&apos;t load analytics. Check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          className="bg-primary rounded-full px-6 py-2.5"
+          onPress={loadData}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading analytics"
+        >
+          <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.heading }}>Try again</Text>
+        </TouchableOpacity>
       </View>
     );
   }

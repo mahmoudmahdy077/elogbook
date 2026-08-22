@@ -168,8 +168,13 @@ export default function MyCasesScreen() {
 
   const handleCaseTap = useCallback((c: CaseData) => {
     if (c.status === 'rejected') {
+      // Rejected cases go straight back into the edit flow
       router.push({ pathname: '/log-case', params: { editCaseId: c.id } });
+      return;
     }
+    // All other statuses open the shared detail screen (was previously a
+    // dead tap for draft/pending/approved/conflict)
+    router.push({ pathname: '/(tabs)/case-detail', params: { caseId: c.id } });
   }, []);
 
   const renderItem = useCallback(

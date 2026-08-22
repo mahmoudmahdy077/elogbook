@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EmptyState from '@/components/EmptyState';
 import QuickAddWrapper from '@/components/QuickAddWrapper';
+import AIInsightsPanel from '@/components/AIInsightsPanel';
 import { useSubscriptionStatus } from '@/components/SubscriptionStatusProvider';
 import { StatusBadge } from '@elogbook/shared/components/web';
 
@@ -377,7 +378,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               <div className="space-y-1 max-h-44 overflow-y-auto">
                 {residents.slice(0, 8).map((r) => (
                   <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-1 rounded-lg hover:bg-neutral-dark">
-                    <div className="truncate flex-1">
+                     <div className="truncate flex-1">
                       <span className="font-medium text-text-primary">{r.full_name}</span>
                       <span className="text-text-muted ml-1">{r.specialty || ''}</span>
                     </div>
@@ -388,6 +389,11 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             </div>
           )}
         </div>
+
+        {/* Resident: AI Insights (edge function ai-insights) */}
+        {profile.role === 'resident' && (
+          <AIInsightsPanel tenantId={profile.tenant_id} residentId={profile.id} />
+        )}
       </div>
 
       {/* Quick Links */}

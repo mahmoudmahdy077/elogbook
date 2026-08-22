@@ -30,6 +30,16 @@ interface GoalData {
   specialty: string | null;
 }
 
+function formatRelativeTime(ts: number): string {
+  const secs = Math.round((Date.now() - ts) / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return `${Math.floor(hours / 24)} d ago`;
+}
+
 export default function DashboardScreen() {
   const [stats, setStats] = useState<Stats>({ draft: 0, pending: 0, approved: 0 });
   const [todayStats, setTodayStats] = useState<TodayStats>({ total: 0, pending: 0, approved: 0, rejected: 0, draft: 0 });
@@ -41,8 +51,9 @@ export default function DashboardScreen() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
-  const updateLastSyncLabel = async () => {
-    setLastSyncAgo('');
+  const updateLastSyncLabel = () => {
+    const ts = syncService.getLastSyncedAt();
+    setLastSyncAgo(ts ? formatRelativeTime(ts) : 'never');
   };
 
   const loadWithProfile = useCallback(async (profileId: string, tenantId: string, user: { id: string; app_metadata?: Record<string, unknown> }, isOnline: boolean | null) => {

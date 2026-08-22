@@ -6,6 +6,7 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 import EmptyState from '@/components/EmptyState';
 import CaseFilters from '@/components/CaseFilters';
 import QuickAddWrapper from '@/components/QuickAddWrapper';
+import CaseImportButton from '@/components/CaseImportButton';
 import ExportCsvButton from '@/components/ExportCsvButton';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import type { StatusVariant } from '@elogbook/shared/components/web';
@@ -91,6 +92,9 @@ export default async function CasesPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {isResident && (
+            <CaseImportButton tenantId={auth.profile.tenant_id} residentId={auth.profile.id} />
+          )}
           {entries && entries.length > 0 && (
             <ExportCsvButton entries={entries} />
           )}

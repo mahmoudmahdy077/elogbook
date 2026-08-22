@@ -40,6 +40,8 @@ class SyncService {
   private tenantId: string | null = null;
   private partialFailureMessage: string | null = null;
   private partialFailureListeners: Set<(msg: string) => void> = new Set();
+  /** Timestamp of the last successful queue flush / sync completion. */
+  private lastSyncedAt: number | null = null;
 
   constructor() {
     this.initNetworkListener();
@@ -167,6 +169,7 @@ class SyncService {
       if (!session) return;
       const result = await flushQueue();
       if (result.synced > 0) {
+        this.lastSyncedAt = Date.now();
         this.setStatus('synced');
         this.emitStatus();
       }
@@ -195,6 +198,11 @@ class SyncService {
 
   getStatus(): SyncStatus {
     return this.status;
+  }
+
+  /** Epoch ms of the last successful sync, or null if never synced. */
+  getLastSyncedAt(): number | null {
+    return this.lastSyncedAt;
   }
 
   async getConflictDrafts() {
