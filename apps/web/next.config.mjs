@@ -1,5 +1,10 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
+
+// Turbopack requires an absolute root — derive it from this config file's location
+const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
@@ -20,7 +25,7 @@ const nextConfig = {
   compress: true,
   transpilePackages: ['@elogbook/shared'],
   turbopack: {
-    root: process.env.TURBOPACK_ROOT ?? '../..',
+    root: process.env.TURBOPACK_ROOT ?? monorepoRoot,
   },
   experimental: {
     optimizePackageImports: ['framer-motion', '@sentry/nextjs'],
