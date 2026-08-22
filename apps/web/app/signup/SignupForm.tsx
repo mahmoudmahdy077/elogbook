@@ -29,6 +29,7 @@ interface SignupFormProps {
 }
 
 export default function SignupForm({ planSlug }: SignupFormProps) {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [sent, setSent] = useState(false);
@@ -38,7 +39,7 @@ export default function SignupForm({ planSlug }: SignupFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || !fullName.trim()) return;
     setError('');
     setLoading(true);
 
@@ -47,7 +48,11 @@ export default function SignupForm({ planSlug }: SignupFormProps) {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-        data: { plan_slug: planSlug ?? undefined },
+        data: {
+          plan_slug: planSlug ?? undefined,
+          role: 'resident',
+          full_name: fullName.trim(),
+        },
       },
     });
 
@@ -82,6 +87,16 @@ export default function SignupForm({ planSlug }: SignupFormProps) {
 
       <div className="panel p-6 sm:p-8 md:p-10">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+          <FormField
+            id="fullName"
+            label="Full name"
+            type="text"
+            value={fullName}
+            onChange={setFullName}
+            placeholder="Dr. Jane Doe"
+            autoComplete="name"
+            required
+          />
           <FormField
             id="email"
             label="Email"
