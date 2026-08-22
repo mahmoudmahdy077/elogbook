@@ -44,7 +44,7 @@ function EvaluationCard({
   const statusColor =
     evaluation.status === 'completed'
       ? '#10B981'
-      : evaluation.status === 'draft'
+      : evaluation.status === 'pending'
         ? '#F59E0B'
         : '#6B7280';
 
@@ -183,7 +183,7 @@ function NewEvaluationSheet({
       encounter_date: encounterDate || null,
       setting: setting || null,
       ratings: {},
-      status: 'draft',
+      status: 'pending',
     });
 
     setSaving(false);
