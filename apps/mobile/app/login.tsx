@@ -83,6 +83,14 @@ export default function LoginScreen() {
       const { error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        // handle_new_user reads these into profiles + user_metadata; without
+        // them self-signups default to role 'resident' + email as the name.
+        options: {
+          data: {
+            role: 'resident',
+            full_name: email.trim().split('@')[0],
+          },
+        },
       });
 
       setLoading(false);
