@@ -13,6 +13,12 @@ DECLARE
   v_salt TEXT;
   v_hash TEXT;
 BEGIN
+  -- SECURITY: this function is SECURITY DEFINER and would otherwise serve as
+  -- a cross-tenant MRN-hash oracle. Restrict to the caller's own tenant.
+  IF p_tenant_id <> get_tenant_id() THEN
+    RAISE EXCEPTION 'cross-tenant hash rejected';
+  END IF;
+
   SELECT mrn_hash_salt INTO v_salt FROM public.tenants WHERE id = p_tenant_id;
   IF v_salt IS NULL THEN
     RAISE EXCEPTION 'tenant has no MRN salt';
