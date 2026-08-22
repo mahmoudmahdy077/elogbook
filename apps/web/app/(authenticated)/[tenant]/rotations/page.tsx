@@ -64,14 +64,6 @@ export default async function RotationsPage({
     );
   }
 
-  // Fetch shifts for the visible rotations
-  const rotationIds = (rotations ?? []).map((r: RotationRow) => r.id);
-  if (rotationIds.length > 0) {
-    await supabase
-      .from('shifts')
-      .select('id, rotation_id, date, shift_type, hours')
-      .in('rotation_id', rotationIds);
-  }
 
   // Fetch residents for filter (directors+ only)
   let residents: ResidentRow[] = [];

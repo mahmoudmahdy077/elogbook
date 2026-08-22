@@ -8,10 +8,10 @@ import EmptyState from '@/components/EmptyState';
 interface EvalFormRow {
   id: string;
   form_type: string;
-  domains: Record<string, unknown>;
-  total_score: number | null;
-  completed_at: string | null;
-  evaluator_notes: string | null;
+  ratings: Record<string, unknown>;
+  overall_score: number | null;
+  status: string;
+  encounter_date: string | null;
   profiles: { full_name: string }[] | null;
   created_at: string;
 }
@@ -39,7 +39,7 @@ export default async function EvaluationsPage({
   let query = supabase
     .from('evaluation_forms')
     .select(
-      'id, form_type, domains, total_score, completed_at, evaluator_notes, created_at, profiles!inner(full_name)'
+      'id, form_type, ratings, overall_score, status, encounter_date, created_at, profiles!inner(full_name)'
     )
     .eq('tenant_id', tenantId);
 
@@ -249,27 +249,31 @@ export default async function EvaluationsPage({
                       </div>
                       <div className="flex items-center">
                         <span className="text-sm text-text-secondary tabular-nums">
-                          {form.total_score != null
-                            ? form.total_score
+                          {form.overall_score != null
+                            ? form.overall_score
                             : '—'}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <span className="text-sm text-text-muted">
-                          {form.completed_at
-                            ? new Date(form.completed_at).toLocaleDateString()
+                          {form.status === 'completed' || form.status === 'acknowledged'
+                            ? form.encounter_date
+                              ? new Date(form.encounter_date).toLocaleDateString()
+                              : 'Completed'
                             : 'Pending'}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            form.completed_at
+                            form.status === 'completed' || form.status === 'acknowledged'
                               ? 'bg-success-50 text-approved'
                               : 'bg-warning-50 text-pending'
                           }`}
                         >
-                          {form.completed_at ? 'Completed' : 'In Progress'}
+                          {form.status === 'completed' || form.status === 'acknowledged'
+                            ? 'Completed'
+                            : 'In Progress'}
                         </span>
                       </div>
                     </div>
