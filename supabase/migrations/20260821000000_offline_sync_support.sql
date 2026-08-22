@@ -146,10 +146,15 @@ DECLARE
   update_clause text;
   sql_query text;
   row_count int;
+  v_tenant_id UUID := get_tenant_id();
 BEGIN
   IF p_table_name <> ALL(allowed_tables) THEN
     RAISE EXCEPTION 'Invalid table name for sync: %', p_table_name;
   END IF;
+
+  -- SECURITY: this function is SECURITY DEFINER and would otherwise let any
+  -- authenticated caller write rows into ANY tenant. Force every row's
+  -- tenant_id to the caller's own tenant before touching the table.
 
   -- Get column names from the table (excluding id which is always present)
   SELECT array_agg(column_name) INTO col_names
@@ -173,6 +178,14 @@ BEGIN
   LOOP
     -- Skip rows without id
     IF NOT (row_obj ? 'id') THEN CONTINUE; END IF;
+
+    -- SECURITY: force tenant_id to the caller's tenant (ignore client value).
+    IF NOT (row_obj ? 'tenant_id') THEN
+      RAISE EXCEPTION 'row missing tenant_id';
+    END IF;
+    IF (row_obj ->> 'tenant_id')::UUID <> v_tenant_id THEN
+      RAISE EXCEPTION 'cross-tenant sync rejected';
+    END IF;
 
     insert_vals := '';
     FOREACH col_val IN ARRAY col_names LOOP
