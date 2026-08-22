@@ -12,7 +12,7 @@ import {
   AppState,
   type AppStateStatus,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -110,6 +110,16 @@ export default function RootLayout() {
 
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // ── Global session guard ────────────────────────────────────────
+  // When the session expires (or is cleared), send the user to login
+  // instead of leaving them on a silently-empty authenticated screen.
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    if (pathname === '/login') return;
+    router.replace('/login');
+  }, [authLoading, isAuthenticated, pathname, router]);
 
   // ── Biometric Gate ──────────────────────────────────────────────
   const [showBiometricGate, setShowBiometricGate] = useState(false);
