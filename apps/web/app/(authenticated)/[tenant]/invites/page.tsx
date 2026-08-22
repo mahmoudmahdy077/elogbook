@@ -9,6 +9,12 @@ export default async function InvitesPage({ params }: { params: Promise<{ tenant
 
   if (auth.tenant.slug !== tenantSlug) redirect('/login');
 
+  // Invite management is an institution_admin/admin function (matches the
+  // API route's role gate); other roles were seeing a permanently-empty list.
+  if (!['institution_admin', 'admin'].includes(auth.profile.role)) {
+    redirect(`/${tenantSlug}/dashboard`);
+  }
+
   const supabase = await createServerSupabase();
 
   // Get pending invites for this tenant
