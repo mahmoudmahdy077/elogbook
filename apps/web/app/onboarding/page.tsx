@@ -53,7 +53,7 @@ export default function OnboardingPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName, specialty, onboarding_completed: true })
+      .update({ role: profile.role, full_name: fullName, specialty, onboarding_completed: true })
       .eq('id', profile.id);
 
     if (error) setError(error.message);
