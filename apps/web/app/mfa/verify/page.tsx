@@ -59,13 +59,20 @@ function MfaVerifyInner() {
     if (!factor) return;
     setError('');
     setLoading(true);
-    const { error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
-    if (challengeError) {
+    // Supabase MFA: verify() requires the challengeId from a fresh challenge().
+    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+      factorId: factor.id,
+    });
+    if (challengeError || !challengeData) {
       setError('Failed to start verification. Please try again.');
       setLoading(false);
       return;
     }
-    const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, code });
+    const { error: verifyError } = await supabase.auth.mfa.verify({
+      factorId: factor.id,
+      challengeId: challengeData.id,
+      code,
+    });
     if (verifyError) {
       setError('Invalid verification code. Please check and re-enter.');
       setLoading(false);
