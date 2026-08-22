@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 /**
  * Responsive sweep — verifies every web route at 375 / 768 / 1440 viewports.
  *
@@ -75,7 +74,6 @@ let ROUTES = [
 if (process.env.ROUTES_ONLY) {
   const only = process.env.ROUTES_ONLY.split(',').map((s) => s.trim()).filter(Boolean);
   ROUTES = ROUTES.filter((r) => only.some((p) => r.includes(p)));
-  // eslint-disable-next-line no-console
   console.log(`ROUTES_ONLY filter active — checking ${ROUTES.length} routes`);
 }
 

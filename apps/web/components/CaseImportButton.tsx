@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import CaseImport from '@/components/CaseImport';
 
 interface CaseImportButtonProps {
@@ -13,7 +12,6 @@ interface CaseImportButtonProps {
  *  CSV case-import feature on the cases list page. */
 export default function CaseImportButton({ tenantId, residentId }: CaseImportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
 
   return (
     <>

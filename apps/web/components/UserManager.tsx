@@ -57,9 +57,19 @@ export default function UserManager({ tenantId, users: initialUsers, currentUser
   async function handleDeactivate(userId: string) {
     if (!confirm('Are you sure you want to deactivate this user?')) return;
 
-    // In a real app, you'd soft-delete or disable the user
-    // For now, we'll just show a message
-    showToast('User deactivation is not implemented yet', 'info');
+    // Soft-delete: profiles.status supports active/pending/suspended/deactivated
+    // (migration 20260818140000_admin_user_management.sql).
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status: 'deactivated' })
+      .eq('id', userId);
+
+    if (error) {
+      showToast('Failed to deactivate user', 'error');
+    } else {
+      showToast('User deactivated', 'success');
+      loadUsers();
+    }
   }
 
   const roleColors: Record<string, string> = {

@@ -108,13 +108,16 @@ function EvaluationCard({
 
 // ── New Evaluation Sheet ─────────────────────────────────────────────
 
+// Mirrors evaluation_forms.form_type CHECK constraint (migration 00081).
 const FORM_TYPES = [
   { key: 'mini_cex', label: 'Mini-CEX' },
+  { key: 'cex', label: 'CEX' },
   { key: 'dops', label: 'DOPS' },
   { key: 'cbd', label: 'Case-Based Discussion' },
   { key: 'msf', label: 'Multi-Source Feedback' },
   { key: 'osce', label: 'OSCE' },
-  { key: 'procedure_log', label: 'Procedure Log' },
+  { key: '360_review', label: '360 Review' },
+  { key: 'portfolio_review', label: 'Portfolio Review' },
 ];
 
 function NewEvaluationSheet({

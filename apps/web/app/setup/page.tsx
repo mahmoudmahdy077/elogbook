@@ -45,8 +45,8 @@ export default function SetupPage() {
   const [postgresDb, setPostgresDb] = useState('supabase');
   const [siteUrl, setSiteUrl] = useState('http://localhost:3000');
 
-  const [_deployProgress, setDeployProgress] = useState<string[]>([]);
-  const [_supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig | null>(null);
+  const [, setDeployProgress] = useState<string[]>([]);
+  const [, setSupabaseConfig] = useState<SupabaseConfig | null>(null);
 
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');

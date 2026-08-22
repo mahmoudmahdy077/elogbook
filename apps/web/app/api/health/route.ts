@@ -10,7 +10,7 @@ export async function GET() {
     const { error } = await supabase.from('tenants').select('id').limit(1).single();
     if (error) return NextResponse.json({ status: 'unhealthy', db: 'error' }, { status: 503 });
     return NextResponse.json({ status: 'healthy', timestamp: new Date().toISOString() });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ status: 'unhealthy', error: 'unreachable' }, { status: 503 });
   }
 }

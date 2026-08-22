@@ -54,7 +54,7 @@ export async function GET(
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'active')
     .maybeSingle();
-  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  const features = (sub as { subscription_plans?: { features?: Record<string, unknown> } | null })?.subscription_plans?.features ?? null;
   if (!features?.webhooks) {
     return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
   }

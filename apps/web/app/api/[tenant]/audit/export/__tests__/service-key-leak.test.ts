@@ -33,7 +33,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 const fetchMock = vi.fn(async () => new Response('PDF_BYTES', { status: 200 }));
-globalThis.fetch = fetchMock as any;
+globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 describe('audit export route — SEC-003', () => {
   beforeEach(() => { fetchMock.mockClear(); });
@@ -43,7 +43,7 @@ describe('audit export route — SEC-003', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
     const { GET } = await import('../route');
     const req = new Request('https://x/api/demo/audit/export?format=pdf', { method: 'GET' });
-    await GET(req as any, { params: Promise.resolve({ tenant: 'demo' }) } as any);
+    await GET(req as unknown as Request, { params: Promise.resolve({ tenant: 'demo' }) } as unknown as Parameters<typeof GET>[1]);
     const calls = fetchMock.mock.calls as unknown as [RequestInfo, RequestInit][];
     const authHeader = (calls[0]?.[1]?.headers as Record<string, string>)?.['Authorization'] || '';
     expect(authHeader).not.toContain('shhh-platform-secret');

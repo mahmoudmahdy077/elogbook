@@ -4,7 +4,6 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DashboardContent from '@/components/DashboardContent';
 import CardSkeleton from '@/components/CardSkeleton';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 type CaseStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
@@ -84,7 +83,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   const totalResidents = dashboard.total_residents ?? 0;
 
   // ── Remaining queries (not covered by RPC) ──────────────────────────
-  const queries: any[] = [
+  const queries: Array<PromiseLike<unknown>> = [
     supabase
       .from('program_goals')
       .select('id, title, target_count, deadline, specialty')
