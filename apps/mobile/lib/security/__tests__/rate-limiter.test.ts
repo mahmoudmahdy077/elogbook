@@ -57,7 +57,6 @@ import {
   consumeIfAllowed,
   type RateLimitAction,
   type RateLimitResult,
-  type RateLimitStatus,
   type BucketState,
 } from '../rate-limiter';
 
@@ -71,11 +70,6 @@ const ALL_ACTIONS: RateLimitAction[] = [
   'sync_pull',
   'sync_push',
 ];
-
-/** Write a raw bucket into the in-memory store for direct manipulation. */
-function setRawBucket(action: RateLimitAction, state: BucketState) {
-  storage.set(`@elogbook/ratelimit:${action}`, JSON.stringify(state));
-}
 
 function getRawBucket(action: RateLimitAction): BucketState | null {
   const raw = storage.get(`@elogbook/ratelimit:${action}`);

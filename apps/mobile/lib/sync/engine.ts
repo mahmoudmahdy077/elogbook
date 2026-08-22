@@ -23,7 +23,6 @@ import type {
   SyncRepository,
   SyncTable,
   SyncRow,
-  RemoteRow,
 } from './repository';
 import type { SyncRemote } from './remote';
 

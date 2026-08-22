@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { SyncEngine } from '../engine';
 import { InMemorySyncRepository } from '../in-memory-repo';
 import type { SyncRemote } from '../../sync/remote';
-import type { SyncTable, RemoteRow, SyncRow } from '../repository';
+import type { SyncTable, RemoteRow } from '../repository';
 
 // ---------------------------------------------------------------------------
 // Mock remote that simulates Supabase pull/push
@@ -80,21 +80,6 @@ class MockRemote implements SyncRemote {
 // ---------------------------------------------------------------------------
 function makeServerRow(id: string, tenantId: string, updatedAt: string, extra?: Record<string, unknown>): RemoteRow {
   return { id, tenant_id: tenantId, updated_at: updatedAt, ...extra };
-}
-
-function makeLocalRow(id: string, serverId: string | null, status: string, tenantId: string): SyncRow {
-  const now = Date.now();
-  return {
-    id,
-    server_id: serverId,
-    tenant_id: tenantId,
-    server_updated_at: serverId ? now - 1000 : null,
-    local_sync_status: status as SyncRow['local_sync_status'],
-    is_deleted: false,
-    data: {},
-    created_at: now - 5000,
-    updated_at: now,
-  };
 }
 
 const TENANT = 'tenant-1';
@@ -257,7 +242,7 @@ describe('SyncEngine', () => {
       ]);
 
       // Pull: remote is newer, wins. Local edit lost (expected in LWW).
-      const progress = await engine.sync(TENANT);
+      await engine.sync(TENANT);
       // The row gets merged from remote
       const rows = repo.all('case_entries');
       expect(rows[0]!.data.status).toBe('remote-edit');
@@ -293,7 +278,7 @@ describe('SyncEngine', () => {
   describe('full sync round-trip', () => {
     it('create offline → sync → see on web → modify on web → sync → see locally', async () => {
       // 1. Create locally while "offline"
-      const localId = await repo.insert('case_entries', {
+      await repo.insert('case_entries', {
         tenant_id: TENANT,
         data: { patient_mrn: 'MRN-001', status: 'draft' },
       });
@@ -308,7 +293,6 @@ describe('SyncEngine', () => {
       const pushedRows = remote.remoteData.get('case_entries') ?? [];
       expect(pushedRows.length).toBe(1);
       const pushedId = pushedRows[0]!.id;
-
       // 3. "Web" modifies the row (simulate a newer server version)
       const laterTime = new Date(Date.now() + 10000).toISOString();
       remote.seed('case_entries', [

@@ -20,7 +20,6 @@ import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
 
 import { useHaptics } from '../../lib/haptics';
-import { generatePatientHash } from '../../lib/patient-hash';
 import { buildCasePayload } from '../../lib/case-payload';
 import { enqueueCase } from '../../lib/offline-queue';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
@@ -104,7 +103,7 @@ export default function LogCaseScreen() {
 
   const haptics = useHaptics();
 
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setFetchError(false);
     const {
@@ -165,7 +164,7 @@ export default function LogCaseScreen() {
       }
     }
     setLoading(false);
-  };
+  }, [editCaseId, duplicateCaseId, repeatLastEntry, selectedTemplateId]);
 
   useFocusEffect(useCallback(() => {
     loadTemplates();

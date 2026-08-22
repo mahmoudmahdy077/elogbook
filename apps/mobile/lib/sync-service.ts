@@ -141,7 +141,7 @@ export class OnlineSyncService {
     }
   }
 
-  private handleError(progress: SyncProgress | null): void {
+  private handleError(_progress: SyncProgress | null): void {
     if (this.retryCount < this.MAX_RETRIES) {
       this.retryCount++;
       const delay = RETRY_DELAYS[Math.min(this.retryIndex, RETRY_DELAYS.length - 1)] ?? 300_000;

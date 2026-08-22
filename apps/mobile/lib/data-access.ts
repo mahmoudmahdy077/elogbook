@@ -63,6 +63,9 @@ function useLiveQuery<T extends Model>(
       cancelled = true;
       subscription.unsubscribe();
     };
+    // deps is the caller-provided dependency list (documented hook contract);
+    // the lint rule can't statically verify a spread dependency array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   return { data, loading, error };

@@ -5,8 +5,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Share,
-  Dimensions,
-  RefreshControl,
 } from 'react-native';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
@@ -178,7 +176,12 @@ export default function AnalyticsScreen() {
 
       if (myGoals) {
         setGoals(
-          (myGoals as any[]).map((g) => ({
+          (myGoals as Array<{
+            title: string;
+            target_count: number;
+            specialty: string | null;
+            goal_progress: Array<{ current_count: number }> | null;
+          }>).map((g) => ({
             title: g.title,
             current: g.goal_progress?.[0]?.current_count ?? 0,
             target: g.target_count,

@@ -70,7 +70,7 @@ export class SupabaseSyncRemote implements SyncRemote {
     // Supabase supports batch upsert (max 1000 rows per call)
     for (let i = 0; i < rows.length; i += 1000) {
       const batch = rows.slice(i, i + 1000);
-      const { data, error } = await this.supabase
+      const { error } = await this.supabase
         .from(table)
         .upsert(batch, { onConflict: 'id', ignoreDuplicates: false });
 

@@ -61,7 +61,8 @@ export function getRandomIv(randomBytes: (n: number) => Uint8Array = defaultRand
 function defaultRandomBytes(n: number): Uint8Array {
   const out = new Uint8Array(n);
   // globalThis.crypto.getRandomValues is available in Hermes, Node >=19, and browsers.
-  const g: any = globalThis as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = globalThis as any;
   if (g.crypto && typeof g.crypto.getRandomValues === 'function') {
     g.crypto.getRandomValues(out);
     return out;

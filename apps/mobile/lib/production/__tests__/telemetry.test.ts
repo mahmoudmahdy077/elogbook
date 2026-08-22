@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'crypto', {
 });
 
 import {
-  initTelemetry, trackEvent, trackSyncComplete, trackSyncError,
+  initTelemetry, trackEvent,
   recordSyncResult, getSyncMetrics, isSyncHealthy, flushEventQueue,
   getEventQueueSize,
 } from '../telemetry';

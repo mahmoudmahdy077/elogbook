@@ -20,7 +20,6 @@ export interface TelemetryEvent {
 
 const EVENT_QUEUE_KEY = 'telemetry_events_v1';
 const MAX_QUEUE_SIZE = 200;
-const SESSION_ID_KEY = 'telemetry_session_id';
 
 let currentSessionId = '';
 let currentUserId: string | null = null;

@@ -89,10 +89,6 @@ export function keyExpansion(key: Uint8Array): number[] {
   return w;
 }
 
-function roundsForKey(key: Uint8Array): number {
-  return key.length === 16 ? 10 : key.length === 24 ? 12 : 14;
-}
-
 /**
  * Encrypt a single 16-byte block under the expanded key schedule.
  */

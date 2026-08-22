@@ -45,7 +45,7 @@ export default function DashboardScreen() {
     setLastSyncAgo('');
   };
 
-  const loadWithProfile = async (profileId: string, tenantId: string, user: any, isOnline: boolean | null) => {
+  const loadWithProfile = useCallback(async (profileId: string, tenantId: string, user: { id: string; app_metadata?: Record<string, unknown> }, isOnline: boolean | null) => {
 
     if (isOnline) {
       const { data: goalsWithProgress } = await supabase
@@ -88,9 +88,9 @@ export default function DashboardScreen() {
     setTodayStats(todayStatsResult);
 
     setLoading(false);
-  };
+  }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
@@ -117,7 +117,7 @@ export default function DashboardScreen() {
 
     const netState = await NetInfo.fetch();
     await loadWithProfile(profileId, tenantId, user, netState.isConnected);
-  };
+  }, [loadWithProfile]);
 
   useFocusEffect(useCallback(() => {
     loadData();
@@ -157,13 +157,15 @@ export default function DashboardScreen() {
       appStateSub.remove();
       clearInterval(interval);
     };
+    // loadData is stable (useCallback) — run subscriptions once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  }, []);
+  }, [loadData]);
 
   if (loading && !roleLoaded) {
     return (
