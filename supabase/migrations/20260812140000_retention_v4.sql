@@ -5,6 +5,7 @@
 -- soft-delete case_entries, hard-delete dependent rows, and audit each purge.
 -- Executable by service_role only (unchanged privilege from 00055).
 
+DROP FUNCTION IF EXISTS public.enforce_data_retention();
 CREATE OR REPLACE FUNCTION public.enforce_data_retention()
 RETURNS void
 LANGUAGE plpgsql

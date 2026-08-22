@@ -163,9 +163,9 @@ BEGIN
 
   -- Build update clause for ON CONFLICT
   update_clause := '';
-  FOREACH col_name IN ARRAY col_names LOOP
+  FOREACH col_val IN ARRAY col_names LOOP
     IF update_clause <> '' THEN update_clause := update_clause || ', '; END IF;
-    update_clause := update_clause || col_name || ' = EXCLUDED.' || col_name;
+    update_clause := update_clause || col_val || ' = EXCLUDED.' || col_val;
   END LOOP;
 
   -- Process each row in the batch
@@ -175,10 +175,10 @@ BEGIN
     IF NOT (row_obj ? 'id') THEN CONTINUE; END IF;
 
     insert_vals := '';
-    FOREACH col_name IN ARRAY col_names LOOP
+    FOREACH col_val IN ARRAY col_names LOOP
       IF insert_vals <> '' THEN insert_vals := insert_vals || ', '; END IF;
-      IF row_obj ? col_name THEN
-        col_val := quote_literal(row_obj ->> col_name);
+      IF row_obj ? col_val THEN
+        col_val := quote_literal(row_obj ->> col_val);
       ELSE
         col_val := 'NULL';
       END IF;
