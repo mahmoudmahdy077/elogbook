@@ -227,7 +227,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 shadow-sm">
+        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 ">
           {sent ? (
             <SuccessState email={email} />
           ) : (

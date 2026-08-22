@@ -68,7 +68,6 @@ export default function ProgressRing({
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-          style={{ filter: 'drop-shadow(0 0 6px currentColor)' }}
         />
         <text
           ref={displayRef}

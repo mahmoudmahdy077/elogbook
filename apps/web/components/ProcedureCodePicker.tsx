@@ -165,7 +165,7 @@ export default function ProcedureCodePicker({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
+            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl overflow-hidden max-h-60 overflow-y-auto"
           >
             {results.map((code) => {
               const isSelected = selectedCodes.includes(code.id);
@@ -218,7 +218,7 @@ export default function ProcedureCodePicker({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl shadow-lg p-4 text-sm text-text-muted text-center"
+            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl p-4 text-sm text-text-muted text-center"
           >
             No procedure codes found for &quot;{query}&quot;
           </motion.div>

@@ -195,7 +195,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
             animate="center"
             exit="exit"
             transition={prefersReduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 h-full w-full max-w-md bg-surface-solid border-l border-border shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-surface-solid border-l border-border z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">

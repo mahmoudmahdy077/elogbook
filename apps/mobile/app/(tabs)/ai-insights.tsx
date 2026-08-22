@@ -18,8 +18,6 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import type { UserRole } from '@elogbook/shared';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 
-const MAX_QUERIES = 20;
-
 export default function AIInsightsScreen() {
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState('');
@@ -28,6 +26,7 @@ export default function AIInsightsScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
   const [quotaUsed, setQuotaUsed] = useState(0);
+  const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
@@ -62,6 +61,16 @@ export default function AIInsightsScreen() {
         .gte('created_at', today);
 
       setQuotaUsed(count ?? 0);
+
+      // Real per-resident limit lives in resident_ai_toggle (default 50,
+      // admin/payment adjustable via grant_ai_quota). Null limit => hide
+      // the quota line instead of showing a fabricated number.
+      const { data: toggle } = await supabase
+        .from('resident_ai_toggle')
+        .select('quota_limit, enabled')
+        .eq('resident_id', profile.id)
+        .maybeSingle();
+      setQuotaLimit(toggle?.enabled && typeof toggle.quota_limit === 'number' ? toggle.quota_limit : null);
     }
 
     setLoading(false);
@@ -80,7 +89,7 @@ export default function AIInsightsScreen() {
   }, [loadProfile]);
 
   const canAccess = role === 'director' || role === 'resident' || role === 'admin';
-  const quotaRemaining = MAX_QUERIES - quotaUsed;
+  const quotaRemaining = quotaLimit === null ? null : quotaLimit - quotaUsed;
 
   const handleSubmit = useCallback(async () => {
     if (!query.trim() || !canAccess) return;
@@ -160,7 +169,9 @@ export default function AIInsightsScreen() {
           <Animated.View entering={FadeIn.delay(100).springify()}>
             <Text className="text-[#000000] text-2xl mb-1" style={{ fontFamily: clinicalTokens.fonts.heading }}>AI Insights</Text>
             <Text className="text-text-muted text-xs mb-4" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-            {quotaUsed} of {MAX_QUERIES} queries used today
+            {quotaLimit === null
+              ? `${quotaUsed} queries used today`
+              : `${quotaUsed} of ${quotaLimit} queries used today`}
           </Text>
           </Animated.View>
 
@@ -200,7 +211,7 @@ export default function AIInsightsScreen() {
                 if (error) setError(null);
               }}
               maxLength={500}
-              editable={!submitting && quotaRemaining > 0}
+              editable={!submitting && (quotaRemaining === null || quotaRemaining > 0)}
               accessibilityLabel="AI clinical reflection query"
             />
             <View className="flex-row justify-between items-center mt-2">
@@ -208,16 +219,16 @@ export default function AIInsightsScreen() {
                 {query.length}/500
               </Text>
               <TouchableOpacity
-                className={`rounded-lg px-4 py-2 ${quotaRemaining > 0 && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
+                className={`rounded-lg px-4 py-2 ${(quotaRemaining === null || quotaRemaining > 0) && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
                 onPress={handleSubmit}
-                disabled={submitting || quotaRemaining <= 0}
+                disabled={submitting || (quotaRemaining !== null && quotaRemaining <= 0)}
                 accessibilityLabel="Submit AI query"
                 accessibilityRole="button"
               >
                 {submitting ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text className={`text-sm ${quotaRemaining > 0 ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
+                  <Text className={`text-sm ${(quotaRemaining === null || quotaRemaining > 0) ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
                     Ask
                   </Text>
                 )}
@@ -245,7 +256,7 @@ export default function AIInsightsScreen() {
           </Animated.View>
         ) : null}
 
-        {quotaRemaining <= 0 && !response && (
+        {quotaRemaining !== null && quotaRemaining <= 0 && !response && (
           <Animated.View entering={FadeIn.delay(350).springify()}>
             <View className="items-center py-8">
               <Text className="text-gray-500 text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>

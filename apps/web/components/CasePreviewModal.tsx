@@ -164,7 +164,7 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
             role="dialog"
             aria-modal="true"
             aria-labelledby="case-preview-title"
-            className="relative h-full w-full max-w-lg bg-surface-solid border-l border-border shadow-2xl flex flex-col"
+            className="relative h-full w-full max-w-lg bg-surface-solid border-l border-border flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">

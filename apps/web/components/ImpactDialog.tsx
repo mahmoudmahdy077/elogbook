@@ -99,7 +99,7 @@ export default function ImpactDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="impact-dialog-title"
-            className={`panel p-6 max-w-md w-full shadow-xl border ${styles.accent}`}
+            className={`panel p-6 max-w-md w-full border ${styles.accent}`}
           >
             <h3 id="impact-dialog-title" className={`text-lg font-semibold font-heading mb-3 ${headerColor}`}>
               {title}
