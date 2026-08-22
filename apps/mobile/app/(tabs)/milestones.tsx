@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, MILESTONE_MAX_LEVEL } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
-const MAX_LEVEL = 5;
+// Milestone progress bars render the DB-valid 1..5 scale (migration 00080).
+const MAX_LEVEL = MILESTONE_MAX_LEVEL;
 
 interface MilestoneData {
   id: string;

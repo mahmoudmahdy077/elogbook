@@ -34,6 +34,9 @@ export const DUTY_SHIFT_TYPES = [
 
 export type DutyShiftType = (typeof DUTY_SHIFT_TYPES)[number]['key'];
 
+/** milestones.level scale — migration 00080_milestones.sql CHECK (level BETWEEN 1 AND 5) */
+export const MILESTONE_MAX_LEVEL = 5;
+
 /** Tenant-settings key for the resident daily case goal (tenants.settings JSONB). */
 export const DAILY_CASE_GOAL_KEY = 'daily_case_goal';
 
