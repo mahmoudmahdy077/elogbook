@@ -7,10 +7,10 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface Comment {
   id: string;
-  case_entry_id: string;
+  entry_id: string;
   parent_id: string | null;
   author_id: string;
-  content: string;
+  body: string;
   created_at: string;
   author_name?: string;
   replies?: Comment[];
@@ -51,11 +51,11 @@ export default function CaseComments({
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('case_comments')
+        .from('comments')
         .select(
-          'id, case_entry_id, parent_id, author_id, content, created_at, profiles!author_id(full_name)'
+          'id, entry_id, parent_id, author_id, body, created_at, profiles!author_id(full_name)'
         )
-        .eq('case_entry_id', caseEntryId)
+        .eq('entry_id', caseEntryId)
         .order('created_at', { ascending: true });
 
       if (fetchError) {
@@ -115,8 +115,8 @@ export default function CaseComments({
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'case_comments',
-          filter: `case_entry_id=eq.${caseEntryId}`,
+          table: 'comments',
+          filter: `entry_id=eq.${caseEntryId}`,
         },
         async (payload: { new: Record<string, unknown> }) => {
           const newC = payload.new as unknown as Comment;
@@ -168,11 +168,11 @@ export default function CaseComments({
     setError(null);
 
     const { error: insertError } = await supabase
-      .from('case_comments')
+      .from('comments')
       .insert({
-        case_entry_id: caseEntryId,
+        entry_id: caseEntryId,
         author_id: currentUserId,
-        content: newComment.trim(),
+        body: newComment.trim(),
         parent_id: null,
       });
 
@@ -192,11 +192,11 @@ export default function CaseComments({
     setError(null);
 
     const { error: insertError } = await supabase
-      .from('case_comments')
+      .from('comments')
       .insert({
-        case_entry_id: caseEntryId,
+        entry_id: caseEntryId,
         author_id: currentUserId,
-        content: replyContent.trim(),
+        body: replyContent.trim(),
         parent_id: parentId,
       });
 
@@ -452,7 +452,7 @@ function CommentCard({
           </span>
         )}
       </div>
-      <p className="text-sm text-text-secondary ml-8">{comment.content}</p>
+      <p className="text-sm text-text-secondary ml-8">{comment.body}</p>
       {!isReply && onReply && (
         <button
           type="button"
