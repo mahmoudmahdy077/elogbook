@@ -12,12 +12,14 @@ export default function ConsentRow({
   description,
   granted: initialGranted,
   tenantId,
+  userId,
 }: {
   consentType: string;
   label: string;
   description: string;
   granted: boolean;
   tenantId: string;
+  userId: string;
 }) {
   const router = useRouter();
   const [granted, setGranted] = useState<boolean>(initialGranted);
@@ -40,13 +42,12 @@ export default function ConsentRow({
       const rpcError = rpcResult.error;
 
       if (rpcError) {
-        // Fallback: write directly. (The RPC is the preferred path;
-        // it may not exist in older deploys and the fallback keeps
-        // the UI usable for the gate verification.)
+        // Fallback: write directly (RPC may be missing on older deploys).
         const { error: insertError } = await supabase
           .from('consent_records')
           .insert({
             tenant_id: tenantId,
+            user_id: userId,
             consent_type: consentType,
             revoked_at: newValue ? null : new Date().toISOString(),
             version: '1.0',
