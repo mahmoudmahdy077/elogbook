@@ -110,7 +110,7 @@ export default function MyCasesScreen() {
 
     const { data: entries } = await supabase
       .from('case_entries')
-      .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
+      .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, case_templates(name, specialty)')
       .eq('resident_id', profile.id);
 
     const mapped: CaseData[] = (entries ?? []).map((entry) => ({
@@ -124,7 +124,8 @@ export default function MyCasesScreen() {
       template_name: (entry.case_templates as { name: string }[] | null)?.[0]?.name ?? '',
       template_specialty: (entry.case_templates as { specialty: string | null }[] | null)?.[0]?.specialty ?? '',
       is_deidentified: entry.is_deidentified ?? true,
-      local_sync_status: entry.local_sync_status ?? '',
+      // Server rows are by definition synced; local-only pending rows live in WatermelonDB.
+      local_sync_status: 'synced',
     }));
 
     setCases(mapped);
