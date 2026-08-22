@@ -12,12 +12,16 @@ beforeEach(() => {
   vi.mocked(createServiceRoleClient).mockReturnValue({
     from: (table: string) => ({
       select: () => ({
-        eq: () => ({
-          eq: () => Promise.resolve({
-            data: table === 'push_tokens' ? [{ token: 'ExponentPushToken[abc]' }] : null,
-            error: null,
-          }),
-        }),
+        eq: (col: string) =>
+          col === 'id'
+            ? // profiles lookup by id -> return the linked auth user
+              { maybeSingle: () => Promise.resolve({ data: { user_id: 'auth-user-1' }, error: null }) }
+            : {
+                eq: () => Promise.resolve({
+                  data: table === 'push_tokens' ? [{ token: 'ExponentPushToken[abc]' }] : null,
+                  error: null,
+                }),
+              },
       }),
       update: () => ({ in: updateMock }),
     }),
