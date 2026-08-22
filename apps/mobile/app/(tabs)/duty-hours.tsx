@@ -4,16 +4,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { buildDutyPeriodPayload } from '../../lib/duty-payload';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, DUTY_SHIFT_TYPES } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
-const SHIFT_TYPES = [
-  { key: 'call', label: 'Call' },
-  { key: 'clinic', label: 'Clinic' },
-  { key: 'vacation', label: 'Vacation' },
-  { key: 'weekend', label: 'Weekend' },
-  { key: 'regular', label: 'Regular' },
-] as const;
+// DB-valid shift types from the shared package (migration 00069 parity).
+const SHIFT_TYPES = DUTY_SHIFT_TYPES;
 
 export default function DutyHoursScreen() {
   const [date, setDate] = useState(new Date());

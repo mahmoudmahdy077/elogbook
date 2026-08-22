@@ -9,7 +9,7 @@ import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, DEFAULT_DAILY_CASE_GOAL, DAILY_CASE_GOAL_KEY } from '@elogbook/shared';
 import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -49,6 +49,7 @@ export default function DashboardScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_CASE_GOAL);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
   const updateLastSyncLabel = () => {
@@ -59,6 +60,16 @@ export default function DashboardScreen() {
   const loadWithProfile = useCallback(async (profileId: string, tenantId: string, user: { id: string; app_metadata?: Record<string, unknown> }, isOnline: boolean | null) => {
 
     if (isOnline) {
+      // Daily case goal is tenant config (tenants.settings JSONB), not a hardcoded value.
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .maybeSingle();
+      const settings = (tenantRow?.settings ?? {}) as Record<string, unknown>;
+      const goal = Number(settings[DAILY_CASE_GOAL_KEY]);
+      setDailyGoal(Number.isFinite(goal) && goal > 0 ? goal : DEFAULT_DAILY_CASE_GOAL);
+
       const { data: goalsWithProgress } = await supabase
         .from('program_goals')
         .select('id, title, target_count, specialty, resident_id, tenant_id, goal_progress(current_count)')
@@ -210,7 +221,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* Today's case count widget */}
-      {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
+      {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={dailyGoal} />}
 
       <Animated.View entering={FadeIn.delay(100)} className="flex-row gap-3 mb-6">
         <View

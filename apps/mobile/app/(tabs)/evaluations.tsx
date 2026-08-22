@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, EVALUATION_FORM_TYPES } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
@@ -108,17 +108,8 @@ function EvaluationCard({
 
 // ── New Evaluation Sheet ─────────────────────────────────────────────
 
-// Mirrors evaluation_forms.form_type CHECK constraint (migration 00081).
-const FORM_TYPES = [
-  { key: 'mini_cex', label: 'Mini-CEX' },
-  { key: 'cex', label: 'CEX' },
-  { key: 'dops', label: 'DOPS' },
-  { key: 'cbd', label: 'Case-Based Discussion' },
-  { key: 'msf', label: 'Multi-Source Feedback' },
-  { key: 'osce', label: 'OSCE' },
-  { key: '360_review', label: '360 Review' },
-  { key: 'portfolio_review', label: 'Portfolio Review' },
-];
+// DB-valid form types from the shared package (migration 00081 parity).
+const FORM_TYPES = EVALUATION_FORM_TYPES;
 
 function NewEvaluationSheet({
   visible,
