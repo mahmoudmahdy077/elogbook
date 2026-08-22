@@ -16,7 +16,7 @@ export default async function HomePage() {
         .select('tenants!inner(slug)')
         .eq('user_id', user.id)
         .single();
-      const slug = (profile?.tenants as { slug: string } | null)?.slug;
+      const slug = (profile?.tenants as unknown as { slug: string } | null)?.slug;
       if (slug) redirect(`/${slug}/dashboard`);
     }
   } catch {

@@ -42,6 +42,22 @@ The system consists of a web client communicating over TLS with Supabase Auth, w
 
 ## Contact
 
+> **Pre-launch requirement:** replace the placeholder addresses below with the
+> production security mailbox and incident hotline before the public launch
+> (Task 8.1 of docs/LAUNCH_UPGRADE_PLAN.md). The mailboxes must be staffed and
+> monitored. Until replaced, this document must not be shared as certified.
+
 - **Security team:** security@example.com
 - **Engineering lead:** eng-lead@example.com
 - **Incident hotline:** +1-555-000-9999 (24/7 for critical incidents)
+
+## AI Feature Policy
+
+- AI insights (`ai-insights`) are de-identified-only by policy: the edge
+  function returns 403 for any request where `is_deidentified !== true`.
+- AI responses are screened by safety regexes (diagnosis/prescription/
+  prognosis patterns) with per-chunk abort on streaming, and every response
+  carries a mandatory educational disclaimer.
+- Per-resident AI usage is quota-gated atomically in the database
+  (`consume_ai_quota` / `release_ai_quota`); provider keys are encrypted at
+  rest and only decryptable through service-role paths.

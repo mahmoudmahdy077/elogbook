@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
 
-function sanitizeQuery(input: string): string {
+export function sanitizeQuery(input: string): string {
   const trimmed = input.slice(0, 1000);
   const sanitized = trimmed.replace(/[^a-zA-Z0-9\s.,!?;:'()\-_@\/]/g, '');
   return sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
@@ -157,7 +157,7 @@ const DIAGNOSIS_PATTERNS = /(patient has|diagnosed with|suffers from|condition i
 const PRESCRIPTION_PATTERNS = /(prescribe|take \d+\s*mg|dosage of|administer|recommend.*medication|start.*treatment\s+with)/i;
 const PROGNOSIS_PATTERNS = /(will recover|likely to develop|prognosis is|life expectancy|expected outcome|will resolve)/i;
 
-function checkSafety(text: string): string[] {
+export function checkSafety(text: string): string[] {
   const flags: string[] = [];
   if (DIAGNOSIS_PATTERNS.test(text)) flags.push('blocked_diagnosis');
   if (PRESCRIPTION_PATTERNS.test(text)) flags.push('blocked_prescription');
@@ -188,7 +188,8 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
-serve(async (req) => {
+if (import.meta.main) {
+  serve(async (req) => {
   const origin = req.headers.get('Origin');
   const headers = corsHeaders(origin);
 
@@ -199,6 +200,14 @@ serve(async (req) => {
   const authResult = await authenticate(req);
   if (authResult instanceof Response) return authResult;
   const { supabase, user, tenantId, role } = authResult;
+
+  // Config reads use the service client: the secret views are role-gated to
+  // tenant admins (Task 1.1), so resident/supervisor callers can no longer
+  // read them with their own token.
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
 
   let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
   try {
@@ -238,27 +247,6 @@ serve(async (req) => {
     );
   }
 
-  const { data: aiToggle, error: toggleError } = await supabase
-    .from('resident_ai_toggle')
-    .select('enabled, quota_limit, quota_used')
-    .eq('tenant_id', tenantId)
-    .eq('resident_id', resident_id)
-    .maybeSingle();
-
-  if (toggleError || !aiToggle || !aiToggle.enabled) {
-    return new Response(
-      JSON.stringify({ error: 'AI insights are not enabled for this resident' }),
-      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (aiToggle.quota_limit != null && aiToggle.quota_used != null && aiToggle.quota_used >= aiToggle.quota_limit) {
-    return new Response(
-      JSON.stringify({ error: 'AI query quota exceeded' }),
-      { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
-
   if (!await checkRateLimitDb(supabase, tenantId, resident_id)) {
     return new Response(
       JSON.stringify({ error: 'Rate limit exceeded. Please wait before making another request.' }),
@@ -281,12 +269,35 @@ serve(async (req) => {
     );
   }
 
-  let { data: aiConfig, error: configError } = await supabase
-    .from('secret_ai_config')
-    .select('*')
+  let aiConfig: { id: string; tenant_id: string; provider: string; model: string; endpoint_url: string | null; api_key: string } | null = null;
+  let configError: unknown = null;
+
+  const { data: rawConfig, error: rawConfigError } = await serviceSupabase
+    .from('ai_config')
+    .select('id, tenant_id, provider, model, endpoint_url, api_key_enc, key_version, is_active')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .maybeSingle();
+  configError = rawConfigError;
+
+  if (rawConfig && !rawConfigError) {
+    const { data: decrypted, error: decError } = await serviceSupabase.rpc('decrypt_with_version', {
+      p_encrypted: rawConfig.api_key_enc,
+      p_version: rawConfig.key_version,
+    });
+    if (decError || !decrypted) {
+      configError = decError ?? new Error('decrypt failed');
+    } else {
+      aiConfig = {
+        id: rawConfig.id,
+        tenant_id: rawConfig.tenant_id,
+        provider: rawConfig.provider,
+        model: rawConfig.model,
+        endpoint_url: rawConfig.endpoint_url,
+        api_key: decrypted as string,
+      };
+    }
+  }
 
   // Fallback to platform-default AI key
   if (!aiConfig && !configError) {
@@ -298,8 +309,8 @@ serve(async (req) => {
         provider: 'openai',
         api_key: platformKey,
         model: 'gpt-4o-mini',
-        is_active: true,
-      } as any;
+        endpoint_url: null,
+      } as unknown as { id: string; tenant_id: string; provider: string; model: string; endpoint_url: string | null; api_key: string };
     }
   }
 
@@ -380,6 +391,19 @@ Be concise, supportive, and evidence-based.`;
         cached: true,
       }),
       { headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Atomic quota consumption: reserves one unit before the provider call.
+  // If the provider call fails, the reservation is released (below).
+  const { data: quota, error: quotaError } = await supabase.rpc('consume_ai_quota', {
+    p_resident_id: resident_id,
+    p_count: 1,
+  });
+  if (quotaError || !quota || (quota as { code?: string }).code !== 'ok') {
+    return new Response(
+      JSON.stringify({ error: 'AI query quota exceeded or AI is disabled' }),
+      { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
@@ -563,6 +587,8 @@ Be concise, supportive, and evidence-based.`;
       );
     }
   } catch (err) {
+    // Provider call failed — release the reserved quota unit.
+    await supabase.rpc('release_ai_quota', { p_resident_id: resident_id, p_count: 1 }).catch(() => undefined);
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.error('AI provider request timed out', { provider, model });
       return new Response(
@@ -663,6 +689,8 @@ Be concise, supportive, and evidence-based.`;
             fullResponse = aiResponse;
           }
         } catch (err) {
+          // Stream failed — release the reserved quota unit.
+          await supabase.rpc('release_ai_quota', { p_resident_id: resident_id, p_count: 1 }).catch(() => undefined);
           if (err instanceof DOMException && err.name === 'AbortError') {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'AI provider request timed out' })}\n\n`));
           } else {
@@ -701,3 +729,4 @@ Be concise, supportive, and evidence-based.`;
     headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
   });
 });
+}

@@ -1,7 +1,7 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "NODE_ENV=development pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @elogbook/web build",
-  "outputDirectory": "apps/web/.next",
+  "outputDirectory": ".next",
   "devCommand": "pnpm --filter @elogbook/web dev",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/web/ packages/ pnpm-lock.yaml pnpm-workspace.yaml 2>/dev/null && exit 1 || exit 0",
 

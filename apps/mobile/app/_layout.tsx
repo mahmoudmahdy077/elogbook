@@ -12,7 +12,7 @@ import {
   AppState,
   type AppStateStatus,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -21,7 +21,8 @@ import { clinicalTokens } from '@elogbook/shared';
 import { usePreventScreenCapture, onScreenshotAttempt } from '../lib/screenshot-guard';
 import { useSyncInit } from '../lib/sync';
 import { parseDeepLink, navigateToDeepLink } from '../lib/linking';
-import { useNotificationNavigation } from '../hooks/useNotificationNavigation';
+import { registerNotificationHandler, handleColdStartNotification } from '../lib/notification-handler';
+import { registerPushToken, configureForegroundNotifications, clearBadge } from '../lib/push';
 import { useAuthGuard } from '../lib/auth-guard';
 import {
   getEffectiveSkipWindow,
@@ -29,7 +30,6 @@ import {
 } from '../lib/biometric-auth';
 import { BiometricGate } from '../components/BiometricGate';
 import { supabase } from '../lib/supabase';
-import { initDatabase } from '../lib/db/database';
 import { Sentry } from '../lib/sentry';
 
 // Font assets
@@ -83,9 +83,11 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const off = onScreenshotAttempt(() => {
       const msg = 'Screenshots are disabled to protect patient data.';
-      Platform.OS === 'android'
-        ? ToastAndroid.show(msg, ToastAndroid.LONG)
-        : Alert.alert('Screenshots blocked', msg);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(msg, ToastAndroid.LONG);
+      } else {
+        Alert.alert('Screenshots blocked', msg);
+      }
     });
     return () => off();
   }, []);
@@ -108,6 +110,16 @@ export default function RootLayout() {
 
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // ── Global session guard ────────────────────────────────────────
+  // When the session expires (or is cleared), send the user to login
+  // instead of leaving them on a silently-empty authenticated screen.
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    if (pathname === '/login') return;
+    router.replace('/login');
+  }, [authLoading, isAuthenticated, pathname, router]);
 
   // ── Biometric Gate ──────────────────────────────────────────────
   const [showBiometricGate, setShowBiometricGate] = useState(false);
@@ -150,9 +162,23 @@ export default function RootLayout() {
   }, [router]);
 
   // ── Init ────────────────────────────────────────────────────────
-  useEffect(() => { initDatabase().catch(console.error); }, []);
   useSyncInit();
-  useNotificationNavigation();
+
+  // Single notification-navigation path: register tap/cold-start handlers
+  // (M9 — the duplicate useNotificationNavigation hook is deleted in Task 8.6).
+  useEffect(() => {
+    const unsubscribe = registerNotificationHandler();
+    handleColdStartNotification();
+    return unsubscribe;
+  }, []);
+
+  // Register the device push token once authenticated.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    configureForegroundNotifications();
+    registerPushToken().catch(() => undefined);
+    clearBadge();
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     const handler = ({ url }: { url: string }) => {

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { loginAction } from './actions';
 import { APP_NAME } from '@elogbook/shared';
 import { FormField, FormDivider } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';
@@ -135,26 +136,51 @@ export default function LoginPage() {
   const handlePasswordLogin = async () => {
     setError('');
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError('Invalid email or password. Please try again.');
-      setLoading(false);
-      return;
-    }
+
     const params = new URLSearchParams(window.location.search);
     const next = safeRelativePath(params.get('next'));
-    if (next !== '/') {
-      router.push(next);
-      return;
+
+    // Try client-side SDK first
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!authError) {
+        if (next !== '/' && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !next.includes('://')) {
+          router.push(next); // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
+          return;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('tenants!inner(slug)')
+            .eq('user_id', session.user.id)
+            .single();
+          const tenants = profile?.tenants as { slug: string } | null;
+          router.push(tenants?.slug ? `/${tenants.slug}/dashboard` : '/dashboard');
+          return;
+        }
+      }
+    } catch {
+      // Client SDK failed (network error), fall through to server action
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tenants!inner(slug)')
-      .eq('user_id', session?.user?.id ?? '')
-      .single();
-    const tenants = profile?.tenants as { slug: string } | null;
-    router.push(tenants?.slug ? `/${tenants.slug}/dashboard` : '/dashboard');
+
+    // Fallback: server action login
+    try {
+      const result = await loginAction(email, password);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      if (next !== '/' && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !next.includes('://')) {
+        router.push(next);
+      } else {
+        router.push(result.redirectUrl || '/dashboard');
+      }
+    } catch {
+      setError('Unable to connect. Please try again.');
+      setLoading(false);
+    }
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -201,7 +227,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 shadow-sm">
+        <div className="bg-surface-solid rounded-2xl sm:rounded-3xl border border-border p-6 sm:p-8 md:p-10 ">
           {sent ? (
             <SuccessState email={email} />
           ) : (

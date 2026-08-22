@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { authenticate, corsHeaders } from '../_shared/auth.ts';
 
 interface AiQualityPayload {
   case_entry_id: string;
@@ -334,20 +334,45 @@ ${JSON.stringify(fieldValues, null, 2)}
 
 Provide completeness, specificity, classification, and overall scores (0-100), and specific suggestions for improvement.`;
 
-  // Fetch AI config from the secret view (handles decryption)
-  const { data: aiConfig, error: configError } = await supabase
-    .from('secret_ai_config')
-    .select('*')
+  // Fetch AI config via the service client: the secret views are role-gated
+  // to tenant admins (Task 1.1), and the base table RLS only allows tenant
+  // admins — supervisors must use the service client.
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
+
+  const { data: rawConfig, error: configError } = await serviceSupabase
+    .from('ai_config')
+    .select('id, tenant_id, provider, model, endpoint_url, api_key_enc, key_version, is_active')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (configError || !aiConfig) {
+  if (configError || !rawConfig) {
     return new Response(
       JSON.stringify({ error: 'No active AI configuration found for this tenant' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
+
+  const { data: decrypted, error: decError } = await serviceSupabase.rpc('decrypt_with_version', {
+    p_encrypted: rawConfig.api_key_enc,
+    p_version: rawConfig.key_version,
+  });
+  if (decError || !decrypted) {
+    return new Response(
+      JSON.stringify({ error: 'No active AI configuration found for this tenant' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const aiConfig = {
+    provider: rawConfig.provider as string,
+    model: rawConfig.model as string,
+    api_key: decrypted as string,
+    endpoint_url: rawConfig.endpoint_url as string | undefined,
+  };
 
   let aiResponseText: string;
   try {

@@ -55,7 +55,7 @@ export default function ResidentOverview() {
         setTotal(t); setApproved(a); setPending(p); setDraft(d);
       }
       const { data: g } = await supabase.from('program_goals').select('id,title,target_count,specialty,goal_progress(current_count)').eq('resident_id', profileId);
-      if (g) setGoals((g as any[]).map(x => ({ title: x.title, current: x.goal_progress?.[0]?.current_count ?? 0, target: x.target_count, specialty: x.specialty })));
+      if (g) setGoals((g as { title: string; target_count: number; specialty: string | null; goal_progress: Array<{ current_count: number }> | null }[]).map(x => ({ title: x.title, current: x.goal_progress?.[0]?.current_count ?? 0, target: x.target_count, specialty: x.specialty })));
     } catch { /* silent */ }
     setLoading(false);
   }, []);

@@ -1,4 +1,4 @@
-import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 
 interface NotificationPayload {
   title: string;
@@ -14,13 +14,23 @@ export async function sendPushNotification(
   userId: string,
   { title, body, data }: NotificationPayload,
 ): Promise<void> {
-  const supabase = await createServerSupabase();
+  const supabase = createServiceRoleClient();
+
+  // Callers pass a profiles.id; push_tokens.user_id stores the auth user id
+  // (profiles.id and auth.users.id are distinct — see 00001_schema.sql).
+  // Resolve profile -> auth user before matching tokens.
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (!prof?.user_id) return;
 
   // Get user's push tokens
   const { data: tokens, error } = await supabase
     .from('push_tokens')
     .select('token')
-    .eq('user_id', userId)
+    .eq('user_id', prof.user_id)
     .eq('active', true);
 
   if (error || !tokens?.length) {

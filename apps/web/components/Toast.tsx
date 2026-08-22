@@ -50,7 +50,7 @@ function ToastContainer({ toasts }: { toasts: ToastItem[] }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md text-sm shadow-lg ${bgMap[t.type]}`}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md text-sm ${bgMap[t.type]}`}
             style={{ maxWidth: '24rem' }}
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

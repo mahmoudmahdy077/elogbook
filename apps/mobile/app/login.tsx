@@ -12,7 +12,6 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { clearBiometricAuthCache } from '../lib/biometric-auth';
-import { setBiometricPreference } from '../lib/secure-store';
 import { clinicalTokens } from '@elogbook/shared';
 
 type AuthMode = 'login' | 'signup';
@@ -31,7 +30,6 @@ export default function LoginScreen() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         clearBiometricAuthCache();
-        setBiometricPreference(false).catch(console.error);
         router.replace('/(tabs)');
       }
     });
@@ -80,7 +78,6 @@ export default function LoginScreen() {
 
       // Clear biometric cache on fresh login
       clearBiometricAuthCache();
-      setBiometricPreference(false).catch(console.error);
       router.replace('/(tabs)');
     } else {
       const { error: signUpError } = await supabase.auth.signUp({

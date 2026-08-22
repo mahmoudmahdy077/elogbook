@@ -5,87 +5,65 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
-interface Milestone {
+export interface MilestoneDefinitionRow {
   id: string;
+  competency_area: string;
   sub_competency: string;
   description: string | null;
-  level_1_label: string | null;
-  level_2_label: string | null;
-  level_3_label: string | null;
-  level_4_label: string | null;
-  level_5_label: string | null;
-  specialty: string | null;
-}
-
-interface EpaMapping {
-  id: string;
-  milestone_id: string;
-  epa_name: string;
-  epa_description: string | null;
-  required_level: number;
+  labels: [string, string, string, string, string];
 }
 
 interface MilestonesMatrixProps {
-  milestones: Milestone[];
-  epaMappings: EpaMapping[];
+  milestones: MilestoneDefinitionRow[];
   currentLevels?: Record<string, number>;
   residentId?: string;
   tenantId?: string;
   isEditable?: boolean;
 }
 
-const LEVEL_LABELS = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5'];
-
+/**
+ * Milestones matrix — one row per sub-competency, current level per resident.
+ *
+ * Writes go to the REAL `milestones` table (per-resident assessment rows:
+ * tenant_id, resident_id, competency_area, sub_competency, level,
+ * assessment_date; UNIQUE(tenant_id, resident_id, sub_competency,
+ * assessment_date) — migration 00080). Each save appends a dated row and
+ * the page resolves the latest one per sub-competency.
+ */
 export default function MilestonesMatrix({
   milestones,
-  epaMappings,
   currentLevels = {},
   residentId,
-  tenantId: _tenantId,
+  tenantId,
   isEditable = false,
 }: MilestonesMatrixProps) {
   const supabase = createClient();
-  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(
-    null
-  );
+  const [selectedMilestone, setSelectedMilestone] =
+    useState<MilestoneDefinitionRow | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const epaMapByMilestone = epaMappings.reduce<Record<string, EpaMapping[]>>(
-    (acc, epa) => {
-      if (!acc[epa.milestone_id]) acc[epa.milestone_id] = [];
-      acc[epa.milestone_id].push(epa);
-      return acc;
-    },
-    {}
-  );
-
   async function handleSaveAssessment() {
-    if (!residentId || !selectedMilestone || selectedLevel < 1) return;
+    if (!residentId || !tenantId || !selectedMilestone || selectedLevel < 1) return;
 
     setSaving(true);
     setError(null);
 
-    const { error: upsertError } = await supabase
-      .from('milestone_assessments')
-      .upsert(
-        {
-          resident_id: residentId,
-          milestone_id: selectedMilestone.id,
-          current_level: selectedLevel,
-          assessed_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'resident_id,milestone_id',
-          ignoreDuplicates: false,
-        }
-      );
+    // Append a new dated assessment row (history preserved; page reads latest).
+    const { error: insertError } = await supabase.from('milestones').insert({
+      tenant_id: tenantId,
+      resident_id: residentId,
+      competency_area: selectedMilestone.competency_area || 'General',
+      sub_competency: selectedMilestone.sub_competency,
+      level: selectedLevel,
+      assessment_date: new Date().toISOString().slice(0, 10),
+    });
 
     setSaving(false);
 
-    if (upsertError) {
-      setError(upsertError.message);
+    if (insertError) {
+      setError(insertError.message);
       return;
     }
 
@@ -93,7 +71,7 @@ export default function MilestonesMatrix({
     setSelectedLevel(0);
   }
 
-  function handleCellClick(milestone: Milestone) {
+  function handleCellClick(milestone: MilestoneDefinitionRow) {
     if (!isEditable) return;
     setSelectedMilestone(milestone);
     setSelectedLevel(currentLevels[milestone.id] || 0);
@@ -106,26 +84,21 @@ export default function MilestonesMatrix({
       <div className="overflow-x-auto">
         <div className="min-w-[800px] bg-surface-solid rounded-2xl border border-border overflow-hidden">
           {/* Header row */}
-          <div className="grid grid-cols-[200px_repeat(5,1fr)_100px] border-b border-border bg-neutral-dark">
+          <div className="grid grid-cols-[220px_repeat(5,1fr)] border-b border-border bg-neutral-dark">
             <div className="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
               Sub-Competency
             </div>
-            {LEVEL_LABELS.map((label, i) => (
+            {milestones[0]?.labels.map((label, i) => (
               <div
-                key={label}
+                key={label + i}
                 className="px-3 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider border-l border-border"
               >
-                <span>{label}</span>
-                {milestones[0] && (
-                  <span className="block text-[10px] font-normal text-text-muted mt-0.5">
-                    {milestones[0][`level_${i + 1}_label` as keyof Milestone] as string ?? ''}
-                  </span>
-                )}
+                <span>Level {i + 1}</span>
+                <span className="block text-[10px] font-normal text-text-muted mt-0.5 normal-case">
+                  {label}
+                </span>
               </div>
             ))}
-            <div className="px-3 py-3 text-center text-xs font-semibold text-text-muted uppercase tracking-wider border-l border-border">
-              EPA
-            </div>
           </div>
 
           {/* Body rows */}
@@ -137,12 +110,11 @@ export default function MilestonesMatrix({
             ) : (
               milestones.map((milestone) => {
                 const currentLevel = currentLevels[milestone.id] || 0;
-                const milestoneEpas = epaMapByMilestone[milestone.id] || [];
 
                 return (
                   <div
                     key={milestone.id}
-                    className="grid grid-cols-[200px_repeat(5,1fr)_100px] hover:bg-neutral-dark transition-colors"
+                    className="grid grid-cols-[220px_repeat(5,1fr)] hover:bg-neutral-dark transition-colors"
                   >
                     {/* Sub-competency label */}
                     <div className="px-4 py-3 flex items-center">
@@ -150,6 +122,11 @@ export default function MilestonesMatrix({
                         <p className="text-sm font-medium text-text-primary">
                           {milestone.sub_competency}
                         </p>
+                        {milestone.competency_area && (
+                          <p className="text-xs text-text-muted mt-0.5">
+                            {milestone.competency_area}
+                          </p>
+                        )}
                         {milestone.description && (
                           <p className="text-xs text-text-muted mt-0.5 line-clamp-2">
                             {milestone.description}
@@ -168,6 +145,7 @@ export default function MilestonesMatrix({
                           type="button"
                           onClick={() => handleCellClick(milestone)}
                           disabled={!isEditable}
+                          aria-label={`Set ${milestone.sub_competency} to level ${level}`}
                           className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                             level === currentLevel
                               ? 'bg-primary text-white scale-110'
@@ -175,34 +153,11 @@ export default function MilestonesMatrix({
                                 ? 'bg-primary/30 text-primary'
                                 : 'bg-neutral-dark border border-border text-text-muted'
                           } ${isEditable ? 'cursor-pointer hover:scale-125' : 'cursor-default'}`}
-                          title={
-                            isEditable
-                              ? `Click to set ${milestone.sub_competency} to ${LEVEL_LABELS[level - 1]}`
-                              : milestone[
-                                  `level_${level}_label` as keyof Milestone
-                                ] as string ?? LEVEL_LABELS[level - 1]
-                          }
                         >
                           <span className="text-[10px] font-bold">{level}</span>
                         </button>
                       </div>
                     ))}
-
-                    {/* EPA column */}
-                    <div className="px-3 py-3 flex items-center justify-center border-l border-border">
-                      {milestoneEpas.length > 0 ? (
-                        <div className="text-center">
-                          <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                            {milestoneEpas.length} EPA
-                          </span>
-                          <div className="text-[9px] text-text-muted mt-0.5">
-                            Req: {milestoneEpas[0].required_level}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-text-muted">—</span>
-                      )}
-                    </div>
                   </div>
                 );
               })
@@ -233,6 +188,11 @@ export default function MilestonesMatrix({
                 <h3 className="text-lg font-semibold text-text-primary">
                   {selectedMilestone.sub_competency}
                 </h3>
+                {selectedMilestone.competency_area && (
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {selectedMilestone.competency_area}
+                  </p>
+                )}
                 {selectedMilestone.description && (
                   <p className="text-sm text-text-muted mt-1">
                     {selectedMilestone.description}
@@ -260,9 +220,7 @@ export default function MilestonesMatrix({
                     >
                       <div className="text-lg font-bold">{level}</div>
                       <div className="text-[10px] mt-0.5">
-                        {selectedMilestone[
-                          `level_${level}_label` as keyof Milestone
-                        ] as string ?? LEVEL_LABELS[level - 1]}
+                        {selectedMilestone.labels[level - 1]}
                       </div>
                     </button>
                   ))}

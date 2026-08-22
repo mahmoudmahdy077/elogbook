@@ -48,3 +48,8 @@ supabase/.temp/
 # CI debug logs
 *_logs.zip
 *_logs/
+
+# Playwright artifacts
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/blob-report/

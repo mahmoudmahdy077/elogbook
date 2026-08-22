@@ -36,7 +36,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -51,7 +51,7 @@ export async function POST(
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'active')
     .maybeSingle();
-  const features = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  const features = (sub as { subscription_plans?: { features?: Record<string, unknown> } | null })?.subscription_plans?.features ?? null;
   if (!features?.ai_config) {
     return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
   }

@@ -44,13 +44,21 @@ export default async function handler(req: Request) {
 
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('gateway_subscription_id')
+    .select('gateway_subscription_id, stripe_customer_id')
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'active')
     .single();
 
   if (!subscription?.gateway_subscription_id) {
     return new Response(JSON.stringify({ invoices: [] }), { status: 200 });
+  }
+
+  // Ownership: the requested customer must be the caller's own Stripe customer.
+  if (subscription.stripe_customer_id !== customerId) {
+    return new Response(
+      JSON.stringify({ error: 'customer_id does not belong to your subscription' }),
+      { status: 403 },
+    );
   }
 
   try {

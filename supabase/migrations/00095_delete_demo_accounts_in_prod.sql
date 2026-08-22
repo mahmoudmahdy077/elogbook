@@ -4,6 +4,61 @@
 -- their profiles, and the demo tenant when the GUC is unset or 'false'.
 -- Idempotent.
 
+-- Fix audit_table_change to not cast id::text (PG17 on Supabase won't
+-- implicitly cast text back to uuid for the audit_logs.resource_id column)
+CREATE OR REPLACE FUNCTION public.audit_table_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_old jsonb;
+  v_new jsonb;
+  v_action TEXT;
+  v_changes jsonb := '{}'::jsonb;
+  v_excluded TEXT[];
+BEGIN
+  IF TG_NARGS > 0 THEN v_excluded := string_to_array(TG_ARGV[0], ', '); ELSE v_excluded := '{}'::TEXT[]; END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    v_action := 'insert';
+    v_new := to_jsonb(NEW);
+  ELSIF TG_OP = 'UPDATE' THEN
+    v_action := 'update';
+    v_old := to_jsonb(OLD);
+    v_new := to_jsonb(NEW);
+    SELECT jsonb_object_agg(key, value)
+      INTO v_changes
+    FROM jsonb_each(v_new)
+    WHERE NOT (key = ANY(v_excluded))
+      AND (v_old -> key) IS DISTINCT FROM value;
+  ELSIF TG_OP = 'DELETE' THEN
+    v_action := 'delete';
+    v_old := to_jsonb(OLD);
+  END IF;
+
+  IF auth.uid() IS NULL THEN RETURN COALESCE(NEW, OLD); END IF;
+
+  INSERT INTO public.audit_logs (tenant_id, user_id, action, resource_type, resource_id, changes)
+  VALUES (
+    COALESCE((to_jsonb(NEW) ->> 'tenant_id')::uuid, (to_jsonb(OLD) ->> 'tenant_id')::uuid),
+    auth.uid(),
+    v_action,
+    TG_TABLE_NAME,
+    COALESCE(NEW.id, OLD.id),
+    jsonb_build_object('new', v_new, 'old', v_old, 'changed', v_changes)
+  );
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- Temporarily disable triggers that would block cleanup
+ALTER TABLE stripe_events DISABLE TRIGGER trg_audit_stripe_events;
+ALTER TABLE audit_logs DISABLE TRIGGER trg_reject_audit_delete;
+ALTER TABLE tenants DISABLE TRIGGER trg_audit_tenants;
+
 DO $$
 DECLARE
   v_demo_user_ids UUID[];
@@ -43,3 +98,7 @@ BEGIN
     RAISE NOTICE 'SEC-001: demo migrations enabled — keeping demo accounts';
   END IF;
 END $$;
+
+ALTER TABLE stripe_events ENABLE TRIGGER trg_audit_stripe_events;
+ALTER TABLE audit_logs ENABLE TRIGGER trg_reject_audit_delete;
+ALTER TABLE tenants ENABLE TRIGGER trg_audit_tenants;

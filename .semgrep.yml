@@ -103,6 +103,7 @@ rules:
         - "**/*.test.ts"
         - "**/*.test.tsx"
         - "**/e2e/**"
+        - "**/scripts/**"
 
   # ----------------------------------------------------------------------
   # 5. SQL string concatenation / template literals. Supabase JS

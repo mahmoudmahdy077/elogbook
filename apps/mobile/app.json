@@ -74,11 +74,13 @@
         }
       ],
       "expo-font",
+      "expo-notifications",
       [
         "expo-build-properties",
         {
           "android": {
             "usesCleartextTraffic": false,
+            "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
             "extraGradleProperties": [
               "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m",
               "hermes.bytecode.limit=65536",
@@ -94,8 +96,7 @@
     "extra": {
       "eas": {
         "projectId": "c0d8281c-0fae-4a16-b7ba-0b7a4a170bb7"
-      },
-      "sentryDsn": "https://example@sentry.io/0"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"

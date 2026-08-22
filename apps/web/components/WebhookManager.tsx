@@ -294,7 +294,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
       {/* ── Add/Edit Form ── */}
       {showForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">{editingId ? 'Edit Webhook' : 'New Webhook'}</h3>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -446,7 +446,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
           {webhooks.map((wh) => (
             <div
               key={wh.id}
-              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 shadow-sm"
+              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 "
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -506,7 +506,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                     title={wh.is_active ? 'Disable' : 'Enable'}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white  transition-transform ${
                         wh.is_active ? 'translate-x-5' : 'translate-x-1'
                       }`}
                     />

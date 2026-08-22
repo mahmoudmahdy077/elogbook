@@ -20,11 +20,11 @@ export default function CaseFilters({ basePath }: { basePath: string }) {
       const finalStatuses = updates.status !== undefined ? updates.status : selectedStatuses;
       const finalSort = updates.sort !== undefined ? updates.sort : sort;
 
-      if (finalSearch) params.set('search', finalSearch);
+      if (finalSearch && typeof finalSearch === 'string') params.set('search', finalSearch);
       if (Array.isArray(finalStatuses)) {
         finalStatuses.forEach((s) => params.append('status', s));
       }
-      if (finalSort && finalSort !== 'date_desc') params.set('sort', finalSort);
+      if (finalSort && typeof finalSort === 'string' && finalSort !== 'date_desc') params.set('sort', finalSort);
       params.set('page', '1');
 
       const qs = params.toString();

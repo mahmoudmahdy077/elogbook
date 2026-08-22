@@ -1,0 +1,26 @@
+# setup.docker-compose.yml
+# Setup-phase only: minimal stack for the wizard
+# Supabase is deployed by the wizard itself via Docker socket
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: elogbook-web:setup
+    container_name: elogbook-setup
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      SETUP_MODE: "true"
+    volumes:
+      - ./volumes/elogbook:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

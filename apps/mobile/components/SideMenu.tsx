@@ -47,7 +47,7 @@ export default function SideMenu({ role, userName }: SideMenuProps) {
   const handleNavigate = (route: string) => {
     close();
     // Short delay to let menu close animation play
-    setTimeout(() => router.push(route as any), 280);
+    setTimeout(() => router.push(route as Parameters<typeof router.push>[0]), 280);
   };
 
   return (
@@ -118,7 +118,7 @@ export default function SideMenu({ role, userName }: SideMenuProps) {
 
         {/* Menu items */}
         <ScrollView showsVerticalScrollIndicator={false}>
-          {items.map((item, index) => (
+          {items.map((item, _index) => (
             <TouchableOpacity
               key={item.key}
               className="flex-row items-center py-3.5"

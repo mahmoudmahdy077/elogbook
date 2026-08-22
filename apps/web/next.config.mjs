@@ -1,12 +1,22 @@
-import bundleAnalyzer from '@next/bundle-analyzer';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
 
+// Turbopack requires an absolute root — derive it from this config file's location
+const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-});
+let withBundleAnalyzer = (config) => config;
+try {
+  const bundleAnalyzer = (await import('@next/bundle-analyzer')).default;
+  withBundleAnalyzer = bundleAnalyzer({
+    enabled: process.env.ANALYZE === 'true',
+  });
+} catch {
+  // bundle-analyzer is a dev-only dependency; ignore if not installed
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -15,10 +25,10 @@ const nextConfig = {
   compress: true,
   transpilePackages: ['@elogbook/shared'],
   turbopack: {
-    root: process.env.TURBOPACK_ROOT ?? '../..',
+    root: process.env.TURBOPACK_ROOT ?? monorepoRoot,
   },
   experimental: {
-    optimizePackageImports: ['@heroui/react', 'framer-motion', '@sentry/nextjs'],
+    optimizePackageImports: ['framer-motion', '@sentry/nextjs'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],

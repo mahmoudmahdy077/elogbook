@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, EVALUATION_FORM_TYPES } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
@@ -44,7 +44,7 @@ function EvaluationCard({
   const statusColor =
     evaluation.status === 'completed'
       ? '#10B981'
-      : evaluation.status === 'draft'
+      : evaluation.status === 'pending'
         ? '#F59E0B'
         : '#6B7280';
 
@@ -65,7 +65,7 @@ function EvaluationCard({
           </Text>
           {evaluation.encounter_date && (
             <Text
-              className="text-[#8E8E93] text-xs mt-1"
+              className="text-text-muted text-xs mt-1"
               style={{ fontFamily: clinicalTokens.fonts.mono }}
             >
               {new Date(evaluation.encounter_date).toLocaleDateString()}
@@ -73,7 +73,7 @@ function EvaluationCard({
           )}
           {evaluation.setting && (
             <Text
-              className="text-[#8E8E93] text-xs mt-0.5"
+              className="text-text-muted text-xs mt-0.5"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               {evaluation.setting}
@@ -108,14 +108,8 @@ function EvaluationCard({
 
 // ── New Evaluation Sheet ─────────────────────────────────────────────
 
-const FORM_TYPES = [
-  { key: 'mini_cex', label: 'Mini-CEX' },
-  { key: 'dops', label: 'DOPS' },
-  { key: 'cbd', label: 'Case-Based Discussion' },
-  { key: 'msf', label: 'Multi-Source Feedback' },
-  { key: 'osce', label: 'OSCE' },
-  { key: 'procedure_log', label: 'Procedure Log' },
-];
+// DB-valid form types from the shared package (migration 00081 parity).
+const FORM_TYPES = EVALUATION_FORM_TYPES;
 
 function NewEvaluationSheet({
   visible,
@@ -189,7 +183,7 @@ function NewEvaluationSheet({
       encounter_date: encounterDate || null,
       setting: setting || null,
       ratings: {},
-      status: 'draft',
+      status: 'pending',
     });
 
     setSaving(false);
@@ -517,6 +511,16 @@ export default function EvaluationsScreen() {
       .sort((a, b) => b.count - a.count);
   }, [evaluations]);
 
+  // Group types expanded past the 5-card preview ("+N more")
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = useCallback((type: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type); else next.add(type);
+      return next;
+    });
+  }, []);
+
   if (loading) {
     return (
       <ScreenWrapper title="Evaluations" scroll={false}>
@@ -568,7 +572,7 @@ export default function EvaluationsScreen() {
         {groupedByType.length === 0 && (
           <Animated.View entering={FadeIn} className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-[#8E8E93] text-sm"
+              className="text-text-muted text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
               >
               No evaluations found.
@@ -600,7 +604,7 @@ export default function EvaluationsScreen() {
               </View>
             </View>
 
-            {group.evaluations.slice(0, 5).map((ev, cardIdx) => (
+            {group.evaluations.slice(0, expandedGroups.has(group.type) ? undefined : 5).map((ev, cardIdx) => (
               <Animated.View
                 key={ev.id}
                 entering={FadeInRight.delay(cardIdx * 80).springify()}
@@ -609,7 +613,16 @@ export default function EvaluationsScreen() {
                   key={ev.id}
                   evaluation={ev}
                   onPress={() => {
-                    // Detail view could navigate to a full evaluation detail screen
+                    // Show full score + metadata inline (no detail screen exists yet)
+                    Alert.alert(
+                      ev.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                      [
+                        `Status: ${ev.status}`,
+                        `Overall score: ${ev.overall_score ?? '—'}`,
+                        ev.encounter_date ? `Encounter: ${new Date(ev.encounter_date).toLocaleDateString()}` : null,
+                        ev.setting ? `Setting: ${ev.setting}` : null,
+                      ].filter(Boolean).join('\n')
+                    );
                   }}
                 />
               </Animated.View>
@@ -617,12 +630,19 @@ export default function EvaluationsScreen() {
 
             {group.evaluations.length > 5 && (
               <Animated.View entering={FadeIn}>
-              <TouchableOpacity className="py-2">
+              <TouchableOpacity
+                className="py-2"
+                onPress={() => toggleGroup(group.type)}
+                accessibilityRole="button"
+                accessibilityLabel={expandedGroups.has(group.type) ? 'Show fewer' : `Show ${group.evaluations.length - 5} more`}
+              >
                 <Text
                   className="text-primary text-sm text-center"
                   style={{ fontFamily: clinicalTokens.fonts.body }}
                 >
-                  +{group.evaluations.length - 5} more
+                  {expandedGroups.has(group.type)
+                    ? 'Show less'
+                    : `+${group.evaluations.length - 5} more`}
                 </Text>
               </TouchableOpacity>
               </Animated.View>

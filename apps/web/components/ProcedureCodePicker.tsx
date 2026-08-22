@@ -7,9 +7,8 @@ import { createClient } from '@/lib/supabase/client';
 interface ProcedureCode {
   id: string;
   code: string;
-  name: string;
-  specialty: string | null;
-  description: string | null;
+  description: string;
+  category: string | null;
 }
 
 interface ProcedureCodePickerProps {
@@ -45,18 +44,14 @@ export default function ProcedureCodePicker({
 
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
-      let dbQuery = supabase
+      const dbQuery = supabase
         .from('procedure_codes')
-        .select('id, code, name, specialty, description')
-        .textSearch('name', query.trim(), {
+        .select('id, code, description, category')
+        .textSearch('description', query.trim(), {
           type: 'websearch',
           config: 'english',
         })
         .limit(20);
-
-      if (tenantId) {
-        dbQuery = dbQuery.eq('tenant_id', tenantId);
-      }
 
       const { data } = await dbQuery;
       setResults((data ?? []) as ProcedureCode[]);
@@ -165,7 +160,7 @@ export default function ProcedureCodePicker({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
+            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl overflow-hidden max-h-60 overflow-y-auto"
           >
             {results.map((code) => {
               const isSelected = selectedCodes.includes(code.id);
@@ -184,11 +179,11 @@ export default function ProcedureCodePicker({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-text-primary truncate font-medium">
-                      {code.name}
+                      {code.description}
                     </p>
-                    {code.specialty && (
+                    {code.category && (
                       <p className="text-text-muted text-xs truncate">
-                        {code.specialty}
+                        {code.category}
                       </p>
                     )}
                   </div>
@@ -218,7 +213,7 @@ export default function ProcedureCodePicker({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl shadow-lg p-4 text-sm text-text-muted text-center"
+            className="absolute z-50 mt-1 w-full bg-surface-solid border border-border rounded-xl p-4 text-sm text-text-muted text-center"
           >
             No procedure codes found for &quot;{query}&quot;
           </motion.div>

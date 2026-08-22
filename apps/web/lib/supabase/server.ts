@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { parseWebServerEnv, parseWebPublicEnv } from '@elogbook/env';
 
 export async function createServerSupabase() {
-  const env = parseWebServerEnv(process.env);
+  parseWebServerEnv(process.env);
   const publicEnv = parseWebPublicEnv(process.env);
   const url = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
   const key = publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;

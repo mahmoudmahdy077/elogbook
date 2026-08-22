@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { escapeCsvCell } from '@/lib/csv';
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -19,12 +20,17 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id, tenants!inner(slug)')
+    .select('tenant_id, role, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || !profile.tenants || (profile.tenants as { slug: string }).slug !== tenantSlug) {
+  if (!profile || !profile.tenants || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  }
+
+  const REPORT_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
+  if (!REPORT_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
   let query = supabase
@@ -44,7 +50,7 @@ export async function GET(request: NextRequest) {
     statusCounts[status] = (statusCounts[status] || 0) + 1;
   }
 
-  const csv = ['Status,Count', ...Object.entries(statusCounts).map(([s, c]) => `"${s}",${c}`)].join('\n');
+  const csv = ['Status,Count', ...Object.entries(statusCounts).map(([s, c]) => [s, c].map(escapeCsvCell).join(','))].join('\n');
 
   return new NextResponse(csv, {
     headers: {

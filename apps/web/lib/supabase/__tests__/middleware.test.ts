@@ -335,6 +335,55 @@ describe('updateSession - auth & tenant slug matching', () => {
   });
 });
 
+describe('updateSession - public marketing/API surface', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+    mockServerClientAuth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error('Not authenticated'),
+    });
+  });
+
+  // Regression: these routes are public by design (marketing funnel,
+  // support page, API docs, health check, public form endpoint, SSO probe)
+  // but used to be bounced to /login for anonymous visitors because the
+  // public-route whitelist was incomplete.
+  it.each([
+    '/pricing',
+    '/signup',
+    '/contact',
+    '/api-docs',
+    '/api/health',
+    '/api/contact',
+    '/api/sso/check',
+  ])('passes through for anonymous user on %s', async (route) => {
+    const req = makeNextRequest(`https://app.elogbook.dev${route}`, { method: 'GET' });
+    const res = await updateSession(req);
+    expect(res.status).not.toBe(307);
+    expect(res.status).not.toBe(403);
+  });
+
+  it('allows matching-origin POST to /api/contact without auth redirect', async () => {
+    const req = makeNextRequest('https://app.elogbook.dev/api/contact', {
+      method: 'POST',
+      headers: { origin: 'https://app.elogbook.dev' },
+    });
+    const res = await updateSession(req);
+    expect(res.status).not.toBe(403);
+    expect(res.status).not.toBe(307);
+  });
+
+  it('still redirects anonymous user to /login on protected dashboard route', async () => {
+    const req = makeNextRequest('https://app.elogbook.dev/dashboard', { method: 'GET' });
+    const res = await updateSession(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get('Location');
+    expect(location).toContain('/login');
+  });
+});
+
 describe('updateSession - pass-through when no env vars', () => {
   it('passes through without CSRF check when SUPABASE_URL is missing', async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;

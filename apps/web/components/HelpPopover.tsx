@@ -67,7 +67,7 @@ export default function HelpPopover({ children, side = 'bottom' }: HelpPopoverPr
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={`absolute z-50 w-72 ${positionClasses}`}
           >
-            <div className="panel p-4 text-sm text-neutral-light/80 leading-relaxed shadow-lg">
+            <div className="panel p-4 text-sm text-neutral-light/80 leading-relaxed">
               {children}
             </div>
           </motion.div>

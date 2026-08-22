@@ -29,7 +29,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
 
   if (!profile) redirect('/login');
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
 
   if (!['director', 'institution_admin', 'admin'].includes(profile.role)) {

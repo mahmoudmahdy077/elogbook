@@ -23,7 +23,7 @@ DECLARE v_allowed BOOLEAN; v_max INT;
 BEGIN
   SELECT allowed, max_cases INTO v_allowed, v_max FROM public.check_case_quota(NEW.tenant_id);
   IF NOT v_allowed THEN
-    RAISE EXCEPTION 'Free plan limit reached (%)%. Upgrade to log more cases.', v_max;
+    RAISE EXCEPTION 'Free plan limit reached (%). Upgrade to log more cases.', v_max;
   END IF;
   RETURN NEW;
 END $$;

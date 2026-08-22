@@ -53,6 +53,13 @@ export default [
     },
   },
   {
+    // Node CLI scripts (e.g. scripts/responsive-sweep.mjs)
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ['e2e/**/*.ts', 'e2e/**/*.tsx'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',

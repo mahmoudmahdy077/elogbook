@@ -118,7 +118,7 @@ export default function SubscriptionPlans({
               transition={{ duration: 0.3, delay: index * staggerDelay, ease: [0.4, 0, 0.2, 1] }}
               whileHover={{ scale: isCurrent ? 1 : 1.02 }}
               className={`panel p-5 flex flex-col ${
-                isCurrent ? 'ring-2 ring-primary shadow-[0_0_16px_rgba(13,148,136,0.15)]' : ''
+                isCurrent ? 'ring-2 ring-primary' : ''
               }`}
             >
               {isCurrent && (

@@ -1,37 +1,69 @@
-# E-Logbook Enterprise — local dev stack
-#
-# Usage:
-#   docker compose up -d
-#   docker compose ps          # wait for "healthy"
-#   curl http://localhost:3000/api/health
-#
-# The web service is built from apps/web/Dockerfile. For Supabase
-# (Postgres, Auth, Edge Functions) use the Supabase CLI in a separate
-# shell: `supabase start`. The two stacks are intentionally not coupled
-# here — Supabase is most easily run via its own CLI which handles the
-# ~12 docker images it needs.
+# docker-compose.yml
+# Production stack: E-Logbook app + Caddy
+# Supabase runs from its own compose file at /opt/supabase/docker-compose.yml
+# E-Logbook connects via the shared supabase_default network
+
+name: elogbook
 
 services:
-  web:
+  app:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: elogbook-web:local
+    image: elogbook-web:latest
     container_name: elogbook-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      SETUP_MODE: "false"
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
       SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - ./volumes/elogbook:/app/data
+    depends_on:
+      api-gw:
+        condition: service_healthy
+    networks:
+      - elogbook
+      - supabase_default
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  caddy:
+    image: caddy:2
+    container_name: elogbook-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - elogbook
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  elogbook:
+    driver: bridge
+  supabase_default:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

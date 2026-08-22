@@ -75,11 +75,17 @@ export default function MiniCEXForm({
         tenant_id: tenantId,
         resident_id: residentId,
         evaluator_id: evaluatorId,
-        form_type: 'Mini-CEX',
-        domains: ratings,
-        total_score: totalScore,
-        evaluator_notes: notes || null,
-        completed_at: new Date().toISOString(),
+        form_type: 'mini_cex',
+        ratings: {
+          domains: Object.entries(ratings).map(([key, score]) => {
+            const def = DOMAINS.find((d) => d.key === key);
+            return { name: def?.label ?? key, key, score, max: 9 };
+          }),
+        },
+        overall_score: Math.round((totalScore / (DOMAINS.length * 9)) * 100) / 10,
+        feedback: notes || null,
+        status: 'completed',
+
       });
 
     setSaving(false);

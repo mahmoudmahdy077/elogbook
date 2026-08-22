@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ClientSubscriptionPlans from '@/components/ClientSubscriptionPlans';
 import ManageSubscriptionButton from '@/components/ManageSubscriptionButton';
+import InvoiceHistory from '@/components/InvoiceHistory';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface SubscriptionPlan {
@@ -16,12 +17,17 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
 
   if (auth.tenant.slug !== tenantSlug) redirect('/login');
 
+  const BILLING_ROLES = ['institution_admin', 'admin'];
+  if (!BILLING_ROLES.includes(auth.profile.role)) {
+    redirect(`/${tenantSlug}/dashboard`);
+  }
+
   const supabase = await createServerSupabase();
 
   const [plansResult, subscriptionResult, gatewayResult, purchasesResult, caseCountResult, residentCountResult, paymentsResult] = await Promise.all([
     supabase
       .from('subscription_plans')
-      .select('name, price_monthly')
+      .select('id, name, slug, price_monthly, features, tenant_type, max_residents')
       .eq('tenant_type', auth.tenant.tenant_type)
       .order('price_monthly', { ascending: true }),
     supabase
@@ -134,6 +140,8 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
           </div>
         </div>
       )}
+      {subscription && <InvoiceHistory />}
+
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
         <h2 className="text-lg font-semibold mb-3">Usage This Period</h2>

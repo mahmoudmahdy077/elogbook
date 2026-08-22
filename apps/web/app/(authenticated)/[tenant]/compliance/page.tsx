@@ -130,28 +130,31 @@ async function fetchPhiInventory(
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .eq('is_deidentified', false),
+      .eq('is_deidentified', false)
+      .is('deleted_at', null),
     supabase
       .from('case_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .eq('is_deidentified', true),
+      .eq('is_deidentified', true)
+      .is('deleted_at', null),
   ]);
 
   const rows: PhiInventoryRow[] = [];
 
-  if (totalCaseEntries > 0) {
+  if ((totalCaseEntries ?? 0) > 0) {
     rows.push({
       table_name: 'case_entries',
-      total_records: totalCaseEntries,
-      phi_present: phiPresent,
-      phi_redacted: phiRedacted,
-      phi_percentage: totalCaseEntries > 0 ? (phiPresent / totalCaseEntries) * 100 : 0,
+      total_records: totalCaseEntries ?? 0,
+      phi_present: phiPresent ?? 0,
+      phi_redacted: phiRedacted ?? 0,
+      phi_percentage: (totalCaseEntries ?? 0) > 0 ? ((phiPresent ?? 0) / (totalCaseEntries ?? 0)) * 100 : 0,
     });
   }
 

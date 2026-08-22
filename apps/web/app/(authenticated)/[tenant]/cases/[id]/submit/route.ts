@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
+import { notifyPendingApproval } from '@/lib/notifications';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
@@ -47,7 +48,7 @@ async function handleSubmit(
     .single();
 
   if (callerProfile) {
-    const callerTenant = callerProfile.tenants as { slug: string } | null;
+    const callerTenant = callerProfile.tenants as unknown as { slug: string } | null;
     if (callerTenant && callerTenant.slug !== tenantSlug) {
       return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
     }
@@ -67,7 +68,7 @@ async function handleSubmit(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role')
+    .select('id, role, full_name')
     .eq('user_id', user.id)
     .single();
 
@@ -143,6 +144,14 @@ async function handleSubmit(
   }).catch((err) => {
     console.error('[webhooks] Submit dispatch error:', err);
   });
+
+  // Push notification to supervisors (fire-and-forget; failures are logged).
+  if (supervisors && supervisors.length > 0) {
+    for (const s of supervisors) {
+      notifyPendingApproval(id, s.id, profile.full_name || 'A resident')
+        .catch((err) => console.error('[push] pending-approval push failed:', err));
+    }
+  }
 
   return NextResponse.json({ success: true });
 }

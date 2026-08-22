@@ -13,7 +13,7 @@ type ExportFormat = 'csv';
 export default function AuditExportUI({ tenantSlug, dateFrom, dateTo }: AuditExportUIProps) {
   const [startDate, setStartDate] = useState(dateFrom || '');
   const [endDate, setEndDate] = useState(dateTo || '');
-  const [format, _setFormat] = useState<ExportFormat>('csv');
+  const [format] = useState<ExportFormat>('csv');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

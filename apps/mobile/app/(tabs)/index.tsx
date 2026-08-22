@@ -9,7 +9,7 @@ import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { syncService } from '../../lib/sync';
 import { NativeProgressRing as ProgressRing } from '@elogbook/shared/components/native';
 import { AccessibleText } from '../../components/AccessibleText';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, DEFAULT_DAILY_CASE_GOAL, DAILY_CASE_GOAL_KEY } from '@elogbook/shared';
 import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -30,6 +30,16 @@ interface GoalData {
   specialty: string | null;
 }
 
+function formatRelativeTime(ts: number): string {
+  const secs = Math.round((Date.now() - ts) / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return `${Math.floor(hours / 24)} d ago`;
+}
+
 export default function DashboardScreen() {
   const [stats, setStats] = useState<Stats>({ draft: 0, pending: 0, approved: 0 });
   const [todayStats, setTodayStats] = useState<TodayStats>({ total: 0, pending: 0, approved: 0, rejected: 0, draft: 0 });
@@ -39,84 +49,27 @@ export default function DashboardScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [lastSyncAgo, setLastSyncAgo] = useState<string>('');
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_CASE_GOAL);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
-  useFocusEffect(useCallback(() => {
-    loadData();
-  }, [loadData]));
-
-  useEffect(() => {
-    // Detect role for conditional rendering
-    (async () => {
-      const { role } = await getRoleFromAuth();
-      setUserRole(role);
-      setRoleLoaded(true);
-    })();
-
-    const netUnsub = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected !== true);
-    });
-
-    const syncUnsub = syncService.onStatusChange((status) => {
-      if (status === 'synced' || status === 'idle') {
-        loadData();
-        updateLastSyncLabel();
-      }
-    });
-
-    const appStateSub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        loadData();
-      }
-    });
-
-    updateLastSyncLabel();
-    const interval = setInterval(updateLastSyncLabel, 60000);
-
-    return () => {
-      netUnsub();
-      syncUnsub();
-      appStateSub.remove();
-      clearInterval(interval);
-    };
-  }, []);
-
-  const updateLastSyncLabel = async () => {
-    setLastSyncAgo('');
+  const updateLastSyncLabel = () => {
+    const ts = syncService.getLastSyncedAt();
+    setLastSyncAgo(ts ? formatRelativeTime(ts) : 'never');
   };
 
-  const loadData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
-    const profileId = (user.app_metadata?.profile_id as string) ?? null;
-    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
-
-    if (!profileId || !tenantId) {
-      // Fallback: try direct DB query (may fail due to RLS policy bug)
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, tenant_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!profile) { setLoading(false); return; }
-        const netState = await NetInfo.fetch();
-        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
-      } catch {
-        setLoading(false);
-      }
-      return;
-    }
-
-    const netState = await NetInfo.fetch();
-    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
-  };
-
-  const loadWithProfile = async (profileId: string, tenantId: string, user: any, isOnline: boolean | null) => {
+  const loadWithProfile = useCallback(async (profileId: string, tenantId: string, user: { id: string; app_metadata?: Record<string, unknown> }, isOnline: boolean | null) => {
 
     if (isOnline) {
+      // Daily case goal is tenant config (tenants.settings JSONB), not a hardcoded value.
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .maybeSingle();
+      const settings = (tenantRow?.settings ?? {}) as Record<string, unknown>;
+      const goal = Number(settings[DAILY_CASE_GOAL_KEY]);
+      setDailyGoal(Number.isFinite(goal) && goal > 0 ? goal : DEFAULT_DAILY_CASE_GOAL);
+
       const { data: goalsWithProgress } = await supabase
         .from('program_goals')
         .select('id, title, target_count, specialty, resident_id, tenant_id, goal_progress(current_count)')
@@ -157,13 +110,84 @@ export default function DashboardScreen() {
     setTodayStats(todayStatsResult);
 
     setLoading(false);
-  };
+  }, []);
+
+  const loadData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    // Read profile_id and tenant_id from JWT app_metadata (fast, no DB query)
+    const profileId = (user.app_metadata?.profile_id as string) ?? null;
+    const tenantId = (user.app_metadata?.tenant_id as string) ?? null;
+
+    if (!profileId || !tenantId) {
+      // Fallback: try direct DB query (may fail due to RLS policy bug)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        const netState = await NetInfo.fetch();
+        await loadWithProfile(profile.id, profile.tenant_id, user, netState.isConnected);
+      } catch {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const netState = await NetInfo.fetch();
+    await loadWithProfile(profileId, tenantId, user, netState.isConnected);
+  }, [loadWithProfile]);
+
+  useFocusEffect(useCallback(() => {
+    loadData();
+  }, [loadData]));
+
+  useEffect(() => {
+    // Detect role for conditional rendering
+    (async () => {
+      const { role } = await getRoleFromAuth();
+      setUserRole(role);
+      setRoleLoaded(true);
+    })();
+
+    const netUnsub = NetInfo.addEventListener((state) => {
+      setIsOffline(state.isConnected !== true);
+    });
+
+    const syncUnsub = syncService.onStatusChange((status) => {
+      if (status === 'synced' || status === 'idle') {
+        loadData();
+        updateLastSyncLabel();
+      }
+    });
+
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        loadData();
+      }
+    });
+
+    updateLastSyncLabel();
+    const interval = setInterval(updateLastSyncLabel, 60000);
+
+    return () => {
+      netUnsub();
+      syncUnsub();
+      appStateSub.remove();
+      clearInterval(interval);
+    };
+    // loadData is stable (useCallback) — run subscriptions once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  }, []);
+  }, [loadData]);
 
   if (loading && !roleLoaded) {
     return (
@@ -197,7 +221,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* Today's case count widget */}
-      {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={10} />}
+      {todayStats.total > 0 && <CaseCountWidget stats={todayStats} dailyGoal={dailyGoal} />}
 
       <Animated.View entering={FadeIn.delay(100)} className="flex-row gap-3 mb-6">
         <View

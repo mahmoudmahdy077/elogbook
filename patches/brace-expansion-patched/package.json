@@ -1,0 +1,10 @@
+{
+  "name": "brace-expansion",
+  "version": "1.1.16-patched",
+  "description": "Brace expansion as known from sh/bash (patched for CVE-2026-14257)",
+  "main": "index.js",
+  "dependencies": {
+    "balanced-match": "^1.0.0",
+    "concat-map": "0.0.1"
+  }
+}

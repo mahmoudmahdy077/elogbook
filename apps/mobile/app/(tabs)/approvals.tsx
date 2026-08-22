@@ -49,7 +49,7 @@ const ApprovalCard = React.memo(function ApprovalCard({
           <Text className="text-[#007AFF] text-xs mt-0.5" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.specialty}
           </Text>
-          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
           {item.comment && (
@@ -179,11 +179,15 @@ export default function ApprovalsScreen() {
       haptics.approvalAction();
 
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
         const { error } = await supabase.rpc(
           action === 'approve' ? 'approve_case' : 'reject_case',
           {
             p_entry_id: entryId,
-            ...(action === 'reject' ? { p_comment: comment ?? '' } : {}),
+            p_supervisor_id: user.id,
+            p_comment: action === 'reject' ? comment ?? '' : null,
           }
         );
 

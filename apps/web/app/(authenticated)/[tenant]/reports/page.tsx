@@ -3,6 +3,8 @@ import { getAuthContext } from '@/lib/supabase/auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import WebAdsExportButton from '@/components/WebAdsExportButton';
+import GapAnalysisRunner from '@/components/GapAnalysisRunner';
 
 export default async function ReportsPage({ params, searchParams }: { params: Promise<{ tenant: string }>; searchParams: Promise<{ date_from?: string; date_to?: string }> }) {
   const { tenant: tenantSlug } = await params;
@@ -12,72 +14,52 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const supabase = await createServerSupabase();
   const tenantId = auth.tenant.id;
   const isResident = auth.profile.role === 'resident';
+  const isDirectorPlus = ['supervisor', 'director', 'institution_admin', 'admin'].includes(auth.profile.role);
 
-  // Report queries
-  const buildQuery = (status?: string) => {
-    let q = supabase
-      .from('case_entries')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
-    if (status) q = q.eq('status', status);
-    if (date_from) q = q.gte('created_at', date_from);
-    if (date_to) q = q.lte('created_at', date_to);
-    return q;
+  const { data: reportData, error: reportError } = await supabase.rpc('get_report_counts', {
+    p_tenant_id: tenantId,
+    p_date_from: date_from ?? '',
+    p_date_to: date_to ?? '',
+  });
+
+  if (reportError) return <ErrorDisplay message={reportError.message} />;
+
+  // Residents list for the gap-analysis runner (director+ only)
+  let residentOptions: { id: string; full_name: string }[] = [];
+  if (isDirectorPlus) {
+    const { data: residentRows } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'resident')
+      .order('full_name');
+    residentOptions = residentRows ?? [];
+  }
+
+  const rpc = reportData as unknown as {
+    status_counts: Record<string, number>;
+    specialty_counts: Record<string, number>;
+    eval_averages: { clinical: number; prof: number; proc: number };
+    eval_count: number;
   };
 
-  const [{ count: totalCount }, { count: approvedCount }, { count: pendingCount }, { count: draftCount }] = await Promise.all([
-    buildQuery(),
-    buildQuery('approved'),
-    buildQuery('pending'),
-    buildQuery('draft'),
-  ]);
+  const statusCounts: Record<string, number> = {
+    draft: rpc.status_counts?.draft ?? 0,
+    pending: rpc.status_counts?.pending ?? 0,
+    approved: rpc.status_counts?.approved ?? 0,
+    rejected: rpc.status_counts?.rejected ?? 0,
+  };
+  const totalCount = statusCounts.draft + statusCounts.pending + statusCounts.approved + statusCounts.rejected;
+  const approvedCount = statusCounts.approved;
+  const pendingCount = statusCounts.pending;
+  const draftCount = statusCounts.draft;
+  const specialtyCounts: Record<string, number> = rpc.specialty_counts ?? {};
 
-  const { data: evalData, error: evalError } = await supabase
-    .from('faculty_evaluations')
-    .select('resident_id, clinical_skills, professionalism, procedures')
-    .eq('tenant_id', tenantId);
-  if (evalError) return <ErrorDisplay message={evalError.message} />;
-
-  interface EvalRow {
-    resident_id: string;
-    clinical_skills: number;
-    professionalism: number;
-    procedures: number;
-  }
-  const evalRows = (evalData ?? []) as EvalRow[];
   const evalStats = {
-    clinical: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.clinical_skills ?? 0), 0) / evalRows.length).toFixed(1) : '0',
-    prof: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.professionalism ?? 0), 0) / evalRows.length).toFixed(1) : '0',
-    proc: evalRows.length > 0 ? (evalRows.reduce((sum, r) => sum + (r.procedures ?? 0), 0) / evalRows.length).toFixed(1) : '0',
+    clinical: String(rpc.eval_averages?.clinical ?? 0),
+    prof: String(rpc.eval_averages?.prof ?? 0),
+    proc: String(rpc.eval_averages?.proc ?? 0),
   };
-
-  const buildEntriesQuery = () => {
-    let q = supabase
-      .from('case_entries')
-      .select('id, status, case_templates!inner(specialty)')
-      .eq('tenant_id', tenantId);
-    if (date_from) q = q.gte('created_at', date_from);
-    if (date_to) q = q.lte('created_at', date_to);
-    return q.limit(1000);
-  };
-
-  const { data: entries, error: entriesError } = await buildEntriesQuery();
-  if (entriesError) return <ErrorDisplay message={entriesError.message} />;
-
-  const specialtyCounts: Record<string, number> = {};
-  const statusCounts: Record<string, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 };
-
-  interface EntryRow {
-    id: string;
-    status: string;
-    case_templates: { specialty: string }[];
-  }
-
-  for (const e of (entries ?? []) as EntryRow[]) {
-    const specialty = e.case_templates[0]?.specialty ?? 'Unknown';
-    specialtyCounts[specialty] = (specialtyCounts[specialty] || 0) + 1;
-    statusCounts[e.status] = (statusCounts[e.status] || 0) + 1;
-  }
 
   const maxSpecialty = Math.max(1, ...Object.values(specialtyCounts));
 
@@ -131,6 +113,9 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
           >
             Export PDF
           </Link>
+          {isDirectorPlus && (
+            <WebAdsExportButton tenantSlug={tenantSlug} dateFrom={date_from} dateTo={date_to} />
+          )}
         </div>
       </div>
 
@@ -162,7 +147,10 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
       </div>
 
-      {/* Charts Grid */}
+            {/* Competency Gap Analysis (director+) */}
+      {isDirectorPlus && <GapAnalysisRunner tenantSlug={tenantSlug} residents={residentOptions} />}
+
+{/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Cases by Specialty */}
         <div className="bg-surface-solid rounded-2xl border border-border p-5">

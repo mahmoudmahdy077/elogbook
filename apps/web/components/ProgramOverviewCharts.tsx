@@ -119,7 +119,7 @@ function BarChart({ data, max }: { data: BarData[]; max: number }) {
                 />
               </div>
               {isHovered && (
-                <div className="absolute -top-8 right-0 px-2 py-1 rounded-lg bg-surface-solid border border-border text-xs text-text-secondary z-10 shadow-sm">
+                <div className="absolute -top-8 right-0 px-2 py-1 rounded-lg bg-surface-solid border border-border text-xs text-text-secondary z-10 ">
                   {item.specialty}: {item.count}
                 </div>
               )}

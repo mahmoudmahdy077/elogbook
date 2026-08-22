@@ -9,7 +9,7 @@ export default function ManageSubscriptionButton() {
 
   const handleManage = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('create-portal-session', {
+    const { data } = await supabase.functions.invoke('create-portal-session', {
       body: { return_url: window.location.href },
     });
     if (data?.url) {

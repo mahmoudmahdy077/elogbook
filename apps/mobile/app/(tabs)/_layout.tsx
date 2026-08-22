@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSyncInit } from '../../lib/sync';
@@ -15,7 +15,7 @@ function TabIcon({ name, color, size }: { name: keyof typeof Ionicons.glyphMap; 
 }
 
 // Elevated center button for "New Case"
-function CenterButton({ focused }: { focused: boolean }) {
+function CenterButton({ focused: _focused }: { focused: boolean }) {
   return (
     <View
       style={{
@@ -40,7 +40,7 @@ function CenterButton({ focused }: { focused: boolean }) {
 
 export default function TabLayout() {
   useSyncInit();
-  const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
+  const { isAuthenticated } = useAuthGuard();
   const [role, setRole] = useState<UserRole | null>(null);
   const [userName, setUserName] = useState('');
 
@@ -91,8 +91,8 @@ export default function TabLayout() {
           {/* Tab 2 — New Case (center elevated) */}
           <Tabs.Screen
             name="log-case"
-            listeners={({ navigation }: { navigation: any }) => ({
-              tabPress: (e: any) => {
+            listeners={({ navigation: _navigation }: { navigation: unknown }) => ({
+              tabPress: (e: { preventDefault: () => void }) => {
                 if (role && role !== 'resident') {
                   e.preventDefault();
                 }
