@@ -38,10 +38,6 @@ export async function GET(request: NextRequest) {
     .select('resident_id, shift_date, hours_worked, shift_type')
     .eq('tenant_id', profile.tenant_id);
 
-  if (profile.role === 'resident') {
-    query = query.eq('resident_id', user.id);
-  }
-
   if (date_from) query = query.gte('shift_date', date_from);
   if (date_to) query = query.lte('shift_date', date_to);
 
