@@ -108,8 +108,13 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErrors(['Not authenticated.']); setSaving(false); return; }
-    const { data: profile } = await supabase.from('profiles').select('id, tenant_id').eq('user_id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('id, tenant_id, role').eq('user_id', user.id).single();
     if (!profile) { setErrors(['Profile not found.']); setSaving(false); return; }
+
+    // Workflow integrity: only supervisor+ may create pre-approved cases.
+    // Residents always enter the approval queue — never write status directly
+    // (INSERT bypasses the enforce_case_status_transition trigger).
+    const canSelfApprove = ['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role);
 
     const insertData: Record<string, unknown> = {
       tenant_id: profile.tenant_id,
@@ -117,7 +122,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
       template_id: selectedTemplateId,
       case_date: caseDate,
       field_values: fieldValues,
-      status: 'approved',
+      status: canSelfApprove ? 'approved' : 'pending',
       is_deidentified: isDeidentified,
     };
 
@@ -148,7 +153,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
       return;
     }
 
-    showToast('Draft saved', 'success');
+    showToast(canSelfApprove ? 'Case saved' : 'Case submitted for approval', 'success');
     if (close) {
       resetForm();
       onClose();
