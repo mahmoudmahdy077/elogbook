@@ -87,7 +87,7 @@ export async function GET(
     resource_type: 'audit',
     resource_id: null,
     user_id: auth.user.id,
-    metadata: {
+    changes: {
       format,
       row_count: rows.length,
       filters: { action_type, resource_type, user_id, date_from, date_to, view },
