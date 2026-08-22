@@ -101,6 +101,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid table name for sync: %', p_table_name;
   END IF;
 
+  -- SECURITY: this function is SECURITY DEFINER; without this check any
+  -- authenticated caller could read any tenant's rows. Force the requested
+  -- tenant to match the JWT-bound tenant before returning data.
+  IF p_tenant_id <> get_tenant_id() THEN
+    RAISE EXCEPTION 'cross-tenant pull rejected';
+  END IF;
+
   -- Build dynamic query — returns all columns as jsonb
   sql_query := format(
     'SELECT to_jsonb(t.*) FROM %I t
