@@ -231,6 +231,12 @@ export class SyncEngine {
   /**
    * Convert a local SyncRow to a server payload.
    * For deletes, only sends id + deleted_at + tenant_id (idempotent tombstone).
+   *
+   * SECURITY: if row.data came from a PHI-sealed local store (see
+   * data-access.ts sealPhi), the caller MUST run openCaseEntryPhi() on the
+   * fields BEFORE building `row.data` — encrypted envelopes must never be
+   * pushed to the server, and decrypted plaintext must never be re-stored
+   * locally after push.
    */
   private rowToServerPayload(row: SyncRow, isDelete: boolean): Record<string, unknown> {
     // SEC-007 fix: always use server_id (UUID) for the server PK.
