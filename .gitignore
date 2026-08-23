@@ -53,3 +53,7 @@ supabase/.temp/
 apps/web/playwright-report/
 apps/web/test-results/
 apps/web/blob-report/
+
+# Next.js dev-generated agent instruction files
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
