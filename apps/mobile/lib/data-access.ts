@@ -17,6 +17,35 @@ import { useEffect, useState } from 'react';
 import { Q } from '@nozbe/watermelondb';
 import type { Model, Query } from '@nozbe/watermelondb';
 import { getDatabase } from './db/database';
+import { encryptText, decryptText } from './crypto/aead';
+import { getOrCreateDbEncryptionKey } from './db/encryption-key';
+
+// ── PHI field encryption (SEC-006) ───────────────────────────────────────────
+// The SQLite adapter is not SQLCipher-encrypted, so PHI fields are sealed with
+// the AEAD module (key from SecureStore) before touching disk. Sync push
+// decrypts before sending; the server never sees these envelopes.
+let cachedPhiKey: Uint8Array | null = null;
+async function phiKey(): Promise<Uint8Array> {
+  if (!cachedPhiKey) {
+    const hex = await getOrCreateDbEncryptionKey();
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    cachedPhiKey = out;
+  }
+  return cachedPhiKey;
+}
+export async function sealPhi(value: string | null): Promise<string | null> {
+  if (value === null || value === undefined || value === '') return value ?? null;
+  return encryptText(await phiKey(), value);
+}
+export async function openPhi(value: string | null): Promise<string | null> {
+  if (value === null || value === undefined || value === '') return value ?? null;
+  try {
+    return decryptText(await phiKey(), value);
+  } catch {
+    return null; // wrong key / corrupt envelope — treat as absent rather than crash
+  }
+}
 import type { CaseEntry } from './db/models/CaseEntry';
 import type { CaseTemplate } from './db/models/CaseTemplate';
 import type { ProgramGoal } from './db/models/ProgramGoal';
@@ -105,17 +134,23 @@ export async function createCaseEntry(
   data: Partial<CaseEntry> & { tenant_id: string; resident_id: string },
 ): Promise<string> {
   const db = getDatabase();
+  const [mrn, dob, fv] = await Promise.all([
+    sealPhi(data.patientMrn ?? null),
+    sealPhi(data.patientDob ?? null),
+    sealPhi(JSON.stringify(data.fieldValues ?? {})),
+  ]);
   const record = await db.write(() =>
     db.get<CaseEntry>('case_entries').create((row: CaseEntry) => {
       row.tenantId = data.tenant_id;
       row.residentId = data.resident_id;
       row.templateId = data.templateId ?? '';
-      row.patientMrn = data.patientMrn ?? null;
-      row.patientDob = data.patientDob ?? null;
+      row.patientMrn = mrn;
+      row.patientDob = dob;
       row.patientAgeYears = data.patientAgeYears ?? null;
       row.patientHash = data.patientHash ?? null;
       row.caseDate = data.caseDate ?? new Date().toISOString().slice(0, 10);
-      row.fieldValues = data.fieldValues ?? {};
+      // field_values stored as AEAD hex envelope (JSON string), parsed on read
+      row.fieldValues = fv ? (JSON.parse(`{"__sealed":"${fv}"}`) as Record<string, unknown>) : {};
       row.accreditationMappings = data.accreditationMappings ?? [];
       row.isDeidentified = data.isDeidentified ?? false;
       row.status = data.status ?? 'draft';
@@ -132,18 +167,52 @@ export async function updateCaseEntry(
   id: string,
   changes: Partial<Pick<CaseEntry, 'status' | 'fieldValues' | 'patientMrn' | 'patientDob'>>,
 ): Promise<void> {
+  const [mrn, dob, fv] = await Promise.all([
+    changes.patientMrn !== undefined ? sealPhi(changes.patientMrn) : Promise.resolve(undefined),
+    changes.patientDob !== undefined ? sealPhi(changes.patientDob) : Promise.resolve(undefined),
+    changes.fieldValues !== undefined
+      ? sealPhi(JSON.stringify(changes.fieldValues))
+      : Promise.resolve(undefined),
+  ]);
   const db = getDatabase();
   await db.write(() =>
     db.get<CaseEntry>('case_entries').find(id).then((record: CaseEntry) =>
       record.update((row: CaseEntry) => {
         if (changes.status !== undefined) row.status = changes.status;
-        if (changes.fieldValues !== undefined) row.fieldValues = changes.fieldValues;
-        if (changes.patientMrn !== undefined) row.patientMrn = changes.patientMrn;
-        if (changes.patientDob !== undefined) row.patientDob = changes.patientDob;
+        if (fv !== undefined)
+          row.fieldValues = fv ? (JSON.parse(`{"__sealed":"${fv}"}`) as Record<string, unknown>) : {};
+        if (mrn !== undefined) row.patientMrn = mrn;
+        if (dob !== undefined) row.patientDob = dob;
         row.localSyncStatus = 'pending_update';
       }),
     ),
   );
+}
+
+/** Decrypt the PHI fields of a stored case row (returns nulls on key mismatch). */
+export async function openCaseEntryPhi(row: {
+  patientMrn: string | null;
+  patientDob: string | null;
+  fieldValues: Record<string, unknown>;
+}): Promise<{ patientMrn: string | null; patientDob: string | null; fieldValues: Record<string, unknown> }> {
+  const sealedFv =
+    row.fieldValues && typeof row.fieldValues === 'object' && '__sealed' in row.fieldValues
+      ? (row.fieldValues as { __sealed: string }).__sealed
+      : null;
+  const [mrn, dob, fv] = await Promise.all([
+    openPhi(row.patientMrn),
+    openPhi(row.patientDob),
+    sealedFv ? openPhi(sealedFv) : Promise.resolve(null),
+  ]);
+  let parsed: Record<string, unknown> = {};
+  if (fv) {
+    try {
+      parsed = JSON.parse(fv) as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
+  return { patientMrn: mrn, patientDob: dob, fieldValues: sealedFv ? parsed : (row.fieldValues ?? {}) };
 }
 
 export async function deleteCaseEntry(id: string): Promise<void> {
