@@ -1,10 +1,10 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-  apiVersion: '2023-10-16',
-});
-
+// Stripe client is created lazily inside the handler: constructing it at module
+// top level with an empty key hung the isolate on cold start (the function
+// timed out even for requests that should fail validation before any Stripe
+// call). A missing key now fails fast with 503 instead.
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -14,6 +14,17 @@ export default async function handler(req: Request) {
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
+
+  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+  if (!stripeKey) {
+    return new Response(
+      JSON.stringify({ error: 'Billing is not configured for this deployment' }),
+      { status: 503 },
+    );
+  }
+  const stripe = new Stripe(stripeKey, {
+    apiVersion: '2023-10-16',
+  });
 
   const url = new URL(req.url);
   const customerId = url.searchParams.get('customer_id');
