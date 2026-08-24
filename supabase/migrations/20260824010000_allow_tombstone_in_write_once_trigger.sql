@@ -26,7 +26,7 @@ RETURNS TRIGGER AS $$
 DECLARE
   v_role TEXT;
 BEGIN
-  v_role := get_user_role();
+  v_role := public.get_user_role();
 
   -- Pure soft-delete tombstone: only deleted_at (and updated_at) may change.
   -- Allow it here so offline sync deletes and admin cleanup work; RLS still
