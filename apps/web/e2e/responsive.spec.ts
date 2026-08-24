@@ -62,10 +62,11 @@ test.describe('Responsive Design', () => {
   });
 
   test('responsive grid adapts from 2-col to 4-col on larger screens', async ({ page }) => {
-    // Test on desktop first — KPI rings in 4 columns
+    // Test on desktop first — KPI rings in 4 columns.
+    // Two such grids exist (KPI + quick links) — target the first (KPI).
     await page.goto(`/${MOCK_TENANT_SLUG}/dashboard`);
     await page.waitForLoadState('domcontentloaded');
-    const desktopGrid = page.locator('.grid.grid-cols-2.sm\\:grid-cols-4');
+    const desktopGrid = page.locator('.grid.grid-cols-2.sm\\:grid-cols-4').first();
     await expect(desktopGrid).toBeVisible();
 
     // Mobile viewport
@@ -74,7 +75,7 @@ test.describe('Responsive Design', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // On mobile the grid should have 2 columns (grid-cols-2)
-    const mobileGrid = page.locator('.grid.grid-cols-2');
+    const mobileGrid = page.locator('.grid.grid-cols-2').first();
     await expect(mobileGrid).toBeVisible();
   });
 

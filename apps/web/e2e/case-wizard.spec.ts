@@ -1,6 +1,9 @@
 import { test, expect, MOCK_TENANT_SLUG, stubAuthSession } from '../e2e/fixtures';
 
 test.describe('Case Wizard', () => {
+  // Full 4-step wizard against a dev server compiling routes on demand
+  test.setTimeout(120000);
+
   test('resident creates a case end-to-end (TEST-002)', async ({ page }) => {
     test.skip(process.env.NODE_ENV === 'production', 'demo accounts only in dev');
 
@@ -26,7 +29,7 @@ test.describe('Case Wizard', () => {
     await page.getByText('Submit Case').click();
     await page.getByText('Confirm & Submit').click();
 
-    // Assert: success state
-    await expect(page.getByText('Case Logged Successfully')).toBeVisible();
+    // Assert: success state (success heading + confirmation toast both render)
+    await expect(page.getByText('Case Logged Successfully').first()).toBeVisible({ timeout: 10000 });
   });
 });

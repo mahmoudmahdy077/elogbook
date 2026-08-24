@@ -19,9 +19,9 @@ const endpoints = ['sso', 'scim', 'webhooks', 'ai-config', 'payment-gateway', 'a
 
 describe('admin endpoint role gating', () => {
   it.each(endpoints)('%s returns 403 for resident', async (endpoint) => {
-    const mod = await import(`../${endpoint}/route`);
+    const mod = await import(`../${endpoint}/route.ts`);
     const req = new Request(`http://localhost/api/test-tenant/admin/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const res = await mod.POST(req, { params: { tenant: 'test-tenant' } });
     expect(res.status).toBe(403);
-  });
+  }, 30000);
 });

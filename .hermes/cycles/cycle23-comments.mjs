@@ -1,7 +1,7 @@
 // Cycle 23 TEST: threaded comments on case entries — web CaseComments contract.
 // supervisor comments on a case, resident replies (thread), verify read + cleanup.
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
