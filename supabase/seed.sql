@@ -76,7 +76,7 @@ VALUES (
 -- Surgery template
 INSERT INTO case_templates (id, tenant_id, specialty, name, fields, required_fields)
 VALUES (
-  '00000000-0000-0000-0000-000000000010',
+  '00000000-0000-4000-8000-000000000010',
   '00000000-0000-0000-0000-000000000000',
   'surgery',
   'General Surgery Log',
@@ -96,7 +96,7 @@ VALUES (
 -- Radiology template
 INSERT INTO case_templates (id, tenant_id, specialty, name, fields, required_fields)
 VALUES (
-  '00000000-0000-0000-0000-000000000011',
+  '00000000-0000-4000-8000-000000000011',
   '00000000-0000-0000-0000-000000000000',
   'radiology',
   'Radiology Report Log',

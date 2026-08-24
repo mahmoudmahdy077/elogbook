@@ -55,6 +55,20 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
 
+  // WAI-ARIA dialog pattern: Escape dismisses the slide-over.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        resetForm();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [isOpen, onClose]);
+
   const fetchTemplates = useCallback(async () => {
     setLoadingTemplates(true);
     const { data: { user } } = await supabase.auth.getUser();
