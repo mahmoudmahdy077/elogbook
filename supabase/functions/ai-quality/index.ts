@@ -259,6 +259,7 @@ serve(async (req) => {
       status,
       created_at,
       updated_at,
+      is_deidentified,
       case_templates!inner(id, name, specialty, fields, required_fields)
     `)
     .eq('id', case_entry_id)
