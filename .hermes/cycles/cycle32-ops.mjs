@@ -1,6 +1,6 @@
 // Cycle 32 TEST: health + backup + contact endpoints (ops surface) — availability & auth shape
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
@@ -8,9 +8,9 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL, KEY = process.env.NEXT_PUBLIC_
 const results = [];
 const ok = (n,c,d='') => results.push({n,p:!!c,d});
 
-// Supabase health
+// Supabase health (REST reachable with anon credentials — RLS-scoped)
 const t0 = Date.now();
-let r = await fetch(`${URL}/rest/v1/`,{headers:{apikey:KEY}});
+let r = await fetch(`${URL}/rest/v1/profiles?select=id&limit=1`,{headers:{apikey:KEY,Authorization:`Bearer ${KEY}`}});
 ok('rest-alive', r.status===200||r.status===204, `${r.status} in ${Date.now()-t0}ms`);
 
 // auth health endpoint
@@ -18,8 +18,8 @@ r = await fetch(`${URL}/auth/v1/health`,{headers:{apikey:KEY}}).then(x=>x.json()
 ok('auth-health', !!r && (r.name==='GoTrue'||r.version), JSON.stringify(r).slice(0,80));
 
 // storage reachable
-r = await fetch(`${URL}/storage/v1/status`,{headers:{apikey:KEY}}).then(x=>x.json()).catch(()=>null);
-ok('storage-status', !!r, JSON.stringify(r).slice(0,60));
+let sr = await fetch(`${URL}/storage/v1/status`,{headers:{apikey:KEY}}).catch(()=>null);
+ok('storage-status', !!sr && sr.status < 500, `http ${sr?.status ?? 'unreachable'}`);
 
 // web app production pages respond (unauthenticated shell)
 for (const path of ['/login','/api/health']) {

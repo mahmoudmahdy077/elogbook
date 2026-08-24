@@ -1,7 +1,7 @@
-// Cycle 25b: finish shifts slice — pull full schema from PostgREST OpenAPI spec,
-// build a valid shift row, run insert→update→delete through sync RPC.
+// Cycle 25b: shifts slice — schema discovery (OpenAPI w/ fallback to migration 00079),
+// valid shift row via sync RPC, partial update, tombstone.
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
@@ -11,64 +11,56 @@ const results = [];
 const ok = (n,c,d='') => results.push({n,p:!!c,d});
 
 const S = await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY},body:JSON.stringify({email:'supervisor@demo.com',password:'password123!'})}).then(r=>r.json());
+const R = await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY},body:JSON.stringify({email:'resident@demo.com',password:'password123!'})}).then(r=>r.json());
 const H = {'apikey':KEY,'Authorization':'Bearer '+S.access_token,'Content-Type':'application/json'};
-ok('login', !!S.access_token);
+ok('login', !!S.access_token && !!R.access_token);
 
-// 1) OpenAPI spec -> shifts required columns
-const spec = await fetch(`${URL}/rest/v1/`,{headers:H}).then(r=>r.json());
-const def = spec?.definitions?.shifts;
-if (!def) { console.log('no shifts definition; keys:', Object.keys(spec?.definitions||{}).filter(k=>k.includes('shift')).join(', ') || 'none'); }
-ok('openapi-has-shifts', !!def);
-const requiredCols = Object.entries(def?.properties||{}).filter(([,v])=>v.format!=='uuid' && v.description?.includes('Note:')===false).map(()=>0); // placeholder
-const notNull = [];
-for (const [col, meta] of Object.entries(def?.properties||{})) {
-  // PostgREST marks non-nullable columns with description "Note:\nThis is a Primary Key.<pk>" or no x-nullable info; use required[] instead
-}
-const reqList = def?.required || [];
-console.log('shifts required:', reqList.join(', '));
+const rprof = await fetch(`${URL}/rest/v1/profiles?select=id&user_id=eq.${R.user.id}`,{headers:H}).then(r=>r.json());
+const RESIDENT_ID = rprof[0]?.id;
 
-// build payload satisfying required minus defaults (id, tenant_id given)
-const sprof = await fetch(`${URL}/rest/v1/profiles?select=id&user_id=eq.${S.user.id}`,{headers:H}).then(r=>r.json());
-const payload = { id: crypto.randomUUID(), tenant_id: TENANT };
-for (const col of reqList) {
-  if (col==='id') continue;
-  if (col==='tenant_id') { payload[col]=TENANT; continue; }
-  const fmt = def.properties[col]?.format || def.properties[col]?.type;
-  if (col.includes('profile')||col.includes('user')||col.includes('resident')) payload[col]=sprof[0].id;
-  else if (fmt==='date' || col==='date'||col.includes('_date')||col==='shift_date') payload[col]='2026-08-25';
-  else if (col.includes('time')&&!col.includes('zone')) payload[col]=payload[col] ?? '09:00';
-  else if (fmt==='timestamp'||fmt==='timestamptz') payload[col]=new Date().toISOString();
-  else if (!payload[col]) payload[col]= col==='status' ? 'scheduled' : `cycle25-${col}`;
-}
-console.log('payload keys:', Object.keys(payload).join(','));
+// 1) OpenAPI spec -> shifts required columns (fallback: migration 00079 known NOT NULL set)
+let reqList = null;
+try {
+  const spec = await fetch(`${URL}/rest/v1/`,{headers:H,signal:AbortSignal.timeout(15000)}).then(r=>r.json());
+  reqList = spec?.definitions?.shifts?.required || null;
+} catch {}
+if (!reqList) { console.log('openapi unavailable; using migration 00079 schema'); reqList = ['id','rotation_id','tenant_id','resident_id','shift_date']; }
+ok('shift-required-cols-known', Array.isArray(reqList) && reqList.includes('rotation_id'), reqList.join(','));
+
+// 2) rotation prerequisite (NOT NULL FK target)
+const rotId = crypto.randomUUID();
+const rot = await fetch(`${URL}/rest/v1/rotations?select=id`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify({id:rotId,tenant_id:TENANT,resident_id:RESIDENT_ID,title:'Cycle25b Rotation',start_date:'2026-08-01',end_date:'2026-09-30'})});
+ok('rotation-created', rot.ok, `${rot.status} ${(await rot.text()).slice(0,90)}`);
 
 async function sync(table, rows) {
   return fetch(`${URL}/rest/v1/rpc/sync_push_batch`,{method:'POST',headers:H,body:JSON.stringify({p_table_name:table,p_rows:rows})});
 }
 
-let res = await sync('shifts',[payload]);
-let body = await res.text();
-ok('shift-insert-via-sync', res.ok, `${res.status} ${body.slice(0,120)}`);
+if (rot.ok) {
+  const sid = crypto.randomUUID();
+  let res = await sync('shifts',[{id:sid, tenant_id:TENANT, rotation_id:rotId, resident_id:RESIDENT_ID, shift_date:'2026-08-25'}]);
+  let body = await res.text();
+  ok('shift-insert-via-sync', res.ok, `${res.status} ${body.slice(0,120)}`);
 
-if (res.ok) {
-  const sid = payload.id;
-  let got = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=*`,{headers:H}).then(x=>x.json());
-  ok('shift-readable', got.length===1);
+  if (res.ok) {
+    let got = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=*`,{headers:H}).then(x=>x.json());
+    ok('shift-readable', got.length===1 && got[0].rotation_id===rotId);
 
-  await sync('shifts',[{id:sid, tenant_id:TENANT, notes:'cycle25-update'}]).then(async r=>({status:r.status,body:await r.text()}));
-  got = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=*`,{headers:H}).then(x=>x.json());
-  ok('shift-partial-update-safe', got[0]?.notes==='cycle25-update');
+    // partial update must preserve NOT NULL cols
+    await sync('shifts',[{id:sid, tenant_id:TENANT, location:'OR-3'}]);
+    got = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=*`,{headers:H}).then(x=>x.json());
+    ok('shift-partial-update-safe', got[0]?.location==='OR-3' && got[0]?.rotation_id===rotId && got[0]?.shift_date==='2026-08-25');
 
-  await sync('shifts',[{id:sid, tenant_id:TENANT, deleted_at:new Date().toISOString()}]);
-  const alive = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=id`,{headers:H}).then(x=>x.json());
-  const tombstoned = Array.isArray(alive) && alive.length===0;
-  // also confirm row still exists when filtering deleted_at explicitly (soft delete)
-  const all = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=id,deleted_at`,{headers:H}).then(x=>x.json());
-  ok('shift-tombstone-or-deleted', tombstoned || (all[0]?.deleted_at!=null), `alive=${alive.length} all=${JSON.stringify(all).slice(0,60)}`);
+    await sync('shifts',[{id:sid, tenant_id:TENANT, deleted_at:new Date().toISOString()}]);
+    const alive = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=id`,{headers:H}).then(x=>x.json());
+    const all = await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}&select=id,deleted_at`,{headers:H}).then(x=>x.json());
+    ok('shift-tombstone-or-deleted', alive.length===0 || all[0]?.deleted_at!=null, `alive=${alive.length} raw=${JSON.stringify(all).slice(0,60)}`);
+  }
 
-  await fetch(`${URL}/rest/v1/shifts?id=eq.${sid}`,{method:'DELETE',headers:H});
-  ok('cleanup', true);
+  await fetch(`${URL}/rest/v1/shifts?rotation_id=eq.${rotId}`,{method:'DELETE',headers:H});
 }
+await fetch(`${URL}/rest/v1/rotations?id=eq.${rotId}`,{method:'DELETE',headers:H});
+ok('cleanup', true);
 
 let fails=0;
 for(const x of results){console.log(`${x.p?'PASS':'FAIL'} ${x.n}${x.d?' :: '+x.d:''}`); if(!x.p)fails++;}

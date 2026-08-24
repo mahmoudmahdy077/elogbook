@@ -1,7 +1,7 @@
 // Cycle 63 TEST: profile update flows — resident updates own full_name, cannot change
 // role/tenant_id, password change roundtrip (change back), session refresh.
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
@@ -34,18 +34,38 @@ if (prof.length===1) {
   const r2 = Array.isArray(roleAfter)&&roleAfter[0] ? roleAfter[0].role : null;
   ok('self-role-change-blocked', !esc.ok || r2==='resident', `patch=${esc.status} role=${r2}`);
 
-  // password change roundtrip via GoTrue
+  // password change roundtrip via GoTrue — restore is GUARANTEED via service-role fallback
+  const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  async function restorePassword() {
+    for (let i = 0; i < 5; i++) {
+      const s = await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY},body:JSON.stringify({email:'resident@demo.com',password:'Cycle63!temp'})}).then(x=>x.json());
+      if (s.access_token) {
+        const back = await fetch(URL+'/auth/v1/user',{method:'PUT',headers:{'apikey':KEY,'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},body:JSON.stringify({password:'password123!'})});
+        if (back.ok) return 'user-path';
+      }
+      await new Promise(r=>setTimeout(r,2000));
+    }
+    if (SRK) {
+      const uid = R.user.id;
+      const adm = await fetch(`${URL}/auth/v1/admin/users/${uid}`,{method:'PUT',headers:{apikey:SRK,Authorization:'Bearer '+SRK,'Content-Type':'application/json'},body:JSON.stringify({password:'password123!'})});
+      if (adm.ok) return 'admin-fallback';
+    }
+    return 'FAILED';
+  }
   const ch = await fetch(URL+'/auth/v1/user',{method:'PUT',headers:{...Hr,'Content-Type':'application/json'},body:JSON.stringify({password:'Cycle63!temp'})});
   ok('password-change-ok', ch.ok, `status=${ch.status}`);
   if (ch.ok) {
-    const relog = await login('resident@demo.com');
-    ok('old-password-rejected', !relog.access_token);
-    process.env.R2 = '';
+    let relog = null;
+    for (let i = 0; i < 4 && !relog?.access_token; i++) {
+      relog = await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY},body:JSON.stringify({email:'resident@demo.com',password:'password123!'})}).then(x=>x.json()).catch(()=>null);
+      if (!relog?.access_token) await new Promise(r=>setTimeout(r,1500));
+    }
+    ok('old-password-rejected', !relog?.access_token);
     const relog2 = await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY},body:JSON.stringify({email:'resident@demo.com',password:'Cycle63!temp'})}).then(x=>x.json());
     ok('new-password-works', !!relog2.access_token);
-    // restore original
-    const back = await fetch(URL+'/auth/v1/user',{method:'PUT',headers:{'apikey':KEY,'Authorization':'Bearer '+relog2.access_token,'Content-Type':'application/json'},body:JSON.stringify({password:'password123!'})});
-    ok('password-restored', back.ok, `status=${back.status}`);
+    const how = await restorePassword();
+    ok('password-restored', how!=='FAILED', `via=${how}`);
+    if (how==='FAILED') console.log('!!! ACCOUNT STATE CORRUPTED — manual restore required');
   }
 }
 

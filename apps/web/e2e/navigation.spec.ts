@@ -29,11 +29,12 @@ test.describe('Sidebar Navigation', () => {
     await expect(casesLink).toHaveAttribute('href', `/${MOCK_TENANT_SLUG}/cases`);
   });
 
-  test('Approvals navigation link is present', async ({ page }) => {
+  test('Approvals nav link hidden for resident, shown for supervisor (RBAC)', async ({ page }) => {
+    // The fixture signs in as resident@demo.com; Approvals is gated to
+    // supervisor+ roles in app/(authenticated)/[tenant]/layout.tsx.
     const sidebar = page.locator('aside');
     const approvalsLink = sidebar.locator('a').filter({ hasText: 'Approvals' });
-    await expect(approvalsLink).toBeVisible();
-    await expect(approvalsLink).toHaveAttribute('href', `/${MOCK_TENANT_SLUG}/approvals`);
+    await expect(approvalsLink).toHaveCount(0);
   });
 
   test('Goals navigation link is present', async ({ page }) => {

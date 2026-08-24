@@ -5,6 +5,8 @@ test.describe('Dashboard Page', () => {
     // Navigate directly to the dashboard route as if authenticated
     await page.goto(`/${MOCK_TENANT_SLUG}/dashboard`);
     await page.waitForLoadState('domcontentloaded');
+    // Dashboard data loads async — give RLS-scoped queries time to resolve
+    await page.waitForLoadState('networkidle').catch(() => {});
   });
 
   test('dashboard layout renders with sidebar and main content', async ({ page }) => {
@@ -26,19 +28,20 @@ test.describe('Dashboard Page', () => {
   });
 
   test('KPI rings section renders with correct labels', async ({ page }) => {
-    // The KPI ring labels
+    // The KPI ring labels. NOTE: each ProgressRing renders a hidden <title>
+    // ("Draft: 1 of 8") for a11y — restrict matching to visible text nodes.
     const kpiLabels = ['Draft', 'Pending', 'Approved', 'Rejected'];
 
     for (const label of kpiLabels) {
-      const kpiSection = page.locator('text=' + label);
+      const kpiSection = page.locator(`text=${label} >> visible=true`);
       await expect(kpiSection.first()).toBeVisible();
     }
   });
 
   test('recent cases section exists', async ({ page }) => {
-    // "Recent Cases" heading
+    // "Recent Cases" appears twice (compact strip h3 + full section h2)
     const recentCasesHeading = page.getByText('Recent Cases');
-    await expect(recentCasesHeading).toBeVisible();
+    await expect(recentCasesHeading.first()).toBeVisible();
   });
 
   test('goal progress section exists', async ({ page }) => {
@@ -60,10 +63,12 @@ test.describe('Dashboard Page', () => {
   });
 
   test('KPI rings use white card design with rounded corners', async ({ page }) => {
-    // The KPI ring cards should have rounded-2xl class
-    const kpiCards = page.locator('.rounded-2xl.border');
-    const cardCount = await kpiCards.count();
-    expect(cardCount).toBeGreaterThanOrEqual(4);
+    // The KPI ring cards should have rounded-2xl class (DashboardContent card style)
+    await expect(async () => {
+      const kpiCards = page.locator('.rounded-2xl.border');
+      const cardCount = await kpiCards.count();
+      expect(cardCount).toBeGreaterThanOrEqual(4);
+    }).toPass({ timeout: 15000 });
   });
 
   test('Log New Case button is present for residents', async ({ page }) => {

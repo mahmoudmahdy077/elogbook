@@ -1,4 +1,4 @@
-import { test, expect } from '../e2e/fixtures';
+import { publicTest as test, expect } from '../e2e/fixtures';
 
 test.describe('Login Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -29,18 +29,19 @@ test.describe('Login Page', () => {
     await expect(page.getByText('Forgot password?')).toBeVisible();
   });
 
-  test('SSO sign-in button exists', async ({ page }) => {
-    // The SSO button should link to /login/sso
+  test('SSO sign-in button is absent (removed pending SAML/OIDC — P1.4)', async ({ page }) => {
+    // SSO login was intentionally removed from the login page
+    // (see app/login/page.tsx). Guard against it re-appearing half-wired.
     const ssoLink = page.locator('a').filter({ hasText: 'Sign in with SSO' });
-    await expect(ssoLink).toBeVisible();
-    await expect(ssoLink).toHaveAttribute('href', '/login/sso');
+    await expect(ssoLink).toHaveCount(0);
   });
 
   test('form submission disabled when email is empty', async ({ page }) => {
     const submitButton = page.locator('button[type="submit"]');
-    // When email is empty, the button should be disabled
+    // When email is empty, the button should be disabled.
+    // Default mode is magic link; password mode relabels to "Sign in".
     await expect(submitButton).toBeDisabled();
-    expect(await submitButton.textContent()).toContain('Sign in');
+    expect(await submitButton.textContent()).toMatch(/sign in|magic link/i);
   });
 
   test('toggle password visibility works', async ({ page }) => {

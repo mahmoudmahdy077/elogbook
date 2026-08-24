@@ -70,7 +70,7 @@ test.describe('Quick Add Case', () => {
 
     await fab.click();
     await expect(page.getByText('Quick Add Case')).toBeVisible();
-    await page.getByRole('button', { name: /Close/i }).click();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.getByText('Quick Add Case')).not.toBeVisible();
   });
 

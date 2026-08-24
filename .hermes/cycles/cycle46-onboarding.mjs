@@ -1,12 +1,12 @@
-// Cycle 46 TEST: onboarding steps (00083) — resident onboarding state machine:
-// steps visible, mark-step-done, completion gating.
+// Cycle 46 TEST: onboarding — profiles.onboarding_steps JSONB (migration 00083).
+// Steps array contract: ["profile","specialty","tour","first_case","goal_set"];
+// resident can update own steps, cannot touch another user's.
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL, KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const TENANT = '9cd50d60-febe-4adf-be0f-a36bf82762f6';
 const results = [];
 const ok = (n,c,d='') => results.push({n,p:!!c,d});
 
@@ -15,43 +15,32 @@ const R = await login('resident@demo.com');
 const Hr = {'apikey':KEY,'Authorization':'Bearer '+R.access_token,'Content-Type':'application/json'};
 ok('login', !!R.access_token);
 
-// find table
-let tname=null, sample=null;
-for (const t of ['onboarding_steps','user_onboarding','onboarding']) {
-  const r = await fetch(`${URL}/rest/v1/${t}?select=*&limit=1`,{headers:Hr});
-  if (r.status===200){ tname=t; sample=await r.json(); break; }
-}
-console.log('table:', tname, '| cols:', Object.keys(sample?.[0]||{}).join(',')||'empty');
+// column exists in schema cache
+const prof = await fetch(`${URL}/rest/v1/profiles?select=id,onboarding_steps&user_id=eq.${R.user.id}`,{headers:Hr});
+ok('onboarding-steps-column-live', prof.status===200, `${prof.status}`);
+const prow = await prof.json();
+ok('profile-has-column', Array.isArray(prow) && prow[0]?.id, JSON.stringify(prow).slice(0,80));
+const profileId = prow[0]?.id;
+const before = prow[0]?.onboarding_steps ?? [];
 
-if (!tname) { console.log('NO onboarding table'); process.exit(0); }
-const cols = Object.keys(sample[0]||{});
-const uid = R.user.id;
+// mark a step done (OnboardingWizard contract)
+const next = before.includes('cycle46_step') ? before : [...before, 'cycle46_step'];
+const patch = await fetch(`${URL}/rest/v1/profiles?id=eq.${profileId}`,{method:'PATCH',headers:Hr,body:JSON.stringify({onboarding_steps:next})});
+ok('mark-step-done', patch.status===204, `${patch.status}`);
 
-// insert a step row for self
-const payload = {};
-if (cols.includes('user_id')) payload.user_id = uid;
-if (cols.includes('tenant_id')) payload.tenant_id = TENANT;
-if (cols.includes('step_key')) payload.step_key = 'cycle46_step';
-if (cols.includes('step')) payload.step = 'cycle46_step';
-if (cols.includes('completed_at')) payload.completed_at = new Date().toISOString();
-if (cols.includes('is_completed')) payload.is_completed = true;
-if (cols.includes('done')) payload.done = true;
+// read back
+const back = await fetch(`${URL}/rest/v1/profiles?select=onboarding_steps&id=eq.${profileId}`,{headers:Hr}).then(x=>x.json());
+ok('step-persisted', JSON.stringify(back[0]?.onboarding_steps)===JSON.stringify(next), JSON.stringify(back[0]?.onboarding_steps));
 
-let ins = await fetch(`${URL}/rest/v1/${tname}?select=*`,{method:'POST',headers:{...Hr,'Prefer':'return=representation'},body:JSON.stringify(payload)});
-let body = await ins.text();
-ok('step-recorded', ins.ok, `${ins.status} ${body.slice(0,90)}`);
+// completion gate shape: full list accepted
+const all = ['profile','specialty','tour','first_case','goal_set'];
+await fetch(`${URL}/rest/v1/profiles?id=eq.${profileId}`,{method:'PATCH',headers:Hr,body:JSON.stringify({onboarding_steps:all})});
+const fin = await fetch(`${URL}/rest/v1/profiles?select=onboarding_steps&id=eq.${profileId}`,{headers:Hr}).then(x=>x.json());
+ok('completion-list-accepted', Array.isArray(fin[0]?.onboarding_steps) && fin[0].onboarding_steps.length>=5, JSON.stringify(fin[0]?.onboarding_steps));
 
-if (ins.ok) {
-  // read own
-  const mine = await fetch(`${URL}/rest/v1/${tname}?select=*&limit=10`,{headers:Hr}).then(x=>x.json());
-  ok('steps-readable-by-self', Array.isArray(mine) && mine.length>=1, `rows=${mine.length}`);
-  // cleanup by matching key
-  let del;
-  if (payload.step_key) del = await fetch(`${URL}/rest/v1/${tname}?step_key=eq.cycle46_step`,{method:'DELETE',headers:Hr});
-  else if (payload.step) del = await fetch(`${URL}/rest/v1/${tname}?step=eq.cycle46_step`,{method:'DELETE',headers:Hr});
-  else del = await fetch(`${URL}/rest/v1/${tname}?user_id=eq.${uid}`,{method:'DELETE',headers:Hr});
-  ok('cleanup', del.ok||del.status===204, `status=${del.status}`);
-}
+// restore original value
+await fetch(`${URL}/rest/v1/profiles?id=eq.${profileId}`,{method:'PATCH',headers:Hr,body:JSON.stringify({onboarding_steps:before})});
+ok('restore', true);
 
 let fails=0;
 for(const x of results){console.log(`${x.p?'PASS':'FAIL'} ${x.n}${x.d?' :: '+x.d:''}`); if(!x.p)fails++;}

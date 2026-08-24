@@ -2,7 +2,7 @@
 // Targets (production): auth login, dashboard RPC, case list query, template search,
 // hash RPC, quota RPC. Budget: interactive DB calls < 1.5s p95-ish; flag anything > 2s.
 import { readFileSync } from 'node:fs';
-for (const line of readFileSync('/root/elogbook/.env', 'utf8').split('\n')) {
+for (const line of readFileSync(new globalThis.URL('../../.env.local', import.meta.url), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
   if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
@@ -31,4 +31,4 @@ for (const t of timings) {
   console.log(`${bad?'SLOW/FAIL':'PASS'} ${t.name}: ${t.ms}ms${t.err?' :: '+t.err:''}`);
   if (bad) fails++;
 }
-console.log(`\nCycle14 performance: ${timings.length-fails}/${timings.length} within budget`);
+console.log(`\nCycle14 performance: ${timings.length-fails}/${timings.length} checks passed (within budget)`);

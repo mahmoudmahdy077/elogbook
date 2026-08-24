@@ -1,19 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-// Load the monorepo root .env so E2E fixtures can reach NEXT_PUBLIC_SUPABASE_URL
-// (zero-dep parser — dotenv isn't a dependency of this package)
-try {
-  for (const line of readFileSync(resolve(__dirname, '../../.env'), 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+// Load the monorepo root env so E2E fixtures can reach NEXT_PUBLIC_SUPABASE_URL
+// (zero-dep parser — dotenv isn't a dependency of this package).
+// NOTE: this config is loaded as an ES module — use import.meta.url, not __dirname
+// (a swallowed ReferenceError here silently disabled all auth seeding once before).
+const configDir = fileURLToPath(new globalThis.URL('.', import.meta.url));
+for (const envFile of ['.env', '.env.local']) {
+  try {
+    for (const line of readFileSync(configDir + `../../${envFile}`, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  } catch {
+    // env file missing — try the next one; fixtures fall back to the localStorage stub
   }
-} catch {
-  // .env missing — fixtures fall back to the localStorage stub
 }
 
 export default defineConfig({

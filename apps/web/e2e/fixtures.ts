@@ -30,22 +30,31 @@ export async function stubAuthSession(page: Page) {
 
   const res = await page.request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     data: { email, password },
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    },
     failOnStatusCode: false,
   });
+  if (process.env.E2E_DEBUG) console.log(`[fixture] auth POST ${res.status()} url=${SUPABASE_URL.slice(0, 30)} for ${email}`);
 
   if (!res.ok()) {
-    // Fall back to the legacy localStorage stub so public-page specs still work offline
-    await page.evaluate(() => {
-      localStorage.setItem(
-        'supabase-auth-token',
-        JSON.stringify({
-          access_token: 'mock-access-token',
-          refresh_token: 'mock-refresh-token',
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-        }),
-      );
-    });
+    // Fall back to the legacy localStorage stub so public-page specs still work offline.
+    // evaluate() throws on about:blank before any navigation — guard it; this is best-effort.
+    try {
+      await page.evaluate(() => {
+        localStorage.setItem(
+          'supabase-auth-token',
+          JSON.stringify({
+            access_token: 'mock-access-token',
+            refresh_token: 'mock-refresh-token',
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+          }),
+        );
+      });
+    } catch {
+      // no document yet — harmless for public pages
+    }
     return;
   }
 
@@ -67,7 +76,6 @@ export async function stubAuthSession(page: Page) {
   });
 
   // @supabase/ssr cookie format: base64-URL-encoded JSON inside sb-<ref>-auth-token
-  const encoded = encodeURIComponent(authTokenValue);
   await page.context().addCookies([
     {
       name: `sb-${PROJECT_REF}-auth-token`,
@@ -77,11 +85,6 @@ export async function stubAuthSession(page: Page) {
       sameSite: 'Lax',
     },
   ]);
-  // Keep the legacy localStorage stub too — client-side listeners read it on hydration
-  await page.evaluate(() => {
-    localStorage.setItem('sb-auth-fallback', '1');
-  });
-  void encoded;
 }
 
 /**
@@ -97,14 +100,21 @@ export async function goToAuthenticatedRoute(
   await page.waitForLoadState('networkidle');
 }
 
-// Extend the base test with our custom fixtures
+// Extend the base test so EVERY spec importing this module gets an
+// auth-seeded page (real Supabase session cookie). Public-page specs are
+// unaffected — an extra valid session cookie is harmless there.
 export const test = base.extend<{
-  authenticatedPage: Page;
+  page: Page;
 }>({
-  authenticatedPage: async ({ page }, use) => {
+  page: async ({ page }, use) => {
     await stubAuthSession(page);
     await use(page);
   },
 });
+
+// Un-seeded test for specs that exercise PUBLIC pages (/login, /signup,
+// /pricing). A seeded session would make the middleware bounce /login to
+// the tenant dashboard, breaking every assertion on that page.
+export const publicTest = base;
 
 export { expect } from '@playwright/test';
