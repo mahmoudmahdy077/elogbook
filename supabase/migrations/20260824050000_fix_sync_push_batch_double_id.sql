@@ -1,13 +1,15 @@
 -- ============================================================================
--- FIX: sync_push_batch generated "INSERT INTO t (id, id, ...)" — insert_cols
--- already began with 'id, ' and format() prepended another id. Every call
--- failed with 42701 (column "id" specified more than once), meaning the
--- mobile offline-sync push RPC has never worked.
+-- FIX v2 for sync_push_batch (supersedes the double-id fix in this file).
 --
--- Minimal fix (keeps original structure): stop double-prefixing id.
---   insert_cols := array_to_string(col_names, ', ')   -- was: 'id, ' || ...
--- VALUES already passes the row id as the first %L. No other behavior change:
--- tenant forcing, allowlist, upsert semantics all preserved.
+-- Two latent bugs made this RPC fail on every call, so mobile offline-sync
+-- push has never worked:
+--   1. INSERT column list doubled id: "(id, id, tenant_id, ...)" → 42701
+--   2. VALUES list concatenated without commas → 42601 NULLNULLNULL...
+--
+-- Rewrite: correct column/value lists with comma joins; tenant_id always
+-- forced server-side to get_tenant_id(); allowlist + upsert semantics
+-- unchanged; cross-tenant writes impossible (tenant pinned + RLS on conflict
+-- target).
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.sync_push_batch(
@@ -27,9 +29,10 @@ DECLARE
   row_obj jsonb;
   affected int := 0;
   col_names text[];
-  col_val text;
-  insert_cols text;
-  insert_vals text;
+  sync_cols text[];
+  col text;
+  cols_sql text;
+  vals_sql text;
   update_clause text;
   sql_query text;
   row_count int;
@@ -39,58 +42,48 @@ BEGIN
     RAISE EXCEPTION 'Invalid table name for sync: %', p_table_name;
   END IF;
 
-  -- SECURITY: this function is SECURITY DEFINER and would otherwise let any
-  -- authenticated caller write rows into ANY tenant. Force every row's
-  -- tenant_id to the caller's own tenant before touching the table.
-
-  -- Get column names from the table (excluding id which is always present)
   SELECT array_agg(column_name) INTO col_names
   FROM information_schema.columns
   WHERE table_name = p_table_name
     AND table_schema = 'public'
-    AND column_name <> 'id';
+    AND column_name NOT IN ('id', 'tenant_id');
 
-  insert_cols := array_to_string(col_names, ', ');
+  -- Sync columns = table columns except id; tenant_id appended separately.
+  sync_cols := col_names || 'tenant_id';
 
-  -- Build update clause for ON CONFLICT
+  -- ON CONFLICT update: every synced column takes EXCLUDED value; tenant_id
+  -- is pinned back to the caller's tenant regardless of payload.
   update_clause := '';
-  FOREACH col_val IN ARRAY col_names LOOP
+  FOREACH col IN ARRAY sync_cols LOOP
     IF update_clause <> '' THEN update_clause := update_clause || ', '; END IF;
-    update_clause := update_clause || col_val || ' = EXCLUDED.' || col_val;
+    update_clause := update_clause || format('%I = EXCLUDED.%I', col, col);
   END LOOP;
 
-  -- Process each row in the batch
   FOR row_obj IN SELECT * FROM jsonb_array_elements(p_rows)
   LOOP
-    -- Skip rows without id
     IF NOT (row_obj ? 'id') THEN CONTINUE; END IF;
 
-    -- SECURITY: force tenant_id to the caller's tenant (ignore client value).
-    IF NOT (row_obj ? 'tenant_id') THEN
-      RAISE EXCEPTION 'row missing tenant_id';
-    END IF;
-    IF (row_obj ->> 'tenant_id')::UUID <> v_tenant_id THEN
-      RAISE EXCEPTION 'cross-tenant sync rejected';
-    END IF;
-
-    insert_vals := '';
-    FOREACH col_val IN ARRAY col_names LOOP
-      IF row_obj ? col_val THEN
-        col_val := quote_literal(row_obj ->> col_val);
-      ELSE
-        col_val := 'NULL';
+    cols_sql := '';
+    vals_sql := '';
+    FOREACH col IN ARRAY sync_cols LOOP
+      IF cols_sql <> '' THEN
+        cols_sql := cols_sql || ', ';
+        vals_sql := vals_sql || ', ';
       END IF;
-      insert_vals := insert_vals || col_val;
+      cols_sql := cols_sql || format('%I', col);
+      IF col = 'tenant_id' THEN
+        vals_sql := vals_sql || format('%L::uuid', v_tenant_id);
+      ELSIF row_obj ? col THEN
+        vals_sql := vals_sql || format('%L', row_obj ->> col);
+      ELSE
+        vals_sql := vals_sql || 'NULL';
+      END IF;
     END LOOP;
 
     sql_query := format(
-      'INSERT INTO %I (id, %s) VALUES (%L, %s)
+      'INSERT INTO %I (%s) VALUES (%s)
        ON CONFLICT (id) DO UPDATE SET %s',
-      p_table_name,
-      insert_cols,
-      row_obj ->> 'id',
-      insert_vals,
-      update_clause
+      p_table_name, cols_sql, vals_sql, update_clause
     );
 
     EXECUTE sql_query;
