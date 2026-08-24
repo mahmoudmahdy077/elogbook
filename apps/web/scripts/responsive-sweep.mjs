@@ -11,13 +11,35 @@
  *   BASE_URL=http://127.0.0.1:3100 node scripts/responsive-sweep.mjs
  *   LOGIN_EMAIL / LOGIN_PASSWORD env vars override demo credentials.
  *
+ * Auth: signs in through the Supabase Auth API (password grant) using creds
+ * from the monorepo root .env (E2E_EMAIL / E2E_PASSWORD, defaulting to the
+ * seeded demo resident) and seeds the sb-<ref>-auth-token cookie in
+ * @supabase/ssr format — the same approach as e2e/fixtures.ts. A UI login is
+ * not used because filling inputs before React hydrates races the controlled
+ * state and leaves the submit button disabled forever.
+ *
  * Exit code 0 = no overflow / JS errors found. 1 = issues found.
  */
+import { readFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3100';
-const EMAIL = process.env.LOGIN_EMAIL || 'resident@demo.com';
-const PASSWORD = process.env.LOGIN_PASSWORD || 'password123!';
+// Load the monorepo root .env (zero-dep parser, same as playwright.config.ts)
+try {
+  const envPath = new URL('../../../.env', import.meta.url);
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+} catch {
+  // .env missing — only public routes will render authenticated content
+}
+const EMAIL = process.env.LOGIN_EMAIL || process.env.E2E_EMAIL || 'resident@demo.com';
+const PASSWORD = process.env.LOGIN_PASSWORD || process.env.E2E_PASSWORD || 'password123!';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const PROJECT_REF = SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i)?.[1] ?? '';
+const ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
 // Production redirects authenticated users to /demo/dashboard — the demo tenant slug.
 const TENANT = 'demo';
 
@@ -175,37 +197,39 @@ async function main() {
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // ---- Login as demo resident ----
-  console.log(`Logging in as ${EMAIL} …`);
-  await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await page.waitForTimeout(800);
-
-  const fillAndSubmit = async () => {
-    await page.fill('input#email', EMAIL).catch(() => {});
-    await page.fill('input#password', PASSWORD).catch(() => {});
-    // The submit button only enables after React hydrates and picks up the
-    // filled values (disabled={!email || loading}) — wait for it so we never
-    // click a dead server-rendered button.
-    await page.waitForSelector('button[type="submit"]:not([disabled])', { timeout: 45000 });
-    await page.click('button[type="submit"]');
-  };
-
-  try {
-    await fillAndSubmit();
-  } catch {
-    // First paint may have failed to hydrate (slow dev compile) — reload once.
-    console.log('  ⚠ submit stayed disabled — reloading to re-hydrate');
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForTimeout(800);
-    await fillAndSubmit();
-  }
-
-  try {
-    await page.waitForURL(/\/dashboard/, { timeout: 60000 });
-    console.log('  ✓ logged in, landed at', page.url());
-  } catch {
-    console.log('  ⚠ login did not redirect to a dashboard. Final URL:', page.url());
-    console.log('    (continuing sweep — unauthenticated routes still verified)');
+  // ---- Login as demo resident (Supabase Auth API + ssr cookie) ----
+  console.log(`Signing in as ${EMAIL} via Supabase Auth API …`);
+  if (!SUPABASE_URL || !ANON_KEY) {
+    console.log('  ⚠ NEXT_PUBLIC_SUPABASE_URL / ANON_KEY missing — skipping auth (public routes only)');
+  } else {
+    const res = await page.request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      data: { email: EMAIL, password: PASSWORD },
+      headers: { 'Content-Type': 'application/json', apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+      failOnStatusCode: false,
+    });
+    if (!res.ok()) {
+      console.log(`  ⚠ auth API returned ${res.status()} — continuing unauthenticated`);
+    } else {
+      const session = await res.json();
+      const authTokenValue = JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_in: session.expires_in ?? 3600,
+        expires_at: session.expires_at ?? Math.floor(Date.now() / 1000) + (session.expires_in ?? 3600),
+        token_type: 'bearer',
+        user: session.user,
+      });
+      await context.addCookies([
+        {
+          name: `sb-${PROJECT_REF}-auth-token`,
+          value: 'base64-' + Buffer.from(authTokenValue).toString('base64'),
+          url: BASE_URL,
+          httpOnly: false,
+          sameSite: 'Lax',
+        },
+      ]);
+      console.log('  ✓ session cookie seeded');
+    }
   }
 
   const results = [];
