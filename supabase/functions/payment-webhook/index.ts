@@ -9,51 +9,63 @@ type CachedConfig = { id: string; tenantId: string; secret: string; webhookSecre
 const configCache = new Map<string, CachedConfig>();
 const CONFIG_CACHE_TTL = 300_000;
 
-async function getConfigForWebhook(supabase: ReturnType<typeof createClient>, stripeAccountId: string | null): Promise<CachedConfig | null> {
-  if (stripeAccountId) {
-    const cached = configCache.get(stripeAccountId);
-    if (cached && (Date.now() - cached.fetchedAt) < CONFIG_CACHE_TTL) return cached;
+function readTenantIdFromEvent(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body);
+    const metadata = parsed?.data?.object?.metadata;
+    return (metadata?.tenant_id as string | null) ?? null;
+  } catch {
+    return null;
   }
+}
 
-  const tenantSlug = await readTenantSlug(supabase, stripeAccountId);
-  if (!tenantSlug) return null;
+export async function resolveTenantConfig(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+): Promise<CachedConfig | null> {
+  const cached = configCache.get(tenantId);
+  if (cached && (Date.now() - cached.fetchedAt) < CONFIG_CACHE_TTL) return cached;
 
   const { data: tenant } = await supabase
     .from('tenants')
     .select('id')
-    .eq('slug', tenantSlug)
+    .eq('id', tenantId)
     .maybeSingle();
   if (!tenant) return null;
 
-  const { data } = await supabase
-    .from('secret_payment_gateway_config')
-    .select('id, tenant_id, secret_key, webhook_secret, mode')
+  // Service-role client bypasses the role-gated secret view (Task 1.1) and
+  // reads the base table; decrypt_with_version is service_role-executable.
+  const { data, error } = await supabase
+    .from('payment_gateway_config')
+    .select('id, tenant_id, secret_key_enc, webhook_secret_enc, mode, key_version')
     .eq('tenant_id', tenant.id)
     .eq('provider', 'stripe')
     .eq('is_active', true)
     .maybeSingle();
-  if (!data) return null;
+  if (error || !data) return null;
+
+  const { data: dec, error: decError } = await supabase.rpc('decrypt_with_version', {
+    p_encrypted: data.secret_key_enc,
+    p_version: data.key_version,
+  });
+  if (decError || !dec) return null;
+
+  const { data: decWs, error: decWsError } = await supabase.rpc('decrypt_with_version', {
+    p_encrypted: data.webhook_secret_enc,
+    p_version: data.key_version,
+  });
+  if (decWsError) return null;
 
   const cfg: CachedConfig = {
     id: data.id,
     tenantId: data.tenant_id,
-    secret: data.secret_key,
-    webhookSecret: data.webhook_secret,
+    secret: dec as string,
+    webhookSecret: (decWs ?? '') as string,
     mode: data.mode,
     fetchedAt: Date.now(),
   };
-  if (stripeAccountId) configCache.set(stripeAccountId, cfg);
+  configCache.set(tenantId, cfg);
   return cfg;
-}
-
-async function readTenantSlug(supabase: ReturnType<typeof createClient>, stripeAccountId: string | null): Promise<string | null> {
-  if (!stripeAccountId) return null;
-  const { data } = await supabase
-    .from('tenants')
-    .select('slug')
-    .eq('stripe_account_id', stripeAccountId)
-    .maybeSingle();
-  return data?.slug ?? null;
 }
 
 export async function handleWebhook(req: Request): Promise<Response> {
@@ -85,38 +97,39 @@ export async function handleWebhook(req: Request): Promise<Response> {
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  const stripeAccountId = req.headers.get('Stripe-Account');
-  let gwConfig: CachedConfig | null = await getConfigForWebhook(supabase, stripeAccountId);
+  async function markEventFailed(eventId: string, reason: string): Promise<void> {
+    try {
+      await supabase.rpc('mark_stripe_event_failed', {
+        p_event_id: eventId,
+        p_reason: reason,
+      });
+    } catch (logErr) {
+      console.error('Failed to record stripe event failure', logErr);
+    }
+  }
 
-  if (!gwConfig && !stripeAccountId) {
+  // Tenant resolution: create-checkout sets metadata.tenant_id on the
+  // checkout session. All subscription events carry the checkout session's
+  // metadata via their subscription metadata. Prefer the event's own
+  // metadata; fall back to the subscription's metadata.
+  let tenantIdFromEvent = readTenantIdFromEvent(body);
+  if (!tenantIdFromEvent) {
     try {
       const parsed = JSON.parse(body);
-      const slug = parsed?.data?.object?.metadata?.tenant_slug;
-      if (slug) {
-        const { data: tenant } = await supabase.from('tenants').select('id').eq('slug', slug).maybeSingle();
-        if (tenant) {
-          const { data: config } = await supabase
-            .from('secret_payment_gateway_config')
-            .select('id, tenant_id, secret_key as secret, webhook_secret, mode')
-            .eq('tenant_id', tenant.id)
-            .eq('provider', 'stripe')
-            .eq('is_active', true)
-            .maybeSingle();
-          if (config) {
-            gwConfig = {
-              id: config.id,
-              tenantId: config.tenant_id,
-              secret: config.secret,
-              webhookSecret: config.webhook_secret,
-              mode: config.mode,
-              fetchedAt: Date.now(),
-            };
-          }
-        }
-      }
+      tenantIdFromEvent = (parsed?.data?.object?.metadata?.tenant_id as string | null) ?? null;
     } catch {
-      // not JSON, ignore
+      tenantIdFromEvent = null;
     }
+  }
+
+  let gwConfig: CachedConfig | null = null;
+  if (tenantIdFromEvent) {
+    gwConfig = await resolveTenantConfig(supabase, tenantIdFromEvent);
+  }
+
+  if (!gwConfig) {
+    // Platform-default gateway config for the global tenant.
+    gwConfig = await resolveTenantConfig(supabase, '00000000-0000-0000-0000-000000000000');
   }
 
   if (!gwConfig) {
@@ -187,7 +200,8 @@ export async function handleWebhook(req: Request): Promise<Response> {
     throw insertError;
   }
 
-  switch (event.type) {
+  try {
+    switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
       const { tenant_id, plan_id } = session.metadata ?? {};
@@ -222,16 +236,34 @@ export async function handleWebhook(req: Request): Promise<Response> {
       const subscriptionId = session.subscription as string;
       const customerId = session.customer as string | null;
 
-      await supabase.from('subscriptions').upsert(
-        {
+      // 00055 dropped UNIQUE(tenant_id); only a partial unique index on
+      // (tenant_id) WHERE status IN (active, trialing, past_due) remains.
+      // Upsert manually: update any existing row for this tenant, else insert.
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('tenant_id', tenant_id)
+        .maybeSingle();
+
+      if (existingSub) {
+        await supabase
+          .from('subscriptions')
+          .update({
+            plan_id,
+            status: 'active',
+            gateway_subscription_id: subscriptionId,
+            stripe_customer_id: customerId,
+          })
+          .eq('id', existingSub.id);
+      } else {
+        await supabase.from('subscriptions').insert({
           tenant_id,
           plan_id,
           status: 'active',
           gateway_subscription_id: subscriptionId,
           stripe_customer_id: customerId,
-        },
-        { onConflict: 'tenant_id' }
-      );
+        });
+      }
 
       break;
     }
@@ -335,7 +367,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
           amount: invoice.amount_paid,
           currency: invoice.currency || 'usd',
           gateway_payment_intent_id: invoice.payment_intent,
-          status: 'succeeded',
+          status: 'completed',
         });
       }
 
@@ -365,6 +397,10 @@ export async function handleWebhook(req: Request): Promise<Response> {
     .from('stripe_events')
     .update({ processed: true })
     .eq('stripe_event_id', event.id);
+  } catch (processErr) {
+    await markEventFailed(event.id, processErr instanceof Error ? processErr.message : String(processErr));
+    throw processErr;
+  }
 
   return new Response(
     JSON.stringify({ received: true }),

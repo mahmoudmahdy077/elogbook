@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { authenticate, corsHeaders } from '../_shared/auth.ts';
 
 interface WebadsExportPayload {
   tenant_id: string;
@@ -94,6 +94,13 @@ serve(async (req) => {
   const authResult = await authenticate(req);
   if (authResult instanceof Response) return authResult;
   const { supabase, tenantId, role } = authResult;
+
+  // Audit rows must be written with a client that can bypass the
+  // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
+  const serviceSupabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  );
 
   // Require elevated role for WebADS export
   const elevatedRoles = ['supervisor', 'director', 'institution_admin', 'admin'];
@@ -201,7 +208,7 @@ serve(async (req) => {
   const xml = buildWebadsXml(cases, tenantId, date_from, date_to);
 
   // Audit log
-  await supabase.from('audit_logs').insert({
+  await serviceSupabase.from('audit_logs').insert({
     tenant_id: tenantId,
     user_id: (await supabase.auth.getUser()).data.user?.id,
     action: 'webads_export',

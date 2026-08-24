@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Post-install script to patch React Native's renderer
  * version check. Replaces the version-mismatch throw with a

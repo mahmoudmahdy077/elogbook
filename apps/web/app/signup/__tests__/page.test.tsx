@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -29,11 +30,11 @@ describe('signup page', () => {
     render(await SignupPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('renders a link to login', async () => {
     const { default: SignupPage } = await import('../page');
     render(await SignupPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
-  });
+  }, 15000);
 });

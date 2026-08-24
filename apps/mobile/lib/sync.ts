@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
+import { flushQueue } from './offline-queue';
 import { RETRY_DELAYS_MS } from './sync-retry';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
@@ -39,6 +40,8 @@ class SyncService {
   private tenantId: string | null = null;
   private partialFailureMessage: string | null = null;
   private partialFailureListeners: Set<(msg: string) => void> = new Set();
+  /** Timestamp of the last successful queue flush / sync completion. */
+  private lastSyncedAt: number | null = null;
 
   constructor() {
     this.initNetworkListener();
@@ -159,7 +162,24 @@ class SyncService {
   }
 
   async initSync(_tenantId?: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
+    // WatermelonDB full sync remains disabled (UXM-001). The light offline
+    // queue IS live: flush encrypted queued cases when we have a session.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const result = await flushQueue();
+      if (result.synced > 0) {
+        this.lastSyncedAt = Date.now();
+        this.setStatus('synced');
+        this.emitStatus();
+      }
+      if (result.failed > 0 && result.lastError) {
+        this.partialFailureMessage = result.lastError;
+        this.consumePartialFailure();
+      }
+    } catch {
+      // stay quiet; next periodic tick retries
+    }
   }
 
   startPeriodicSync(intervalMs = 60000) {
@@ -178,6 +198,11 @@ class SyncService {
 
   getStatus(): SyncStatus {
     return this.status;
+  }
+
+  /** Epoch ms of the last successful sync, or null if never synced. */
+  getLastSyncedAt(): number | null {
+    return this.lastSyncedAt;
   }
 
   async getConflictDrafts() {

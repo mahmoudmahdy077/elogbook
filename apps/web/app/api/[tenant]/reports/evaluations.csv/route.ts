@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { escapeCsvCell } from '@/lib/csv';
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -23,12 +24,13 @@ export async function GET(request: NextRequest) {
     .eq('user_id', user.id)
     .single();
 
-  if (!profile || !profile.tenants || (profile.tenants as { slug: string }).slug !== tenantSlug) {
+  if (!profile || !profile.tenants || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
 
-  if (profile.role === 'resident') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const REPORT_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
+  if (!REPORT_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
   let query = supabase
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
 
   const lines = ['Resident ID,Evaluator ID,Date,Clinical Skills,Professionalism,Procedures,Comments'];
   for (const e of (evals ?? [])) {
-    lines.push(`"${e.resident_id}","${e.evaluator_id || ''}","${e.evaluation_date}",${e.clinical_skills || ''},${e.professionalism || ''},${e.procedures || ''},"${e.comments || ''}"`);
+    lines.push([e.resident_id, e.evaluator_id || '', e.evaluation_date, e.clinical_skills || '', e.professionalism || '', e.procedures || '', e.comments || ''].map(escapeCsvCell).join(','));
   }
 
   const csv = lines.join('\n');

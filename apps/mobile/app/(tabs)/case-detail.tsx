@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
@@ -132,11 +131,15 @@ export default function CaseDetailScreen() {
       haptics.approvalAction();
 
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
         const { error } = await supabase.rpc(
           action === 'approve' ? 'approve_case' : 'reject_case',
           {
             p_entry_id: caseId,
-            ...(action === 'reject' ? { p_comment: comment ?? '' } : {}),
+            p_supervisor_id: user.id,
+            p_comment: action === 'reject' ? comment ?? '' : null,
           }
         );
 

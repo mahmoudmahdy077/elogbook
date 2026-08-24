@@ -60,5 +60,14 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Exclude Next.js internals + static assets from session logic:
+  // - _next/* covers build output, image optimizer, and the dev HMR websocket
+  //   (/_next/webpack-hmr). Without it, HMR upgrade requests hit the session
+  //   logic and get 307 → /login, so the WebSocket handshake fails
+  //   (ERR_INVALID_HTTP_RESPONSE) and React never hydrates in dev.
+  // - Root-level public/ files (sw.js, sw-register.js, manifest.json,
+  //   robots.txt, sitemap.xml, openapi.yaml, …) would otherwise 307 → /login,
+  //   serving login HTML for script requests (SyntaxError → hydration break)
+  //   and hiding robots.txt/sitemap.xml from crawlers.
+  matcher: ['/((?!_next/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|json|txt|xml|yaml|yml|ico|woff2?|map|webmanifest)$).*)'],
 };

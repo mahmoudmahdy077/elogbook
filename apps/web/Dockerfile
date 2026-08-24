@@ -2,20 +2,23 @@
 # Build context: repo root
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN apk add --no-cache bash curl postgresql-client
 
 FROM base AS builder
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/env/package.json ./packages/env/
 COPY apps/web/package.json ./apps/web/
 COPY packages/supabase/package.json ./packages/supabase/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 COPY packages ./packages
 COPY apps/web ./apps/web
 RUN NEXT_OUTPUT=standalone pnpm --filter @elogbook/web build
 
-FROM base AS runner
+FROM node:22-alpine AS runner
+RUN npm install -g tar@7.5.19 && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/tar
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000

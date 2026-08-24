@@ -32,6 +32,27 @@ export default function CaseImport({
   const [imported, setImported] = useState(false);
   const [importCount, setImportCount] = useState(0);
 
+  // case_entries.template_id is NOT NULL — every imported row needs one.
+  // Resolved once per import: CSV template_name column (case-insensitive)
+  // matched against tenant templates, falling back to the first tenant
+  // template. Import is blocked when the tenant has no templates.
+  async function resolveTemplateId(rows: CsvRow[]): Promise<string | null> {
+    const { data: templates } = await supabase
+      .from('case_templates')
+      .select('id, name')
+      .eq('tenant_id', tenantId);
+    if (!templates || templates.length === 0) return null;
+
+    const byName = new Map<string, string>(
+      templates.map((t: { id: string; name: string }) => [t.name.trim().toLowerCase(), t.id] as const),
+    );
+    for (const row of rows) {
+      const wanted = (row.template_name || row.template || '').trim().toLowerCase();
+      if (wanted && byName.has(wanted)) return byName.get(wanted)!;
+    }
+    return templates[0].id;
+  }
+
   function parseCSV(text: string): { headers: string[]; rows: CsvRow[] } {
     const lines = text.split('\n').filter((line) => line.trim());
     if (lines.length === 0) {
@@ -118,6 +139,21 @@ export default function CaseImport({
     try {
       const text = await file.text();
       const { rows } = parseCSV(text);
+      if (rows.length === 0) {
+        setError('No data rows found in the CSV file');
+        setImporting(false);
+        return;
+      }
+
+      const templateId = await resolveTemplateId(rows);
+      if (!templateId) {
+        setError(
+          'No case templates exist for this program yet. Create a template before importing cases.'
+        );
+        setImporting(false);
+        return;
+      }
+
       const BATCH_SIZE = 50;
       let totalInserted = 0;
 
@@ -126,6 +162,7 @@ export default function CaseImport({
         const inserts = batch.map((row) => ({
           tenant_id: tenantId,
           resident_id: residentId,
+          template_id: templateId,
           case_date: row.case_date || row.date || new Date().toISOString().split('T')[0],
           field_values: row,
           status: 'draft',

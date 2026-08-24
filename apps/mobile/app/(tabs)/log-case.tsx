@@ -20,7 +20,8 @@ import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
 
 import { useHaptics } from '../../lib/haptics';
-import { generatePatientHash } from '../../lib/patient-hash';
+import { buildCasePayload } from '../../lib/case-payload';
+import { enqueueCase } from '../../lib/offline-queue';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
@@ -101,6 +102,69 @@ export default function LogCaseScreen() {
   }, [selectedTemplateId, patientMrn, patientDob, fieldValues, isDeidentified]);
 
   const haptics = useHaptics();
+
+  const loadTemplates = useCallback(async () => {
+    setLoading(true);
+    setFetchError(false);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, tenant_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile) { setLoading(false); return; }
+
+    const { data, error } = await supabase
+      .from('case_templates')
+      .select('*')
+      .eq('tenant_id', profile.tenant_id);
+
+    if (error) { setFetchError(true); setLoading(false); return; }
+    if (data) {
+      const allTemplates = data as unknown as CaseTemplate[];
+      let favIds = new Set<string>();
+      let personalCounts = new Map<string, number>();
+
+      const { data: favData } = await supabase
+        .from('template_favorites')
+        .select('template_id')
+        .eq('user_id', user.id);
+      if (favData) {
+        favIds = new Set(favData.map((r: { template_id: string }) => r.template_id));
+      }
+
+      const { data: personalData } = await supabase
+        .from('case_entries')
+        .select('template_id')
+        .eq('resident_id', profile.id);
+      if (personalData) {
+        personalCounts = new Map(
+          Array.from(
+            personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
+              acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
+              return acc;
+            }, new Map<string, number>())
+          )
+        );
+      }
+
+      setFavoriteIds(favIds);
+      const sorted = sortTemplates(allTemplates, favIds, personalCounts, new Map());
+      setTemplates(sorted as unknown as CaseTemplate[]);
+
+      const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
+      if (autoSelectId) {
+        const t = sorted.find((x) => x.id === autoSelectId);
+        if (t) setSelectedTemplate(t);
+      }
+    }
+    setLoading(false);
+  }, [editCaseId, duplicateCaseId, repeatLastEntry, selectedTemplateId]);
 
   useFocusEffect(useCallback(() => {
     loadTemplates();
@@ -242,69 +306,6 @@ export default function LogCaseScreen() {
     return syncService.onStatusChange(setSyncStatus);
   }, []);
 
-  const loadTemplates = async () => {
-    setLoading(true);
-    setFetchError(false);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, tenant_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) { setLoading(false); return; }
-
-    const { data, error } = await supabase
-      .from('case_templates')
-      .select('*')
-      .eq('tenant_id', profile.tenant_id);
-
-    if (error) { setFetchError(true); setLoading(false); return; }
-    if (data) {
-      const allTemplates = data as unknown as CaseTemplate[];
-      let favIds = new Set<string>();
-      let personalCounts = new Map<string, number>();
-
-      const { data: favData } = await supabase
-        .from('template_favorites')
-        .select('template_id')
-        .eq('user_id', user.id);
-      if (favData) {
-        favIds = new Set(favData.map((r: { template_id: string }) => r.template_id));
-      }
-
-      const { data: personalData } = await supabase
-        .from('case_entries')
-        .select('template_id')
-        .eq('resident_id', profile.id);
-      if (personalData) {
-        personalCounts = new Map(
-          Array.from(
-            personalData.reduce((acc: Map<string, number>, r: { template_id: string }) => {
-              acc.set(r.template_id, (acc.get(r.template_id) ?? 0) + 1);
-              return acc;
-            }, new Map<string, number>())
-          )
-        );
-      }
-
-      setFavoriteIds(favIds);
-      const sorted = sortTemplates(allTemplates, favIds, personalCounts, new Map());
-      setTemplates(sorted as unknown as CaseTemplate[]);
-
-      const autoSelectId = editCaseId || duplicateCaseId || String(repeatLastEntry) === 'true' ? selectedTemplateId : null;
-      if (autoSelectId) {
-        const t = sorted.find((x) => x.id === autoSelectId);
-        if (t) setSelectedTemplate(t);
-      }
-    }
-    setLoading(false);
-  };
-
   const toggleFavorite = useCallback(async (templateId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -365,7 +366,7 @@ export default function LogCaseScreen() {
       ? {
           template_id: selectedTemplate.id,
           patient_age_years: Number(patientAge) || 0,
-          patient_hash: '',
+          patient_hash: null as string | null,
           case_date: caseDate,
           field_values: fieldValues,
           is_deidentified: true as const,
@@ -411,18 +412,34 @@ export default function LogCaseScreen() {
     // 'draft' for the supervisor queue). New cases follow the same rule.
     const status = tenant?.tenant_type === 'individual' ? 'pending' : 'draft';
 
-    const caseData = {
-      tenant_id: profile.tenant_id,
-      resident_id: profile.id,
-      template_id: selectedTemplate.id,
-      patient_mrn: isDeidentified ? undefined : patientMrn,
-      patient_dob: isDeidentified ? undefined : patientDob,
-      patient_age_years: isDeidentified ? Number(patientAge) : undefined,
-      case_date: caseDate,
-      field_values: fieldValues,
+    let patientHash: string | null = null;
+    if (!isDeidentified && patientMrn) {
+      const { data: hashData, error: hashError } = await supabase.rpc('hash_patient_mrn', {
+        p_mrn: patientMrn,
+        p_tenant_id: profile.tenant_id,
+      });
+      if (hashError || !hashData) {
+        setSubmitting(false);
+        isSubmitting.current = false;
+        setValidationError('Could not compute patient hash. Please try again.');
+        return;
+      }
+      patientHash = hashData as string;
+    }
+
+    const caseData = buildCasePayload({
+      tenantId: profile.tenant_id,
+      residentId: profile.id,
+      templateId: selectedTemplate.id,
+      patientMrn,
+      patientDob,
+      patientAge,
+      caseDate,
+      fieldValues,
+      isDeidentified,
       status,
-      is_deidentified: isDeidentified,
-    };
+      patientHash,
+    });
 
     if (editCaseId) {
       try {
@@ -438,11 +455,12 @@ export default function LogCaseScreen() {
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
         setShowConfirmation(true);
-      } catch {
-        haptics.offlineSave();
-        setConfirmationSuccess(false);
-        confirmationTypeRef.current = 'offline';
-        setShowConfirmation(true);
+      } catch (err) {
+        // Edits cannot be queued safely offline — surface the real error.
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setSubmitting(false);
+        isSubmitting.current = false;
+        setValidationError(`Could not save this case (${msg}). Check your connection and try again.`);
       }
       setTimeout(() => {
         setShowConfirmation(false);
@@ -461,11 +479,22 @@ export default function LogCaseScreen() {
       setConfirmationSuccess(true);
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
-    } catch {
-      haptics.offlineSave();
-      setConfirmationSuccess(false);
-      confirmationTypeRef.current = 'offline';
-      setShowConfirmation(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const isNetworkError = /network|fetch|timeout|abort|connect/i.test(msg);
+      if (isNetworkError) {
+        try {
+          await enqueueCase(caseData);
+          haptics.offlineSave();
+          setConfirmationSuccess(false);
+          confirmationTypeRef.current = 'offline';
+          setShowConfirmation(true);
+        } catch {
+          setValidationError('Could not save this case. Check your connection and try again.');
+        }
+      } else {
+        setValidationError(`Could not save this case (${msg}). Please try again.`);
+      }
     }
 
     setTimeout(() => {

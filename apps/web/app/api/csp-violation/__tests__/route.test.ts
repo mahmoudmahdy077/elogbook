@@ -11,7 +11,7 @@ describe('csp-violation — SEC-005', () => {
     const req = new Request('https://x/api/csp-violation', {
       method: 'POST', body: big,
     });
-    const res = await POST(req as any);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(413);
   });
 
@@ -19,7 +19,7 @@ describe('csp-violation — SEC-005', () => {
     const req = new Request('https://x/api/csp-violation', {
       method: 'POST', body: 'not json',
     });
-    const res = await POST(req as any);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(400);
   });
 
@@ -28,7 +28,7 @@ describe('csp-violation — SEC-005', () => {
     const req = new Request('https://x/api/csp-violation', {
       method: 'POST', body,
     });
-    const res = await POST(req as any);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(204);
   });
 });

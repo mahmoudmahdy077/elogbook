@@ -55,6 +55,7 @@ END $$;
 --    running silently with no audit trail.  Now each purge batch writes
 --    a single audit_logs row recording the cutoff date and count.
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.enforce_data_retention();
 CREATE OR REPLACE FUNCTION enforce_data_retention()
 RETURNS void
 LANGUAGE plpgsql

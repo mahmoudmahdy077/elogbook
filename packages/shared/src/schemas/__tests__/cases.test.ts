@@ -11,6 +11,7 @@ import {
   residentAiToggleSchema,
   templateFieldSchema,
   accreditationMappingSchema,
+  fieldValidationSchema,
 } from '../cases';
 
 describe('caseEntryIdentifiedSchema', () => {
@@ -74,6 +75,12 @@ describe('caseEntryDeidentifiedSchema', () => {
 
   it('should accept a valid deidentified case', () => {
     const result = caseEntryDeidentifiedSchema.safeParse(validDeidentified);
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept a deidentified case without a patient hash', () => {
+    const { patient_hash: _hash, ...rest } = validDeidentified;
+    const result = caseEntryDeidentifiedSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
 
@@ -439,5 +446,153 @@ describe('accreditationMappingSchema', () => {
       competency_area: 'Patient Care',
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('templateFieldSchema v2 properties', () => {
+  it('should accept field with description', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'diagnosis',
+      label: 'Diagnosis',
+      type: 'text',
+      description: 'Enter the primary diagnosis',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept field with validation rules', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      validation: {
+        minLength: 5,
+        maxLength: 500,
+        pattern: '^[A-Z].*',
+        patternMessage: 'Must start with uppercase',
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept field with defaultValue', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'count',
+      label: 'Count',
+      type: 'number',
+      defaultValue: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept field with order', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'field1',
+      label: 'Field 1',
+      type: 'text',
+      order: 2,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject select field with empty options', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'choice',
+      label: 'Choice',
+      type: 'select',
+      options: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept select field with options', () => {
+    const result = templateFieldSchema.safeParse({
+      key: 'choice',
+      label: 'Choice',
+      type: 'select',
+      options: ['Option A', 'Option B'],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('fieldValidationSchema', () => {
+  it('should accept valid validation rules', () => {
+    const result = fieldValidationSchema.safeParse({
+      minLength: 5,
+      maxLength: 100,
+      min: 0,
+      max: 1000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject minLength > maxLength', () => {
+    const result = fieldValidationSchema.safeParse({
+      minLength: 100,
+      maxLength: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject min > max', () => {
+    const result = fieldValidationSchema.safeParse({
+      min: 1000,
+      max: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept empty validation object', () => {
+    const result = fieldValidationSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept partial validation (only minLength)', () => {
+    const result = fieldValidationSchema.safeParse({
+      minLength: 10,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('caseTemplateSchema v2 refinements', () => {
+  it('should reject duplicate field keys', () => {
+    const result = caseTemplateSchema.safeParse({
+      specialty: 'Surgery',
+      name: 'Test Template',
+      fields: [
+        { key: 'diagnosis', label: 'Diagnosis 1', type: 'text' },
+        { key: 'diagnosis', label: 'Diagnosis 2', type: 'textarea' },
+      ],
+      required_fields: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept template with v2 field properties', () => {
+    const result = caseTemplateSchema.safeParse({
+      specialty: 'Surgery',
+      name: 'Test Template',
+      fields: [
+        {
+          key: 'procedure',
+          label: 'Procedure',
+          type: 'text',
+          required: true,
+          description: 'Name of the procedure',
+          validation: { minLength: 2, maxLength: 200 },
+        },
+        {
+          key: 'supervision',
+          label: 'Supervision Level',
+          type: 'select',
+          options: ['Direct', 'Indirect'],
+          required: true,
+        },
+      ],
+      required_fields: ['procedure', 'supervision'],
+    });
+    expect(result.success).toBe(true);
   });
 });

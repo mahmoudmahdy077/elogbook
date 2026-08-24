@@ -15,12 +15,14 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
   const [mrnRevealed, setMrnRevealed] = useState(false);
   const [dobRevealed, setDobRevealed] = useState(false);
 
-  const maskMrn = (val: string) => {
+  const maskMrn = (val: string | null) => {
+    if (!val) return '—';
     if (val.length <= 4) return val;
     return '***-**-' + val.slice(-4);
   };
 
-  const maskDob = (val: string) => {
+  const maskDob = (val: string | null) => {
+    if (!val) return '—';
     if (val.length <= 5) return val;
     return '****-**-' + val.slice(-2);
   };
@@ -44,8 +46,8 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
       <div>
         <label className="text-sm text-text-muted">Patient MRN</label>
         <div className="flex items-center gap-2">
-          <p>{mrnRevealed ? mrn : maskMrn(mrn)}</p>
-          {!mrnRevealed && (
+          <p>{mrnRevealed ? (mrn || '—') : maskMrn(mrn)}</p>
+          {!mrnRevealed && mrn && (
             <button onClick={() => reveal('mrn')} className="text-xs text-primary hover:underline">
               Reveal
             </button>
@@ -55,8 +57,8 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
       <div>
         <label className="text-sm text-text-muted">Patient DOB</label>
         <div className="flex items-center gap-2">
-          <p>{dobRevealed ? dob : maskDob(dob)}</p>
-          {!dobRevealed && (
+          <p>{dobRevealed ? (dob || '—') : maskDob(dob)}</p>
+          {!dobRevealed && dob && (
             <button onClick={() => reveal('dob')} className="text-xs text-primary hover:underline">
               Reveal
             </button>

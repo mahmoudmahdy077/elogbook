@@ -16,6 +16,10 @@ export class EvaluationForm extends Model {
   @text('feedback') feedback!: string | null;
   @text('action_plan') actionPlan!: string | null;
   @text('status') status!: string;
+  @text('local_sync_status') localSyncStatus!: string;
+  @text('server_id') serverId!: string | null;
+  @field('server_updated_at') serverUpdatedAt!: number | null;
+  @field('is_deleted') isDeleted!: boolean;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 }

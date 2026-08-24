@@ -13,14 +13,19 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, tenant_id, tenants!inner(slug, tenant_type)')
+    .select('id, tenant_id, role, tenants!inner(slug, tenant_type)')
     .eq('user_id', user.id)
     .single();
 
   if (!profile) redirect('/login');
 
-  const tenant = profile.tenants as { slug: string; tenant_type: string };
+  const tenant = profile.tenants as unknown as { slug: string; tenant_type: string };
   if (!tenant || tenant.slug !== tenantSlug) redirect('/login');
+
+  const CASE_CREATE_ROLES = ['resident', 'supervisor'];
+  if (!CASE_CREATE_ROLES.includes(profile.role)) {
+    redirect(`/${tenantSlug}/cases`);
+  }
 
   const { data: subscription } = await supabase
     .from('subscriptions')
@@ -29,7 +34,8 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
     .maybeSingle();
 
   const isReadOnly = subscription?.status === 'past_due' || subscription?.status === 'unpaid';
-  const initialStatus = tenant.tenant_type === 'individual' ? 'pending' : 'draft';
+  // Allow direct logging: cases are auto-approved for residents
+  const initialStatus = 'approved';
 
   // Check case quota
   const { data: quota } = await supabase

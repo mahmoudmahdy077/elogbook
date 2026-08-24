@@ -1,4 +1,5 @@
 import { getAuthContext, canAccessTenant } from '@/lib/supabase/auth';
+import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
@@ -15,17 +16,21 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { href: '/dashboard', label: 'Dashboard', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
-  { href: '/cases', label: 'Cases', roles: ['resident', 'supervisor'] },
-  { href: '/approvals', label: 'Approvals', roles: ['supervisor', 'director', 'admin'] },
-  { href: '/goals', label: 'Goals', roles: ['resident', 'director', 'admin'] },
+  { href: '/cases', label: 'Cases', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
+  { href: '/approvals', label: 'Approvals', roles: ['supervisor', 'director', 'institution_admin', 'admin'] },
+  { href: '/goals', label: 'Goals', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
+  { href: '/milestones', label: 'Milestones', roles: ['director', 'institution_admin', 'admin'] },
+  { href: '/rotations', label: 'Rotations', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/reports', label: 'Reports', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/evaluate', label: 'Evaluate', roles: ['supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/resident/evaluations', label: 'My Evaluations', roles: ['resident'] },
-  { href: '/billing', label: 'Billing', roles: ['resident', 'admin'] },
+  { href: '/resident/duty-hours', label: 'Duty Hours', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
+  { href: '/billing', label: 'Billing', roles: ['institution_admin', 'admin'] },
   { href: '/analytics', label: 'Analytics', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/audit', label: 'Audit', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/compliance', label: 'Compliance', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/admin', label: 'Admin', roles: ['director', 'institution_admin', 'admin'] },
+  { href: '/invites', label: 'Invites', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/settings', label: 'Settings', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
 ];
 
@@ -58,7 +63,7 @@ export default async function TenantLayout({
   // The /mfa/* pages live at the top level (outside this layout), so
   // no recursion guard is needed here.
   if (auth.mfaRequired) {
-    redirect(`/${auth.tenant.slug}/mfa/verify?next=/${auth.tenant.slug}/dashboard`);
+    redirect(`/mfa/verify?next=/${auth.tenant.slug}/dashboard`);
   }
 
   const userRole = auth.profile.role;
@@ -67,11 +72,25 @@ export default async function TenantLayout({
 
   const visibleLinks = NAV_LINKS.filter((link) => link.roles.includes(userRole));
 
+  let pendingApprovals = 0;
+  if (visibleLinks.some((l) => l.label === 'Approvals')) {
+    const supabase = await createServerSupabase();
+    const { data } = await supabase.rpc('get_dashboard_data', {
+      p_tenant_id: auth.profile.tenant_id,
+      p_resident_id: auth.profile.id,
+      p_role: userRole,
+    });
+    if (data) {
+      pendingApprovals = (data as Record<string, unknown>).pending_approvals as number ?? 0;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-backdrop flex">
       <Sidebar
         visibleLinks={visibleLinks}
         tenantSlug={tenantSlug}
+        pendingCount={pendingApprovals}
         user={{
           name: auth.profile.full_name,
           role: auth.profile.role,

@@ -21,7 +21,7 @@ export default function LocaleSwitcher() {
     document.cookie = `NEXT_LOCALE=${code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
     if (typeof document !== 'undefined') {
       document.documentElement.lang = code;
-      document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.dir = 'ltr';
     }
     startTransition(() => {
       router.refresh();

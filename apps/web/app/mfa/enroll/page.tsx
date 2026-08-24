@@ -60,14 +60,18 @@ function MfaEnrollInner() {
     if (!qr) return;
     setError('');
     setLoading(true);
-    const { error: challengeError } = await supabase.auth.mfa.challenge({ factorId: qr.factorId });
-    if (challengeError) {
+    // Supabase MFA: verify() requires the challengeId from a fresh challenge().
+    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+      factorId: qr.factorId,
+    });
+    if (challengeError || !challengeData) {
       setError('Failed to start verification. Please try again.');
       setLoading(false);
       return;
     }
     const { error: verifyError } = await supabase.auth.mfa.verify({
       factorId: qr.factorId,
+      challengeId: challengeData.id,
       code,
     });
     if (verifyError) {

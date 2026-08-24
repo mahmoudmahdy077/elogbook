@@ -10,6 +10,11 @@ export default async function EvaluateResidentPage({ params }: { params: Promise
 
   if (auth.tenant.slug !== tenantSlug) redirect('/login');
 
+  // Faculty evaluations are a supervisor+ function; residents have no UI here.
+  if (!['supervisor', 'director', 'institution_admin', 'admin'].includes(auth.profile.role)) {
+    redirect(`/${tenantSlug}/dashboard`);
+  }
+
   const supabase = await createServerSupabase();
 
   const { data: resident, error } = await supabase

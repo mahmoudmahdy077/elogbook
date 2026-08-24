@@ -10,23 +10,119 @@
 @theme {
   --color-backdrop: #F2F2F7;
   --color-panel: #FFFFFF;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-solid: #FFFFFF;
+  --color-surface-raised: rgba(255, 255, 255, 0.88);
   --color-primary: #007AFF;
+  --color-primary-hover: #0066D6;
+  --color-primary-glow: rgba(0, 122, 255, 0.08);
   --color-secondary: #5856D6;
+  --color-secondary-hover: #6E6CF0;
+  --color-secondary-glow: rgba(88, 86, 214, 0.08);
+  --color-neutral-light: #E5E5EA;
+  --color-neutral-dark: #F2F2F7;
+  --color-neutral-darker: #FFFFFF;
+  --color-border: rgba(60, 60, 67, 0.10);
+  --color-border-active: rgba(60, 60, 67, 0.20);
+  --color-border-glow: rgba(0, 122, 255, 0.20);
+  --color-text-primary: #000000;
+  --color-text-secondary: #3C3C43;
+  --color-text-muted: #6D6D73; /* WCAG AA 4.6:1 on #F2F2F7 (synced from shared) */
+  --color-text-on-primary: #FFFFFF;
+  --color-pending: #FF9500;
+  --color-approved: #34C759;
+  --color-rejected: #FF3B30;
   --color-amber: #FF9500;
   --color-emerald: #34C759;
   --color-crimson: #FF3B30;
-  --color-neutral-light: #E5E5EA;
-  --color-neutral-dark: #F2F2F7;
+  --color-amber-glow: rgba(255, 149, 0, 0.08);
+  --color-emerald-glow: rgba(52, 199, 89, 0.08);
+  --color-crimson-glow: rgba(255, 59, 48, 0.08);
+  --color-divider: rgba(60, 60, 67, 0.08);
 
+  /* HeroUI semantic scales — light-adapted (synced from web) */
+  --color-default-50: #f8f8fa;
+  --color-default-100: #f2f2f7;
+  --color-default-200: #e5e5ea;
+  --color-default-300: #d1d1d6;
+  --color-default-400: #aeaeb2;
+  --color-default-500: #6d6d73;
+  --color-default-600: #636366;
+  --color-default-700: #48484a;
+  --color-default-800: #3a3a3c;
+  --color-default-900: #1c1c1e;
+
+  --color-success-50: rgba(52, 199, 89, 0.10);
+  --color-success-100: rgba(52, 199, 89, 0.18);
+  --color-success-200: rgba(52, 199, 89, 0.25);
+  --color-success-300: rgba(52, 199, 89, 0.35);
+  --color-success-400: #30d158;
+  --color-success-500: #34c759;
+  --color-success-600: #28a745;
+  --color-success-700: #1e7e34;
+  --color-success-800: #155724;
+  --color-success-900: #0d3616;
+
+  --color-warning-50: rgba(255, 149, 0, 0.10);
+  --color-warning-100: rgba(255, 149, 0, 0.18);
+  --color-warning-200: rgba(255, 149, 0, 0.25);
+  --color-warning-300: rgba(255, 149, 0, 0.35);
+  --color-warning-400: #ff9f0a;
+  --color-warning-500: #ff9500;
+  --color-warning-600: #e68600;
+  --color-warning-700: #bf6e00;
+  --color-warning-800: #8a5000;
+  --color-warning-900: #553200;
+
+  --color-danger-50: rgba(255, 59, 48, 0.10);
+  --color-danger-100: rgba(255, 59, 48, 0.18);
+  --color-danger-200: rgba(255, 59, 48, 0.25);
+  --color-danger-300: rgba(255, 59, 48, 0.35);
+  --color-danger-400: #ff453a;
+  --color-danger-500: #ff3b30;
+  --color-danger-600: #e0352b;
+  --color-danger-700: #b82c23;
+  --color-danger-800: #8a211a;
+  --color-danger-900: #5c1611;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
   --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  --shadow-panel: none;
+  --shadow-primary: none;
+  --shadow-pending: none;
+  --shadow-approved: none;
+  --shadow-rejected: none;
+
+  --transition-duration-fast: 200ms;
+  --transition-duration-medium: 300ms;
+  --transition-duration-spring: 350ms;
+  --ease-fast: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-medium: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-spring: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --blur-glass: 20px;
+}
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-blur: 20px;
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --transition-fast: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-medium: 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-default: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 @layer components {
   .glass-panel-mobile {
-    background-color: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background-color: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     border-radius: 14px;
   }
 }

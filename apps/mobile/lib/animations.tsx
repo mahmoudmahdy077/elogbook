@@ -16,7 +16,6 @@ import Animated, {
   SlideInUp,
   ZoomIn,
   Layout,
-  type AnimatableValue,
   type WithSpringConfig,
   type WithTimingConfig,
 } from 'react-native-reanimated';
@@ -96,7 +95,7 @@ export function AnimatedPressable({
   onPress?: () => void;
   children: React.ReactNode;
   scaleTo?: number;
-  style?: any;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
 }) {
   const { animatedStyle, onPressIn, onPressOut } = usePressScale(scaleTo);
 
@@ -126,7 +125,7 @@ export function ShimmerBlock({
   width?: number | string;
   height?: number;
   borderRadius?: number;
-  style?: any;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
 }) {
   const opacity = useSharedValue(0.3);
 
@@ -142,11 +141,11 @@ export function ShimmerBlock({
     <Animated.View
       style={[
         {
-          width: width as any,
+          width,
           height,
           borderRadius,
           backgroundColor: '#E5E5EA',
-        },
+        } as React.ComponentProps<typeof Animated.View>['style'],
         animatedStyle,
         style,
       ]}

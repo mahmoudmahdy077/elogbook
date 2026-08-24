@@ -11,7 +11,6 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { clinicalTokens } from '@elogbook/shared';
-import ScreenWrapper from '../../components/ScreenWrapper';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

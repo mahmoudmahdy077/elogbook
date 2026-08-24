@@ -17,7 +17,7 @@ const emptyStats: TodayStats = { total: 0, pending: 0, approved: 0, rejected: 0,
  *
  * When online, queries `case_entries` filtered by `case_date = today`
  * and `resident_id = current user's profile id`.
- * When offline, falls back to local WatermelonDB records.
+ * When offline, returns empty stats (local storage is deferred).
  */
 export async function fetchTodayStats(): Promise<TodayStats> {
   const { data: { user } } = await supabase.auth.getUser();

@@ -13,6 +13,10 @@ export class Milestone extends Model {
   @text('assessment_date') assessmentDate!: string;
   @text('evidence_entry_id') evidenceEntryId!: string | null;
   @text('comments') comments!: string | null;
+  @text('local_sync_status') localSyncStatus!: string;
+  @text('server_id') serverId!: string | null;
+  @field('server_updated_at') serverUpdatedAt!: number | null;
+  @field('is_deleted') isDeleted!: boolean;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 }

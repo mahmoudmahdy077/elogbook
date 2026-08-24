@@ -14,6 +14,7 @@ import type { CaseStatus } from '@elogbook/shared';
 interface CaseData {
   id: string;
   patient_mrn: string | null;
+  patient_hash: string | null;
   patient_dob: string | null;
   case_date: string;
   status: CaseStatus;
@@ -60,17 +61,17 @@ const CaseCard = React.memo(function CaseCard({
           <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.heading }}>
             {item.template_specialty} - {item.template_name}
           </Text>
-          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-            {item.is_deidentified ? `Age: — Hash: ${item.patient_mrn?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
+          <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+            {item.is_deidentified ? `Hash: ${item.patient_hash?.slice(0, 12) ?? '—'}` : `MRN: ${item.patient_mrn}`}
           </Text>
-          <Text className="text-[#8E8E93] text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+          <Text className="text-text-muted text-xs mt-1" style={{ fontFamily: clinicalTokens.fonts.mono }}>
             {item.case_date}
           </Text>
         </View>
         <View className="flex-col items-end gap-1">
           <StatusBadge status={item.status} />
           {SYNC_STATUS_LABELS[item.local_sync_status] ? (
-            <Text className="text-xs text-[#8E8E93]" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
+            <Text className="text-xs text-text-muted" style={{ fontFamily: clinicalTokens.fonts.body }}>{SYNC_STATUS_LABELS[item.local_sync_status]}</Text>
           ) : null}
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/log-case', params: { duplicateCaseId: item.id } })}
@@ -107,21 +108,24 @@ export default function MyCasesScreen() {
 
     if (!profile) { setLoading(false); return; }
 
-    const { data: entries, error } = await supabase
+    const { data: entries } = await supabase
       .from('case_entries')
-      .select('id, patient_mrn, patient_dob, case_date, status, is_deidentified, template_id, local_sync_status, case_templates(name, specialty)')
+      .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, case_templates(name, specialty)')
       .eq('resident_id', profile.id);
 
-    const mapped: CaseData[] = (entries ?? []).map((entry: any) => ({
+    const mapped: CaseData[] = (entries ?? []).map((entry) => ({
       id: entry.id,
       patient_mrn: entry.patient_mrn,
+      patient_hash: entry.patient_hash,
       patient_dob: entry.patient_dob,
       case_date: entry.case_date,
       status: entry.status ?? ('draft' as CaseStatus),
-      template_name: entry.case_templates?.name ?? '',
-      template_specialty: entry.case_templates?.specialty ?? '',
+      // PostgREST returns to-one joins as arrays; index before reading
+      template_name: (entry.case_templates as { name: string }[] | null)?.[0]?.name ?? '',
+      template_specialty: (entry.case_templates as { specialty: string | null }[] | null)?.[0]?.specialty ?? '',
       is_deidentified: entry.is_deidentified ?? true,
-      local_sync_status: entry.local_sync_status ?? '',
+      // Server rows are by definition synced; local-only pending rows live in WatermelonDB.
+      local_sync_status: 'synced',
     }));
 
     setCases(mapped);
@@ -165,8 +169,13 @@ export default function MyCasesScreen() {
 
   const handleCaseTap = useCallback((c: CaseData) => {
     if (c.status === 'rejected') {
+      // Rejected cases go straight back into the edit flow
       router.push({ pathname: '/log-case', params: { editCaseId: c.id } });
+      return;
     }
+    // All other statuses open the shared detail screen (was previously a
+    // dead tap for draft/pending/approved/conflict)
+    router.push({ pathname: '/(tabs)/case-detail', params: { caseId: c.id } });
   }, []);
 
   const renderItem = useCallback(

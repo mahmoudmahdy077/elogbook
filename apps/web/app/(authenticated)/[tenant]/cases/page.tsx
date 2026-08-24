@@ -5,6 +5,9 @@ import { redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import EmptyState from '@/components/EmptyState';
 import CaseFilters from '@/components/CaseFilters';
+import QuickAddWrapper from '@/components/QuickAddWrapper';
+import CaseImportButton from '@/components/CaseImportButton';
+import ExportCsvButton from '@/components/ExportCsvButton';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import type { StatusVariant } from '@elogbook/shared/components/web';
 
@@ -79,6 +82,7 @@ export default async function CasesPage({
 
   return (
     <div className="space-y-7">
+      <QuickAddWrapper tenantSlug={tenantSlug} />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -87,13 +91,21 @@ export default async function CasesPage({
             {count ?? 0} case{(count ?? 0) !== 1 ? 's' : ''} logged
           </p>
         </div>
-        <Link
-          href={`/${tenantSlug}/cases/new`}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"/></svg>
-          Log New Case
-        </Link>
+        <div className="flex items-center gap-3">
+          {isResident && (
+            <CaseImportButton tenantId={auth.profile.tenant_id} residentId={auth.profile.id} />
+          )}
+          {entries && entries.length > 0 && (
+            <ExportCsvButton entries={entries} />
+          )}
+          <Link
+            href={`/${tenantSlug}/cases/new`}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"/></svg>
+            Log New Case
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -168,6 +180,14 @@ export default async function CasesPage({
                     >
                       View
                     </Link>
+                    {entry.resident_id === auth.profile.id && entry.status === 'draft' && (
+                      <Link
+                        href={`/${tenantSlug}/cases/${entry.id}/edit`}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium text-text-muted hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        Edit
+                      </Link>
+                    )}
                     {entry.resident_id === auth.profile.id && (
                       <Link
                         href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}

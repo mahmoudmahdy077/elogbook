@@ -296,7 +296,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
       {/* ── Add/Edit Form ── */}
       {showForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">{editingId ? 'Edit SSO Configuration' : 'New SSO Configuration'}</h3>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -522,6 +522,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <p className="text-xs text-text-muted/50 mt-1">
                 Provide this URL to your identity provider as the SAML/OIDC callback endpoint.
               </p>
+              <p className="text-xs text-warning mt-2" role="note">
+                Note: SSO sign-in callbacks are not yet enabled server-side. Configurations
+                can be prepared and saved now; authentication via SSO will fail until the
+                callback endpoint is activated.
+              </p>
             </div>
           )}
         </div>
@@ -541,7 +546,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
           {configs.map((cfg) => (
             <div
               key={cfg.id}
-              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 shadow-sm"
+              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 "
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -595,7 +600,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                     title={cfg.is_active ? 'Disable' : 'Enable'}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white  transition-transform ${
                         cfg.is_active ? 'translate-x-5' : 'translate-x-1'
                       }`}
                     />

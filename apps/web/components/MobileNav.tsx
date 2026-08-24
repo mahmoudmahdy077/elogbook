@@ -115,7 +115,7 @@ export default function MobileNav({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="absolute bottom-full mb-2 right-0 w-44 panel p-1.5 shadow-lg"
+                  className="absolute bottom-full mb-2 right-0 w-44 panel p-1.5"
                 >
                   {overflowLinks.map((link) => (
                     <Link

@@ -85,7 +85,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const headersList = await headers();
   const nonce = headersList.get('x-nonce') ?? '';
   const locale = await getLocale();
-  const dir = locale === 'ar' ? 'rtl' : 'ltr';
+  const dir = 'ltr';
 
   const jsonLd = {
     '@context': 'https://schema.org',

@@ -1,20 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { programGoalSchema } from '@elogbook/shared';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { createClient } from '@/lib/supabase/client';
 
+interface GoalData {
+  id: string;
+  resident_id: string;
+  title: string;
+  target_count: number;
+  specialty: string | null;
+  deadline: string;
+  description: string | null;
+}
+
 interface GoalFormProps {
   tenantId: string;
   directorId: string;
   residents: { id: string; full_name: string }[];
+  initialGoal?: GoalData;
 }
 
-export default function GoalForm({ tenantId, directorId, residents }: GoalFormProps) {
+export default function GoalForm({ tenantId, directorId, residents, initialGoal }: GoalFormProps) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
+  const isEditMode = !!initialGoal;
 
   const [residentId, setResidentId] = useState('');
   const [title, setTitle] = useState('');
@@ -24,6 +36,17 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialGoal && showModal) {
+      setResidentId(initialGoal.resident_id);
+      setTitle(initialGoal.title);
+      setTargetCount(String(initialGoal.target_count));
+      setSpecialty(initialGoal.specialty ?? '');
+      setDeadline(initialGoal.deadline);
+      setDescription(initialGoal.description ?? '');
+    }
+  }, [initialGoal, showModal]);
 
   function resetForm() {
     setResidentId('');
@@ -55,39 +78,59 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     setLoading(true);
     const supabase = createClient();
 
-    const { data: goal, error: insertError } = await supabase
-      .from('program_goals')
-      .insert({
-        tenant_id: tenantId,
-        director_id: directorId,
-        resident_id: result.data.resident_id,
-        title: result.data.title,
-        target_count: result.data.target_count,
-        specialty: result.data.specialty ?? null,
-        deadline: result.data.deadline,
-        description: result.data.description ?? null,
-      })
-      .select('id')
-      .single();
+    if (isEditMode) {
+      const { error: updateError } = await supabase
+        .from('program_goals')
+        .update({
+          resident_id: result.data.resident_id,
+          title: result.data.title,
+          target_count: result.data.target_count,
+          specialty: result.data.specialty ?? null,
+          deadline: result.data.deadline,
+          description: result.data.description ?? null,
+        })
+        .eq('id', initialGoal!.id);
 
-    if (insertError || !goal) {
-      setError(insertError?.message ?? 'Failed to create goal');
-      setLoading(false);
-      return;
-    }
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        return;
+      }
+    } else {
+      const { data: goal, error: insertError } = await supabase
+        .from('program_goals')
+        .insert({
+          tenant_id: tenantId,
+          director_id: directorId,
+          resident_id: result.data.resident_id,
+          title: result.data.title,
+          target_count: result.data.target_count,
+          specialty: result.data.specialty ?? null,
+          deadline: result.data.deadline,
+          description: result.data.description ?? null,
+        })
+        .select('id')
+        .single();
 
-    const { error: progressError } = await supabase
-      .from('goal_progress')
-      .insert({
-        goal_id: goal.id,
-        resident_id: result.data.resident_id,
-        current_count: 0,
-      });
+      if (insertError || !goal) {
+        setError(insertError?.message ?? 'Failed to create goal');
+        setLoading(false);
+        return;
+      }
 
-    if (progressError) {
-      setError(progressError.message);
-      setLoading(false);
-      return;
+      const { error: progressError } = await supabase
+        .from('goal_progress')
+        .insert({
+          goal_id: goal.id,
+          resident_id: result.data.resident_id,
+          current_count: 0,
+        });
+
+      if (progressError) {
+        setError(progressError.message);
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(false);
@@ -96,20 +139,34 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
     setShowModal(false);
   }
 
+  const triggerLabel = isEditMode ? 'Edit' : 'New Goal';
+  const modalTitle = isEditMode ? 'Edit Goal' : 'Create Goal';
+  const submitLabel = isEditMode ? 'Update' : 'Create';
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setShowModal(true)}
-        className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
-      >
-        New Goal
-      </button>
+      {isEditMode ? (
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="rounded-full border border-border text-sm font-medium px-3 py-1.5 text-text-secondary hover:bg-neutral-dark transition-colors"
+        >
+          {triggerLabel}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          {triggerLabel}
+        </button>
+      )}
 
       {showModal && (
         <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
           <div className="panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <h3 className="text-lg font-semibold mb-4">Create Goal</h3>
+            <h3 className="text-lg font-semibold mb-4">{modalTitle}</h3>
 
             {error && <ErrorDisplay message={error} />}
 
@@ -203,7 +260,7 @@ export default function GoalForm({ tenantId, directorId, residents }: GoalFormPr
                   loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
                 }`}
               >
-                Create
+                {submitLabel}
               </button>
             </div>
           </div>

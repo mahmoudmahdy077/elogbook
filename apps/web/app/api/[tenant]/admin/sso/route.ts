@@ -32,7 +32,7 @@ export async function GET(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -48,7 +48,7 @@ export async function GET(
     .eq('tenant_id', profile.tenant_id)
     .eq('status', 'active')
     .maybeSingle();
-  const features = (planCheck as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  const features = (planCheck as { subscription_plans?: { features?: Record<string, unknown> } | null })?.subscription_plans?.features ?? null;
   if (!features?.sso) {
     return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
   }
@@ -102,7 +102,7 @@ export async function POST(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -187,7 +187,8 @@ export async function POST(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'tenant_sso_configs', resource_id: insertedConfig!.id, changes: {} });
+  const insertedRow = (insertedConfig as unknown as { id: string }[] | null)?.[0];
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'tenant_sso_configs', resource_id: insertedRow?.id ?? '', changes: {} });
 
   return NextResponse.json({ config: insertError ? null : body }, { status: 201 });
 }
@@ -223,7 +224,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
@@ -349,7 +350,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const tenant = profile.tenants as { slug: string };
+  const tenant = profile.tenants as unknown as { slug: string };
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }

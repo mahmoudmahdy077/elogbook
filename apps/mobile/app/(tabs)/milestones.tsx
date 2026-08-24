@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, MILESTONE_MAX_LEVEL } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
-const MAX_LEVEL = 5;
+// Milestone progress bars render the DB-valid 1..5 scale (migration 00080).
+const MAX_LEVEL = MILESTONE_MAX_LEVEL;
 
 interface MilestoneData {
   id: string;
@@ -74,7 +75,7 @@ function MilestoneMatrix({
       <Animated.View entering={FadeIn.delay(200).springify()}>
         <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
           <Text
-            className="text-[#8E8E93] text-sm"
+            className="text-text-muted text-sm"
             style={{ fontFamily: clinicalTokens.fonts.body }}
           >
             No milestones recorded yet.
@@ -157,7 +158,7 @@ function ResidentPicker({
     return (
       <View className="bg-white/5 rounded-xl p-4 border border-gray-700/50 mb-4">
         <Text
-          className="text-[#8E8E93] text-sm"
+          className="text-text-muted text-sm"
           style={{ fontFamily: clinicalTokens.fonts.body }}
         >
           No residents found in this tenant.
@@ -169,7 +170,7 @@ function ResidentPicker({
   return (
     <View className="mb-4">
       <Text
-        className="text-[#8E8E93] text-xs mb-2"
+        className="text-text-muted text-xs mb-2"
         style={{ fontFamily: clinicalTokens.fonts.body }}
       >
         Select Resident
@@ -392,7 +393,7 @@ export default function MilestonesScreen() {
           <Animated.View entering={FadeIn.delay(200).springify()}>
             <View className="bg-white/5 rounded-xl p-6 border border-gray-700/50 items-center">
             <Text
-              className="text-[#8E8E93] text-sm"
+              className="text-text-muted text-sm"
               style={{ fontFamily: clinicalTokens.fonts.body }}
             >
               Select a resident to view milestones.

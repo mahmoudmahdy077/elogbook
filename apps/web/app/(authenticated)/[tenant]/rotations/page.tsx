@@ -11,7 +11,7 @@ interface RotationRow {
   end_date: string;
   site: string | null;
   resident_id: string;
-  profiles: { full_name: string } | null;
+  profiles: { full_name: string }[] | null;
 }
 
 interface ResidentRow {
@@ -64,14 +64,6 @@ export default async function RotationsPage({
     );
   }
 
-  // Fetch shifts for the visible rotations
-  const rotationIds = (rotations ?? []).map((r: RotationRow) => r.id);
-  if (rotationIds.length > 0) {
-    await supabase
-      .from('shifts')
-      .select('id, rotation_id, date, shift_type, hours')
-      .in('rotation_id', rotationIds);
-  }
 
   // Fetch residents for filter (directors+ only)
   let residents: ResidentRow[] = [];
@@ -85,10 +77,14 @@ export default async function RotationsPage({
   }
 
   const rotationRows: RotationRow[] = (rotations ?? []) as RotationRow[];
+  const calendarRotations = rotationRows.map((r) => ({
+    ...r,
+    profiles: r.profiles?.[0] ?? null,
+  }));
 
   return (
     <RotationCalendar
-      rotations={rotationRows}
+      rotations={calendarRotations}
       residents={residents}
       tenantSlug={tenantSlug}
       canEdit={role === 'director' || role === 'institution_admin' || role === 'admin'}

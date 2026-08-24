@@ -75,11 +75,17 @@ export default function DOPSForm({
         tenant_id: tenantId,
         resident_id: residentId,
         evaluator_id: evaluatorId,
-        form_type: 'DOPS',
-        domains: ratings,
-        total_score: totalScore,
-        evaluator_notes: notes || null,
-        completed_at: new Date().toISOString(),
+        form_type: 'dops',
+        ratings: {
+          domains: Object.entries(ratings).map(([key, score]) => {
+            const def = DOMAINS.find((d) => d.key === key);
+            return { name: def?.label ?? key, key, score, max: 9 };
+          }),
+        },
+        overall_score: Math.round((totalScore / (DOMAINS.length * 9)) * 100) / 10,
+        feedback: notes || null,
+        status: 'completed',
+
       });
 
     setSaving(false);

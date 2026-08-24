@@ -4,27 +4,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import EmptyState from '@/components/EmptyState';
-import MilestonesMatrix from '@/components/MilestonesMatrix';
+import MilestonesMatrix, { type MilestoneDefinitionRow } from '@/components/MilestonesMatrix';
 
-interface MilestoneRow {
-  id: string;
-  sub_competency: string;
-  description: string | null;
-  level_1_label: string | null;
-  level_2_label: string | null;
-  level_3_label: string | null;
-  level_4_label: string | null;
-  level_5_label: string | null;
-  specialty: string | null;
-}
-
-interface EpaMappingRow {
-  id: string;
-  milestone_id: string;
-  epa_name: string;
-  epa_description: string | null;
-  required_level: number;
-}
+const ALLOWED_ROLES = ['director', 'institution_admin', 'admin'];
 
 export default async function MilestonesPage({
   params,
@@ -41,20 +23,30 @@ export default async function MilestonesPage({
   const supabase = await createServerSupabase();
   const tenantId = auth.profile.tenant_id;
   const role = auth.profile.role;
-  const isDirectorPlus =
-    role === 'director' || role === 'institution_admin' || role === 'admin';
+  const isDirectorPlus = ALLOWED_ROLES.includes(role);
   const isResident = role === 'resident';
 
-  // Fetch milestones for the tenant
-  const { data: milestones, error: milestonesError } = await supabase
-    .from('milestones')
-    .select(
-      'id, sub_competency, description, level_1_label, level_2_label, level_3_label, level_4_label, level_5_label, specialty'
-    )
-    .eq('tenant_id', tenantId)
-    .order('sub_competency', { ascending: true });
+  // ---- Resident assessments (real per-resident rows in `milestones`) ----
+  const targetId = isResident ? auth.profile.id : residentFilter || auth.profile.id;
 
-  if (milestonesError) {
+  const [assessmentsRes, frameworkRes] = await Promise.all([
+    supabase
+      .from('milestones')
+      .select(
+        'id, competency_area, sub_competency, level, assessment_date, assessor_id, comments'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('resident_id', targetId)
+      .order('assessment_date', { ascending: false }),
+    // Milestone definitions live on the accreditation framework (JSONB column).
+    supabase
+      .from('accreditation_frameworks')
+      .select('id, name, milestones')
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+  ]);
+
+  if (assessmentsRes.error) {
     return (
       <div className="space-y-7">
         <div>
@@ -62,37 +54,84 @@ export default async function MilestonesPage({
             Milestones
           </h1>
           <p className="text-[0.9rem] text-text-muted mt-1">
-            Error loading milestones.
+            Error loading milestone assessments.
           </p>
         </div>
-        <ErrorDisplay message={milestonesError.message} />
+        <ErrorDisplay message={assessmentsRes.error.message} />
       </div>
     );
   }
 
-  // Fetch EPA mappings
-  const { data: epaMappings, error: epaError } = await supabase
-    .from('epa_mappings')
-    .select('id, milestone_id, epa_name, epa_description, required_level')
-    .eq('tenant_id', tenantId);
+  type AssessmentRow = {
+    id: string;
+    competency_area: string;
+    sub_competency: string;
+    level: number;
+    assessment_date: string;
+    assessor_id: string | null;
+    comments: string | null;
+  };
+  const assessments = (assessmentsRes.data ?? []) as AssessmentRow[];
 
-  if (epaError) {
-    return (
-      <div className="space-y-7">
-        <div>
-          <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em]">
-            Milestones
-          </h1>
-          <p className="text-[0.9rem] text-text-muted mt-1">
-            Error loading EPA mappings.
-          </p>
-        </div>
-        <ErrorDisplay message={epaError.message} />
-      </div>
-    );
+  // Latest level per sub-competency (rows are date-desc).
+  const latestBySub: Record<string, AssessmentRow> = {};
+  for (const a of assessments) {
+    if (!latestBySub[a.sub_competency]) latestBySub[a.sub_competency] = a;
   }
 
-  // Fetch residents for director+ filter
+  // Build definition rows from the framework JSONB (falls back to observed sub-competencies).
+  type FrameworkMilestone = {
+    id?: string;
+    competency_area?: string;
+    sub_competency: string;
+    description?: string | null;
+    levels?: string[];
+  };
+  const framework = (frameworkRes.data ?? null) as {
+    id: string;
+    name: string;
+    milestones: FrameworkMilestone[] | null;
+  } | null;
+
+  const definitions: MilestoneDefinitionRow[] = [];
+  const seen = new Set<string>();
+  for (const fm of framework?.milestones ?? []) {
+    if (!fm?.sub_competency || seen.has(fm.sub_competency)) continue;
+    seen.add(fm.sub_competency);
+    definitions.push({
+      id: seen.size.toString(),
+      competency_area: fm.competency_area ?? '',
+      sub_competency: fm.sub_competency,
+      description: fm.description ?? null,
+      labels: [
+        fm.levels?.[0] ?? 'Level 1',
+        fm.levels?.[1] ?? 'Level 2',
+        fm.levels?.[2] ?? 'Level 3',
+        fm.levels?.[3] ?? 'Level 4',
+        fm.levels?.[4] ?? 'Level 5',
+      ],
+    });
+  }
+  for (const a of Object.values(latestBySub)) {
+    if (seen.has(a.sub_competency)) continue;
+    seen.add(a.sub_competency);
+    definitions.push({
+      id: `observed-${definitions.length + 1}`,
+      competency_area: a.competency_area,
+      sub_competency: a.sub_competency,
+      description: null,
+      labels: ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5'],
+    });
+  }
+
+  // Current level map keyed by the definition ids the matrix renders.
+  const currentLevels: Record<string, number> = {};
+  for (const d of definitions) {
+    const latest = latestBySub[d.sub_competency];
+    if (latest) currentLevels[d.id] = latest.level;
+  }
+
+  // Residents list for director+ filter
   let residents: { id: string; full_name: string }[] = [];
   if (isDirectorPlus) {
     const { data: residentData } = await supabase
@@ -104,30 +143,6 @@ export default async function MilestonesPage({
     residents = (residentData ?? []) as { id: string; full_name: string }[];
   }
 
-  const typedMilestones = (milestones ?? []) as MilestoneRow[];
-  const typedEpaMappings = (epaMappings ?? []) as EpaMappingRow[];
-
-  // Fetch current level assessments if a resident is selected or viewing own
-  const currentLevels: Record<string, number> = {};
-  const targetId = isResident
-    ? auth.profile.id
-    : residentFilter || auth.profile.id;
-
-  if (targetId && typedMilestones.length > 0) {
-    const milestoneIds = typedMilestones.map((m) => m.id);
-    const { data: assessments } = await supabase
-      .from('milestone_assessments')
-      .select('milestone_id, current_level')
-      .eq('resident_id', targetId)
-      .in('milestone_id', milestoneIds);
-
-    if (assessments) {
-      for (const a of assessments) {
-        currentLevels[a.milestone_id] = a.current_level;
-      }
-    }
-  }
-
   return (
     <div className="space-y-7">
       {/* Header */}
@@ -137,8 +152,8 @@ export default async function MilestonesPage({
             Milestones
           </h1>
           <p className="text-[0.9rem] text-text-muted mt-1">
-            {typedMilestones.length} milestone{typedMilestones.length !== 1 ? 's' : ''}{' '}
-            defined
+            {definitions.length} sub-competenc{definitions.length !== 1 ? 'ies' : 'y'} tracked
+            {framework ? ` · ${framework.name}` : ''}
           </p>
         </div>
 
@@ -174,7 +189,7 @@ export default async function MilestonesPage({
         </div>
       </div>
 
-      {typedMilestones.length === 0 ? (
+      {definitions.length === 0 ? (
         <EmptyState
           icon={
             <svg
@@ -184,7 +199,7 @@ export default async function MilestonesPage({
             >
               <path
                 fillRule="evenodd"
-                d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z"
+                d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h6.5z"
                 clipRule="evenodd"
               />
             </svg>
@@ -194,12 +209,11 @@ export default async function MilestonesPage({
         />
       ) : (
         <MilestonesMatrix
-          milestones={typedMilestones}
-          epaMappings={typedEpaMappings}
+          milestones={definitions}
           currentLevels={currentLevels}
           residentId={targetId}
           tenantId={tenantId}
-          isEditable={isDirectorPlus}
+          isEditable
         />
       )}
     </div>

@@ -210,7 +210,7 @@ export default function SCIManager({
 
       {/* ── New token plaintext banner ── */}
       {newTokenPlaintext && (
-        <div className="bg-primary/10 border border-primary/25 rounded-2xl p-5 shadow-sm">
+        <div className="bg-primary/10 border border-primary/25 rounded-2xl p-5 ">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary mb-1">
@@ -248,7 +248,7 @@ export default function SCIManager({
       )}
 
       {/* ── Provisioning Instructions ── */}
-      <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+      <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
         <h3 className="text-base font-semibold mb-4">Provisioning Instructions</h3>
         <div className="space-y-4">
           <div>
@@ -287,7 +287,7 @@ export default function SCIManager({
 
       {/* ── Generate Form ── */}
       {showGenerateForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">Generate New SCIM Token</h3>
 
           <form onSubmit={handleGenerate} className="space-y-5">
@@ -335,7 +335,7 @@ export default function SCIManager({
 
       {/* ── Active Tokens ── */}
       {activeTokens.length > 0 && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">
             Active Tokens <span className="text-text-muted font-normal text-sm">({activeTokens.length})</span>
           </h3>
@@ -385,7 +385,7 @@ export default function SCIManager({
 
       {/* ── Revoked Tokens ── */}
       {revokedTokens.length > 0 && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 shadow-sm">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">
             Revoked Tokens <span className="text-text-muted font-normal text-sm">({revokedTokens.length})</span>
           </h3>
@@ -416,7 +416,7 @@ export default function SCIManager({
 
       {/* ── Empty state ── */}
       {tokens.length === 0 && !showGenerateForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-8 shadow-sm text-center">
+        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-8 text-center">
           <div className="text-3xl mb-3">🔑</div>
           <h3 className="text-base font-semibold mb-1">No SCIM tokens yet</h3>
           <p className="text-sm text-text-muted max-w-md mx-auto">

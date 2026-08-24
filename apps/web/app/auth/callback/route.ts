@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         if (profile) {
           if (isMfaRequiredForRole(profile.role as UserRole)) {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.aal !== 'aal2') {
+            if ((session as { aal?: string } | null)?.aal !== 'aal2') {
               try {
                 const { data: mfaData } = await supabase.auth.mfa.listFactors();
                 const hasVerifiedMfa =

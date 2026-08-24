@@ -1,5 +1,19 @@
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { handleWebhook } from './index.ts';
+import { handleWebhook, resolveTenantConfig } from './index.ts';
+
+Deno.test('resolveTenantConfig returns null when tenant does not exist', async () => {
+  const stubSupabase = {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+        }),
+      }),
+    }),
+  };
+  const result = await resolveTenantConfig(stubSupabase as never, '00000000-0000-0000-0000-000000000000');
+  assertEquals(result, null);
+});
 
 Deno.test('payment-webhook: accepts OPTIONS request', async () => {
   const res = await handleWebhook(new Request('https://x', { method: 'OPTIONS' }));
