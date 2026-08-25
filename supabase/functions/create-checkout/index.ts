@@ -76,17 +76,23 @@ serve(async (req) => {
     );
   }
 
-  let body: { plan_id?: string; gateway?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
+    let body: { plan_id?: string; gateway?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
 
-  const { plan_id, gateway = 'stripe' } = body;
+    const { plan_id, gateway = 'stripe' } = body;
   if (!plan_id) {
     return new Response(
       JSON.stringify({ error: 'plan_id is required' }),

@@ -46,6 +46,14 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // JSON `null` parses successfully but cannot be destructured — reject early
+  if (!payload || typeof payload !== 'object') {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { case_ids, resident_name, tenant } = payload;
 
   if (!case_ids || !Array.isArray(case_ids) || case_ids.length === 0) {

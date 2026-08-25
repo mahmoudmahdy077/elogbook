@@ -111,17 +111,23 @@ serve(async (req) => {
     );
   }
 
-  let body: WebadsExportPayload;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+    let body: WebadsExportPayload;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
 
-  const { tenant_id, resident_ids, date_from, date_to } = body;
+    const { tenant_id, resident_ids, date_from, date_to } = body;
 
   if (!tenant_id) {
     return new Response(

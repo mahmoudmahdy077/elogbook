@@ -1,0 +1,1 @@
+SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='evaluation_forms' ORDER BY ordinal_position; SELECT t.tgname, p.proname FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid WHERE t.tgrelid='public.evaluation_forms'::regclass AND NOT t.tgisinternal;
