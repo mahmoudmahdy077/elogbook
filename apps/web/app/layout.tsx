@@ -124,6 +124,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="mobile-web-app-capable" content="yes" />
 
         {/* Theme FOUC guard — must be inline, non-deferrable */}
+        {/* semgrep-ignore: jsx-dangerously-set-inner-html — static literal, no user input */}
         {nonce ? (
           <script nonce={nonce}
             dangerouslySetInnerHTML={{
