@@ -1,0 +1,220 @@
+{
+  "timestamp": "2026-08-24T22:59:05.979Z",
+  "sections": {
+    "auth_login": {
+      "n": 5,
+      "p50": 223.7,
+      "p95": 1024,
+      "min": 206.2,
+      "max": 1024,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "rpc_get_dashboard_data": {
+      "n": 5,
+      "p50": 137.5,
+      "p95": 198.9,
+      "min": 130,
+      "max": 198.9,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "case_entries_list_limit20": {
+      "n": 5,
+      "p50": 108.3,
+      "p95": 115.6,
+      "min": 104.4,
+      "max": 115.6,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "case_templates_search": {
+      "n": 5,
+      "p50": 104.3,
+      "p95": 303.2,
+      "min": 101.5,
+      "max": 303.2,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "rpc_hash_patient_mrn": {
+      "n": 5,
+      "p50": 109.3,
+      "p95": 121.5,
+      "min": 93.3,
+      "max": 121.5,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "rpc_check_case_quota": {
+      "n": 5,
+      "p50": 108.9,
+      "p95": 126.7,
+      "min": 102.5,
+      "max": 126.7,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "evaluations_list": {
+      "n": 5,
+      "p50": 105.3,
+      "p95": 114.8,
+      "min": 94.1,
+      "max": 114.8,
+      "statuses": [
+        404,
+        404,
+        404,
+        404,
+        404
+      ],
+      "errors": 5
+    },
+    "notifications_list": {
+      "n": 5,
+      "p50": 110.2,
+      "p95": 311.2,
+      "min": 92.6,
+      "max": 311.2,
+      "statuses": [
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "errors": 5
+    },
+    "sync_push_batch_10rows": {
+      "error": "no template found"
+    },
+    "prod_ttfb": {
+      "/login": {
+        "n": 3,
+        "p50": 266.9,
+        "p95": 2082,
+        "min": 246.7,
+        "max": 2082,
+        "statuses": [
+          200,
+          200,
+          200
+        ],
+        "errors": 0
+      },
+      "/pricing": {
+        "n": 3,
+        "p50": 570.7,
+        "p95": 857.1,
+        "min": 532.4,
+        "max": 857.1,
+        "statuses": [
+          200,
+          200,
+          200
+        ],
+        "errors": 0
+      },
+      "/": {
+        "n": 3,
+        "p50": 222.5,
+        "p95": 230,
+        "min": 221.2,
+        "max": 230,
+        "statuses": [
+          200,
+          200,
+          200
+        ],
+        "errors": 0
+      }
+    },
+    "edge_functions": {
+      "payment-webhook": {
+        "n": 1,
+        "p50": 353.2,
+        "p95": 353.2,
+        "min": 353.2,
+        "max": 353.2,
+        "statuses": [
+          400
+        ],
+        "errors": 1,
+        "note": "single run"
+      },
+      "create-checkout": {
+        "n": 1,
+        "p50": 422.4,
+        "p95": 422.4,
+        "min": 422.4,
+        "max": 422.4,
+        "statuses": [
+          401
+        ],
+        "errors": 1,
+        "note": "single run"
+      },
+      "list-invoices": {
+        "n": 1,
+        "p50": 222.6,
+        "p95": 222.6,
+        "min": 222.6,
+        "max": 222.6,
+        "statuses": [
+          405
+        ],
+        "errors": 1,
+        "note": "single run"
+      },
+      "ai-quality": {
+        "n": 1,
+        "p50": 261.9,
+        "p95": 261.9,
+        "min": 261.9,
+        "max": 261.9,
+        "statuses": [
+          401
+        ],
+        "errors": 1,
+        "note": "single run"
+      }
+    }
+  },
+  "sync_template_found": false
+}

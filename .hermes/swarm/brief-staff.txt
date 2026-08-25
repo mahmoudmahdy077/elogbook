@@ -1,0 +1,6 @@
+STAFF+ADMIN WORKFLOWS MISSION (task_2694bb5a2c7d). Repo G:\elogbook. Creds from .env.local. Accounts password 'password123!'. Tenant 9cd50d60-febe-4adf-be0f-a36bf82762f6.
+SUPERVISOR: resident first inserts case status pending -> supervisor rpc approve_case -> verify status+notification for resident; reject path w/ comment on second case; supervisor cross-tenant insert denied.
+DIRECTOR: create program_goal; create/update/delete case_template; MSF: evaluation_forms pending->completed->acknowledge (respect CHECK constraints on form_type/status); compliance export section queries; webhook register https://example.com/hook then delete, bad-url expects CHECK 400.
+ADMIN: profiles list tenant-scoped; role change resident->supervisor then REVERT to resident; tenant_settings read; sso_configs read-only; plan features read.
+EDGE FUNCTIONS sweep POST {}: payment-webhook create-checkout create-portal-session list-invoices ai-quality generate-pdf - expect fast >=400 responses, no hangs (<3s each).
+Pace logins ~3s apart. TOMBSTONE all created rows. WRITE results to .hermes/swarm/staff-workflows.md then reply exactly: SWARM-DONE staff-workflows

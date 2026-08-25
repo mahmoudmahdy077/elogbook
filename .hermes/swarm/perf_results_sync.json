@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-08-24T23:07:53.257Z",
+  "sections": {
+    "sync_push_batch_10rows": {
+      "n": 5,
+      "p50": 119.7,
+      "p95": 141.6,
+      "min": 107.3,
+      "max": 141.6,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    }
+  },
+  "mode": "update-path 10-row batches on tombstoned draft rows",
+  "total_audit_rows": 0,
+  "undeleted_remaining": 0,
+  "audit_row_ids": []
+}
