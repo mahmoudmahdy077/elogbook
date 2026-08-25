@@ -1,0 +1,72 @@
+-- Capture v3: explicit role phases (postgres = DDL; authenticated = DML)
+CREATE OR REPLACE FUNCTION public.dbg_cap_deleted()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public._swarm_debug_results VALUES ((SELECT COALESCE(MAX(line),80)+1 FROM public._swarm_debug_results),
+      jsonb_build_object('phase','BEFORE','OLD.deleted_at',OLD.deleted_at,'NEW.deleted_at',NEW.deleted_at,'NEW.status',NEW.status));
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_dbg_cap ON public.case_entries;
+CREATE TRIGGER trg_dbg_cap BEFORE UPDATE ON public.case_entries
+FOR EACH ROW EXECUTE FUNCTION public.dbg_cap_deleted();
+
+DO $$
+DECLARE
+  v_uid UUID := 'f2a0d3a0-b3a0-4026-bdfa-ba0a4688a783';
+  v_tenant UUID := '9cd50d60-febe-4adf-be0f-a36bf82762f6';
+  v_claims JSONB := jsonb_build_object('aud','authenticated','role','authenticated','sub',v_uid,
+    'app_metadata', jsonb_build_object('tenant_id',v_tenant,'user_role','resident'));
+  v_pid UUID; v_tmpl UUID; v_id UUID;
+  v_keep JSONB;
+  r RECORD;
+BEGIN
+  DELETE FROM public._swarm_debug_results WHERE line >= 2;
+
+  -- ── PHASE A (postgres): identity resolution under claims-aware context is
+  --    impossible for postgres (FORCE rls + no claims), so switch:
+  PERFORM set_config('role','authenticated', true);
+  PERFORM set_config('request.jwt.claims', v_claims::text, true);
+  SELECT id INTO v_pid FROM public.profiles WHERE user_id = auth.uid();
+  PERFORM set_config('role','postgres', true);
+
+  -- ── PHASE B (authenticated): seed row under ORIGINAL insert policies ──
+  PERFORM set_config('role','authenticated', true);
+  PERFORM set_config('request.jwt.claims', v_claims::text, true);
+  SELECT id INTO v_tmpl FROM public.case_templates LIMIT 1; -- templates readable tenant+global? use global fallback below
+  IF v_tmpl IS NULL THEN
+    SELECT id INTO v_tmpl FROM public.case_templates LIMIT 1;
+  END IF;
+  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','cap3'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+
+  -- ── PHASE C (postgres): swap UPDATE policies to minimal suspect ──
+  PERFORM set_config('role','postgres', true);
+  SELECT jsonb_agg(jsonb_build_object('name',policyname,'roles',roles,'qual',qual,'wc',with_check))
+    INTO v_keep FROM pg_policies
+   WHERE schemaname='public' AND tablename='case_entries' AND cmd='UPDATE';
+  FOR r IN SELECT policyname FROM pg_policies
+           WHERE schemaname='public' AND tablename='case_entries' AND cmd='UPDATE'
+  LOOP EXECUTE format('DROP POLICY %I ON public.case_entries', r.policyname); END LOOP;
+  EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NOT NULL)';
+
+  -- ── PHASE D (authenticated): the failing UPDATE, instrumented ──
+  PERFORM set_config('role','authenticated', true);
+  PERFORM set_config('request.jwt.claims', v_claims::text, true);
+  BEGIN
+    UPDATE public.case_entries SET deleted_at = NOW() WHERE id = v_id;
+    INSERT INTO public._swarm_debug_results VALUES (99, jsonb_build_object('update','OK'));
+  EXCEPTION WHEN OTHERS THEN
+    INSERT INTO public._swarm_debug_results VALUES (99, jsonb_build_object('update','FAIL','msg',SQLERRM));
+  END;
+
+  -- ── PHASE E (postgres): restore policies ──
+  PERFORM set_config('role','postgres', true);
+  FOR r IN SELECT * FROM jsonb_to_recordset(v_keep) AS x(name text, roles jsonb, qual text, wc text)
+  LOOP
+    EXECUTE format($p$CREATE POLICY %I ON public.case_entries FOR UPDATE TO authenticated USING (%s) WITH CHECK (%s)$p$, r.name, r.qual, r.wc);
+  END LOOP;
+END $$;
