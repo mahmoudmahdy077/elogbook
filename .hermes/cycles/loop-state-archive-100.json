@@ -1,0 +1,915 @@
+{
+  "completedCycles": [
+    {
+      "cycle": 1,
+      "suite": "cycle1-case-web",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 2959,
+      "ts": "2026-08-24T17:00:23.588Z"
+    },
+    {
+      "cycle": 2,
+      "suite": "cycle2-case-mobile",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 2220,
+      "ts": "2026-08-24T17:00:25.820Z"
+    },
+    {
+      "cycle": 3,
+      "suite": "cycle3-approvals",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 3685,
+      "ts": "2026-08-24T17:00:29.524Z"
+    },
+    {
+      "cycle": 4,
+      "suite": "cycle9-evals",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 2237,
+      "ts": "2026-08-24T17:00:31.772Z"
+    },
+    {
+      "cycle": 5,
+      "suite": "cycle10-rbac",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 3089,
+      "ts": "2026-08-24T17:00:34.873Z"
+    },
+    {
+      "cycle": 6,
+      "suite": "cycle11-dashboard",
+      "ok": true,
+      "passed": 2,
+      "total": 2,
+      "ms": 1562,
+      "ts": "2026-08-24T17:00:36.446Z"
+    },
+    {
+      "cycle": 7,
+      "suite": "cycle12-billing",
+      "ok": true,
+      "passed": 3,
+      "total": 3,
+      "ms": 1085,
+      "ts": "2026-08-24T17:00:37.533Z"
+    },
+    {
+      "cycle": 8,
+      "suite": "cycle13-reports",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2200,
+      "ts": "2026-08-24T17:00:39.745Z"
+    },
+    {
+      "cycle": 9,
+      "suite": "cycle14-perf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 1774,
+      "ts": "2026-08-24T17:00:41.525Z"
+    },
+    {
+      "cycle": 10,
+      "suite": "cycle23-comments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2129,
+      "ts": "2026-08-24T17:00:43.656Z"
+    },
+    {
+      "cycle": 11,
+      "suite": "cycle25-shifts",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 3064,
+      "ts": "2026-08-24T17:00:46.722Z"
+    },
+    {
+      "cycle": 12,
+      "suite": "cycle25b-shifts-schema",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2709,
+      "ts": "2026-08-24T17:00:49.432Z"
+    },
+    {
+      "cycle": 13,
+      "suite": "cycle25c-shifts-full",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2457,
+      "ts": "2026-08-24T17:00:51.891Z"
+    },
+    {
+      "cycle": 14,
+      "suite": "cycle27-goals",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2079,
+      "ts": "2026-08-24T17:00:53.979Z"
+    },
+    {
+      "cycle": 15,
+      "suite": "cycle32-ops",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 11054,
+      "ts": "2026-08-24T17:01:05.049Z"
+    },
+    {
+      "cycle": 16,
+      "suite": "cycle33-attachments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2152,
+      "ts": "2026-08-24T17:01:07.240Z"
+    },
+    {
+      "cycle": 17,
+      "suite": "cycle35-templates",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1897,
+      "ts": "2026-08-24T17:01:09.143Z"
+    },
+    {
+      "cycle": 18,
+      "suite": "cycle36-msf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2420,
+      "ts": "2026-08-24T17:01:11.567Z"
+    },
+    {
+      "cycle": 19,
+      "suite": "cycle41-notifications",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1884,
+      "ts": "2026-08-24T17:01:13.463Z"
+    },
+    {
+      "cycle": 20,
+      "suite": "cycle43-favorites",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2095,
+      "ts": "2026-08-24T17:01:15.570Z"
+    },
+    {
+      "cycle": 21,
+      "suite": "cycle44-consent",
+      "ok": true,
+      "passed": 4,
+      "total": 4,
+      "ms": 1315,
+      "ts": "2026-08-24T17:01:16.890Z"
+    },
+    {
+      "cycle": 22,
+      "suite": "cycle46-onboarding",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 1873,
+      "ts": "2026-08-24T17:01:18.766Z"
+    },
+    {
+      "cycle": 23,
+      "suite": "cycle48-compliance",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1628,
+      "ts": "2026-08-24T17:01:20.396Z"
+    },
+    {
+      "cycle": 24,
+      "suite": "cycle49-push-tokens",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1662,
+      "ts": "2026-08-24T17:01:22.063Z"
+    },
+    {
+      "cycle": 25,
+      "suite": "cycle51-webhooks",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 1878,
+      "ts": "2026-08-24T17:01:23.944Z"
+    },
+    {
+      "cycle": 26,
+      "suite": "cycle53-admin-users",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 2160,
+      "ts": "2026-08-24T17:01:26.108Z"
+    },
+    {
+      "cycle": 27,
+      "suite": "cycle54-plan-features",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2602,
+      "ts": "2026-08-24T17:01:28.719Z"
+    },
+    {
+      "cycle": 28,
+      "suite": "cycle56-tenant-settings",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1700,
+      "ts": "2026-08-24T17:01:30.420Z"
+    },
+    {
+      "cycle": 29,
+      "suite": "cycle57-sso",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1726,
+      "ts": "2026-08-24T17:01:32.155Z"
+    },
+    {
+      "cycle": 30,
+      "suite": "cycle63-profile",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2634,
+      "ts": "2026-08-24T17:01:34.810Z"
+    },
+    {
+      "cycle": 31,
+      "suite": "cycle64-sessions",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2092,
+      "ts": "2026-08-24T17:01:36.930Z"
+    },
+    {
+      "cycle": 32,
+      "suite": "cycle67-reports-data",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1572,
+      "ts": "2026-08-24T17:01:38.508Z"
+    },
+    {
+      "cycle": 33,
+      "suite": "cycle1-case-web",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 2689,
+      "ts": "2026-08-24T17:01:50.210Z"
+    },
+    {
+      "cycle": 34,
+      "suite": "cycle2-case-mobile",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 2424,
+      "ts": "2026-08-24T17:01:52.642Z"
+    },
+    {
+      "cycle": 35,
+      "suite": "cycle3-approvals",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 3158,
+      "ts": "2026-08-24T17:01:55.805Z"
+    },
+    {
+      "cycle": 36,
+      "suite": "cycle9-evals",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 2879,
+      "ts": "2026-08-24T17:01:58.785Z"
+    },
+    {
+      "cycle": 37,
+      "suite": "cycle10-rbac",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2605,
+      "ts": "2026-08-24T17:02:01.410Z"
+    },
+    {
+      "cycle": 38,
+      "suite": "cycle11-dashboard",
+      "ok": true,
+      "passed": 2,
+      "total": 2,
+      "ms": 1300,
+      "ts": "2026-08-24T17:02:02.712Z"
+    },
+    {
+      "cycle": 39,
+      "suite": "cycle12-billing",
+      "ok": true,
+      "passed": 3,
+      "total": 3,
+      "ms": 1425,
+      "ts": "2026-08-24T17:02:04.223Z"
+    },
+    {
+      "cycle": 40,
+      "suite": "cycle13-reports",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2405,
+      "ts": "2026-08-24T17:02:06.652Z"
+    },
+    {
+      "cycle": 41,
+      "suite": "cycle14-perf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2450,
+      "ts": "2026-08-24T17:02:09.129Z"
+    },
+    {
+      "cycle": 42,
+      "suite": "cycle23-comments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2373,
+      "ts": "2026-08-24T17:02:11.509Z"
+    },
+    {
+      "cycle": 43,
+      "suite": "cycle25-shifts",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 3249,
+      "ts": "2026-08-24T17:02:14.771Z"
+    },
+    {
+      "cycle": 44,
+      "suite": "cycle25b-shifts-schema",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2730,
+      "ts": "2026-08-24T17:02:17.568Z"
+    },
+    {
+      "cycle": 45,
+      "suite": "cycle25c-shifts-full",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2822,
+      "ts": "2026-08-24T17:02:20.403Z"
+    },
+    {
+      "cycle": 46,
+      "suite": "cycle27-goals",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2547,
+      "ts": "2026-08-24T17:02:22.961Z"
+    },
+    {
+      "cycle": 47,
+      "suite": "cycle32-ops",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 11189,
+      "ts": "2026-08-24T17:02:34.155Z"
+    },
+    {
+      "cycle": 48,
+      "suite": "cycle33-attachments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2066,
+      "ts": "2026-08-24T17:02:36.235Z"
+    },
+    {
+      "cycle": 49,
+      "suite": "cycle35-templates",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 3156,
+      "ts": "2026-08-24T17:02:39.394Z"
+    },
+    {
+      "cycle": 50,
+      "suite": "cycle36-msf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2466,
+      "ts": "2026-08-24T17:02:41.866Z"
+    },
+    {
+      "cycle": 51,
+      "suite": "cycle41-notifications",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2114,
+      "ts": "2026-08-24T17:02:43.988Z"
+    },
+    {
+      "cycle": 52,
+      "suite": "cycle43-favorites",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2196,
+      "ts": "2026-08-24T17:02:46.227Z"
+    },
+    {
+      "cycle": 53,
+      "suite": "cycle44-consent",
+      "ok": true,
+      "passed": 4,
+      "total": 4,
+      "ms": 1490,
+      "ts": "2026-08-24T17:02:47.724Z"
+    },
+    {
+      "cycle": 54,
+      "suite": "cycle46-onboarding",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 1470,
+      "ts": "2026-08-24T17:02:49.204Z"
+    },
+    {
+      "cycle": 55,
+      "suite": "cycle48-compliance",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1930,
+      "ts": "2026-08-24T17:02:51.135Z"
+    },
+    {
+      "cycle": 56,
+      "suite": "cycle49-push-tokens",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2306,
+      "ts": "2026-08-24T17:02:53.445Z"
+    },
+    {
+      "cycle": 57,
+      "suite": "cycle51-webhooks",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2270,
+      "ts": "2026-08-24T17:02:55.718Z"
+    },
+    {
+      "cycle": 58,
+      "suite": "cycle53-admin-users",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 1972,
+      "ts": "2026-08-24T17:02:57.700Z"
+    },
+    {
+      "cycle": 59,
+      "suite": "cycle54-plan-features",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2295,
+      "ts": "2026-08-24T17:03:00.040Z"
+    },
+    {
+      "cycle": 60,
+      "suite": "cycle56-tenant-settings",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1850,
+      "ts": "2026-08-24T17:03:01.907Z"
+    },
+    {
+      "cycle": 61,
+      "suite": "cycle57-sso",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1717,
+      "ts": "2026-08-24T17:03:03.645Z"
+    },
+    {
+      "cycle": 62,
+      "suite": "cycle63-profile",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2523,
+      "ts": "2026-08-24T17:03:06.195Z"
+    },
+    {
+      "cycle": 63,
+      "suite": "cycle64-sessions",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2393,
+      "ts": "2026-08-24T17:03:08.596Z"
+    },
+    {
+      "cycle": 64,
+      "suite": "cycle67-reports-data",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2896,
+      "ts": "2026-08-24T17:03:11.501Z"
+    },
+    {
+      "cycle": 65,
+      "suite": "cycle1-case-web",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 3709,
+      "ts": "2026-08-24T17:08:44.983Z"
+    },
+    {
+      "cycle": 66,
+      "suite": "cycle2-case-mobile",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 2493,
+      "ts": "2026-08-24T17:08:48.707Z"
+    },
+    {
+      "cycle": 67,
+      "suite": "cycle3-approvals",
+      "ok": true,
+      "passed": 9,
+      "total": 9,
+      "ms": 3062,
+      "ts": "2026-08-24T17:08:52.983Z"
+    },
+    {
+      "cycle": 68,
+      "suite": "cycle9-evals",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 2188,
+      "ts": "2026-08-24T17:08:56.396Z"
+    },
+    {
+      "cycle": 69,
+      "suite": "cycle10-rbac",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2526,
+      "ts": "2026-08-24T17:09:00.183Z"
+    },
+    {
+      "cycle": 70,
+      "suite": "cycle11-dashboard",
+      "ok": true,
+      "passed": 2,
+      "total": 2,
+      "ms": 1341,
+      "ts": "2026-08-24T17:09:02.738Z"
+    },
+    {
+      "cycle": 71,
+      "suite": "cycle12-billing",
+      "ok": true,
+      "passed": 3,
+      "total": 3,
+      "ms": 1551,
+      "ts": "2026-08-24T17:09:05.494Z"
+    },
+    {
+      "cycle": 72,
+      "suite": "cycle13-reports",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2271,
+      "ts": "2026-08-24T17:09:08.987Z"
+    },
+    {
+      "cycle": 73,
+      "suite": "cycle14-perf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2075,
+      "ts": "2026-08-24T17:09:12.302Z"
+    },
+    {
+      "cycle": 74,
+      "suite": "cycle23-comments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2479,
+      "ts": "2026-08-24T17:09:15.993Z"
+    },
+    {
+      "cycle": 75,
+      "suite": "cycle25-shifts",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 3734,
+      "ts": "2026-08-24T17:09:20.945Z"
+    },
+    {
+      "cycle": 76,
+      "suite": "cycle25b-shifts-schema",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2344,
+      "ts": "2026-08-24T17:09:24.499Z"
+    },
+    {
+      "cycle": 77,
+      "suite": "cycle25c-shifts-full",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2385,
+      "ts": "2026-08-24T17:09:28.096Z"
+    },
+    {
+      "cycle": 78,
+      "suite": "cycle27-goals",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2239,
+      "ts": "2026-08-24T17:09:31.609Z"
+    },
+    {
+      "cycle": 79,
+      "suite": "cycle32-ops",
+      "ok": true,
+      "passed": 10,
+      "total": 10,
+      "ms": 12629,
+      "ts": "2026-08-24T17:09:45.457Z"
+    },
+    {
+      "cycle": 80,
+      "suite": "cycle33-attachments",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2358,
+      "ts": "2026-08-24T17:09:49.033Z"
+    },
+    {
+      "cycle": 81,
+      "suite": "cycle35-templates",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 3019,
+      "ts": "2026-08-24T17:09:53.256Z"
+    },
+    {
+      "cycle": 82,
+      "suite": "cycle36-msf",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 2857,
+      "ts": "2026-08-24T17:09:57.338Z"
+    },
+    {
+      "cycle": 83,
+      "suite": "cycle41-notifications",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 4305,
+      "ts": "2026-08-24T17:10:02.883Z"
+    },
+    {
+      "cycle": 84,
+      "suite": "cycle43-favorites",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 4381,
+      "ts": "2026-08-24T17:10:08.470Z"
+    },
+    {
+      "cycle": 85,
+      "suite": "cycle44-consent",
+      "ok": true,
+      "passed": 4,
+      "total": 4,
+      "ms": 1961,
+      "ts": "2026-08-24T17:10:11.651Z"
+    },
+    {
+      "cycle": 86,
+      "suite": "cycle46-onboarding",
+      "ok": true,
+      "passed": 7,
+      "total": 7,
+      "ms": 1927,
+      "ts": "2026-08-24T17:10:14.823Z"
+    },
+    {
+      "cycle": 87,
+      "suite": "cycle48-compliance",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1761,
+      "ts": "2026-08-24T17:10:17.795Z"
+    },
+    {
+      "cycle": 88,
+      "suite": "cycle49-push-tokens",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2063,
+      "ts": "2026-08-24T17:10:21.111Z"
+    },
+    {
+      "cycle": 89,
+      "suite": "cycle51-webhooks",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 6808,
+      "ts": "2026-08-24T17:10:29.134Z"
+    },
+    {
+      "cycle": 90,
+      "suite": "cycle53-admin-users",
+      "ok": true,
+      "passed": 6,
+      "total": 6,
+      "ms": 13286,
+      "ts": "2026-08-24T17:10:43.630Z"
+    },
+    {
+      "cycle": 91,
+      "suite": "cycle54-plan-features",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 5201,
+      "ts": "2026-08-24T17:10:50.042Z"
+    },
+    {
+      "cycle": 92,
+      "suite": "cycle56-tenant-settings",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 4963,
+      "ts": "2026-08-24T17:10:56.217Z"
+    },
+    {
+      "cycle": 93,
+      "suite": "cycle57-sso",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 2360,
+      "ts": "2026-08-24T17:10:59.800Z"
+    },
+    {
+      "cycle": 94,
+      "suite": "cycle63-profile",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 12315,
+      "ts": "2026-08-24T17:11:13.433Z"
+    },
+    {
+      "cycle": 95,
+      "suite": "cycle64-sessions",
+      "ok": true,
+      "passed": 8,
+      "total": 8,
+      "ms": 2358,
+      "ts": "2026-08-24T17:11:17.013Z"
+    },
+    {
+      "cycle": 96,
+      "suite": "cycle67-reports-data",
+      "ok": true,
+      "passed": 5,
+      "total": 5,
+      "ms": 1987,
+      "ts": "2026-08-24T17:11:20.207Z"
+    },
+    {
+      "cycle": 97,
+      "suite": "static-sweep-typecheck+lint",
+      "ok": true,
+      "passed": 2,
+      "total": 2,
+      "ms": 0,
+      "ts": "2026-08-24T17:15:24.232Z"
+    },
+    {
+      "cycle": 98,
+      "suite": "web-unit-tests",
+      "ok": true,
+      "passed": 292,
+      "total": 293,
+      "ms": 234530,
+      "ts": "2026-08-24T17:22:05.659Z"
+    },
+    {
+      "cycle": 99,
+      "suite": "mobile-unit-tests",
+      "ok": true,
+      "passed": 308,
+      "total": 314,
+      "ms": 35340,
+      "ts": "2026-08-24T17:22:05.662Z"
+    },
+    {
+      "cycle": 100,
+      "suite": "e2e-playwright-full",
+      "ok": true,
+      "passed": 68,
+      "total": 68,
+      "ms": 270000,
+      "ts": "2026-08-24T20:35:59.035Z"
+    }
+  ],
+  "failures": {},
+  "summary": {
+    "run": "100-cycle QA loop (post-pull)",
+    "rotations": 3,
+    "liveCycles": 96,
+    "liveChecksGreen": true,
+    "static": "typecheck 5 pkgs + lint clean",
+    "webUnit": "293 pass",
+    "mobileUnit": "308 pass",
+    "e2e": "68 pass / 0 fail"
+  }
+}
