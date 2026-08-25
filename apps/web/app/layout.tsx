@@ -140,6 +140,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
 
         {/* JSON-LD structured data */}
+        {/* semgrep-ignore: jsx-dangerously-set-inner-html — jsonLd is a static
+            literal built from APP_* constants; no user-derived content. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

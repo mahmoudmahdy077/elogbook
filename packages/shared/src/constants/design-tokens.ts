@@ -48,15 +48,3 @@ export const clinicalTokens = {
 } as const;
 
 export type ClinicalTokens = typeof clinicalTokens;
-
-export const clinicalFonts = {
-  heading: "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-  body: "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  mono: "'SF Mono', 'JetBrains Mono', ui-monospace, monospace",
-} as const;
-
-export const animationTokens = {
-  defaultTransition: '200ms cubic-bezier(0.25, 0.1, 0.25, 1)',
-  springSlideUp: { tension: 170, friction: 26 },
-  staggerDelay: 30,
-} as const;

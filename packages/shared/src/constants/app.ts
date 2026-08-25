@@ -1,5 +1,4 @@
 export const APP_NAME = 'E-Logbook';
-export const APP_VERSION = '1.0.0';
 
 /**
  * The UUID used for global/shared templates that are available across all tenants.

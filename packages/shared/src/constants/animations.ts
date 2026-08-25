@@ -16,8 +16,3 @@ export const CARD_EXIT_ANIMATION = {
   opacity: 0,
   transition: { duration: 0.3 },
 } as const;
-
-export const KPI_COUNT_UP = {
-  duration: 1.5,
-  ease: 'easeOut' as const,
-} as const;
