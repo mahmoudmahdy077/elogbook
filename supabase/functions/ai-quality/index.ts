@@ -212,17 +212,23 @@ serve(async (req) => {
     );
   }
 
-  let body: AiQualityPayload;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+    let body: AiQualityPayload;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
 
-  const { case_entry_id, tenant_id } = body;
+    const { case_entry_id, tenant_id } = body;
 
   if (!case_entry_id) {
     return new Response(

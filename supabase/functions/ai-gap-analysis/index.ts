@@ -28,12 +28,12 @@ serve(async (req) => {
       });
     }
 
-    const { resident_id }: GapAnalysisRequest = await req.json();
-    if (!resident_id) {
-      return new Response(JSON.stringify({ error: 'resident_id required' }), {
-        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
+      const { resident_id }: GapAnalysisRequest = await req.json();
+      if (!resident_id || typeof resident_id !== 'string') {
+        return new Response(JSON.stringify({ error: 'resident_id required' }), {
+          status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
 
     const [casesRes, milestonesRes, goalsRes] = await Promise.all([
       supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, case_date, status, created_at, updated_at, case_templates!inner(specialty, name)')

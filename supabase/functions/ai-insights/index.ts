@@ -209,17 +209,23 @@ if (import.meta.main) {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-  let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
+    let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
 
-  const { resident_id, query: rawQuery, stream = false, is_deidentified } = body;
+    const { resident_id, query: rawQuery, stream = false, is_deidentified } = body;
   const query = rawQuery ? sanitizeQuery(rawQuery) : undefined;
 
   if (!resident_id) {

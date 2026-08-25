@@ -24,17 +24,23 @@ serve(async (req) => {
     );
   }
 
-  let body: { return_url?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
+    let body: { return_url?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!body || typeof body !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
 
-  const returnUrl = body.return_url || (origin && ALLOWED_ORIGINS.includes(origin) ? origin : 'https://app.elogbook.dev');
+    const returnUrl = body.return_url || (origin && ALLOWED_ORIGINS.includes(origin) ? origin : 'https://app.elogbook.dev');
 
   const { data: subscription } = await supabase
     .from('subscriptions')
