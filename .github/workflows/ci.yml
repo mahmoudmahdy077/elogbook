@@ -53,7 +53,17 @@ jobs:
         with: { version: 2.109.1 }
         env:
           SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
-      - run: supabase start
+      # supabase start pulls several images and flakes on registry hiccups;
+      # use the public docker.io mirror and retry before giving up.
+      - name: Start local Supabase (with retries)
+        run: |
+          export SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io
+          for i in 1 2 3; do
+            if supabase start; then exit 0; fi
+            echo "::warning::supabase start attempt $i failed; retrying in 30s"
+            sleep 30
+          done
+          exit 1
       - run: supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
   deno-test:
     runs-on: ubuntu-latest

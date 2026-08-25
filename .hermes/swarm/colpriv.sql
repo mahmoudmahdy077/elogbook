@@ -1,0 +1,1 @@
+SELECT column_name, has_column_privilege('authenticated','case_entries',column_name,'UPDATE') AS can_upd FROM information_schema.columns WHERE table_schema='public' AND table_name='case_entries' ORDER BY ordinal_position;

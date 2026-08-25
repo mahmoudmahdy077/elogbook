@@ -10,22 +10,23 @@ export default function ApiDocsPage() {
   useEffect(() => {
     if (loaded) return;
 
-    // Load Swagger UI bundle from CDN
+    // Self-hosted Swagger UI (public/swagger/) — CDN loading violates CSP
+    // (script-src 'strict-dynamic' + style-src 'self').
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js';
+    script.src = '/swagger/swagger-ui-bundle.js';
     script.async = true;
     script.onload = () => {
       setLoaded(true);
     };
     script.onerror = () => {
-      setError('Failed to load Swagger UI. Check your internet connection.');
+      setError('Failed to load Swagger UI.');
     };
     document.body.appendChild(script);
 
     // Load Swagger UI CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/swagger-ui-dist@5/swagger-ui.css';
+    link.href = '/swagger/swagger-ui.css';
     document.head.appendChild(link);
 
     return () => {
@@ -37,18 +38,14 @@ export default function ApiDocsPage() {
 
   useEffect(() => {
     if (!loaded || !swaggerRef.current) return;
-    const SwaggerUI = (window as unknown as Record<string, unknown>).SwaggerUIBundle as
+    const SwaggerUIBundle = (window as unknown as Record<string, unknown>).SwaggerUIBundle as
       | ((opts: Record<string, unknown>) => void)
       | undefined;
-    if (SwaggerUI) {
-      SwaggerUI({
+    if (SwaggerUIBundle) {
+      SwaggerUIBundle({
         url: '/openapi.yaml',
         dom_id: '#swagger-ui',
         deepLinking: true,
-        presets: [
-          (SwaggerUI as unknown as Record<string, unknown>).presets as { apis: unknown },
-          (window as unknown as Record<string, unknown>).SwaggerUIBundle as unknown,
-        ],
         layout: 'BaseLayout',
         defaultModelsExpandDepth: 1,
         defaultModelExpandDepth: 1,
@@ -132,6 +129,11 @@ export default function ApiDocsPage() {
       />
 
       <style jsx global>{`
+        /* Mobile: keep Swagger UI inside the viewport (scroll internally) */
+        #swagger-ui { overflow-x: auto; }
+        @media (max-width: 640px) {
+          .swagger-ui .wrapper { padding-left: 12px; padding-right: 12px; max-width: 100%; }
+        }
         /* Dark theme overrides for Swagger UI */
         .dark #swagger-ui {
           --swagger-color: #3b82f6;
