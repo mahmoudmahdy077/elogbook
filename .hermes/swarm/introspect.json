@@ -1,0 +1,124 @@
+{
+ "policies": [
+  {
+   "cmd": "INSERT",
+   "name": "Authenticated users can insert own entries",
+   "qual": null,
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "((tenant_id = get_tenant_id()) AND (resident_id IN ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))))"
+  },
+  {
+   "cmd": "SELECT",
+   "name": "Resident reads own entries",
+   "qual": "((tenant_id = get_tenant_id()) AND (deleted_at IS NULL) AND (resident_id IN ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": null
+  },
+  {
+   "cmd": "SELECT",
+   "name": "Supervisor+ reads all tenant entries",
+   "qual": "((tenant_id = get_tenant_id()) AND (deleted_at IS NULL) AND (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": null
+  },
+  {
+   "cmd": "INSERT",
+   "name": "no_inserts_for_lapsed_tenants",
+   "qual": null,
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "\nCASE\n    WHEN (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])) THEN true\n    ELSE (NOT (EXISTS ( SELECT 1\n       FROM subscriptions\n      WHERE ((subscriptions.tenant_id = case_entries.tenant_id) AND (subscriptions.status = ANY (ARRAY['past_due'::text, 'unpaid'::text]))))))\nEND"
+  },
+  {
+   "cmd": "UPDATE",
+   "name": "residents soft delete own entries",
+   "qual": "((resident_id = ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))) AND (tenant_id = get_tenant_id()) AND (deleted_at IS NULL))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "((resident_id = ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))) AND (tenant_id = get_tenant_id()) AND (deleted_at IS NOT NULL))"
+  },
+  {
+   "cmd": "UPDATE",
+   "name": "residents update own draft or rejected entries",
+   "qual": "((resident_id = ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))) AND (tenant_id = get_tenant_id()) AND (status = ANY (ARRAY['draft'::text, 'rejected'::text])) AND (deleted_at IS NULL))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "((resident_id = ( SELECT profiles.id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid()))) AND (tenant_id = get_tenant_id()) AND (deleted_at IS NULL) AND ((status = 'draft'::text) OR (status = 'pending'::text)))"
+  },
+  {
+   "cmd": "UPDATE",
+   "name": "supervisor+ soft delete tenant entries",
+   "qual": "((tenant_id = get_tenant_id()) AND (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])) AND (deleted_at IS NULL))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "((tenant_id = get_tenant_id()) AND (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])) AND (deleted_at IS NOT NULL))"
+  },
+  {
+   "cmd": "UPDATE",
+   "name": "supervisor+ update pending tenant entries",
+   "qual": "((tenant_id = get_tenant_id()) AND (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])) AND (status = 'pending'::text) AND (deleted_at IS NULL))",
+   "roles": [
+    "authenticated"
+   ],
+   "with_check": "((tenant_id = get_tenant_id()) AND (get_user_role() = ANY (ARRAY['supervisor'::text, 'director'::text, 'institution_admin'::text, 'admin'::text])) AND (deleted_at IS NULL) AND (status = ANY (ARRAY['approved'::text, 'rejected'::text])))"
+  }
+ ],
+ "triggers": [
+  {
+   "fn": "update_updated_at",
+   "name": "set_updated_at",
+   "enabled": "O"
+  },
+  {
+   "fn": "audit_case_entry",
+   "name": "trg_audit_case_entry",
+   "enabled": "O"
+  },
+  {
+   "fn": "auto_approve_individual",
+   "name": "trg_auto_approve_individual",
+   "enabled": "O"
+  },
+  {
+   "fn": "block_lapsed_tenant_submit",
+   "name": "trg_block_lapsed_tenant_submit",
+   "enabled": "O"
+  },
+  {
+   "fn": "enforce_case_quota",
+   "name": "trg_enforce_case_quota",
+   "enabled": "O"
+  },
+  {
+   "fn": "enforce_case_status_transition",
+   "name": "trg_enforce_case_status_transition",
+   "enabled": "O"
+  },
+  {
+   "fn": "scan_field_values_for_phi",
+   "name": "trg_scan_field_values_phi",
+   "enabled": "O"
+  },
+  {
+   "fn": "recalc_goal_progress",
+   "name": "trg_update_goal_progress",
+   "enabled": "O"
+  },
+  {
+   "fn": "write_once_submitted_check",
+   "name": "trg_write_once_submitted_check",
+   "enabled": "O"
+  }
+ ],
+ "write_once_fn": "CREATE OR REPLACE FUNCTION public.write_once_submitted_check()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE\n  v_role TEXT;\nBEGIN\n  v_role := public.get_user_role();\n\n  -- Pure soft-delete tombstone: only deleted_at (and updated_at) may change.\n  IF NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL THEN\n    IF NEW.status IS DISTINCT FROM OLD.status\n       OR NEW.field_values IS DISTINCT FROM OLD.field_values\n       OR NEW.accreditation_mappings IS DISTINCT FROM OLD.accreditation_mappings\n       OR NEW.patient_mrn IS DISTINCT FROM OLD.patient_mrn\n       OR NEW.patient_dob IS DISTINCT FROM OLD.patient_dob\n       OR NEW.patient_age_years IS DISTINCT FROM OLD.patient_age_years\n       OR NEW.patient_hash IS DISTINCT FROM OLD.patient_hash\n       OR NEW.case_date IS DISTINCT FROM OLD.case_date\n       OR NEW.template_id IS DISTINCT FROM OLD.template_id\n       OR NEW.resident_id IS DISTINCT FROM OLD.resident_id\n       OR NEW.is_deidentified IS DISTINCT FROM OLD.is_deidentified THEN\n      RAISE EXCEPTION 'Soft-delete must not alter case content'\n        USING ERRCODE = 'insufficient_privilege';\n    END IF;\n    RETURN NEW;\n  END IF;\n\n  IF v_role = 'resident' THEN\n    IF OLD.status = 'rejected' AND NEW.status = 'draft' THEN\n      RETURN NEW;\n    END IF;\n    IF OLD.status != 'draft' THEN\n      RAISE EXCEPTION 'Cannot modify case entry once submitted (status: %). Only rejected cases can be edited for resubmission.', OLD.status\n        USING ERRCODE = 'insufficient_privilege';\n    END IF;\n  END IF;\n\n  RETURN NEW;\nEND;\n$function$\n"
+}

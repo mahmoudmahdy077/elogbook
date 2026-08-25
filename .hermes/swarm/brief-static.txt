@@ -1,0 +1,9 @@
+STATIC CODE + SUPPLY-CHAIN REVIEW MISSION (task_0e508eaeb467). Repo G:\elogbook.
+1 pnpm audit --prod --audit-level=high - list advisories w/ severity.
+2 If semgrep binary exists: semgrep scan --config .semgrep.yml apps packages; else note unavailable.
+3 Secret sweep: search apps/ packages/ supabase/functions (exclude node_modules/tests) for service_role|SUPABASE_SERVICE_ROLE|sk_live|whsec_ outside .env* files - any hit is P1.
+4 console.log census in apps/web/app + apps/web/components production paths.
+5 TODO/FIXME/HACK count per top-level dir.
+6 Dead exports spot-check in packages/shared/src (exports never imported by apps/*).
+WRITE findings to .hermes/swarm/static-review.md with file:line refs and severities then reply exactly: SWARM-DONE static-review
+Read-only for repo files.

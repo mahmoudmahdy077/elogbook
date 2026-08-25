@@ -1,0 +1,4 @@
+PERFORMANCE MISSION (task_326ec5dd1593). Repo G:\elogbook. Creds from .env.local. Login resident@demo.com / 'password123!'.
+Measure 5 runs each, report p50/p95 vs budget: auth login <500ms; rpc get_dashboard_data {p_tenant_id} <800ms; GET case_entries?limit=20 <250ms; GET case_templates?name.ilike.*a* <200ms; rpc hash_patient_mrn <150ms; rpc check_case_quota <150ms; evaluations list <250ms; notifications list <250ms; rpc sync_push_batch with 10-row batch on case_templates? use shifts table w/ required cols OR tombstone-only rows <400ms.
+Then prod TTFB (fetch no-cors timing or date diff) x3 each <800ms: https://elogbook-web.vercel.app/login /pricing /. Edge functions POST {} expect fast >=400 not hang <3000ms: payment-webhook create-checkout create-portal-session list-invoices ai-quality.
+Pace calls ~2/s max. WRITE table (metric/p50/p95/budget/PASS-FAIL) to .hermes/swarm/performance.md then reply exactly: SWARM-DONE performance

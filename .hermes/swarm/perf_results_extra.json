@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-08-24T23:03:19.535Z",
+  "sections": {
+    "evaluations_list_faculty": {
+      "n": 5,
+      "p50": 116.3,
+      "p95": 123.7,
+      "min": 111.5,
+      "max": 123.7,
+      "statuses": [
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "errors": 5
+    },
+    "notifications_list_fixed": {
+      "n": 5,
+      "p50": 123.9,
+      "p95": 128.5,
+      "min": 99.9,
+      "max": 128.5,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": 0
+    },
+    "sync_push_batch_10rows": {
+      "n": 5,
+      "p50": 125.7,
+      "p95": 150.9,
+      "min": 111.8,
+      "max": 150.9,
+      "statuses": [
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "errors": 5
+    }
+  },
+  "template_used": "00000000-0000-4000-8000-000000000010",
+  "created_rows_visible": 0,
+  "tombstoned_rows": 0,
+  "tombstone_status": 400,
+  "created_row_ids": [
+    "f024c416-4628-4a9e-97e8-90bd7558cd85",
+    "0832c41b-a8a5-42b6-9cc8-4a347fae12b4",
+    "305655c3-4294-460b-aab8-1213f3cc0799",
+    "62a2aaa1-fd7d-4971-8dd4-33a0dce4d254",
+    "bd49fd9f-8da3-4ceb-a755-631f2f8c8f0d",
+    "e8aaf526-9bb8-4ca8-af95-77f30c5e0965",
+    "8d587f61-2d75-471a-9b5a-2882d6d7bcc5",
+    "69f645a5-1e40-42a7-9f58-abb3ef71da36",
+    "3e31b579-b15e-48a9-9ff2-a7688e2a9083",
+    "97bd8714-db4b-4c0a-8f04-2dc1b0d1b6e1"
+  ]
+}

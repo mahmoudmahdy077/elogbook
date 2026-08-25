@@ -1,0 +1,5 @@
+UI/E2E + UNITS MISSION (task_ba81471d38f4). Repo G:\elogbook (pnpm monorepo, Node 22).
+Run in order and record results: 1 pnpm install --prefer-offline; 2 pnpm typecheck (expect 0 errors across workspaces); 3 pnpm lint:all (expect clean); 4 pnpm --filter @elogbook/web test (expect ~293 pass/1 skipped) and pnpm --filter @elogbook/mobile test (expect ~308 pass/6 skipped); 5 E2E: pnpm --filter @elogbook/web build; start prod server on port 3100 in background (from apps/web: pnpm start -- -p 3100 &); wait for readiness; BASE_URL=http://localhost:3100 MOCK_TENANT_SLUG=demo pnpm --filter @elogbook/web test:e2e (expect 68 pass / 0 fail / 6 skipped). Kill background server after.
+If ANY failure: capture test name + error + root-cause hypothesis. NOTE e2e hits live Supabase; suites already have retry logic.
+WRITE summary to .hermes/swarm/ui-e2e.md then reply exactly: SWARM-DONE ui-e2e
+Do not modify source files.
