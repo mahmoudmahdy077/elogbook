@@ -93,7 +93,13 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
       ? { status: subscription.status, plan_id: subscription.plan_id, current_period_end: subscription.current_period_end }
       : null,
     aal,
-    mfaRequired: isMfaRequiredForRole(role) && aal !== 'aal2',
+    // P6.1 MFA enforcement can be disabled per-deployment (DISABLE_MFA=true)
+    // for auth servers where GoTrue MFA endpoints are unavailable — otherwise
+    // director+ roles are permanently locked out at /mfa/enroll.
+    mfaRequired:
+      process.env.DISABLE_MFA !== 'true' &&
+      isMfaRequiredForRole(role) &&
+      aal !== 'aal2',
   };
 });
 
