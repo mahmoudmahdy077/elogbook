@@ -1,0 +1,1 @@
+SELECT (SELECT count(*)::text FROM pg_extension WHERE extname='pgtap') AS pgtap_installed, (SELECT count(*)::text FROM pg_available_extensions WHERE name='pgtap') AS pgtap_available, has_table_privilege('postgres','auth.users','INSERT') AS auth_users_insert;

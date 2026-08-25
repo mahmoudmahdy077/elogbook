@@ -1,0 +1,65 @@
+
+  /api/{tenant}/billing/invoices:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Tenant slug
+    get:
+      operationId: listInvoices
+      summary: List Stripe invoices for the tenant's customer
+      description: Requires director, institution_admin or admin role. Returns 503 when billing is not configured for the deployment.
+      tags: [Billing]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Invoice list
+        "403":
+          description: Insufficient permissions
+        "503":
+          description: Billing not configured
+
+  /api/{tenant}/reports/gap-analysis:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Tenant slug
+    post:
+      operationId: gapAnalysis
+      summary: ACGME gap-analysis computation across resident cases
+      description: Requires supervisor or higher role.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Gap-analysis report
+        "403":
+          description: Insufficient permissions
+
+  /api/{tenant}/reports/webads:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Tenant slug
+    get:
+      operationId: webadsExport
+      summary: WEBADS export dataset (case-level aggregate export)
+      description: Requires supervisor or higher role.
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: WEBADS export
+        "403":
+          description: Insufficient permissions
