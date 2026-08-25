@@ -1,3 +1,4 @@
+/* global process, Buffer */
 // Authenticated-page axe scan (Wave 6 Track D) — reuses e2e fixtures pattern
 import { chromium } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
