@@ -242,7 +242,7 @@ export function startAuditFlush(): void {
       if (error || !session) return; // not authenticated — skip flush
 
       const count = await flushAuditLog();
-      if (count > 0) {
+      if (count > 0 && __DEV__) {
         console.debug(`[AuditTrail] Flushed ${count} entries to ${SUPABASE_TABLE}`);
       }
     } catch {
