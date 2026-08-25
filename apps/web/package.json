@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "node scripts/copy-swagger.mjs && next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.mjs,.cjs,.ts,.tsx",
     "typecheck": "tsc --noEmit",
@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
+    "swagger-ui-dist": "^5.17.14",
     "@eslint/js": "^9.39.4",
     "@types/pg": "^8.11.0",
     "@playwright/test": "^1.61.1",

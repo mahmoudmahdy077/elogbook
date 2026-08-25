@@ -1,18 +1,31 @@
-# UI / E2E + Unit Validation — coordinator takeover
+# UI/E2E + Units Verification — task_ba81471d38f4
 
-- Task: task_ba81471d38f4 · Worker session stalled post-typecheck; coordinator completed the track directly.
-- Date: 2026-08-25 · Tree: main @ swarm fixes (profiles WITH CHECK, sha256 hash, goal recalc, reasserted soft-delete policies)
+Date: 2026-08-25 · Repo: `G:\elogbook` (pnpm monorepo, Node 22) · OS: Windows (pwsh)
 
-| Step | Result |
-|---|---|
-| pnpm typecheck (5 workspaces) | ✅ 0 errors |
-| pnpm lint:all | ✅ clean (0 errors, 0 warnings) |
-| Web unit tests | ✅ 293 passed / 1 skipped (30 files) |
-| Mobile unit tests | ✅ 308 passed / 6 skipped |
-| Playwright E2E | ✅ 68 passed / 0 failed / 6 skipped (full run earlier this session on same code; role-gating timeout fix + fixture fixes verified) |
+## Results
 
-Notes:
-- E2E suite exercises: a11y (axe, zero critical), auth flows, dashboard/cases/goals navigation, case wizard end-to-end (UUID fix), quick-add (incl. new Escape handling), shortcuts (hydration-aware), responsive layouts, rate-limit surface.
-- No source changes required for this track in Wave 1 beyond those already committed with the fixes above.
+| # | Step | Expected | Actual | Status |
+|---|------|----------|--------|--------|
+| 1 | `pnpm install --prefer-offline` | success | Done in 1m13s; lockfile up to date; mobile postinstall renderer patch OK | PASS |
+| 2 | `pnpm typecheck` | 0 errors | 5/6 workspaces ran (`env`, `supabase`, `shared`, `mobile`, `web`) — all clean, 0 errors | PASS |
+| 3 | `pnpm lint:all` | clean | web + mobile eslint: 0 errors, 0 warnings | PASS |
+| 4a | `pnpm --filter @elogbook/web test` | ~293 pass / 1 skipped | **293 passed / 1 skipped** (294) in 30 files, 340s | PASS |
+| 4b | `pnpm --filter @elogbook/mobile test` | ~308 pass / 6 skipped | **308 passed / 6 skipped** (314), 36 files pass + 1 file skipped, 43s | PASS |
+| 5 | E2E (prod build on :3100) | 68 pass / 0 fail / 6 skipped | **68 passed / 0 failed / 6 skipped**, 3.8m, 74 tests total | PASS |
 
-SWARM-DONE ui-e2e
+## E2E details
+- Build: `pnpm --filter @elogbook/web build` → Next.js 16.3.1 (Turbopack), compiled successfully; only non-blocking warnings (`metadataBase` not set).
+- Server: started detached from `apps/web` via `pnpm exec next start -p 3100`; readiness confirmed via `GET /api/health` → 200.
+- Run: `BASE_URL=http://localhost:3100 MOCK_TENANT_SLUG=demo pnpm --filter @elogbook/web test:e2e`.
+- Suites: a11y (4, all critical-violation-free), case-wizard, dashboard (9), landing, login-dark-mode, login (7), navigation (9), quick-add (6), rate-limit (429 on 31st attempt), responsive (9), shortcuts (10), smoke (3), template-builder (6). Skips: 6 approvals.spec.ts tests skipped as designed.
+- a11y scans reported only non-critical violation kinds on /signup, /, /login, /pricing.
+
+## Environment notes (no source changes made)
+- `pnpm start -- -p 3100` does NOT work with this pnpm version (forwards `--` literally to `next start`, which treats `-p` as a project dir). Used `pnpm exec next start -p 3100` instead.
+- On Windows, the first server launch died when its parent shell session was reaped; relaunched fully detached via `Win32_Process.Create`. Port 3100 verified released after run.
+
+## Failures / root-cause hypotheses
+None. All suites matched expected counts exactly.
+
+## Cleanup
+Background prod server killed (listener PID 15500 + wrapper PID 17824); port 3100 released.
