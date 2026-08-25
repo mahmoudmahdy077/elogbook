@@ -7,5 +7,16 @@
     "attachments scaffold unwired (P4)",
     "compliance RBAC enforced server-side",
     "edge contracts verified (pdf 200 %PDF)"
-  ]
+  ],
+  "wave4": {
+    "started": "2026-08-25T12:40:00Z",
+    "items": [
+      "tombstone column-privilege check (ruled out)",
+      "storage policies wired+verified",
+      "load check 5630req/0err p95=317ms",
+      "CI P1-infra fix: db-tests retry+mirror -> green",
+      "swagger self-host (CSP fix) 111/111 sweep",
+      "role-authz P1 fix verified (ed372cc)"
+    ]
+  }
 }

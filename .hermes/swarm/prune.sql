@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS p_ab ON public.case_entries; DROP POLICY IF EXISTS p_v ON public.case_entries; SELECT count(*)::text AS remaining FROM pg_policies WHERE schemaname='public' AND tablename='case_entries' AND cmd='UPDATE';
