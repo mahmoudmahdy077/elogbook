@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import CaseAttachments from '@/components/CaseAttachments';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -187,6 +188,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           </div>
         </div>
       )}
+
+      <CaseAttachments
+        caseId={id}
+        tenantSlug={tenantSlug}
+        tenantId={entry.tenant_id}
+        viewerProfileId={auth.profile.id}
+        viewerRole={auth.profile.role}
+      />
     </div>
   );
 }
