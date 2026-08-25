@@ -5,25 +5,151 @@
       "wave": 1,
       "started": "2026-08-24T23:05:00Z",
       "tracks": {
-        "security-rbac":   { "task": "task_e043afe0a195", "dispatch": "ctx_49e0307ddcc7", "status": "report-received", "cycles": 48, "report": "security-rbac.md" },
-        "performance":     { "task": "task_326ec5dd1593", "dispatch": "ctx_daed08b4b6ea", "status": "report-received", "cycles": 60, "report": "performance.md" },
-        "resident-flow":   { "task": "task_78149709ebd2", "dispatch": "ctx_a0922bdabefa", "status": "report-received", "cycles": 11, "report": "resident-workflow.md" },
-        "staff-workflows": { "task": "task_2694bb5a2c7d", "dispatch": "ctx_c4f9139c9674", "status": "running", "cycles": 0, "report": "staff-workflows.md" },
-        "ui-e2e":          { "task": "task_ba81471d38f4", "dispatch": "ctx_7394d75e3077", "status": "running", "cycles": 0, "report": "ui-e2e.md" },
-        "static-review":   { "task": "task_0e508eaeb467", "dispatch": "ctx_3f8432f02eb8", "status": "report-received", "cycles": 7, "report": "static-review.md" }
+        "security-rbac": {
+          "task": "task_e043afe0a195",
+          "dispatch": "ctx_49e0307ddcc7",
+          "status": "report-received",
+          "cycles": 48,
+          "report": "security-rbac.md"
+        },
+        "performance": {
+          "task": "task_326ec5dd1593",
+          "dispatch": "ctx_daed08b4b6ea",
+          "status": "report-received",
+          "cycles": 60,
+          "report": "performance.md"
+        },
+        "resident-flow": {
+          "task": "task_78149709ebd2",
+          "dispatch": "ctx_a0922bdabefa",
+          "status": "report-received",
+          "cycles": 11,
+          "report": "resident-workflow.md"
+        },
+        "staff-workflows": {
+          "task": "task_2694bb5a2c7d",
+          "dispatch": "ctx_c4f9139c9674",
+          "status": "running",
+          "cycles": 0,
+          "report": "staff-workflows.md"
+        },
+        "ui-e2e": {
+          "task": "task_ba81471d38f4",
+          "dispatch": "ctx_7394d75e3077",
+          "status": "running",
+          "cycles": 0,
+          "report": "ui-e2e.md"
+        },
+        "static-review": {
+          "task": "task_0e508eaeb467",
+          "dispatch": "ctx_3f8432f02eb8",
+          "status": "report-received",
+          "cycles": 7,
+          "report": "static-review.md"
+        }
+      }
+    },
+    {
+      "wave": 2,
+      "started": "2026-08-25T04:30:00Z",
+      "mode": "coordinator-driven",
+      "tracks": {
+        "pipeline-recovery": {
+          "status": "recovered+repaired",
+          "cycles": 2
+        },
+        "audit-regression-P1": {
+          "status": "fixed+verified",
+          "cycles": 6
+        },
+        "eval-scoping": {
+          "status": "fixed+verified",
+          "cycles": 3
+        },
+        "sync-quota-skip": {
+          "status": "fixed+verified",
+          "cycles": 4
+        },
+        "mfa-escalation-test": {
+          "status": "deferred-needs-isolated-account",
+          "cycles": 0
+        }
       }
     }
   ],
   "fixes_applied": [
-    { "id": "F1-security-P2", "fix": "profiles UPDATE missing tenant WITH CHECK allowed self-service cross-tenant relocation", "migration": "20260825000000_profiles_update_tenant_with_check.sql", "verified": "403 on foreign-tenant PATCH; legit own-name update still 204" },
-    { "id": "F3-hash-P2", "fix": "hash_patient_mrn silently fell back to unsalted md5 (pgcrypto in extensions schema not on search_path)", "migration": "20260825020000_hash_mrn_sha256_fail_closed.sql", "verified": "RPC now returns 64-hex sha256" },
-    { "id": "F4-goalrecalc-P3", "fix": "goal progress ignored cases logged against GLOBAL templates", "migration": "20260825030000_goal_progress_count_global_templates.sql", "verified": "migration applied; suite cycle27 7/7 green" },
-    { "id": "F2-tombstone-P2-investigation", "fix": "REST tombstone 42501 root-cause: policies verified correct+live via introspection; failing layer still unidentified (trigger-order suspected). sync_push_batch path works and is what mobile/web actually call. Reasserted all 4 UPDATE policies deterministically.", "migration": "20260825010000_reassert_case_soft_delete_policies.sql", "verified": "partial - sync path OK; direct REST PATCH still blocked; no production caller affected" }
+    {
+      "id": "F1-security-P2",
+      "fix": "profiles UPDATE missing tenant WITH CHECK allowed self-service cross-tenant relocation",
+      "migration": "20260825000000_profiles_update_tenant_with_check.sql",
+      "verified": "403 on foreign-tenant PATCH; legit own-name update still 204"
+    },
+    {
+      "id": "F3-hash-P2",
+      "fix": "hash_patient_mrn silently fell back to unsalted md5 (pgcrypto in extensions schema not on search_path)",
+      "migration": "20260825020000_hash_mrn_sha256_fail_closed.sql",
+      "verified": "RPC now returns 64-hex sha256"
+    },
+    {
+      "id": "F4-goalrecalc-P3",
+      "fix": "goal progress ignored cases logged against GLOBAL templates",
+      "migration": "20260825030000_goal_progress_count_global_templates.sql",
+      "verified": "migration applied; suite cycle27 7/7 green"
+    },
+    {
+      "id": "F2-tombstone-P2-investigation",
+      "fix": "REST tombstone 42501 root-cause: policies verified correct+live via introspection; failing layer still unidentified (trigger-order suspected). sync_push_batch path works and is what mobile/web actually call. Reasserted all 4 UPDATE policies deterministically.",
+      "migration": "20260825010000_reassert_case_soft_delete_policies.sql",
+      "verified": "partial - sync path OK; direct REST PATCH still blocked; no production caller affected"
+    },
+    {
+      "id": "P1-audit-tenants",
+      "fix": "audit_table_change regression broke ALL tenant INSERT/DELETE (signup + onboarding down since Aug 23); combined uuid-cast + tenants special-case + NULL-guard",
+      "migration": "20260825130000_fix_audit_table_change_tenants_regression.sql",
+      "verified": "tenant create OK, signup OK, global-community assignment OK, audit row written"
+    },
+    {
+      "id": "F5-eval-scope",
+      "fix": "evaluation_forms tenant-wide FOR ALL let residents read all evaluations; SELECT now own-or-evaluator-or-supervisor+",
+      "migration": "20260825100000_evaluation_forms_select_scoping.sql",
+      "verified": "resident sees only own (0 leaked); director sees all; MSF ack path intact (cycle36 7/7)"
+    },
+    {
+      "id": "F6-sync-quota",
+      "fix": "sync_push_batch atomic failure at plan cap wedged whole offline batch; quota errors now skip per-row, caller detects via affected<count",
+      "migration": "20260825110000_sync_push_batch_quota_row_skip.sql",
+      "verified": "overflow batch at 20/20 cap returns 200 affected=0"
+    },
+    {
+      "id": "cleanup",
+      "fix": "temp wave-1 debug objects dropped; migration history repaired after bookkeeping denial cleared",
+      "migration": "20260825070000_drop_temp_debug_objects.sql",
+      "verified": "push finished clean"
+    }
   ],
   "infra_blockers": [
-    { "issue": "supabase db push bookkeeping INSERT into supabase_migrations.schema_migrations denied (platform-side); started ~03:10Z after 5 successful pushes same day", "workaround": "none local; needs dashboard/support", "pending_migration": "20260825070000_drop_temp_debug_objects.sql (cleanup only)" },
-    { "issue": "orca orchestration dispatch --inject stalls with opencode agent on Windows (agent_prompt_stalled x9, 12s readiness window too short)", "workaround": "tracked dispatch without inject + manual terminal send + file-based reports" }
+    {
+      "issue": "supabase db push bookkeeping INSERT into supabase_migrations.schema_migrations denied (platform-side); started ~03:10Z after 5 successful pushes same day",
+      "workaround": "none local; needs dashboard/support",
+      "pending_migration": "20260825070000_drop_temp_debug_objects.sql (cleanup only)"
+    },
+    {
+      "issue": "orca orchestration dispatch --inject stalls with opencode agent on Windows (agent_prompt_stalled x9, 12s readiness window too short)",
+      "workaround": "tracked dispatch without inject + manual terminal send + file-based reports"
+    }
   ],
-  "live_debug_objects_to_drop_later": ["public.debug_swarm_introspect(TEXT,UUID)", "public._swarm_debug_results"],
-  "regression_replay_after_fixes": { "cycle1-case-web": "9/9", "cycle2-case-mobile": "9/9", "cycle27-goals": "7/7" }
+  "live_debug_objects_to_drop_later": [
+    "public.debug_swarm_introspect(TEXT,UUID)",
+    "public._swarm_debug_results"
+  ],
+  "regression_replay_after_fixes": {
+    "cycle1-case-web": "9/9",
+    "cycle2-case-mobile": "9/9",
+    "cycle27-goals": "7/7"
+  },
+  "regression_replay_wave2": {
+    "cycle9-evals": "6/6",
+    "cycle36-msf": "7/7",
+    "cycle1-case-web": "9/9"
+  }
 }
