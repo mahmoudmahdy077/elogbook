@@ -81,6 +81,7 @@ export default function CaseFilters({ basePath }: { basePath: string }) {
         })}
       </div>
       <select
+        aria-label="Sort cases"
         value={sort}
         onChange={(e) => handleSort(e.target.value)}
         className="h-9 px-3 text-sm border border-border rounded-xl bg-surface-solid text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"

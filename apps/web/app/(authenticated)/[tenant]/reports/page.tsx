@@ -89,6 +89,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
           <form className="flex items-center gap-2" method="GET">
             <input
               type="date"
+              aria-label="From date"
               name="date_from"
               defaultValue={date_from || ''}
               className="px-3 py-2 rounded-full bg-surface-solid border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -96,6 +97,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             <span className="text-xs text-text-muted font-medium">to</span>
             <input
               type="date"
+              aria-label="To date"
               name="date_to"
               defaultValue={date_to || ''}
               className="px-3 py-2 rounded-full bg-surface-solid border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
