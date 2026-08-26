@@ -18,7 +18,12 @@ vi.mock('next/server', () => {
       return new MockNextResponse(body, init);
     }
   }
-  return { NextResponse: MockNextResponse };
+  return {
+    NextResponse: MockNextResponse,
+    // route handlers register post-response work via after(); run it inline
+    // during tests so mocks (webhooks/notifications) can be asserted.
+    after: (cb: () => void | Promise<void>) => { void cb(); },
+  };
 });
 
 // ---------------------------------------------------------------------------
