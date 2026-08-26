@@ -18,5 +18,21 @@
       "swagger self-host (CSP fix) 111/111 sweep",
       "role-authz P1 fix verified (ed372cc)"
     ]
+  },
+  "waves6to10": {
+    "final_sha": "d103e41",
+    "totals": {
+      "rotation": "32/32 suites 206/206 checks (x3 full rotations)",
+      "units": "web 293 + mobile 308",
+      "e2e": "68 pass / 0 fail",
+      "responsive": "111/111",
+      "load": "18k+ req total, 0% errors",
+      "a11y": "0 criticals authed+public"
+    },
+    "bugs_fixed_total": 11,
+    "open_platform_items": [
+      "elogbook-two stale alias (Vercel dash)",
+      "REST tombstone anomaly (platform TSI; RPC shipped)"
+    ]
   }
 }
