@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
@@ -133,19 +133,28 @@ export async function POST(
     link: `/${tenantSlug}/cases/${entry_id}`,
   }).maybeSingle();
 
-  // Fire webhook event after successful approval/rejection
-  dispatchWebhookEvent({
-    tenant_id: profile.tenant_id,
-    event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
-    event_id: entry_id,
-    data: { entry_id, comment: comment || null, acted_by: user.id },
-  }).catch((err) => {
-    console.error('[webhooks] Approval dispatch error:', err);
+  // Fire webhook event after successful approval/rejection.
+  // `after()` guarantees post-response execution on serverless — a bare
+  // fire-and-forget promise here gets frozen when the response returns,
+  // which silently killed webhook deliveries in production.
+  after(async () => {
+    try {
+      await dispatchWebhookEvent({
+        tenant_id: profile.tenant_id,
+        event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
+        event_id: entry_id,
+        data: { entry_id, comment: comment || null, acted_by: user.id },
+      });
+    } catch (err) {
+      console.error('[webhooks] Approval dispatch error:', err);
+    }
   });
 
   // Push notification to the resident (fire-and-forget; failures are logged).
-  notifyCaseApproval(entry_id, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name)
-    .catch((err) => console.error('[push] approval push failed:', err));
+  after(() =>
+    notifyCaseApproval(entry_id, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name)
+      .catch((err) => console.error('[push] approval push failed:', err))
+  );
 
   return NextResponse.json({ success: true, action });
 }
