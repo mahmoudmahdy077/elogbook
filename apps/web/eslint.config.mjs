@@ -66,6 +66,6 @@ export default [
     },
   },
   {
-    ignores: ['.next/', 'node_modules/', 'dist/', 'build/', '*.min.js', 'public/swagger/'],
+    ignores: ['.next/', 'node_modules/', 'dist/', 'build/', '*.min.js', 'public/swagger/', 'e2e/**/*.mjs'],
   },
 ];
