@@ -1,3 +1,5 @@
+/* global process, Buffer */
+/* eslint-env node */
 // W12 final v2: approve pending rows (close slide-over between), verify webhook delivery
 import { chromium } from '@playwright/test';
 import { readFileSync } from 'node:fs';
@@ -37,6 +39,7 @@ const WID='fec65687-ac20-4a86-b3fb-24eb0ce54aa3';
  if(afterCount>beforeCount) console.log(JSON.stringify(after));
  await browser.close();
 })()
+
 
 
 
