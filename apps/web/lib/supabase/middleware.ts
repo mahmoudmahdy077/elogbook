@@ -173,22 +173,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // User is authenticated — check tenant scope
+  // User is authenticated — check tenant scope.
+  // API routes carry their own auth (per-route getAuthContext / service
+  // checks); their first path segment is literally "api", which would
+  // always mismatch the tenant slug and 307 every cookie-authenticated
+  // API mutation to the dashboard. Skip scope enforcement here — the
+  // handlers enforce tenant scoping themselves (and RLS backstops it).
   const segments = pathname.split('/').filter(Boolean);
-  const urlTenantSlug = segments[0];
+  if (!pathname.startsWith('/api/')) {
+    const urlTenantSlug = segments[0];
 
-  if (urlTenantSlug) {
-    const info = await getUserTenantSlug(supabase, user.id);
-    if (info && info.slug !== urlTenantSlug) {
-      return NextResponse.redirect(
-        new URL(`/${info.slug}/dashboard`, request.url),
-      );
+    if (urlTenantSlug) {
+      const info = await getUserTenantSlug(supabase, user.id);
+      if (info && info.slug !== urlTenantSlug) {
+        return NextResponse.redirect(
+          new URL(`/${info.slug}/dashboard`, request.url),
+        );
+      }
     }
   }
 
   const isAdminRoute =
     segments[1] === 'admin' || (segments[0] === 'api' && segments[2] === 'admin');
-
   if (isAdminRoute) {
     const { data: { session } } = await supabase.auth.getSession();
     if ((session as { aal?: string } | null)?.aal && (session as { aal?: string } | null)?.aal !== 'aal2') {
