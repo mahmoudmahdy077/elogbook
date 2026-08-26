@@ -15,6 +15,12 @@ function csrfGuard(request: NextRequest): NextResponse | null {
     return null;
   }
 
+  // Signed webhook deliveries (server→server, including self-delivery) carry
+  // an HMAC signature instead of a browser Origin — never CSRF-relevant.
+  if (request.headers.get('x-e-logbook-signature')) {
+    return null;
+  }
+
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
   const requestOrigin = origin ?? (referer ? new URL(referer).origin : null);
