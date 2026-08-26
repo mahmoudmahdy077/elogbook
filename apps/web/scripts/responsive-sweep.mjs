@@ -169,6 +169,27 @@ async function checkPage(page, viewport) {
       offenders,
       bodyChildren: body ? body.children.length : 0,
     };
+  }).catch(async (err) => {
+    // A client-side navigation destroyed the execution context mid-check.
+    // Let it settle and measure the page we actually landed on.
+    if (!/Execution context|navigation/i.test(String(err))) throw err;
+    await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+    await page.waitForTimeout(1500);
+    return page.evaluate(() => {
+      const doc = document.documentElement;
+      const body = document.body;
+      return {
+        viewportW: window.innerWidth,
+        docScrollWidth: doc.scrollWidth,
+        bodyScrollWidth: body ? body.scrollWidth : 0,
+        overflow: Math.max(
+          doc.scrollWidth - window.innerWidth,
+          body ? body.scrollWidth - window.innerWidth : 0,
+        ),
+        offenders: [],
+        bodyChildren: body ? body.children.length : 0,
+      };
+    });
   });
 
   if (metrics.overflow > 1) {
@@ -240,7 +261,30 @@ async function main() {
     for (const viewport of VIEWPORTS) {
       const label = `${viewport.name.padEnd(12)} ${route}`;
       try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+        // Client-side redirects (role gates, auth refresh) can interrupt the
+        // outer page.goto and make Playwright throw ERR_ABORTED /
+        // "interrupted by another navigation". These are harness races, not
+        // layout bugs — retry, and if the redirect keeps fighting us, let it
+        // settle and measure whatever page we actually landed on.
+        let lastNavError;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+            lastNavError = null;
+            break;
+          } catch (err) {
+            lastNavError = err;
+            await page.waitForTimeout(1500);
+          }
+        }
+        if (lastNavError) {
+          try {
+            await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+            await page.waitForTimeout(1500);
+          } catch {
+            // Nothing measurable landed — report the original error.
+          }
+        }
         const { issues, finalUrl } = await checkPage(page, viewport);
         const row = { route, viewport: viewport.name, issues, finalUrl };
         results.push(row);
