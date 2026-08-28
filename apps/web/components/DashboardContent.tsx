@@ -204,7 +204,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                   <StatusBadge status={c.status} />
                   <button
                     onClick={() => router.push(`/${tenantSlug}/cases/new?duplicateFrom=${c.id}`)}
-                    className="text-xs text-primary hover:opacity-80"
+                    className="text-xs text-primary hover:opacity-80 px-2 -mx-2 py-1 -my-1"
                   >
                     Duplicate
                   </button>
