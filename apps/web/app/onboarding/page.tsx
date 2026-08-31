@@ -67,20 +67,20 @@ export default function OnboardingPage() {
   if (!profile) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-neutral-950">
+    <div className="flex items-center justify-center min-h-screen bg-backdrop">
       <div className="panel p-8 max-w-md w-full mx-4">
         <h1 className="text-2xl font-bold mb-6">Welcome to E-Logbook</h1>
 
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Your Role</h2>
-            <p className="text-sm text-neutral-light/60">Select your role in the program.</p>
+            <p className="text-sm text-text-muted">Select your role in the program.</p>
             <div className="grid gap-2">
               {(['resident', 'supervisor', 'director'] as Role[]).map((r) => (
                 <button
                   key={r}
                   onClick={() => { setProfile({ ...profile, role: r }); setStep(2); }}
-                  className={`p-3 rounded-lg border text-left transition-colors ${profile?.role === r ? 'border-primary bg-primary/10' : 'border-neutral-dark hover:bg-neutral-dark/50'}`}
+                  className={`p-3 rounded-lg border text-left transition-colors ${profile?.role === r ? 'border-primary bg-primary/10' : 'border-border hover:bg-surface-elevated'}`}
                 >
                   {r.charAt(0).toUpperCase() + r.slice(1)}
                 </button>
@@ -92,7 +92,7 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Your Profile</h2>
-            <p className="text-sm text-neutral-light/60">Enter your details.</p>
+            <p className="text-sm text-text-muted">Enter your details.</p>
             <div>
               <label htmlFor="full-name" className="block text-xs mb-1">Full Name</label>
               <input
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
               </select>
             </div>
             <div className="flex gap-2 pt-4">
-              <button onClick={() => setStep(1)} className="px-4 py-2 rounded-lg border border-border hover:bg-neutral-dark/50">Back</button>
+              <button onClick={() => setStep(1)} className="px-4 py-2 rounded-lg border border-border hover:bg-surface-elevated">Back</button>
               <button
                 onClick={completeOnboarding}
                 disabled={loading || !fullName}

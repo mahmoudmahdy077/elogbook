@@ -70,4 +70,14 @@ describe('offline queue v2 (AEAD)', () => {
     await enqueueCase({ c: 3 });
     expect(await getPendingCount()).toBe(3);
   });
+
+  it('generates RFC4122 v4 UUIDs using CSPRNG', async () => {
+    await enqueueCase({ a: 1 });
+    await enqueueCase({ b: 2 });
+    const items = await readQueue();
+    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    expect(items[0].id).toMatch(uuidV4Regex);
+    expect(items[1].id).toMatch(uuidV4Regex);
+    expect(items[0].id).not.toBe(items[1].id);
+  });
 });

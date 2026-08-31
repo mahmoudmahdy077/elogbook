@@ -25,12 +25,28 @@ export interface QueuedCasePayload {
 
 export type QueueCaseData = Record<string, unknown>;
 
+/**
+ * Secure RFC4122 v4 UUID using CSPRNG.
+ * Mirrors `apps/mobile/lib/crypto/aead.ts:defaultRandomBytes` — uses
+ * `globalThis.crypto.getRandomValues` (available in Hermes, Node >=19, browsers).
+ * Throws instead of falling back to Math.random (see Karpathy secure defaults).
+ */
 function uuidv4(): string {
   const bytes = new Uint8Array(16);
-  for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = globalThis as any;
+  if (!g.crypto || typeof g.crypto.getRandomValues !== 'function') {
+    throw new Error(
+      '[offline-queue] No CSPRNG available (globalThis.crypto.getRandomValues). ' +
+        'Cannot generate secure UUID. Ensure platform provides a CSPRNG.',
+    );
+  }
+  g.crypto.getRandomValues(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 

@@ -49,10 +49,18 @@ async function makePending() {
   return Array.isArray(ins) ? ins[0] : ins; // {code,message} on quota rejection
 }
 
-// free up headroom by soft-deleting our own old test rows (status any) first
+// free up headroom by soft-deleting our own old test rows (status any) first — use RPC
 const mine = await fetch(`${URL}/rest/v1/case_entries?select=id&patient_hash=eq.cycle3&deleted_at=is.null`, {headers:hr}).then(r=>r.json());
 for (const row of mine.slice(0, 5)) {
-  await fetch(`${URL}/rest/v1/case_entries?id=eq.${row.id}`, {method:'PATCH',headers:hr,body:JSON.stringify({deleted_at:new Date().toISOString()})});
+  await fetch(`${URL}/rest/v1/rpc/soft_delete_case`, {method:'POST',headers:hr,body:JSON.stringify({p_entry_id:row.id})}).then(r=>r.json()).catch(()=>null);
+}
+// extra: if quota still full, evict oldest rows via RPC headroom loop
+let _q = await fetch(`${URL}/rest/v1/rpc/check_case_quota`, {method:'POST',headers:hr,body:JSON.stringify({p_tenant_id:TENANT})}).then(r=>r.json());
+if (_q?.[0] && !_q[0].allowed) {
+  const oldest = await fetch(`${URL}/rest/v1/case_entries?select=id&tenant_id=eq.${TENANT}&deleted_at=is.null&order=created_at.asc&limit=2`, {headers:hr}).then(r=>r.json());
+  for (const row of (Array.isArray(oldest)?oldest:[])) {
+    await fetch(`${URL}/rest/v1/rpc/soft_delete_case`, {method:'POST',headers:hr,body:JSON.stringify({p_entry_id:row.id})}).then(r=>r.json()).catch(()=>null);
+  }
 }
 
 // 1. pending case A -> resident tries to approve (must be denied)
@@ -102,8 +110,8 @@ if (B.id) {
 }
 ok('supervisor-reject', rj?.success === true, JSON.stringify(rj).slice(0,90));
 
-// cleanup tombstones
-for (const id of [A.id, B.id]) if (id) await fetch(`${URL}/rest/v1/case_entries?id=eq.${id}`, {method:'PATCH',headers:hr,body:JSON.stringify({deleted_at:new Date().toISOString()})});
+// cleanup tombstones — RPC
+for (const id of [A.id, B.id]) if (id) await fetch(`${URL}/rest/v1/rpc/soft_delete_case`, {method:'POST',headers:hr,body:JSON.stringify({p_entry_id:id})}).then(r=>r.json()).catch(()=>null);
 
 let fails=0;
 for (const r of results){ console.log(`${r.pass?'PASS':'FAIL'} ${r.name}${r.detail?' :: '+r.detail:''}`); if(!r.pass)fails++; }

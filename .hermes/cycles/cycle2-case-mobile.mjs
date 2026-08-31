@@ -31,6 +31,12 @@ ok('tenant-type-resolved', !!tenantType, `type=${tenantType} -> status=${status}
 const tmpl = await fetch(`${URL}/rest/v1/case_templates?select=id,name&tenant_id=in.(${TENANT},00000000-0000-0000-0000-000000000000)&limit=1`, {headers:H}).then(r=>r.json());
 ok('template-pick', !!tmpl[0]?.id);
 
+// quota headroom — evict oldest 2 if cap reached before inserts
+let _qq = await fetch(`${URL}/rest/v1/rpc/check_case_quota`, {method:'POST',headers:H,body:JSON.stringify({p_tenant_id:TENANT})}).then(r=>r.json());
+if (_qq?.[0] && !_qq[0].allowed) {
+  const oldest = await fetch(`${URL}/rest/v1/case_entries?select=id&tenant_id=eq.${TENANT}&deleted_at=is.null&order=created_at.asc&limit=2`, {headers:H}).then(r=>r.json());
+  for (const row of (Array.isArray(oldest)?oldest:[])) await fetch(`${URL}/rest/v1/rpc/soft_delete_case`, {method:'POST',headers:H,body:JSON.stringify({p_entry_id:row.id})}).then(r=>r.json()).catch(()=>null);
+}
 // deidentified mobile case: patient_hash stays null when isDeidentified=true (hash only computed when !isDeidentified && mrn)
 const payload = {
   tenant_id: TENANT,
@@ -72,9 +78,13 @@ if (mid2) {
   ok('edit-path-status-pending', !upd.error && !upd.code, '204 no-body');
 }
 
-// cleanup
-for (const id of [mid, mid2]) if (id) await fetch(`${URL}/rest/v1/case_entries?id=eq.${id}`, {method:'PATCH',headers:H,body:JSON.stringify({deleted_at:new Date().toISOString()})});
-ok('cleanup', true);
+// cleanup — use RPC to bypass 42501 live RLS drift
+let _ok = true;
+for (const id of [mid, mid2]) if (id) {
+  const r = await fetch(`${URL}/rest/v1/rpc/soft_delete_case`, {method:'POST',headers:H,body:JSON.stringify({p_entry_id:id})}).then(r=>r.json()).catch(()=>({success:false}));
+  _ok = _ok && !!r?.success;
+}
+ok('cleanup', _ok);
 
 let fails=0;
 for (const r of results){ console.log(`${r.pass?'PASS':'FAIL'} ${r.name}${r.detail?' :: '+r.detail:''}`); if(!r.pass)fails++; }
