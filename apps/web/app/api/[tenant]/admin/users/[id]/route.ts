@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 
 const ADMIN_ROLES = ['institution_admin', 'admin'];
 
@@ -10,22 +11,12 @@ export async function GET(
 ) {
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const _auth = await requireTenantAdmin(supabase, tenantSlug);
+  if (!_auth.ok) {
+    return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
-
-  if (!ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = _auth.profile;
+  const user = _auth.user;
 
   const { data: targetProfile, error } = await supabase
     .from('profiles')
@@ -56,22 +47,12 @@ export async function PUT(
 ) {
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const _auth = await requireTenantAdmin(supabase, tenantSlug);
+  if (!_auth.ok) {
+    return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
-
-  if (!ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = _auth.profile;
+  const user = _auth.user;
 
   const body = await request.json();
   const { full_name, specialty, role, status } = body;
@@ -151,22 +132,12 @@ export async function DELETE(
 ) {
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const _auth = await requireTenantAdmin(supabase, tenantSlug);
+  if (!_auth.ok) {
+    return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
-
-  if (!ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = _auth.profile;
+  const user = _auth.user;
 
   const adminClient = createServiceRoleClient();
 

@@ -25,6 +25,8 @@ DECLARE
   -- dynamic query so new tables are caught automatically, but the
   -- test remains as a hard check: every known tenant-scoped table
   -- must have FORCE RLS.
+  -- RLS-001: 20260826150000_force_rls_remaining.sql forces the 7 tables
+  -- that were missed between 00096 and the 2026* migrations.
   v_expected TEXT[] := ARRAY[
     'accreditation_frameworks',
     'ai_config',
@@ -33,11 +35,13 @@ DECLARE
     'approval_requests',
     'attachment_signatures',
     'audit_logs',
+    'benchmark_data',
     'case_attachments',
     'case_entries',
     'case_templates',
     'comments',
     'consent_records',
+    'custom_plan_features',
     'duty_periods',
     'epa_mappings',
     'evaluation_forms',
@@ -50,17 +54,22 @@ DECLARE
     'one_time_purchases',
     'payment_gateway_config',
     'payments',
+    'procedure_codes',
     'profiles',
     'program_goals',
     'resident_ai_toggle',
     'rotations',
+    'scheduled_backup_log',
     'scholarly_activities',
     'scim_tokens',
     'shifts',
     'stripe_events',
+    'subscription_changes',
     'subscription_plans',
     'subscriptions',
     'template_favorites',
+    'tenant_invites',
+    'tenant_settings',
     'tenant_sso_configs',
     'tenant_webhook_deliveries',
     'tenant_webhooks',

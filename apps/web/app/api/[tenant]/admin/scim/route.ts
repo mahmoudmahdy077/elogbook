@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
@@ -20,7 +21,7 @@ const TOKEN_LIST_FIELDS =
   'id, tenant_id, description, created_by, created_at, last_used_at, revoked_at';
 
 // ---------------------------------------------------------------------------
-// Permission gate used by all handlers
+// Permission gate used by all handlers — now delegates to shared helper
 // ---------------------------------------------------------------------------
 async function authorize(
   slug: string,
@@ -30,35 +31,15 @@ async function authorize(
   | { profile: null; error: NextResponse }
 > {
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { profile: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return { profile: null, error: NextResponse.json({ error: 'Profile not found' }, { status: 404 }) };
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
-  if (tenant.slug !== slug) {
-    return { profile: null, error: NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 }) };
-  }
-
   const allowed = allowInstitutionAdmin
     ? ['director', 'institution_admin', 'admin']
     : ['institution_admin', 'admin'];
-
-  if (!allowed.includes(profile.role)) {
-    return { profile: null, error: NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 }) };
+  const result = await requireTenantAdmin(supabase, slug, allowed);
+  if (!result.ok) {
+    return { profile: null, error: NextResponse.json({ error: result.error }, { status: result.status }) };
   }
-
-  return { profile: { id: profile.id, tenant_id: profile.tenant_id, role: profile.role }, error: null };
+  const p = result.profile;
+  return { profile: { id: p.id, tenant_id: p.tenant_id, role: p.role }, error: null };
 }
 
 // ---------------------------------------------------------------------------

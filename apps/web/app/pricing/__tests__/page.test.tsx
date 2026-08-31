@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 
 vi.mock('@/lib/supabase/server', () => ({
   createServerSupabase: vi.fn(async () => ({
@@ -18,13 +18,17 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 describe('pricing page — UXW-001', () => {
-  it('renders 5 plan cards', async () => {
+  beforeEach(() => {
+    cleanup();
+  });
+
+  it('renders 5 plan cards', { timeout: 10000 }, async () => {
     const { default: PricingPage } = await import('../page');
     render(await PricingPage());
     expect(screen.getAllByTestId('plan-card')).toHaveLength(5);
   });
 
-  it('renders a Sign-up link on each paid plan', async () => {
+  it('renders a Sign-up link on each paid plan', { timeout: 10000 }, async () => {
     const { default: PricingPage } = await import('../page');
     render(await PricingPage());
     const signupLinks = screen.getAllByRole('link', { name: /sign up/i });

@@ -99,34 +99,32 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
     async function loadAllData() {
       const searchPattern = `%${templateSearch}%`;
-      const [tenantTemplatesRes, globalTemplatesRes] = await Promise.all([
-        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', tenantId).ilike('name', searchPattern).limit(30),
-        supabase.from('case_templates').select('id, name, specialty, fields').eq('tenant_id', GLOBAL_TENANT_ID).ilike('name', searchPattern).limit(30),
+      // Perf: single template query (tenant+global via IN) + parallel user fetch to reduce waterfall
+      const [templatesRes, { data: { user } }] = await Promise.all([
+        supabase.from('case_templates').select('id, name, specialty, fields').in('tenant_id', [tenantId, GLOBAL_TENANT_ID]).ilike('name', searchPattern).limit(30),
+        supabase.auth.getUser(),
       ]);
       if (cancelled) return;
 
-      if (tenantTemplatesRes.error) {
-        console.error('[CaseForm] Tenant templates error:', tenantTemplatesRes.error);
-        setErrors([tenantTemplatesRes.error.message]);
+      if (templatesRes.error) {
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        const msg = isOffline || /network|fetch|Failed to fetch/i.test(templatesRes.error.message)
+          ? 'You appear to be offline — templates will load when you reconnect. Your last entries are cached.'
+          : templatesRes.error.message;
+        console.error('[CaseForm] Templates error:', templatesRes.error);
+        setErrors([msg]);
         return;
       }
-      if (globalTemplatesRes.error) {
-        console.warn('[CaseForm] Global templates error:', globalTemplatesRes.error);
-      }
-      const allTemplates = [...(tenantTemplatesRes.data || []), ...(globalTemplatesRes.data || [])] as unknown as import('@elogbook/shared').CaseTemplate[];
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (cancelled) return;
+      const allTemplates = (templatesRes.data || []) as unknown as import('@elogbook/shared').CaseTemplate[];
 
       let favIds = new Set<string>();
       let personalCounts = new Map<string, number>();
       let tenantCounts = new Map<string, number>();
 
       if (user) {
-        const [favResult, profileResult, frameworkResult] = await Promise.allSettled([
+        const [favResult, profileResult] = await Promise.allSettled([
           supabase.from('template_favorites').select('template_id').eq('user_id', user.id),
           supabase.from('profiles').select('id').eq('user_id', user.id).single(),
-          supabase.from('accreditation_frameworks').select('*').eq('tenant_id', tenantId),
         ]);
         if (cancelled) return;
 
@@ -141,10 +139,6 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             personalCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.personal_count]));
             tenantCounts = new Map(countsData.map((r: { template_id: string; personal_count: number; tenant_count: number }) => [r.template_id, r.tenant_count]));
           }
-        }
-
-        if (frameworkResult.status === 'fulfilled') {
-          // frameworks data available but not directly used
         }
       }
 
@@ -190,11 +184,17 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       if (duplicateCaseId) {
         const { data, error } = await supabase
           .from('case_entries')
-          .select('*')
+          .select('template_id, is_deidentified, patient_age_years, field_values, accreditation_mappings')
           .eq('id', duplicateCaseId)
           .single();
         if (error || !data) {
-          if (error) setErrors([error.message]);
+          if (error) {
+            const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+            const msg = isOffline || /network|fetch|Failed to fetch/i.test(error.message)
+              ? 'You appear to be offline — cannot duplicate case right now. Your last entry will be available when you reconnect.'
+              : error.message;
+            setErrors([msg]);
+          }
           return;
         }
         sourceCase = data as unknown as Record<string, unknown>;
@@ -211,7 +211,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
 
         const { data, error } = await supabase
           .from('case_entries')
-          .select('*')
+          .select('template_id, is_deidentified, patient_age_years, field_values, accreditation_mappings')
           .eq('resident_id', profile.id)
           .in('status', ['pending', 'approved'])
           .order('created_at', { ascending: false })
@@ -319,7 +319,13 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       insertData.patient_hash = null;
     }
     const { error } = await supabase.from('case_entries').insert(insertData);
-    if (error) { setErrors([error.message]); setSavingDraft(false); return; }
+    if (error) {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
+      setErrors([offline ? 'You appear to be offline — draft queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      setSavingDraft(false);
+      return;
+    }
     toast.show('Draft saved — you can continue editing from My Cases', 'success');
     router.push(`/${tenantSlug}/cases`);
   }
@@ -359,7 +365,13 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       insertData.patient_mrn = patientMrn; insertData.patient_dob = patientDob; insertData.patient_age_years = null; insertData.patient_hash = null;
     }
     const { data: inserted, error } = await supabase.from('case_entries').insert(insertData).select('id').single();
-    if (error) { setErrors([error.message]); setLoading(false); return; }
+    if (error) {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
+      setErrors([offline ? 'You appear to be offline — case queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      setLoading(false);
+      return;
+    }
     setSubmittedCaseId((inserted as { id: string })?.id || null);
     setSubmitted(true);
     setLoading(false);
@@ -458,13 +470,27 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeInOut' }}
             >
               {step === 0 && (
-                <TemplateStep
-                  templates={templates}
-                  selectedTemplateId={selectedTemplateId}
-                  onSelect={(id) => { setSelectedTemplateId(id); setFieldValues({}); }}
-                  onToggleFavorite={toggleFavorite}
-                  onSearch={setTemplateSearch}
-                />
+                <>
+                  {!duplicateCaseId && !lastEntry && (
+                    <div className="mb-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/${tenantSlug}/cases/new?repeatLast=true`)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                        aria-label="Log same as last entry"
+                      >
+                        ↻ Log same as last
+                      </button>
+                    </div>
+                  )}
+                  <TemplateStep
+                    templates={templates}
+                    selectedTemplateId={selectedTemplateId}
+                    onSelect={(id) => { setSelectedTemplateId(id); setFieldValues({}); }}
+                    onToggleFavorite={toggleFavorite}
+                    onSearch={setTemplateSearch}
+                  />
+                </>
               )}
               {step === 1 && (
                 <PatientInfoStep
