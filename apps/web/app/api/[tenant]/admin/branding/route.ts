@@ -22,7 +22,7 @@ export async function GET(
 ) {
   const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
-  const auth = await requireTenantAdmin(supabase, tenantSlug);
+  const auth = await requireTenantAdmin(supabase, tenantSlug, ['director', 'institution_admin', 'admin']);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const adminClient = createServiceRoleClient();
@@ -55,7 +55,7 @@ export async function POST(
   const { allowed, retryAfter } = await checkRateLimit(`branding:${preUser.id}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  const auth = await requireTenantAdmin(supabase, tenantSlug);
+  const auth = await requireTenantAdmin(supabase, tenantSlug, ['director', 'institution_admin', 'admin']);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const profile = auth.profile;
   const user = auth.user;
