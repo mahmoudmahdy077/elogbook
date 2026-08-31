@@ -89,7 +89,7 @@ export async function POST(
         apikey: anonKey,
         Authorization: `Bearer ${accessToken ?? anonKey}`,
       },
-      body: JSON.stringify({ resident_id: residentId }),
+      body: JSON.stringify({ resident_id: residentId, is_deidentified: true }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

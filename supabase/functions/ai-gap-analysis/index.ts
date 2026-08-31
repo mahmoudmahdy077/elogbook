@@ -28,12 +28,40 @@ serve(async (req) => {
       });
     }
 
-      const { resident_id }: GapAnalysisRequest = await req.json();
-      if (!resident_id || typeof resident_id !== 'string') {
-        return new Response(JSON.stringify({ error: 'resident_id required' }), {
-          status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
-        });
-      }
+    let body: GapAnalysisRequest & { is_deidentified?: boolean };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+    const { resident_id, is_deidentified } = body;
+    if (!resident_id || typeof resident_id !== 'string') {
+      return new Response(JSON.stringify({ error: 'resident_id required' }), {
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (is_deidentified !== true) {
+      return new Response(JSON.stringify({ error: 'Cannot send identifiable patient data to external AI. Set is_deidentified=true or remove PHI.' }), {
+        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Plan gate: AI features only if subscription_plans.features.ai = true (mirrors ai-insights)
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('subscription_plans!inner(features)')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .maybeSingle();
+    const planFeatures = (sub as unknown as { subscription_plans?: { features?: Record<string, unknown> } | null })?.subscription_plans?.features ?? null;
+    if (!planFeatures || planFeatures.ai !== true) {
+      return new Response(JSON.stringify({ error: 'AI features not available on your plan' }), {
+        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
 
     const [casesRes, milestonesRes, goalsRes] = await Promise.all([
       supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, case_date, status, created_at, updated_at, case_templates!inner(specialty, name)')
