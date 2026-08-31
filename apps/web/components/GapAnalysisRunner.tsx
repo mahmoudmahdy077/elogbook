@@ -39,7 +39,7 @@ export default function GapAnalysisRunner({
       const res = await fetch(`/api/${tenantSlug}/reports/gap-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resident_id: residentId }),
+        body: JSON.stringify({ resident_id: residentId, is_deidentified: true }),
       });
       const data = (await res.json()) as { gaps?: GapResult[]; error?: string };
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
