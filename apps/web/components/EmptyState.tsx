@@ -31,7 +31,7 @@ export default function EmptyState({ icon, title, description, action, secondary
       {(action || secondaryAction) && (
         <div className="flex items-center justify-center gap-3 pt-1">
           {action && (action.href ? (
-            <a href={action.href} className="inline-flex px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
+            <a href={action.href} className="inline-flex min-h-[44px] items-center px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
               {action.label}
             </a>
           ) : (
@@ -40,11 +40,11 @@ export default function EmptyState({ icon, title, description, action, secondary
             </button>
           ))}
           {secondaryAction && (secondaryAction.href ? (
-            <a href={secondaryAction.href} className="inline-flex px-4 py-2 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors">
+            <a href={secondaryAction.href} className="inline-flex min-h-[44px] items-center px-4 py-2 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors">
               {secondaryAction.label}
             </a>
           ) : (
-            <button onClick={secondaryAction.onClick} className="inline-flex px-4 py-2 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors">
+            <button onClick={secondaryAction.onClick} className="inline-flex min-h-[44px] items-center px-4 py-2 rounded-lg border border-border text-sm font-medium text-neutral-light hover:border-primary hover:text-primary transition-colors">
               {secondaryAction.label}
             </button>
           ))}

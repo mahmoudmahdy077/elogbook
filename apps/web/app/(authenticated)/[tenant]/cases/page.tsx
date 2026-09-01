@@ -149,7 +149,7 @@ export default async function CasesPage({
                   <div className="min-w-0">
                     <Link
                       href={`/${tenantSlug}/cases/${entry.id}`}
-                      className="text-sm font-medium text-text-primary truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
+                      className="inline-flex items-center min-h-[44px] text-sm font-medium text-text-primary truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
                     >
                       {template?.specialty}{template?.name ? ` — ${template.name}` : ''}
                     </Link>
@@ -176,14 +176,14 @@ export default async function CasesPage({
                   <div className="flex items-center gap-1.5">
                     <Link
                       href={`/${tenantSlug}/cases/${entry.id}`}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium text-primary hover:bg-primary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="inline-flex items-center min-h-[44px] px-3 rounded-full text-xs font-medium text-primary hover:bg-primary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       View
                     </Link>
                     {entry.resident_id === auth.profile.id && entry.status === 'draft' && (
                       <Link
                         href={`/${tenantSlug}/cases/${entry.id}/edit`}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium text-text-muted hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex items-center min-h-[44px] px-3 rounded-full text-xs font-medium text-text-muted hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Edit
                       </Link>
@@ -191,7 +191,7 @@ export default async function CasesPage({
                     {entry.resident_id === auth.profile.id && (
                       <Link
                         href={`/${tenantSlug}/cases/new?duplicateFrom=${entry.id}`}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium text-text-muted hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex items-center min-h-[44px] px-3 rounded-full text-xs font-medium text-text-muted hover:bg-neutral-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Duplicate
                       </Link>
