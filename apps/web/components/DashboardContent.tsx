@@ -175,7 +175,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               Logging disabled — renew subscription
             </span>
           ) : (
-            <Link href={`/${tenantSlug}/cases/new`} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <Link href={`/${tenantSlug}/cases/new`} className="inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"/></svg>
               Log New Case
             </Link>
@@ -204,7 +204,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                   <StatusBadge status={c.status} />
                   <button
                     onClick={() => router.push(`/${tenantSlug}/cases/new?duplicateFrom=${c.id}`)}
-                    className="text-xs text-primary hover:opacity-80 px-2 -mx-2 py-1 -my-1"
+                    className="inline-flex items-center min-h-[44px] px-2 -mx-2 text-xs text-primary hover:opacity-80"
                   >
                     Duplicate
                   </button>
@@ -276,7 +276,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Recent Cases</h2>
             {recentCases.length > 0 && (
-              <Link href={`/${tenantSlug}/cases`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
+              <Link href={`/${tenantSlug}/cases`} className="inline-flex min-h-[44px] items-center text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                 View All
               </Link>
             )}
@@ -322,7 +322,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Goal Progress</h2>
                 {goals.length > 0 && (
-                  <Link href={`/${tenantSlug}/goals`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
+                  <Link href={`/${tenantSlug}/goals`} className="inline-flex min-h-[44px] items-center text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                     All Goals
                   </Link>
                 )}
@@ -349,7 +349,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Pending Approvals</h2>
                 {pendingApprovals > 0 && (
-                  <Link href={`/${tenantSlug}/approvals`} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity">
+                  <Link href={`/${tenantSlug}/approvals`} className="inline-flex min-h-[44px] items-center text-xs font-medium text-primary hover:opacity-80 transition-opacity">
                     Review All
                   </Link>
                 )}

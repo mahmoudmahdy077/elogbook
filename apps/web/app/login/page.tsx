@@ -270,7 +270,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgot(true)}
-                    className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+                    className="inline-flex min-h-[44px] items-center text-xs font-medium text-primary hover:opacity-80 transition-opacity"
                   >
                     Forgot password?
                   </button>

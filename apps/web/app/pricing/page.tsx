@@ -41,15 +41,15 @@ export default async function PricingPage() {
                 ))}
               </ul>
               {plan.slug === 'free' ? (
-                <Link href="/signup" className="block text-center py-2 rounded-lg bg-primary text-white font-medium text-sm">Sign up free</Link>
+                <Link href="/signup" className="flex min-h-[44px] items-center justify-center text-center py-2 rounded-lg bg-primary text-white font-medium text-sm">Sign up free</Link>
               ) : (
-                <Link href={`/signup?plan=${plan.slug}`} className="block text-center py-2 rounded-lg bg-primary text-white font-medium text-sm">Sign up</Link>
+                <Link href={`/signup?plan=${plan.slug}`} className="flex min-h-[44px] items-center justify-center text-center py-2 rounded-lg bg-primary text-white font-medium text-sm">Sign up</Link>
               )}
             </div>
           ))}
         </div>
         <p className="text-center text-sm text-text-muted mt-12">
-          Need SSO, SCIM, or a BAA? <Link href="/contact" className="text-primary underline">Contact us</Link>.
+          Need SSO, SCIM, or a BAA? <Link href="/contact" className="inline-flex min-h-[44px] items-center text-primary underline">Contact us</Link>.
         </p>
       </main>
     </div>

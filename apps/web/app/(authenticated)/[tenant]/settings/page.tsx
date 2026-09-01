@@ -27,7 +27,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ tenan
 
       <div className="panel p-6">
         <h2 className="text-lg font-heading font-semibold mb-4">Consent</h2>
-        <Link href={`/${tenantSlug}/consent`} className="text-primary text-sm hover:underline">Manage consent preferences →</Link>
+        <Link href={`/${tenantSlug}/consent`} className="inline-flex items-center min-h-[44px] text-primary text-sm hover:underline">Manage consent preferences →</Link>
       </div>
     </div>
   );

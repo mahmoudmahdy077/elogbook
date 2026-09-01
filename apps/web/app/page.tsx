@@ -73,7 +73,7 @@ export default async function HomePage() {
       {/* 0 · NAV */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface backdrop-blur">
         <nav aria-label="Primary" className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-8 max-md:px-6 max-sm:px-4">
-          <Link href="/" className="text-sm font-semibold text-text-primary" data-testid="nav-logo">
+          <Link href="/" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-text-primary" data-testid="nav-logo">
             {APP_NAME}
           </Link>
           <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/pricing" className="mt-3 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline">
+              <Link href="/pricing" className="mt-3 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-2 hover:underline">
                 See plans →
               </Link>
             </div>
@@ -220,8 +220,8 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-8 py-8 text-sm max-md:px-6 max-sm:px-4">
           <p className="text-text-muted">{APP_NAME}</p>
           <nav aria-label="Footer" className="flex gap-5">
-            <Link href="/pricing" className="text-text-secondary underline-offset-2 hover:underline">Pricing</Link>
-            <Link href="/contact" className="text-text-secondary underline-offset-2 hover:underline">Contact</Link>
+            <Link href="/pricing" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Pricing</Link>
+            <Link href="/contact" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Contact</Link>
           </nav>
         </div>
       </footer>

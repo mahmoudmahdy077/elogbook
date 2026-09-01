@@ -70,7 +70,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
       <button
         onClick={handleAnalyze}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="inline-flex min-h-[44px] items-center gap-1.5 px-4 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {query.trim() ? 'Ask AI' : 'Analyze My Cases'}
       </button>

@@ -36,7 +36,7 @@ export default function SettingsSections({ profile, email, aal }: SettingsSectio
             <button
               type="button"
               onClick={() => setEditingProfile(true)}
-              className="px-3 py-1.5 rounded-lg bg-neutral-dark border border-border text-xs font-medium hover:bg-neutral transition-colors"
+              className="inline-flex items-center min-h-[44px] px-3 rounded-lg bg-neutral-dark border border-border text-xs font-medium hover:bg-neutral transition-colors"
             >
               Edit
             </button>
@@ -78,7 +78,7 @@ export default function SettingsSections({ profile, email, aal }: SettingsSectio
                   {aal === 'aal2' ? 'Enabled' : 'Not enabled — required for directors and admins'}
                 </p>
               </div>
-              <a href="/mfa/enroll" className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-hover transition-colors">
+              <a href="/mfa/enroll" className="inline-flex items-center min-h-[44px] px-3 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-hover transition-colors">
                 {aal === 'aal2' ? 'Manage' : 'Set up'}
               </a>
             </div>

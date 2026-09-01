@@ -135,7 +135,7 @@ export default function SignupForm({ planSlug }: SignupFormProps) {
 
       <p className="text-center text-sm text-text-muted mt-6 sm:mt-8">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-primary hover:opacity-80 transition-opacity">
+        <Link href="/login" className="inline-flex min-h-[44px] items-center font-medium text-primary hover:opacity-80 transition-opacity">
           Sign in
         </Link>
       </p>

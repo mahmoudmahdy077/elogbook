@@ -27,7 +27,7 @@ export default function Breadcrumbs({ tenantSlug }: { tenantSlug: string }) {
     <nav aria-label="Breadcrumb" className="mb-4">
       <ol className="flex items-center gap-1.5 text-sm text-text-muted">
         <li>
-          <Link href={`/${tenantSlug}/dashboard`} className="hover:text-text-primary transition-colors">
+          <Link href={`/${tenantSlug}/dashboard`} className="inline-flex items-center min-h-[44px] hover:text-text-primary transition-colors">
             Home
           </Link>
         </li>
@@ -35,7 +35,7 @@ export default function Breadcrumbs({ tenantSlug }: { tenantSlug: string }) {
           <li key={i} className="flex items-center gap-1.5">
             <span className="text-text-muted/40">/</span>
             {crumb.href ? (
-              <Link href={crumb.href} className="hover:text-text-primary transition-colors">
+              <Link href={crumb.href} className="inline-flex items-center min-h-[44px] hover:text-text-primary transition-colors">
                 {crumb.label}
               </Link>
             ) : (
