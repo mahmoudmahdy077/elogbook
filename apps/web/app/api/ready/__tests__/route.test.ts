@@ -118,8 +118,9 @@ describe('GET /api/ready — readiness (TICKET-003)', () => {
   });
 
   it('is exempt from rate limiting (proxy check by inspection)', async () => {
-    const fs = await import('node:fs');
-    const proxySrc = fs.readFileSync(new URL('../../../../proxy.ts', import.meta.url), 'utf8');
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const proxySrc = readFileSync(join(process.cwd(), 'apps/web/proxy.ts'), 'utf8');
     expect(proxySrc).toMatch(/\/api\/ready/);
     expect(proxySrc).toMatch(/isHealthProbe|health.*ready/i);
   });

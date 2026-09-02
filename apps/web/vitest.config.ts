@@ -8,12 +8,8 @@ export default defineConfig({
     setupFiles: ['./test-setup.ts'],
     globals: true,
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        isolate: true,
-      },
-    },
+    singleThread: false,
+    isolate: true,
     testTimeout: 10000,
     hookTimeout: 10000,
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**'],

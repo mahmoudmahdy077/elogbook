@@ -151,9 +151,9 @@ describe('getClientIp — trusted proxy hop aware (TICKET-002)', () => {
   it('Gate G: only client-ip.ts reads x-forwarded-for (single source)', async () => {
     // This test documents the invariant; the actual gate is in CI via grep.
     // We assert the helper itself consults TRUSTED_PROXY_HOPS.
-    const src = await import('node:fs').then((fs) =>
-      fs.readFileSync(new URL('../client-ip.ts', import.meta.url), 'utf8'),
-    );
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const src = readFileSync(join(process.cwd(), 'apps/web/lib/client-ip.ts'), 'utf8');
     expect(src).toMatch(/TRUSTED_PROXY_HOPS/);
     expect(src).toMatch(/x-forwarded-for/i);
   });
