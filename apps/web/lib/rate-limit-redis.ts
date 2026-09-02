@@ -23,6 +23,13 @@ const WINDOW_MS = 60_000;
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const useRedis = !!(UPSTASH_URL && UPSTASH_TOKEN);
+const isProd = process.env.NODE_ENV === 'production';
+const REQUIRE_REDIS_IN_PROD =
+  process.env.REQUIRE_REDIS_IN_PROD === 'true' || isProd;
+
+function isAuthKey(key: string): boolean {
+  return key.startsWith('login:') || key.startsWith('auth-cb:') || key.startsWith('api:') || key.startsWith('assign-role:') || key.startsWith('invite:');
+}
 
 /**
  * Execute a Redis command via Upstash REST API
@@ -76,10 +83,27 @@ export async function checkRateLimit(
       await redisCommand('INCR', countKey);
       return { allowed: true, retryAfter: 0 };
     } catch (err) {
-      // Redis failure — fall back to local limiter
+      // Redis failure — in production, fail closed for auth keys (no Map fallback)
       console.warn('[rate-limit-redis] Redis error, falling back to local:', err);
+      if (isProd && isAuthKey(key) && REQUIRE_REDIS_IN_PROD) {
+        console.error('[rate-limit-redis] CRITICAL: Redis unavailable in production for auth key', key, '- failing closed');
+        // Fail closed: deny request rather than allow with inconsistent local state
+        return { allowed: false, retryAfter: 60 };
+      }
       return localCheckRateLimit(key, maxRequests);
     }
+  }
+
+  // No Redis configured
+  if (isProd && isAuthKey(key) && REQUIRE_REDIS_IN_PROD) {
+    console.error('[rate-limit-redis] CRITICAL: UPSTASH_REDIS_REST_URL/TOKEN not configured in production for auth key', key, '- rate limiting is not distributed. Set REQUIRE_REDIS_IN_PROD=false to allow local fallback (not recommended).');
+    // In production, deny rather than silently using local Map for auth
+    // If you intentionally run single-instance, set REQUIRE_REDIS_IN_PROD=false
+    return { allowed: false, retryAfter: 60 };
+  }
+
+  if (isProd && !useRedis) {
+    console.warn('[rate-limit-redis] Redis not configured — using in-memory fallback (single-instance only, not safe for distributed prod).');
   }
 
   return localCheckRateLimit(key, maxRequests);
