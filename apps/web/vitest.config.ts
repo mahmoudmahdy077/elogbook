@@ -7,6 +7,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./test-setup.ts'],
     globals: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        isolate: true,
+      },
+    },
+    testTimeout: 10000,
+    hookTimeout: 10000,
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**'],
     coverage: {
       provider: 'v8',
