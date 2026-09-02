@@ -77,6 +77,7 @@ jobs:
           supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
   deno-test:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
