@@ -17,7 +17,7 @@ export default async function AdminWebhooksPage({
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('profiles') // tenant-scope-exempt: user-scoped lookup by user_id (1:1), not tenant list — owner=human expiry=2026-12-31
     .select('id, role, tenant_id, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
@@ -49,7 +49,7 @@ export default async function AdminWebhooksPage({
 
   if (webhookIds.length > 0) {
     const { data: deliveries } = await adminClient
-      .from('tenant_webhook_deliveries')
+      .from('tenant_webhook_deliveries') // tenant-scope-exempt: delivery is child of tenant_webhooks filtered by webhook_id tenant_id already — owner=human expiry=2026-12-31
       .select('webhook_id, attempted_at, status_code, succeeded')
       .in('webhook_id', webhookIds)
       .order('attempted_at', { ascending: false })
