@@ -1,28 +1,25 @@
-import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * Liveness probe — no dependencies, no I/O.
+ *
+ * Must return 200 whenever the process is running. It is exempt from rate
+ * limiting in proxy.ts and is the target of docker-compose's healthcheck
+ * (and any orchestrator liveness probe). A transient DB blip must NOT cause
+ * the orchestrator to kill the container — that is readiness's job.
+ *
+ * This handler intentionally performs zero imports of supabase, redis, or
+ * any other I/O. A test asserts it by mocking those modules to throw.
+ */
 export async function GET() {
-  const t0 = Date.now();
-  try {
-    const supabase = await createServerSupabase();
-    // Connectivity/auth/schema probe only: RLS legitimately hides all rows from
-    // anon clients, so an empty result set is HEALTHY. Do not use .single() here —
-    // PGRST116 on zero rows would false-alarm every deployment.
-    const { error } = await supabase.from('tenants').select('id').limit(1);
-    if (error) return NextResponse.json({ status: 'unhealthy', db: 'error' }, { status: 503 });
-    return NextResponse.json({
+  return NextResponse.json(
+    {
       status: 'healthy',
-      db: 'ok',
-      durationMs: Date.now() - t0,
       timestamp: new Date().toISOString(),
-    });
-  } catch {
-    return NextResponse.json(
-      { status: 'unhealthy', error: 'unreachable', durationMs: Date.now() - t0 },
-      { status: 503 },
-    );
-  }
+    },
+    { status: 200 },
+  );
 }

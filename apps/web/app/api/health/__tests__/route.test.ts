@@ -1,52 +1,56 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// RLS hides all rows from anon clients — an empty data array with no error is
-// the healthy path. Transport/schema failures surface as `error`.
+// Liveness must perform NO I/O — DB or Redis failures must not affect it.
+// We mock those modules to throw if they are ever imported/called, and assert
+// health still returns 200.
+
 vi.mock('@/lib/supabase/server', () => ({
-  createServerSupabase: vi.fn(async () => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        limit: vi.fn(async () => ({ data: [], error: null })),
-      })),
-    })),
-  })),
+  createServerSupabase: vi.fn(async () => {
+    throw new Error('health should not call supabase');
+  }),
 }));
+
+vi.mock('@/lib/rate-limit-redis', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/rate-limit-redis')>('@/lib/rate-limit-redis');
+  return {
+    ...actual,
+    rateLimiterHealth: vi.fn(() => {
+      throw new Error('health should not call rateLimiterHealth');
+    }),
+  };
+});
 
 const { GET } = await import('../route');
 
-describe('GET /api/health', () => {
-  it('returns 200 with status healthy when DB query succeeds (RLS-empty ok)', async () => {
+describe('GET /api/health — liveness (TICKET-003)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 200 healthy with timestamp, no DB dependency', async () => {
     const res = await GET();
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.status).toBe('healthy');
-    expect(body.db).toBe('ok');
     expect(typeof body.timestamp).toBe('string');
-    expect(typeof body.durationMs).toBe('number');
+    // liveness must not expose db fields
+    expect(body.db).toBeUndefined();
+    expect(body.rateLimit).toBeUndefined();
   });
 
-  it('returns valid JSON with timestamp', async () => {
+  it('still returns 200 even when supabase would throw (no I/O assertion)', async () => {
+    // The mock above makes createServerSupabase throw — health must not call it.
     const res = await GET();
-    const body = await res.json();
-
-    expect(() => new Date(body.timestamp)).not.toThrow();
-    expect(body.timestamp).toBeDefined();
-  });
-
-  it('returns 503 when the DB query errors', async () => {
+    expect(res.status).toBe(200);
     const { createServerSupabase } = await import('@/lib/supabase/server');
-    (createServerSupabase as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => ({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          limit: vi.fn(async () => ({ data: null, error: { code: 'XX000', message: 'boom' } })),
-        })),
-      })),
-    }));
+    expect(createServerSupabase).not.toHaveBeenCalled();
+  });
+
+  it('returns valid ISO timestamp', async () => {
     const res = await GET();
     const body = await res.json();
-
-    expect(res.status).toBe(503);
-    expect(body.status).toBe('unhealthy');
+    expect(() => new Date(body.timestamp)).not.toThrow();
+    expect(new Date(body.timestamp).toISOString()).toBe(body.timestamp);
   });
 });
