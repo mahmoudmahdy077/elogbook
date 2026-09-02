@@ -13,8 +13,7 @@ export async function GET(
   if (!_auth.ok) {
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
-  const profile = _auth.profile;
-  const user = _auth.user;
+  const { profile } = _auth;
 
   const { data: targetProfile, error } = await supabase
     .from('profiles')

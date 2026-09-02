@@ -29,7 +29,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Generate SBOM
-        run: npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.json --spec-version 1.5
+        run: npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.json --spec-version 1.5 --ignore-npm-errors
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
