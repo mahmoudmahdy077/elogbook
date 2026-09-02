@@ -1,6 +1,8 @@
 // ADMIN-001: shared tenant admin guard
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export async function requireTenantAdmin(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantSlug: string,
   allowedRoles: string[] = ['institution_admin', 'admin'],
 ) {
@@ -21,8 +23,12 @@ export async function requireTenantAdmin(
     return { ok: false as const, error: 'Profile not found', status: 403 as const };
   }
 
-  const tenant = (profile as any).tenants as unknown as { slug: string };
-  const slug = Array.isArray(tenant) ? (tenant as any)[0]?.slug : tenant?.slug;
+  const tenant = (profile as unknown as { tenants: unknown }).tenants as unknown as
+    | { slug: string }
+    | { slug: string }[];
+  const slug = Array.isArray(tenant)
+    ? (tenant as { slug: string }[])[0]?.slug
+    : (tenant as { slug: string } | null)?.slug;
   if (slug !== tenantSlug) {
     return { ok: false as const, error: 'Tenant mismatch', status: 403 as const };
   }
