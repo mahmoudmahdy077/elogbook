@@ -24,8 +24,10 @@ BEGIN
 
   -- ── E2: deleted_at only ──
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NOT NULL)';
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','e2'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
   BEGIN
@@ -39,8 +41,10 @@ BEGIN
 
   -- ── E3: + tenant ──
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (true) WITH CHECK (tenant_id = get_tenant_id() AND deleted_at IS NOT NULL)';
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','e3'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
   BEGIN
@@ -54,8 +58,10 @@ BEGIN
 
   -- ── E4: + resident scalar subquery (= original P3) ──
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (deleted_at IS NULL) WITH CHECK (resident_id = (SELECT id FROM profiles WHERE user_id = auth.uid()) AND tenant_id = get_tenant_id() AND deleted_at IS NOT NULL)';
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','e4'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
   BEGIN
@@ -69,8 +75,10 @@ BEGIN
 
   -- ── E5: resident EXISTS form ──
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = case_entries.resident_id AND profiles.user_id = auth.uid())) WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = case_entries.resident_id AND profiles.user_id = auth.uid()) AND tenant_id = get_tenant_id() AND deleted_at IS NOT NULL)';
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','e5'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
   BEGIN

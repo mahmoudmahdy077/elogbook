@@ -48,8 +48,10 @@ BEGIN
 
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','x1'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   BEGIN
     UPDATE public.case_entries SET deleted_at = NOW() WHERE id = v_id;
     INSERT INTO public._swarm_debug_results VALUES (91, jsonb_build_object('x1-control-wc-true','OK'));
@@ -59,8 +61,10 @@ BEGIN
 
   -- ── X2: WC = deleted_at IS NOT NULL ──
   RESET ROLE;
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','x2'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
   EXECUTE 'DROP POLICY p_v ON public.case_entries';
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NOT NULL)';
 

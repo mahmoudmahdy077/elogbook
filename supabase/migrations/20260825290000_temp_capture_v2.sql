@@ -40,8 +40,10 @@ BEGIN
   IF v_tmpl IS NULL THEN
     SELECT id INTO v_tmpl FROM public.case_templates LIMIT 1;
   END IF;
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','cap3'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
 
   -- ── PHASE C (postgres): swap UPDATE policies to minimal suspect ──
   PERFORM set_config('role','postgres', true);
