@@ -13,6 +13,7 @@ const webServerSchema = z.object({
 const optionalSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  RATE_LIMIT_MODE: z.enum(['distributed', 'single-instance']).optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_SENTRY_ENV: z.enum(['development', 'production', 'test']).optional(),
   SENTRY_ORG: z.string().optional(),
@@ -27,14 +28,36 @@ const optionalSchema = z.object({
   ANALYZE: z.string().optional().transform((v) => v === 'true'),
 });
 
-const envSchema = webPublicSchema.merge(webServerSchema).merge(optionalSchema);
+const baseEnvSchema = webPublicSchema.merge(webServerSchema).merge(optionalSchema);
 
-function parseOrThrow<T extends z.ZodRawShape>(
-  schema: z.ZodObject<T>,
+const envSchema = baseEnvSchema.superRefine((data, ctx) => {
+  if (data.NODE_ENV === 'production' && !data.RATE_LIMIT_MODE) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RATE_LIMIT_MODE'],
+      message:
+        "RATE_LIMIT_MODE is required in production. Set 'distributed' (requires UPSTASH_REDIS_REST_URL/TOKEN) or 'single-instance' (reduced-security, single-process only).",
+    });
+  }
+  if (
+    data.RATE_LIMIT_MODE === 'distributed' &&
+    (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RATE_LIMIT_MODE'],
+      message:
+        'RATE_LIMIT_MODE=distributed requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.',
+    });
+  }
+});
+
+function parseOrThrow<T extends z.ZodTypeAny>(
+  schema: T,
   source: Record<string, string | undefined>,
   label: string,
-): z.infer<typeof schema> {
-  const result = schema.safeParse(source);
+): z.infer<T> {
+  const result = (schema as z.ZodTypeAny).safeParse(source);
   if (!result.success) {
     const details = result.error.issues
       .map((i) => `  ${i.path.join('.')}: ${i.message}`)
