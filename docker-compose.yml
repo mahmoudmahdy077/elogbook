@@ -13,10 +13,15 @@ services:
     image: elogbook-web:latest
     container_name: elogbook-web
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # D-10 fixed: do not publish 3000 to the host — only Caddy (80/443) is
+    # ingress. Direct host:3000 would bypass the proxy, TLS, and the
+    # trusted-proxy hop that TICKET-002 relies on.
     environment:
       NODE_ENV: production
+      RATE_LIMIT_MODE: ${RATE_LIMIT_MODE:?RATE_LIMIT_MODE required — see LAUNCH_SCOPE.md}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       SETUP_MODE: "false"
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
@@ -26,9 +31,6 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - ./volumes/elogbook:/app/data
-    depends_on:
-      api-gw:
-        condition: service_healthy
     networks:
       - elogbook
       - supabase_default

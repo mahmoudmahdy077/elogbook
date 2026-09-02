@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Message too large' }, { status: 413 });
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const ip = getClientIp(request);
   const { allowed, retryAfter } = await checkRateLimit(`contact:${ip}`, 5);
   if (!allowed) return rateLimitResponse(retryAfter);
 

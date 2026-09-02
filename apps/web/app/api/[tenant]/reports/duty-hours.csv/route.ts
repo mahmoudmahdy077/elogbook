@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 import { escapeCsvCell } from '@/lib/csv';
 
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const ip = getClientIp(request);
   const rl = await checkRateLimit(`csv-export:${ip}`, 10);
   if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
 

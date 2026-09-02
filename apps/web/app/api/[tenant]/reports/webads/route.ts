@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 import type { UserRole } from '@/lib/supabase/auth';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
@@ -19,10 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   // ---- Rate limit by IP (10 req/min, same tier as audit export) ----
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = getClientIp(request);
 
   const { allowed, retryAfter } = await checkRateLimit(`webads-export:${ip}`, 10);
   if (!allowed) return rateLimitResponse(retryAfter);

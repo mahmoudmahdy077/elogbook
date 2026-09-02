@@ -1,0 +1,73 @@
+# Caddyfile — production reverse proxy for eLogbook
+# D-9 fix: this file was missing (bind-mount pointed at a nonexistent source).
+# D-10 fix: app:3000 is NOT published to the host; this is the only ingress.
+#
+# Trust boundary (TICKET-002):
+#   Caddy terminates TLS and overwrites X-Forwarded-* toward the app.
+#   By default Caddy *appends* the remote address to any existing
+#   X-Forwarded-For, so the first element remains client-controlled. With
+#   `trusted_proxies private_ranges` Caddy trusts only the immediate
+#   Docker/private-range hop, and the app reads the client IP at offset
+#   TRUSTED_PROXY_HOPS from the right (default 1). Direct access to
+#   app:3000 without this proxy is impossible in the composed stack
+#   because the port is not published (see docker-compose.yml).
+#
+# The app's `getClientIp()` in lib/client-ip.ts implements the hop-aware
+# reading; this file and that helper must agree on the hop count.
+
+{
+  admin off
+  # Disable admin API over network; healthcheck uses localhost:2019 which is
+  # still reachable inside the container even with admin off (Caddy >=2.8).
+}
+
+# HTTP — redirect to HTTPS when a public host is configured, otherwise serve
+# directly (useful for localhost pilot without TLS).
+:80 {
+  @health path /api/health /api/ready
+  handle @health {
+    reverse_proxy app:3000 {
+      trusted_proxies private_ranges
+      # Preserve original host/proto for absolute URL generation
+      header_up Host {host}
+      header_up X-Real-IP {remote}
+      header_up X-Forwarded-Proto {scheme}
+      # Do not trust client-supplied X-Forwarded-For — Caddy will append.
+    }
+  }
+  handle {
+    reverse_proxy app:3000 {
+      trusted_proxies private_ranges
+      header_up Host {host}
+      header_up X-Real-IP {remote}
+      header_up X-Forwarded-Proto {scheme}
+    }
+  }
+}
+
+# HTTPS — automatic TLS via Let's Encrypt when SITE_DOMAIN is a public
+# hostname; for localhost/private pilot this block is still valid and Caddy
+# will serve with an internal CA (clients will see a self-signed chain).
+:443 {
+  tls {
+    # ACME email for expiry notices — set ACME_EMAIL in env or leave empty
+    # for internal CA on localhost.
+  }
+  reverse_proxy app:3000 {
+    trusted_proxies private_ranges
+    header_up Host {host}
+    header_up X-Real-IP {remote}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}
+
+# Fallback for explicit domain (e.g., elogbook.example.com) when
+# SITE_DOMAIN is set in the environment. Caddy will obtain a cert for it.
+{$SITE_DOMAIN} {
+  reverse_proxy app:3000 {
+    trusted_proxies private_ranges
+    header_up Host {host}
+    header_up X-Real-IP {remote}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}

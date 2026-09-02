@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createFullBackup } from '@/lib/setup/backup-manager';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 
 export const runtime = 'nodejs';
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+  const ip = getClientIp(request);
   const { allowed, retryAfter } = await checkRateLimit(`update:${ip}`, 5);
   if (!allowed) return rateLimitResponse(retryAfter);
 
