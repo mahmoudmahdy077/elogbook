@@ -28,7 +28,6 @@ const nextConfig = {
     root: process.env.TURBOPACK_ROOT ?? monorepoRoot,
   },
   experimental: {
-    instrumentationHook: true,
     optimizePackageImports: ['framer-motion', '@sentry/nextjs'],
   },
   images: {
