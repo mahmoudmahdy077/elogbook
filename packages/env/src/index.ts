@@ -14,6 +14,7 @@ const optionalSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   RATE_LIMIT_MODE: z.enum(['distributed', 'single-instance']).optional(),
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_SENTRY_ENV: z.enum(['development', 'production', 'test']).optional(),
   SENTRY_ORG: z.string().optional(),
@@ -48,6 +49,14 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
       path: ['RATE_LIMIT_MODE'],
       message:
         'RATE_LIMIT_MODE=distributed requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.',
+    });
+  }
+  if (data.NODE_ENV === 'production' && data.TRUSTED_PROXY_HOPS === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['TRUSTED_PROXY_HOPS'],
+      message:
+        'TRUSTED_PROXY_HOPS is required in production. Set 0 (trust nothing, use socket peer) or 1 (single Caddy hop, pilot default).',
     });
   }
 });

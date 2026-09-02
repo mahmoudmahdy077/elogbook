@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse, after } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { notifyCaseApproval } from '@/lib/notifications';
@@ -24,10 +25,7 @@ export async function POST(
   if (csrfError) return csrfError;
 
   // ---- Rate limit by IP (20 req/min) ----
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = getClientIp(request);
 
   const { allowed, retryAfter } = await checkRateLimit(`approve-action:${ip}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);

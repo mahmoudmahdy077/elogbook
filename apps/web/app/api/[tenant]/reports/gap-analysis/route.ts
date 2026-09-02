@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -17,10 +18,7 @@ export async function POST(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   // ---- CSRF (state-changing) + rate limit ----
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = getClientIp(request);
 
   const { allowed, retryAfter } = await checkRateLimit(`gap-analysis:${ip}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);

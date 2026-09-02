@@ -1,6 +1,7 @@
 import { updateSession } from '@/lib/supabase/middleware';
 import type { NextRequest } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { getClientIp } from '@/lib/client-ip';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -21,7 +22,7 @@ function generateCsp(nonce: string): string {
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = new URL(request.url);
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const ip = getClientIp(request);
 
   // Rate limiting for auth endpoints
   if (pathname.startsWith('/auth/callback') && request.method === 'POST') {
