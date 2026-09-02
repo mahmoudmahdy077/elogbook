@@ -153,7 +153,18 @@ describe('getClientIp — trusted proxy hop aware (TICKET-002)', () => {
     // We assert the helper itself consults TRUSTED_PROXY_HOPS.
     const { readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
-    const src = readFileSync(join(process.cwd(), 'apps/web/lib/client-ip.ts'), 'utf8');
+    const candidates = [
+      join(process.cwd(), 'lib/client-ip.ts'),
+      join(process.cwd(), 'apps/web/lib/client-ip.ts'),
+      join(process.cwd(), '../lib/client-ip.ts'),
+    ];
+    let src = '';
+    for (const p of candidates) {
+      try {
+        src = readFileSync(p, 'utf8');
+        break;
+      } catch {}
+    }
     expect(src).toMatch(/TRUSTED_PROXY_HOPS/);
     expect(src).toMatch(/x-forwarded-for/i);
   });
