@@ -36,8 +36,13 @@ export default async function proxy(request: NextRequest) {
     if (!allowed) return rateLimitResponse(retryAfter);
   }
 
-  // Rate limiting for unauthenticated API routes
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
+  // Liveness and readiness are never rate-limited (TICKET-003, D-6).
+  // They must be exempt BEFORE the generic /api limiter, otherwise a
+  // denying limiter takes the health signal down with the app (crash loop).
+  const isHealthProbe = pathname === '/api/health' || pathname === '/api/ready';
+
+  // Rate limiting for unauthenticated API routes (excluding health probes)
+  if (!isHealthProbe && pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
     const { allowed, retryAfter } = await checkRateLimit(`api:${ip}`);
     if (!allowed) return rateLimitResponse(retryAfter);
   }
