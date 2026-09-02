@@ -60,20 +60,16 @@ export async function POST(request: Request) {
     }
 
     const configPath = join('/app/data', 'supabase-config.json');
-    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8'); // lgtm[js/missing-rate-limiting]
+    writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 }); // lgtm[js/missing-rate-limiting]
 
     const version = await getSupabaseVersion();
 
+    // SECURITY: Never return infrastructure secrets (serviceRoleKey, jwtSecret,
+    // postgresPassword) to the browser. They are written server-side with 0600
+    // and consumed via env/config inside the private network only.
     return NextResponse.json({
       success: true,
-      config: {
-        apiUrl: config.apiUrl,
-        anonKey: config.anonKey,
-        serviceRoleKey: config.serviceRoleKey,
-        jwtSecret: config.jwtSecret,
-        postgresPassword: config.postgresPassword,
-        postgresDb: config.postgresDb,
-      },
+      apiUrl: config.apiUrl,
       version,
     });
   } catch (error) {

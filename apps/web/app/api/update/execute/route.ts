@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createFullBackup } from '@/lib/setup/backup-manager';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export const runtime = 'nodejs';
 
-const ADMIN_ROLES = ['director', 'institution_admin', 'admin'];
+// Privileged operation — operator-only
+const ADMIN_ROLES = ['admin'];
 
 export async function POST(request: Request) {
   if (!existsSync('/app/data/.setup-complete')) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
   }
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+  const { allowed, retryAfter } = await checkRateLimit(`update:${ip}`, 5);
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,18 +27,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { data: { session } } = await supabase.auth.getSession();
+  if ((session as { aal?: string } | null)?.aal && (session as { aal?: string })?.aal !== 'aal2') {
+    try {
+      const { data: mfaData } = await supabase.auth.mfa.listFactors();
+      const hasVerifiedMfa = mfaData?.all?.some((f) => f.status === 'verified') ?? false;
+      if (hasVerifiedMfa) {
+        return NextResponse.json({ error: 'Re-authentication with MFA required for this operation' }, { status: 403 });
+      }
+    } catch { /* ignore */ }
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('id, tenant_id, role')
     .eq('user_id', user.id)
     .single();
 
   if (!profile || !ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    return NextResponse.json({ error: 'Insufficient permissions — operator only' }, { status: 403 });
   }
 
   const body = await request.json();
   const { component } = body;
+
+  const allowedComponents = ['elogbook', 'supabase', 'both'];
+  if (component && !allowedComponents.includes(component)) {
+    return NextResponse.json({ error: `Invalid component. Must be one of: ${allowedComponents.join(', ')}` }, { status: 400 });
+  }
+
+  // Audit
+  try {
+    const adminClient = createServiceRoleClient();
+    await adminClient.from('audit_logs').insert({
+      tenant_id: profile.tenant_id,
+      user_id: user.id,
+      action: 'update_requested',
+      resource_type: 'system',
+      resource_id: component || 'both',
+      changes: { component, ip },
+    });
+  } catch { /* best-effort */ }
 
   const configPath = join('/app/data', 'supabase-config.json');
   const config = existsSync(configPath) ? JSON.parse(readFileSync(configPath, 'utf-8')) : null;

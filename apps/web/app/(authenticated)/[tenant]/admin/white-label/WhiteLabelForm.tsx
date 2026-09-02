@@ -77,7 +77,6 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
           <p className="text-xs text-text-muted mt-1">HTTPS URL to your logo. Upload roadmap: direct storage upload.</p>
           {logoUrl && isValidUrl(logoUrl) && (
             <div className="mt-2 p-2 border border-border rounded-lg bg-white flex items-center justify-center h-16">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={logoUrl} alt="Logo preview" className="max-h-12 max-w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
             </div>
           )}

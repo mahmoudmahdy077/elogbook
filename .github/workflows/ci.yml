@@ -12,7 +12,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '24', cache: 'pnpm' }
+        with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
   lint:
@@ -22,7 +22,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '24', cache: 'pnpm' }
+        with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint:all
   test:
@@ -32,7 +32,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '24', cache: 'pnpm' }
+        with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
   build-web:
@@ -42,7 +42,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: '24', cache: 'pnpm' }
+        with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
   db-tests:
@@ -53,25 +53,24 @@ jobs:
         with: { version: 2.109.1 }
         env:
           SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
-      # supabase start pulls several images and flakes on registry hiccups;
-      # use the public docker.io mirror and retry before giving up.
-      # continue-on-error while the runner-side flake is investigated: these
-      # two SQL isolation tests are additionally exercised continuously
-      # against the live project by the swarm regression rotation.
       - name: Start local Supabase (with retries)
         id: sbstart
-        continue-on-error: true
+        shell: bash
         run: |
+          set -euo pipefail
           export SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io
           for i in 1 2 3; do
             if supabase start; then exit 0; fi
             echo "::warning::supabase start attempt $i failed; retrying in 30s"
             sleep 30
           done
+          echo "::error::supabase start failed after 3 attempts"
           exit 1
       - name: Run DB isolation tests
-        if: steps.sbstart.outcome == 'success'
-        run: supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
   deno-test:
     runs-on: ubuntu-latest
     steps:
@@ -79,4 +78,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with: { deno-version: v2.x }
       - name: Cache and run Deno tests
-        run: deno test --allow-import --allow-net=localhost supabase/functions/payment-webhook/ 2>&1 | tail -20
+        shell: bash
+        run: |
+          set -o pipefail
+          deno test --allow-import --allow-net=localhost supabase/functions/payment-webhook/ 2>&1 | tail -n 20

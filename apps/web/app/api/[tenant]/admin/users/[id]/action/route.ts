@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
-import crypto from 'crypto';
-
-const ADMIN_ROLES = ['institution_admin', 'admin'];
 
 export async function POST(
   request: NextRequest,
@@ -24,23 +21,30 @@ export async function POST(
 
   const adminClient = createServiceRoleClient();
 
-  // Get target user
+  // Get target user — must belong to same tenant (service-role bypasses RLS)
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, user_id, status')
+    .select('id, user_id, status, tenant_id')
     .eq('id', id)
+    .eq('tenant_id', profile.tenant_id)
     .single();
 
   if (!targetProfile) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
+  // Defense-in-depth: explicit tenant check even if query predicate is bypassed/missed
+  if ((targetProfile as { tenant_id: string }).tenant_id !== profile.tenant_id) {
+    return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
+  }
+
   if (action === 'deactivate') {
-    // Update profile status
+    // Update profile status — scoped to tenant
     const { error } = await adminClient
       .from('profiles')
       .update({ status: 'deactivated', deactivated_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', profile.tenant_id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -60,7 +64,8 @@ export async function POST(
     const { error } = await adminClient
       .from('profiles')
       .update({ status: 'active', deactivated_at: null })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', profile.tenant_id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -76,20 +81,30 @@ export async function POST(
   }
 
   if (action === 'reset-password') {
-    // Generate password reset link
-    await adminClient.auth.admin.generateLink({
-      type: 'magiclink',
-      email: '', // We need the email
-    });
-
-    // Alternative: use updateUser to set a temporary password
-    const tempPassword = crypto.randomBytes(16).toString('base64url').slice(0, 12) + 'A1!';
-    const { error: updateError } = await adminClient.auth.admin.updateUserById(
+    // Fetch the target auth user's email (required for recovery link)
+    const { data: authUserData, error: getUserError } = await adminClient.auth.admin.getUserById(
       targetProfile.user_id,
-      { password: tempPassword }
     );
 
-    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (getUserError) {
+      return NextResponse.json({ error: getUserError.message }, { status: 500 });
+    }
+
+    const targetEmail = authUserData?.user?.email;
+    if (!targetEmail) {
+      return NextResponse.json({ error: 'Target user has no email' }, { status: 400 });
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const { error: linkError } = await adminClient.auth.admin.generateLink({
+      type: 'recovery',
+      email: targetEmail,
+      options: { redirectTo: `${siteUrl}/login` },
+    });
+
+    if (linkError) {
+      return NextResponse.json({ error: linkError.message }, { status: 500 });
+    }
 
     await adminClient.from('audit_logs').insert({
       tenant_id: profile.tenant_id,
@@ -99,7 +114,7 @@ export async function POST(
       resource_id: id,
     });
 
-    return NextResponse.json({ success: true, message: 'Password reset. New password sent to user.' });
+    return NextResponse.json({ success: true, message: 'Password reset email sent' });
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

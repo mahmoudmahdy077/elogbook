@@ -3,8 +3,6 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 
-const ADMIN_ROLES = ['institution_admin', 'admin'];
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ tenant: string; id: string }> }
@@ -76,15 +74,20 @@ export async function PUT(
 
   const adminClient = createServiceRoleClient();
 
-  // Get target user
+  // Get target user — must belong to same tenant (service-role bypasses RLS)
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, user_id, role')
+    .select('id, user_id, role, tenant_id')
     .eq('id', id)
+    .eq('tenant_id', profile.tenant_id)
     .single();
 
   if (!targetProfile) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  if ((targetProfile as { tenant_id: string }).tenant_id !== profile.tenant_id) {
+    return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
   }
 
   // Update profile
@@ -102,7 +105,8 @@ export async function PUT(
   const { error: updateError } = await adminClient
     .from('profiles')
     .update(updates)
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', profile.tenant_id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
@@ -141,15 +145,20 @@ export async function DELETE(
 
   const adminClient = createServiceRoleClient();
 
-  // Get target user
+  // Get target user — must belong to same tenant (service-role bypasses RLS)
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, user_id')
+    .select('id, user_id, tenant_id')
     .eq('id', id)
+    .eq('tenant_id', profile.tenant_id)
     .single();
 
   if (!targetProfile) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  if ((targetProfile as { tenant_id: string }).tenant_id !== profile.tenant_id) {
+    return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
   }
 
   // Prevent self-deletion
