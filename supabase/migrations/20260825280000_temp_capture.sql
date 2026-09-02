@@ -31,8 +31,10 @@ BEGIN
   LOOP EXECUTE format('DROP POLICY %I ON public.case_entries', r.policyname); END LOOP;
   EXECUTE 'CREATE POLICY p_v ON public.case_entries FOR UPDATE TO authenticated USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NOT NULL)';
 
-  INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
+  IF v_pid IS NOT NULL THEN
+    INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
   VALUES (v_tenant,v_pid,v_tmpl,CURRENT_DATE,jsonb_build_object('procedure_name','cap'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x') RETURNING id INTO v_id;
+  END IF;
 
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);

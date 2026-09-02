@@ -1,7 +1,3 @@
 {
-  "lock": false,
-  "nodeModulesDir": "auto",
-  "imports": {
-    "std/": "https://deno.land/std@0.224.0/"
-  }
+  "lock": false
 }
