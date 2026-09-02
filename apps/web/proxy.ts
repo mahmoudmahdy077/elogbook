@@ -22,6 +22,20 @@ function generateCsp(nonce: string): string {
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = new URL(request.url);
+  // D-5: unauthenticated control plane must be absent in PHI build.
+  // Until the routes are removed from the build, deny them at the edge
+  // in production. This satisfies Gate C's runtime probe (404) even though
+  // the build-manifest and network-rule parts of TICKET-004 are human-only.
+  if (process.env.NODE_ENV === 'production') {
+    if (
+      pathname.startsWith('/api/setup') ||
+      pathname.startsWith('/api/backup') ||
+      pathname === '/api/uninstall' ||
+      pathname.startsWith('/api/update')
+    ) {
+      return new Response('Not Found', { status: 404 });
+    }
+  }
   const ip = getClientIp(request);
 
   // Rate limiting for auth endpoints

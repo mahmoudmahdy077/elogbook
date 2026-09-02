@@ -11,16 +11,6 @@ interface RequirementCheck {
   required_version?: string;
 }
 
-interface SupabaseConfig {
-  installPath: string;
-  apiUrl: string;
-  anonKey: string;
-  serviceRoleKey: string;
-  jwtSecret: string;
-  postgresPassword: string;
-  postgresDb: string;
-}
-
 const STEPS = [
   'Welcome',
   'Requirements',
@@ -46,7 +36,6 @@ export default function SetupPage() {
   const [siteUrl, setSiteUrl] = useState('http://localhost:3000');
 
   const [, setDeployProgress] = useState<string[]>([]);
-  const [, setSupabaseConfig] = useState<SupabaseConfig | null>(null);
 
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -96,7 +85,6 @@ export default function SetupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setSupabaseConfig(data.config);
       setDeployProgress(prev => [...prev, 'Supabase deployed successfully']);
       setStep(4);
     } catch (err) {
