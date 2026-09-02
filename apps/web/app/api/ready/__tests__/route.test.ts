@@ -130,7 +130,9 @@ describe('GET /api/ready — readiness (TICKET-003)', () => {
       try {
         proxySrc = readFileSync(p, 'utf8');
         break;
-      } catch {}
+      } catch {
+        // ignore missing candidate
+      }
     }
     expect(proxySrc).toMatch(/\/api\/ready/);
     expect(proxySrc).toMatch(/isHealthProbe|health.*ready/i);

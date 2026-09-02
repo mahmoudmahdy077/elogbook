@@ -163,7 +163,9 @@ describe('getClientIp — trusted proxy hop aware (TICKET-002)', () => {
       try {
         src = readFileSync(p, 'utf8');
         break;
-      } catch {}
+      } catch {
+        // ignore missing candidate
+      }
     }
     expect(src).toMatch(/TRUSTED_PROXY_HOPS/);
     expect(src).toMatch(/x-forwarded-for/i);
