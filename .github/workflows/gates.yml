@@ -1,0 +1,32 @@
+name: Gates
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - name: Gate A — tenant-scope detector
+        run: node scripts/verify-tenant-scope.mjs
+      - name: Gate B — rate-limiter contract (via vitest)
+        run: pnpm exec vitest run apps/web/lib/__tests__/rate-limit-contract.test.ts
+      - name: Gate C — boot + compose + health/ready + setup guard
+        run: node scripts/verify-boot.mjs
+      - name: Gate D — security tests cannot vanish
+        run: node scripts/verify-security-tests.mjs
+      - name: Gate E — PHI claim guard
+        run: node scripts/verify-phi-claim.mjs
+      - name: Gate F — credential fail-closed
+        run: node scripts/verify-credential-fail-closed.mjs
+      - name: Gate G — single client-ip
+        run: node scripts/verify-single-ip.mjs
+      - name: Gate H — export compatibility
+        run: node scripts/verify-exports.mjs

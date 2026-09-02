@@ -20,7 +20,7 @@ export async function sendPushNotification(
   // (profiles.id and auth.users.id are distinct — see 00001_schema.sql).
   // Resolve profile -> auth user before matching tokens.
   const { data: prof } = await supabase
-    .from('profiles')
+    .from('profiles') // tenant-scope-exempt: user-scoped lookup by user_id (1:1), not tenant list — owner=human expiry=2026-12-31
     .select('user_id')
     .eq('id', userId)
     .maybeSingle();

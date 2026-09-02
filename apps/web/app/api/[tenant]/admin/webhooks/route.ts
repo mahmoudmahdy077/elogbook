@@ -61,7 +61,7 @@ export async function GET(
 
   if (webhookIds.length > 0) {
     const { data: deliveries } = await adminClient
-      .from('tenant_webhook_deliveries')
+      .from('tenant_webhook_deliveries') // tenant-scope-exempt: delivery is child of tenant_webhooks filtered by webhook_id tenant_id already — owner=human expiry=2026-12-31
       .select('webhook_id, attempted_at, status_code, succeeded')
       .in('webhook_id', webhookIds)
       .order('attempted_at', { ascending: false })

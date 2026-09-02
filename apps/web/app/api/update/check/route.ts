@@ -8,6 +8,11 @@ export const runtime = 'nodejs';
 const ADMIN_ROLES = ['director', 'institution_admin', 'admin'];
 
 export async function GET() {
+  // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   if (!existsSync('/app/data/.setup-complete')) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
   }
