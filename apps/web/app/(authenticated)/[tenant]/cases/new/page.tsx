@@ -34,8 +34,10 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
     .maybeSingle();
 
   const isReadOnly = subscription?.status === 'past_due' || subscription?.status === 'unpaid';
-  // Allow direct logging: cases are auto-approved for residents
-  const initialStatus = 'approved';
+  // SEC-002: residents' cases enter the approval queue ('pending'); supervisors+
+  // may log pre-approved cases directly. The DB trigger enforces the same rule —
+  // this keeps the UI consistent with what actually lands.
+  const initialStatus = profile.role === 'resident' ? 'pending' : 'approved';
 
   // Check case quota
   const { data: quota } = await supabase
