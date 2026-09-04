@@ -62,6 +62,8 @@ function runSuite(suite) {
   return { out, code };
 }
 
+// Outer super-loop: inner rotation covers 32 suites per pass — wrap until 1000.
+while (state.completedCycles.length < 1000) {
 for (const suite of ROTATION) {
   if (done >= 1000) break;
   const cycleNum = done + 1;
@@ -105,7 +107,10 @@ for (const suite of ROTATION) {
   done = cycleNum;
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
   await new Promise(r => setTimeout(r, 1200));
-}
+  if (state.completedCycles.length >= 1000) break;
+  } // inner rotation
+  if (state.completedCycles.length >= 1000) break;
+} // super-loop
 
 const fails = Object.keys(state.failures).length;
 console.log(`\n[loop] progress: ${state.completedCycles.length}/1000 | failed suites logged: ${fails}`);
