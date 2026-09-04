@@ -62,7 +62,7 @@ const ins = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
     tenant_id: TENANT, resident_id: profileId, template_id: templateId,
     case_date: new Date().toISOString().split('T')[0],
     field_values: {"procedure_name":"Cycle1 test","duration_min":30},
-    status: 'approved',
+    status: 'pending', // SEC-002: residents insert into the approval queue
     accreditation_mappings: [],
     is_deidentified: true,
     patient_mrn: null, patient_dob: null, patient_age_years: 44, patient_hash: hash || ''
@@ -78,7 +78,7 @@ const insDraft = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
     tenant_id: TENANT, resident_id: profileId, template_id: templateId,
     case_date: new Date().toISOString().split('T')[0],
     field_values: {"procedure_name":"Cycle1 draft"},
-    status: 'approved',
+    status: 'pending', // SEC-002: residents insert into the approval queue
     accreditation_mappings: [], is_deidentified: false,
     patient_mrn: null, patient_dob: null, patient_age_years: null, patient_hash: null
   })
