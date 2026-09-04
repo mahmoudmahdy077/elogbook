@@ -234,6 +234,62 @@ h1, h2, h3 {
   --color-divider: rgba(255, 255, 255, 0.08);
   --glass-bg: rgba(28, 28, 30, 0.72);
   --glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Semantic scales — dark-adapted (Apple Health iOS dark palette).
+     Hue anchors stay identical to light; fills flip to low-alpha-on-dark,
+     text steps lighten for WCAG AA on #1C1C1E surfaces. */
+  --color-primary: #0A84FF;
+  --color-primary-hover: #339DFF;
+  --color-secondary: #5E5CE6;
+  --color-secondary-hover: #7D7AFF;
+  --color-text-on-primary: #FFFFFF;
+  --color-pending: #FF9F0A;
+  --color-approved: #30D158;
+  --color-rejected: #FF453A;
+
+  --color-default-50: #1c1c1e;
+  --color-default-100: #2c2c2e;
+  --color-default-200: #3a3a3c;
+  --color-default-300: #48484a;
+  --color-default-400: #636366;
+  --color-default-500: #aeaeb2;
+  --color-default-600: #b8b8bd;
+  --color-default-700: #d1d1d6;
+  --color-default-800: #e5e5ea;
+  --color-default-900: #f2f2f7;
+
+  --color-success-50: rgba(48, 209, 88, 0.12);
+  --color-success-100: rgba(48, 209, 88, 0.20);
+  --color-success-200: rgba(48, 209, 88, 0.28);
+  --color-success-300: rgba(48, 209, 88, 0.38);
+  --color-success-400: #30D158;
+  --color-success-500: #30D158;
+  --color-success-600: #28A745;
+  --color-success-700: #4CD964;
+  --color-success-800: #6EE58A;
+  --color-success-900: #A3F0B5;
+
+  --color-warning-50: rgba(255, 159, 10, 0.12);
+  --color-warning-100: rgba(255, 159, 10, 0.20);
+  --color-warning-200: rgba(255, 159, 10, 0.28);
+  --color-warning-300: rgba(255, 159, 10, 0.38);
+  --color-warning-400: #FF9F0A;
+  --color-warning-500: #FF9F0A;
+  --color-warning-600: #E68600;
+  --color-warning-700: #FFB340;
+  --color-warning-800: #FFCC80;
+  --color-warning-900: #FFE0B8;
+
+  --color-danger-50: rgba(255, 69, 58, 0.12);
+  --color-danger-100: rgba(255, 69, 58, 0.20);
+  --color-danger-200: rgba(255, 69, 58, 0.28);
+  --color-danger-300: rgba(255, 69, 58, 0.38);
+  --color-danger-400: #FF453A;
+  --color-danger-500: #FF453A;
+  --color-danger-600: #E0352B;
+  --color-danger-700: #FF6961;
+  --color-danger-800: #FF8C86;
+  --color-danger-900: #FFB3AE;
 }
 
 /* Dark mode badge adjustments */
