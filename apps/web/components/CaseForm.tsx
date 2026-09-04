@@ -293,7 +293,9 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       template_id: selectedTemplateId,
       case_date: caseDate || new Date().toISOString().split('T')[0],
       field_values: fieldValues,
-      status: 'approved',
+      // SEC-002: honor the role-gated initialStatus — DB trigger enforces the
+      // same rule server-side (residents land 'pending', supervisors+ 'approved').
+      status: initialStatus,
       accreditation_mappings: accreditationMappings,
       is_deidentified: isDeidentified,
     };
