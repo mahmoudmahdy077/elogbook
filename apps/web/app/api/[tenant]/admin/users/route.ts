@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 const ADMIN_ROLES = ['institution_admin', 'admin'];
 
@@ -25,6 +26,9 @@ export async function GET(request: NextRequest) {
   if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
     return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
   }
+
+  const { allowed, retryAfter } = await checkRateLimit(`admin-users:${tenantSlug}`, 120);
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   if (!ADMIN_ROLES.includes(profile.role)) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });

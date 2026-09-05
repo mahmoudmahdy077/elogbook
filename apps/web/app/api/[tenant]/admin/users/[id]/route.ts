@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +14,9 @@ export async function GET(
   if (!_auth.ok) {
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
+
+  const rl = await checkRateLimit(`admin-user-detail:${tenantSlug}`, 60);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const { profile } = _auth;
 
   const { data: targetProfile, error } = await supabase
@@ -48,6 +52,9 @@ export async function PUT(
   if (!_auth.ok) {
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
+
+  const rl = await checkRateLimit(`admin-user-mut:${tenantSlug}`, 30);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const profile = _auth.profile;
   const user = _auth.user;
 
@@ -139,6 +146,9 @@ export async function DELETE(
   if (!_auth.ok) {
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
+
+  const rl = await checkRateLimit(`admin-user-mut:${tenantSlug}`, 30);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const profile = _auth.profile;
   const user = _auth.user;
 

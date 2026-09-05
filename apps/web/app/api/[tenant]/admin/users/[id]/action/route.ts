@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +14,9 @@ export async function POST(
   if (!_auth.ok) {
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
+
+  const rl = await checkRateLimit(`admin-user-action:${tenantSlug}`, 20);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const profile = _auth.profile;
   const user = _auth.user;
 
