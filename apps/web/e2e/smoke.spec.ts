@@ -1,12 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('App smoke', () => {
-  test('health endpoint returns ok', async ({ request }) => {
+  test('health endpoint is liveness-only (200, no dependencies)', async ({ request }) => {
     const res = await request.get('/api/health');
-    expect(res.status()).toBeLessThan(503);
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('healthy');
+    expect(body).toHaveProperty('timestamp');
+    // Liveness must not expose dependency state (T03 contract).
+    expect(body).not.toHaveProperty('db');
+    expect(body).not.toHaveProperty('rateLimit');
+  });
+
+  test('ready endpoint reports dependencies', async ({ request }) => {
+    const res = await request.get('/api/ready');
+    expect([200, 503]).toContain(res.status());
     const body = await res.json();
     expect(body).toHaveProperty('status');
-    expect(body).toHaveProperty('durationMs');
+    expect(body).toHaveProperty('db');
+    expect(body).toHaveProperty('rateLimit');
   });
 
   test('login page renders', async ({ page }) => {
