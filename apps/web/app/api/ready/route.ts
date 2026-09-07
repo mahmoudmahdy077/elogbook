@@ -21,22 +21,38 @@ export const dynamic = 'force-dynamic';
  * different consumers — conflating them (old /api/health with DB+503) would
  * restart healthy pods on a transient DB blip (D-6).
  */
+/** Bound for the dependency ping so a hung database yields 503 promptly. */
+function dbTimeoutMs(): number {
+  const raw = Number(process.env.READINESS_DB_TIMEOUT_MS ?? 5000);
+  return Number.isFinite(raw) && raw > 0 ? raw : 5000;
+}
+
 export async function GET() {
   const t0 = Date.now();
 
-  // Database probe — same minimal check as old health, but only for readiness.
+  // Database probe — minimal check, timeout-bound. Full diagnostics stay
+  // server-side (console.warn); anonymous callers get 'unavailable' only,
+  // never connection strings, usernames, or hostnames (T03).
   let db: 'ok' | 'error' = 'ok';
   let dbError: string | null = null;
   try {
     const supabase = await createServerSupabase();
-    const { error } = await supabase.from('tenants').select('id').limit(1);
+    const ping = supabase.from('tenants').select('id').limit(1);
+    const { error } = (await Promise.race([
+      ping,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('readiness DB ping timed out')), dbTimeoutMs()),
+      ),
+    ])) as { error: { message: string } | null };
     if (error) {
       db = 'error';
-      dbError = error.message;
+      dbError = 'unavailable';
+      console.warn('[ready] database probe error:', error.message);
     }
   } catch (e) {
     db = 'error';
-    dbError = e instanceof Error ? e.message : String(e);
+    dbError = 'unavailable';
+    console.warn('[ready] database probe exception:', e instanceof Error ? e.message : String(e));
   }
 
   // Rate limiter health — reflects redisDegradedSince set by checkRateLimit
@@ -47,9 +63,12 @@ export async function GET() {
     rateLimitDegraded = rateLimit.redisDegraded;
   } catch (e) {
     // If resolveMode throws (e.g., RATE_LIMIT_MODE unset in prod), treat as
-    // degraded — readiness should not be ready.
+    // degraded — readiness should not be ready. Detail stays server-side.
     rateLimitDegraded = true;
-    dbError = dbError ?? (e instanceof Error ? e.message : String(e));
+    console.warn(
+      '[ready] rate-limiter health exception:',
+      e instanceof Error ? e.message : String(e),
+    );
   }
 
   const durationMs = Date.now() - t0;

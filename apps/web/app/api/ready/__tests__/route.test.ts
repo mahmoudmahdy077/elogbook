@@ -117,6 +117,66 @@ describe('GET /api/ready — readiness (TICKET-003)', () => {
     expect(res.status).toBe(503);
   });
 
+  it('returns 503 promptly when the DB ping hangs (timeout-bound)', async () => {
+    process.env.READINESS_DB_TIMEOUT_MS = '50';
+    try {
+      vi.mocked(createServerSupabase).mockResolvedValue({
+        from: vi.fn(() => ({
+          select: vi.fn(() => ({
+            limit: vi.fn(() => new Promise(() => {})),
+          })),
+        })),
+      } as unknown as Awaited<ReturnType<typeof createServerSupabase>>);
+      vi.mocked(rateLimiterHealth).mockReturnValue({
+        mode: 'single-instance' as const,
+        redisDegraded: false,
+        degradedSince: null,
+      });
+
+      const t0 = Date.now();
+      const res = await GET();
+      const elapsed = Date.now() - t0;
+      expect(res.status).toBe(503);
+      // Must not hang with the query: bounded well under the 5s default.
+      expect(elapsed).toBeLessThan(4000);
+      const body = await res.json();
+      expect(body.db).toBe('error');
+    } finally {
+      delete process.env.READINESS_DB_TIMEOUT_MS;
+    }
+  });
+
+  it('never exposes internal database details to anonymous callers', async () => {
+    const secret = 'password authentication failed for user "postgres" at 10.0.0.9';
+    supabaseReturns({ message: secret });
+    vi.mocked(rateLimiterHealth).mockReturnValue({
+      mode: 'single-instance' as const,
+      redisDegraded: false,
+      degradedSince: null,
+    });
+
+    const res = await GET();
+    expect(res.status).toBe(503);
+    const text = JSON.stringify(await res.json());
+    expect(text).not.toContain('postgres');
+    expect(text).not.toContain('10.0.0.9');
+  });
+
+  it('reports ready again after the database recovers (no latch)', async () => {
+    supabaseReturns({ message: 'transient blip' });
+    vi.mocked(rateLimiterHealth).mockReturnValue({
+      mode: 'single-instance' as const,
+      redisDegraded: false,
+      degradedSince: null,
+    });
+    expect((await GET()).status).toBe(503);
+
+    supabaseReturns(null);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe('ready');
+  });
+
   it('is exempt from rate limiting (proxy check by inspection)', async () => {
     const { readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
