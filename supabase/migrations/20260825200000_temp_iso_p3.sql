@@ -7,6 +7,7 @@ DECLARE
   v_claims JSONB := jsonb_build_object('aud','authenticated','role','authenticated','sub',v_uid,
     'app_metadata', jsonb_build_object('tenant_id',v_tenant,'user_role','resident'));
   v_id UUID; v_keep JSONB;
+  v_pid UUID;
   r RECORD;
 BEGIN
   -- stash all four UPDATE policies
@@ -30,9 +31,10 @@ BEGIN
   PERFORM set_config('role','authenticated', true);
   PERFORM set_config('request.jwt.claims', v_claims::text, true);
 
+  SELECT id INTO v_pid FROM public.profiles WHERE user_id = v_uid;
   IF v_pid IS NOT NULL THEN
     INSERT INTO public.case_entries (tenant_id,resident_id,template_id,case_date,field_values,status,accreditation_mappings,is_deidentified,patient_mrn,patient_dob,patient_age_years,patient_hash)
-  VALUES (v_tenant,(SELECT id FROM public.profiles WHERE user_id=v_uid),(SELECT id FROM public.case_templates LIMIT 1),CURRENT_DATE,jsonb_build_object('procedure_name','iso'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x')
+  VALUES (v_tenant,v_pid,(SELECT id FROM public.case_templates LIMIT 1),CURRENT_DATE,jsonb_build_object('procedure_name','iso'),'draft','[]'::jsonb,TRUE,NULL,NULL,NULL,'x')
   RETURNING id INTO v_id;
   END IF;
 
