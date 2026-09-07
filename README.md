@@ -2,7 +2,7 @@
 
 > Enterprise-grade electronic logbook for medical residents: log surgical / clinical procedures, map them to accreditation milestones, and receive supervisor verifications — across web and mobile, online and offline.
 
-> **Status:** Enterprise transformation in progress. See [`ENTERPRISE_TRANSFORMATION_PLAN.md`](./ENTERPRISE_TRANSFORMATION_PLAN.md) for the full plan and progress.
+> **Status:** Enterprise transformation in progress. Canonical implementation roadmap: [`ELOGBOOK_MASTER_UPGRADE_PLAN.md`](./ELOGBOOK_MASTER_UPGRADE_PLAN.md). Product context: [`PRODUCT.md`](./PRODUCT.md). Historical plans (`ENTERPRISE_TRANSFORMATION_PLAN.md`, `PRODUCTION_UPGRADE_PLAN.md`, `docs/` backlogs) are retained as evidence; do not execute conflicting instructions from them in parallel.
 
 ## Quickstart
 
