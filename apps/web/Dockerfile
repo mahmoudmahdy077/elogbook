@@ -8,11 +8,15 @@ RUN apk add --no-cache bash curl postgresql-client
 
 FROM base AS builder
 WORKDIR /app
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .pnpmfile.cjs ./
+COPY patches ./patches
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/env/package.json ./packages/env/
 COPY apps/web/package.json ./apps/web/
 COPY packages/supabase/package.json ./packages/supabase/
+COPY apps/ops/package.json ./apps/ops/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/mobile/scripts ./apps/mobile/scripts
 RUN pnpm install --frozen-lockfile
 
 COPY packages ./packages

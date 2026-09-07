@@ -3,11 +3,23 @@ name: CD
 on:
   push:
     branches: [main]
+    # Docs/history-only pushes never need a production deploy (Vercel free
+    # tier is quota-limited; each push burns a deployment).
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.hermes/**'
+      - 'specs/**'
+      - 'supabase/tests/**'
+      - 'scripts/verify-*.mjs'
   workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  # Superseded queued deploys are pure quota burn on a free tier: only the
+  # latest main matters. Vercel deployments are atomic, so cancelling a
+  # still-queued build cannot half-deploy.
+  cancel-in-progress: true
 
 jobs:
   # ----------------------------------------------------------------------
