@@ -13,3 +13,4 @@ export * from './preflight.js';
 export * from './config-merge.js';
 export * from './setup-progress.js';
 export * from './release-state.js';
+export * from './update-plan.js';
