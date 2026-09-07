@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
+import { assertNotLastTenantAdmin } from '@/lib/supabase/tenant-admins';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 export async function GET(
@@ -96,6 +97,19 @@ export async function PUT(
     return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
   }
 
+  // T18: demoting the last institution_admin strands the tenant.
+  if (role !== undefined && role !== (targetProfile as { role: string }).role) {
+    const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
+      tenantId: profile.tenant_id,
+      profileId: id,
+      currentRole: (targetProfile as { role: string }).role,
+      newRole: role,
+    });
+    if (!lastAdmin.ok) {
+      return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
+    }
+  }
+
   // Update profile
   const updates: Record<string, unknown> = {};
   if (full_name !== undefined) updates.full_name = full_name;
@@ -157,7 +171,7 @@ export async function DELETE(
   // Get target user — must belong to same tenant (service-role bypasses RLS)
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, user_id, tenant_id')
+    .select('id, user_id, tenant_id, role')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .single();
@@ -173,6 +187,16 @@ export async function DELETE(
   // Prevent self-deletion
   if (targetProfile.user_id === user.id) {
     return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
+  }
+
+  // T18: deleting the last institution_admin strands the tenant.
+  const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
+    tenantId: profile.tenant_id,
+    profileId: id,
+    currentRole: (targetProfile as { role?: string }).role ?? '',
+  });
+  if (!lastAdmin.ok) {
+    return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
   }
 
   // Delete auth user (cascades to profile)

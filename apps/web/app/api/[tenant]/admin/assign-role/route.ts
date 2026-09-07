@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { assertNotLastTenantAdmin } from '@/lib/supabase/tenant-admins';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 
 export async function POST(
@@ -48,7 +49,7 @@ export async function POST(
 
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, user_id, tenant_id')
+    .select('id, user_id, tenant_id, role')
     .eq('id', user_id)
     .single();
 
@@ -58,6 +59,17 @@ export async function POST(
 
   if (targetProfile.tenant_id !== profile.tenant_id) {
     return NextResponse.json({ error: 'Target user is not in the same tenant.' }, { status: 403 });
+  }
+
+  // T18: never strand a tenant without an institution admin.
+  const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
+    tenantId: profile.tenant_id,
+    profileId: user_id,
+    currentRole: (targetProfile as { role: string }).role,
+    newRole: role,
+  });
+  if (!lastAdmin.ok) {
+    return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
   }
 
   const { error: profileError } = await adminClient
