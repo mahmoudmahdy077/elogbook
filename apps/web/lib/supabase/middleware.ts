@@ -139,7 +139,7 @@ export async function updateSession(request: NextRequest) {
   const isContactRoute = pathname === '/contact' || pathname.startsWith('/contact/');
   const isApiDocsRoute = pathname === '/api-docs' || pathname.startsWith('/api-docs/');
   const isPublicApiRoute =
-    pathname === '/api/health' || pathname === '/api/contact' || pathname === '/api/sso/check' ||
+    pathname === '/api/health' || pathname === '/api/ready' || pathname === '/api/contact' || pathname === '/api/sso/check' ||
     pathname.startsWith('/api/auth');
   const isPublicRoute =
     isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute ||

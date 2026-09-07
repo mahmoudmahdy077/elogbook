@@ -1,4 +1,5 @@
 import { test as base, type Page } from '@playwright/test';
+import { authCookieName } from '../lib/e2e-cookie';
 
 /**
  * E2E auth fixture.
@@ -13,12 +14,21 @@ import { test as base, type Page } from '@playwright/test';
  * getAuthContext then succeeds and pages render with real data. Requires
  * E2E_EMAIL / E2E_PASSWORD (defaults = seeded demo accounts) and network
  * access to the Supabase project.
+ *
+ * Cookie-name derivation lives in lib/e2e-cookie.ts and matches the app's
+ * @supabase/ssr default for cloud, custom-domain, and local origins (T02).
+ * The old `*.supabase.co` regex is gone: it produced `sb--auth-token` for
+ * self-hosted/local Supabase and failed silently.
  */
 
 export const MOCK_TENANT_SLUG = 'demo';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const PROJECT_REF = SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i)?.[1] ?? '';
+
+/** When set, a failed real login fails the test instead of falling back. */
+const REQUIRE_AUTH =
+  process.env.E2E_REQUIRE_AUTH === '1' ||
+  (process.env.CI === 'true' && process.env.E2E_REQUIRE_AUTH !== '0');
 
 /**
  * Sign in via the Supabase Auth API and seed the @supabase/ssr cookie so
@@ -39,8 +49,22 @@ export async function stubAuthSession(page: Page) {
   if (process.env.E2E_DEBUG) console.log(`[fixture] auth POST ${res.status()} url=${SUPABASE_URL.slice(0, 30)} for ${email}`);
 
   if (!res.ok()) {
-    // Fall back to the legacy localStorage stub so public-page specs still work offline.
-    // evaluate() throws on about:blank before any navigation — guard it; this is best-effort.
+    const detail = `real Supabase login failed: HTTP ${res.status()} for ${email} against ${SUPABASE_URL.slice(0, 40)}`;
+    if (REQUIRE_AUTH) {
+      // T02: absent credentials or a down project must fail protected specs,
+      // never green them with a fake session.
+      throw new Error(
+        `[fixture] ${detail}. Set E2E_EMAIL/E2E_PASSWORD and ensure network access to the Supabase project.`,
+      );
+    }
+    if (!SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      throw new Error(
+        '[fixture] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are unset. ' +
+          'Refusing to seed a fake session: set E2E_REQUIRE_AUTH=0 explicitly to allow the legacy fallback.',
+      );
+    }
+    // Legacy localStorage stub: best-effort only, for public-page specs offline.
+    // evaluate() throws on about:blank before any navigation — guard it.
     try {
       await page.evaluate(() => {
         localStorage.setItem(
@@ -76,9 +100,10 @@ export async function stubAuthSession(page: Page) {
   });
 
   // @supabase/ssr cookie format: base64-URL-encoded JSON inside sb-<ref>-auth-token
+  // (ref derivation matches the app's supabase-js default for any origin).
   await page.context().addCookies([
     {
-      name: `sb-${PROJECT_REF}-auth-token`,
+      name: authCookieName(SUPABASE_URL),
       value: 'base64-' + Buffer.from(authTokenValue).toString('base64'),
       url: process.env.BASE_URL ?? 'http://localhost:3000',
       httpOnly: false,

@@ -72,6 +72,23 @@ Base commit: `734dfec` + working tree (this ticket)
 - `package.json` (`test:unit`)
 - `.github/workflows/ci.yml`
 
+## Addendum — lockfile regression found and repaired (2026-09-07)
+
+- The `pnpm install --lockfile-only` regeneration used for the shared
+  vitest entry also re-resolved `minimatch@3.x → brace-expansion` to
+  `apps/mobile/patches/brace-expansion-patched` (a stub: wrong package
+  name, no `index.js`), breaking `pnpm lint` with
+  `Cannot find module .../brace-expansion/index.js`.
+- Authority is `.pnpmfile.cjs:18-24`, which pins minimatch@3.x to the
+  root `patches/brace-expansion-patched` CVE patch; the pre-change
+  lockfile had zero references to the mobile stub.
+- Repair: restored the pre-change lockfile and hand-applied only the
+  3-line shared-vitst importer addition (the exact `vitest@4.1.11(...)`
+  snapshot already existed). `pnpm install --frozen-lockfile` exit 0,
+  web lint exit 0, shared tests 113/113. Lesson recorded: never ship a
+  full lockfile re-resolution for a one-line addition; diff the lockfile
+  before committing it.
+
 ## Unverified / next
 
 - Full 9-suite DB run has never been observed green (BLOCKED locally).

@@ -74,6 +74,45 @@ jobs:
         run: |
           set -euo pipefail
           supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql
+  e2e:
+    runs-on: ubuntu-latest
+    # Full-stack harness (T02). Runs only when the owner enables it and
+    # provides a throwaway Supabase project + seeded E2E accounts; otherwise
+    # the job is SKIPPED (never green without credentials).
+    if: vars.E2E_ENABLED == 'true'
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SERVICE_ROLE_KEY }}
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      RATE_LIMIT_MODE: single-instance
+      TRUSTED_PROXY_HOPS: '1'
+      E2E_REQUIRE_AUTH: '1'
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elogbook/web exec playwright install --with-deps chromium
+      - run: pnpm build:web
+      - name: Start production server
+        run: |
+          set -euo pipefail
+          (pnpm --filter @elogbook/web start -p 3000 > /tmp/e2e-server.log 2>&1 &)
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health; then break; fi
+            sleep 5
+          done
+          curl -fsS http://localhost:3000/api/health
+      - name: Live boot probe (Gate C HTTP mode)
+        run: node scripts/verify-boot.mjs --probe-base-url=http://localhost:3000
+      - name: Run Playwright (authed harness, no fake-auth fallback)
+        run: pnpm --filter @elogbook/web test:e2e
   deno-test:
     runs-on: ubuntu-latest
     steps:

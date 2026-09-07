@@ -43,5 +43,34 @@ check('instrumentation calls resolveMode', instr.includes('resolveMode'));
 const setupCheck=readFileSync(join(ROOT,'apps/web/app/api/setup/deploy-supabase/route.ts'),'utf8');
 check('setup routes guard prod 404', setupCheck.includes("NODE_ENV === 'production'") && setupCheck.includes('404'));
 
+// 6. Optional live HTTP probe (T02): --probe-base-url=http://localhost:3000
+// performs real requests against a running server. Without the flag the
+// script keeps its source-check behavior; a live probe never passes by
+// default when no server answers (fetch failure fails the gate).
+const probeArg = process.argv.find((a) => a.startsWith('--probe-base-url='));
+if (probeArg) {
+  const base = probeArg.slice('--probe-base-url='.length).replace(/\/$/, '');
+  const live = await (async () => {
+    try {
+      const h = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(10000) });
+      const hb = await h.json();
+      check('live /api/health returns 200 healthy', h.status === 200 && hb.status === 'healthy');
+      check('live /api/health exposes no dependency state', hb.db === undefined && hb.rateLimit === undefined);
+
+      const r = await fetch(`${base}/api/ready`, { signal: AbortSignal.timeout(15000) });
+      const rb = await r.json();
+      check('live /api/ready returns 200|503 with dependency report', (r.status === 200 || r.status === 503) && rb.db !== undefined && rb.rateLimit !== undefined);
+
+      for (const [path, body] of [['/api/health', hb], ['/api/ready', rb]]) {
+        const text = JSON.stringify(body);
+        check(`live ${path} leaks no secrets`, !/service_role|serviceRoleKey|jwtSecret|postgresPassword|BEGIN [A-Z ]*PRIVATE KEY/.test(text));
+      }
+    } catch (e) {
+      check(`live probe reachable at ${base} (${e.cause?.code ?? e.message})`, false);
+    }
+  })();
+  void live;
+}
+
 if(failed) process.exit(1);
 console.log('Gate C passed: compose, health/ready, proxy, boot validation, setup guard');
