@@ -15,7 +15,7 @@ Status: IMPLEMENTED (models, validation, platform API; editor/renderer in T25)
   128KB caps. 6/6 suite.
 - Platform API: list/create (+initial draft + audit), draft save,
   publish (re-validate, archive previous, move pointer, 409 on stale),
-  revert-as-new-revision. 6/6 route suite (mock-chain + silent-drop
+  revert-by-republishing (row content/author immutable; statuses move). 6/6 route suite (mock-chain + silent-drop
   gaps found via failing tests).
 - pgTAP `p2_15` (invisibility, scope/slug CHECKs, canonical
   uniqueness), in blocking db-tests.
