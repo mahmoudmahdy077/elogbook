@@ -28,7 +28,7 @@ const MAX_TEXT = 5000;
 
 const HTML_RE = /<\s*\/?\s*[a-z][^>]*>/i;
 
-function isSafeHref(href: unknown): boolean {
+export function isSafeHref(href: unknown): boolean {
   if (typeof href !== 'string' || !href) return false;
   if (href.startsWith('/')) return !href.startsWith('//');
   if (href.startsWith('mailto:')) return /^mailto:[^\s@]+@[^\s@]+$/.test(href);
