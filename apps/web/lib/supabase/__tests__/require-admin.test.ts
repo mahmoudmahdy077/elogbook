@@ -78,4 +78,23 @@ describe('requireTenantAdmin status enforcement (T04)', () => {
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.status).toBe(401);
   });
+
+  it.each(['suspended', 'archived'])('denies tenants with status %s', async (tenantStatus) => {
+    const withTenantStatus = {
+      ...BASE_PROFILE,
+      tenants: { slug: 'tenant-a', status: tenantStatus },
+    };
+    const supabase = mockSupabase('user-1', withTenantStatus);
+    const res = await requireTenantAdmin(supabase as never, 'tenant-a');
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.status).toBe(403);
+      expect(res.error).toMatch(/tenant is/i);
+    }
+  });
+
+  it('allows tenants without a status field (pre-migration compatibility)', async () => {
+    const supabase = mockSupabase('user-1', { ...BASE_PROFILE });
+    expect((await requireTenantAdmin(supabase as never, 'tenant-a')).ok).toBe(true);
+  });
 });
