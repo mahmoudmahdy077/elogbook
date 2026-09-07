@@ -15,7 +15,7 @@ export async function requireTenantAdmin(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, tenant_id, user_id, role, status, tenants!inner(slug)')
+    .select('id, tenant_id, user_id, role, status, tenants!inner(slug,status)')
     .eq('user_id', user.id)
     .single();
 
@@ -32,13 +32,19 @@ export async function requireTenantAdmin(
   }
 
   const tenant = (profile as unknown as { tenants: unknown }).tenants as unknown as
-    | { slug: string }
-    | { slug: string }[];
-  const slug = Array.isArray(tenant)
-    ? (tenant as { slug: string }[])[0]?.slug
-    : (tenant as { slug: string } | null)?.slug;
+    | { slug: string; status?: string | null }
+    | { slug: string; status?: string | null }[];
+  const tenantRow = Array.isArray(tenant) ? tenant[0] : tenant;
+  const slug = tenantRow?.slug;
   if (slug !== tenantSlug) {
     return { ok: false as const, error: 'Tenant mismatch', status: 403 as const };
+  }
+
+  // T18: suspended/archived tenants are inoperative through guarded routes.
+  // Direct REST/RPC/Storage row-level suspension is T18-full work; the
+  // status column it will predicate on ships in this ticket's migration.
+  if (tenantRow?.status != null && tenantRow.status !== 'active') {
+    return { ok: false as const, error: `Tenant is ${tenantRow.status}`, status: 403 as const };
   }
 
   if (!allowedRoles.includes(profile.role)) {
