@@ -7,3 +7,4 @@
  * contain no Docker execution, host shell, or installation secrets).
  */
 export * from './bootstrap-token.js';
+export * from './jobs.js';
