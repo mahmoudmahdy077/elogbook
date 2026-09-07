@@ -51,6 +51,7 @@ export async function POST(
     .from('profiles')
     .select('id, user_id, tenant_id, role')
     .eq('id', user_id)
+    .eq('tenant_id', profile.tenant_id)
     .single();
 
   if (!targetProfile) {
@@ -75,7 +76,8 @@ export async function POST(
   const { error: profileError } = await adminClient
     .from('profiles')
     .update({ role })
-    .eq('id', user_id);
+    .eq('id', user_id)
+    .eq('tenant_id', profile.tenant_id);
 
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });

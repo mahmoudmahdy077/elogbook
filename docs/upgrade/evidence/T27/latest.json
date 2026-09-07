@@ -1,0 +1,118 @@
+{
+  "generated_at": "2026-09-07T19:34:00.243Z",
+  "commit": "ec51b81",
+  "node": "v22.23.1",
+  "mode": "fast",
+  "results": [
+    {
+      "name": "gate:verify-tenant-scope.mjs",
+      "status": "pass",
+      "ms": 108
+    },
+    {
+      "name": "gate:verify-phi-claim.mjs",
+      "status": "pass",
+      "ms": 82
+    },
+    {
+      "name": "gate:verify-single-ip.mjs",
+      "status": "pass",
+      "ms": 122
+    },
+    {
+      "name": "gate:verify-exports.mjs",
+      "status": "pass",
+      "ms": 210
+    },
+    {
+      "name": "gate:verify-security-tests.mjs",
+      "status": "pass",
+      "ms": 78
+    },
+    {
+      "name": "gate:verify-credential-fail-closed.mjs",
+      "status": "pass",
+      "ms": 82
+    },
+    {
+      "name": "gate:verify-boot.mjs",
+      "status": "pass",
+      "ms": 75
+    },
+    {
+      "name": "gate:verify-e2e-auth.mjs",
+      "status": "pass",
+      "ms": 78
+    },
+    {
+      "name": "gate:verify-tokens.mjs",
+      "status": "pass",
+      "ms": 75
+    },
+    {
+      "name": "unit:security-core",
+      "status": "pass",
+      "ms": 45029
+    },
+    {
+      "name": "unit:ops",
+      "status": "pass",
+      "ms": 20031
+    },
+    {
+      "name": "unit:shared",
+      "status": "pass",
+      "ms": 17370
+    },
+    {
+      "name": "typecheck/lint/full-unit",
+      "status": "blocked",
+      "prerequisite": "pass --full (slow; CI runs them per push)"
+    },
+    {
+      "name": "db-tests (pgTAP)",
+      "status": "blocked",
+      "prerequisite": "Docker + `supabase start` (CI db-tests job runs them)"
+    },
+    {
+      "name": "deno-test",
+      "status": "blocked",
+      "prerequisite": "deno toolchain (CI deno-test job runs it)"
+    },
+    {
+      "name": "e2e (Playwright)",
+      "status": "blocked",
+      "prerequisite": "browsers + E2E secrets + running app (CI e2e job when E2E_ENABLED)"
+    },
+    {
+      "name": "docker-boot",
+      "status": "blocked",
+      "prerequisite": "Docker (CI docker-boot job builds + probes)"
+    },
+    {
+      "name": "restore/upgrade fault injection",
+      "status": "blocked",
+      "prerequisite": "throwaway VPS + off-host backup (T27 drills)"
+    },
+    {
+      "name": "load/soak + EXPLAIN",
+      "status": "blocked",
+      "prerequisite": "qualified VPS + synthetic dataset (T26-full)"
+    },
+    {
+      "name": "accessibility/browser matrix",
+      "status": "blocked",
+      "prerequisite": "browsers + manual keyboard pass (G5)"
+    },
+    {
+      "name": "G8 identifiable-data gate",
+      "status": "blocked",
+      "prerequisite": "governance owner + independent assessment (T19b+)"
+    }
+  ],
+  "summary": {
+    "pass": 12,
+    "fail": 0,
+    "blocked": 9
+  }
+}
