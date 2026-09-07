@@ -50,7 +50,6 @@ jobs:
       - run: pnpm build:web
   db-tests:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v2
@@ -70,20 +69,19 @@ jobs:
           done
           echo "::error::supabase start failed after 3 attempts"
           exit 1
-      - name: Run DB isolation tests
+      - name: Run DB isolation tests (maintained SQL inventory, non-legacy)
         shell: bash
         run: |
           set -euo pipefail
-          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql
+          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql
   deno-test:
     runs-on: ubuntu-latest
-    if: false # requires running Supabase + env vars; run locally via supabase start
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with: { deno-version: v2.x }
-      - name: Run Deno tests
+      - name: Run Deno unit tests (isolated; lifecycle suite needs live Supabase and runs after `supabase start`)
         shell: bash
         run: |
           set -o pipefail
-          deno test --no-lock --no-check --allow-import --allow-net=localhost supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20
+          deno test --no-lock --no-check --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20
