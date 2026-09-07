@@ -21,6 +21,37 @@ describe('supabase-mock', () => {
     expect(res.data).toEqual([{ id: '1', status: 'draft' }]);
   });
 
+  it('applies conditional updates only to matched rows and returns them', async () => {
+    setTableData('case_entries', [
+      { id: '1', status: 'draft' },
+      { id: '2', status: 'pending' },
+    ]);
+    const client = createMockSupabaseClient();
+    const res = (await client
+      .from('case_entries')
+      .update({ status: 'archived' })
+      .eq('status', 'draft')
+      .select('id')) as { data: unknown[]; error: null };
+    expect(res.data).toEqual([{ id: '1', status: 'archived' }]);
+    const after = (await client.from('case_entries').select('*')) as { data: unknown[] };
+    expect(after.data).toEqual([
+      { id: '1', status: 'archived' },
+      { id: '2', status: 'pending' },
+    ]);
+  });
+
+  it('returns empty data when a conditional update matches nothing', async () => {
+    setTableData('case_entries', [{ id: '1', status: 'pending' }]);
+    const client = createMockSupabaseClient();
+    const res = (await client
+      .from('case_entries')
+      .update({ status: 'archived' })
+      .eq('id', '1')
+      .eq('status', 'draft')
+      .select('id')) as { data: unknown[]; error: null };
+    expect(res.data).toEqual([]);
+  });
+
   it('returns single row', async () => {
     setTableData('profiles', [{ id: 'p-1', role: 'resident' }]);
     const client = createMockSupabaseClient();

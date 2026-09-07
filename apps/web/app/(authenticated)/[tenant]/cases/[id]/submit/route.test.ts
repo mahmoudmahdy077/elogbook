@@ -270,6 +270,53 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     expect(body.auto_approved).toBe(true);
   });
 
+  it('returns 409 when a concurrent writer moved the case first', async () => {
+    // Read sees a draft, but the conditional update matches nothing
+    // (simulating a concurrent submit that already claimed the row).
+    setTableData('case_entries', [
+      { id: 'c-123', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
+    ]);
+    setTableData('profiles', [
+      { id: 'p-1', user_id: 'u-1', role: 'resident', tenant_id: 't-1' },
+    ]);
+    setTableData('subscriptions', [
+      { tenant_id: 't-1', status: 'active' },
+    ]);
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u-1' } },
+      error: null,
+    });
+    const originalFrom = mockSupabase.from;
+    mockSupabase.from = vi.fn((table: string) => {
+      const builder = originalFrom(table);
+      if (table === 'case_entries') {
+        // Force the lost race: the conditional claim matches zero rows.
+        builder.update = (() => ({
+          eq: () => ({
+            eq: () => ({
+              select: () => Promise.resolve({ data: [], error: null }),
+            }),
+          }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        })) as any;
+      }
+      return builder;
+    });
+    try {
+      const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-123/submit', {
+        origin: 'https://app.elogbook.dev',
+      });
+      const params = Promise.resolve({ tenant: 'demo', id: 'c-123' });
+
+      const res = await POST(req, { params });
+      expect(res.status).toBe(409);
+      const body = await res.json();
+      expect(body.error).toMatch(/concurrent/i);
+    } finally {
+      mockSupabase.from = originalFrom;
+    }
+  });
+
   it('rolls back to draft when approval creation fails', async () => {
     setTableData('case_entries', [
       { id: 'c-126', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },

@@ -90,12 +90,24 @@ async function handleSubmit(
     return NextResponse.json({ error: 'Subscription lapsed — case submission disabled' }, { status: 403 });
   }
 
-  const { error: updateError } = await supabase
+  // T23: conditional update — the status predicate travels WITH the write
+  // so two concurrent submits cannot both pass. Zero matched rows means a
+  // concurrent writer moved the case first: fail clearly (409) instead of
+  // creating approvals for a non-draft.
+  const { data: claimed, error: updateError } = await supabase
     .from('case_entries')
     .update({ status: 'pending' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('status', 'draft')
+    .select('id');
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (!claimed || (Array.isArray(claimed) && claimed.length === 0)) {
+    return NextResponse.json(
+      { error: 'Case is no longer a draft — it may have been updated concurrently. Reload and retry.' },
+      { status: 409 },
+    );
+  }
 
   const { data: tenant } = await supabase
     .from('tenants')
