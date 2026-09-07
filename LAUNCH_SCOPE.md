@@ -1,6 +1,6 @@
 # eLogbook Launch Scope — Release 1 (Pilot)
 
-**Status:** ACCEPTED (Phase 0 gate). Supersedes any prior informal scope. Implementation pending per `PRODUCTION_UPGRADE_PLAN.md` v2.2.
+**Status:** ACCEPTED (Phase 0 gate). Restricted de-identified pilot preserved until the new release gates pass. Canonical roadmap: `ELOGBOOK_MASTER_UPGRADE_PLAN.md`. Historical reference: `PRODUCTION_UPGRADE_PLAN.md` v2.2 (retained as evidence; revalidate old findings before citing).
 
 **Date:** 2026-09-02
 **Owner:** pilot steering (named: mahmoudmahdy077) — second approver required before PHI.
