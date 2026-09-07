@@ -15,12 +15,20 @@ export async function requireTenantAdmin(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, tenant_id, user_id, role, tenants!inner(slug)')
+    .select('id, tenant_id, user_id, role, status, tenants!inner(slug)')
     .eq('user_id', user.id)
     .single();
 
   if (!profile) {
     return { ok: false as const, error: 'Profile not found', status: 403 as const };
+  }
+
+  // T04: account state precedes authorization. A suspended/deactivated/
+  // pending account with a still-valid session must not operate. NULL or
+  // missing status fails closed (the column defaults to 'active' but is
+  // nullable, so absence proves nothing).
+  if ((profile as { status?: string | null }).status !== 'active') {
+    return { ok: false as const, error: 'Account is not active', status: 403 as const };
   }
 
   const tenant = (profile as unknown as { tenants: unknown }).tenants as unknown as
