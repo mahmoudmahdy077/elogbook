@@ -17,6 +17,11 @@ SELECT is_empty(
 RESET ROLE;
 
 -- Fixtures for constraint tests (superuser; ROLLBACK undoes all).
+-- NOTE: every file runs in its own rolled-back transaction, so fixtures
+-- from other suites (e.g. p2_02's tenants) do NOT exist here.
+INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
+VALUES ('00000000-0000-0000-0000-000000000036', 'Grant Tenant', 'grant-tenant-11', 'institution', encode(gen_random_bytes(32), 'hex'))
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO auth.users (id, instance_id, email) VALUES
   ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000000', 'role-admin@example.com'),
   ('00000000-0000-0000-0000-000000000096', '00000000-0000-0000-0000-000000000000', 'role-pending@example.com')
@@ -34,14 +39,14 @@ SELECT throws_ok(
 
 -- 4. Expired-at-birth grants rejected.
 SELECT throws_ok(
-  $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000021', 'test', NOW() - INTERVAL '1 hour')$$,
+  $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000036', 'test', NOW() - INTERVAL '1 hour')$$,
   '23514',
   'grant expiry must be in the future'
 );
 
 -- 5. Unknown grant scope rejected.
 SELECT throws_ok(
-  $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, scope, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000021', 'test', 'clinical:write', NOW() + INTERVAL '1 hour')$$,
+  $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, scope, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000036', 'test', 'clinical:write', NOW() + INTERVAL '1 hour')$$,
   '23514',
   'grant scope is allowlisted (no clinical access grant exists)'
 );
