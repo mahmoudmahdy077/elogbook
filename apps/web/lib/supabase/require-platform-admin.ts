@@ -23,7 +23,7 @@ export async function requirePlatformAdmin(supabase: SupabaseClient) {
   }
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('profiles') // tenant-scope-exempt: user-scoped lookup by user_id (1:1), not tenant list — owner=human expiry=2026-12-31
     .select('id, tenant_id, status')
     .eq('user_id', user.id)
     .single();
