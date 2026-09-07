@@ -65,12 +65,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
     .maybeSingle();
   const planSlug = (subData as { subscription_plans: { slug: string } } | null)?.subscription_plans?.slug;
 
-  const { data: rpcData, error: rpcError } = await supabase
-    .rpc('get_dashboard_data', {
-      p_tenant_id: tenantId,
-      p_resident_id: residentId,
-      p_role: role,
-    });
+  // T26: shared memoized entry point with the tenant layout.
+  const { getDashboardData } = await import('@/lib/dashboard-data');
+  const { data: rpcData, error: rpcError } = await getDashboardData(tenantId, residentId, role);
 
   if (rpcError) {
     throw new Error(`Dashboard RPC failed: ${rpcError.message}`);

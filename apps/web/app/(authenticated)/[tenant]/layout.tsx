@@ -1,6 +1,5 @@
 import { getAuthContext, canAccessTenant } from '@/lib/supabase/auth';
 import { parseBranding, brandingCssVars } from '@/lib/tenant-branding';
-import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
@@ -75,12 +74,10 @@ export default async function TenantLayout({
 
   let pendingApprovals = 0;
   if (visibleLinks.some((l) => l.label === 'Approvals')) {
-    const supabase = await createServerSupabase();
-    const { data } = await supabase.rpc('get_dashboard_data', {
-      p_tenant_id: auth.profile.tenant_id,
-      p_resident_id: auth.profile.id,
-      p_role: userRole,
-    });
+    // T26: shared memoized entry point with the dashboard page (one RPC
+    // per load instead of two). Errors ignored here; the page surfaces them.
+    const { getDashboardData } = await import('@/lib/dashboard-data');
+    const { data } = await getDashboardData(auth.profile.tenant_id, auth.profile.id, userRole);
     if (data) {
       pendingApprovals = (data as Record<string, unknown>).pending_approvals as number ?? 0;
     }
