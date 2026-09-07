@@ -43,4 +43,11 @@ USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/health || exit 1
+# Full production dependency tree (not just the standalone trace): Next's
+# file tracing misses dynamically-required packages under pnpm's isolated
+# layout (observed: @swc/helpers via require-hook), so the traced server
+# cannot boot alone. Node resolution walks up to /app/node_modules, which
+# covers every workspace package. Slimming (e.g. pruned prod tree) is
+# tracked with asset budgets; correctness first.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 CMD ["node", "apps/web/server.js"]

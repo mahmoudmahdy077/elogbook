@@ -61,13 +61,26 @@ jobs:
       - name: Misconfigured production boot must fail fast (non-zero exit)
         run: |
           set -euo pipefail
-          if docker run --rm -e NODE_ENV=production elogbook-web:boot; then
+          # A crash also exits non-zero, so assert the VALIDATION message:
+          # otherwise a broken image passes this gate vacuously.
+          set +e
+          out=$(docker run --rm -e NODE_ENV=production elogbook-web:boot 2>&1)
+          code=$?
+          set -e
+          if [ $code -eq 0 ]; then
             echo "::error::production boot without RATE_LIMIT_MODE exited 0; fail-fast broken"
             exit 1
           fi
+          echo "$out" | grep -q "RATE_LIMIT_MODE" || {
+            echo "::error::boot failed without the fail-fast validation message (broken image?)"
+            echo "$out" | tail -5
+            exit 1
+          }
       - name: Boot with valid env and probe liveness/readiness
         run: |
           set -euo pipefail
+          docker rm -f elogbook-boot 2>/dev/null || true
+          trap 'docker rm -f elogbook-boot 2>/dev/null || true' EXIT
           docker run -d --name elogbook-boot -p 3000:3000 \
             -e NODE_ENV=production \
             -e NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co \
@@ -83,7 +96,7 @@ jobs:
           done
           node scripts/verify-boot.mjs --probe-base-url=http://localhost:3000
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/setup/deploy-supabase -H 'Content-Type: application/json' -d '{}')" = "404"
-          docker stop elogbook-boot
+          docker stop elogbook-boot || true
   db-tests:
     runs-on: ubuntu-latest
     steps:
