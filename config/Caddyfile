@@ -16,9 +16,11 @@
 # reading; this file and that helper must agree on the hop count.
 
 {
-  admin off
-  # Disable admin API over network; healthcheck uses localhost:2019 which is
-  # still reachable inside the container even with admin off (Caddy >=2.8).
+  # Admin API on loopback only (T03/F17): the compose healthcheck polls
+  # localhost:2019, which must actually listen — `admin off` would leave the
+  # caddy container permanently unhealthy. Only 80/443 are published to the
+  # host, so the admin endpoint is unreachable off-container either way.
+  admin localhost:2019
 }
 
 # HTTP — redirect to HTTPS when a public host is configured, otherwise serve
