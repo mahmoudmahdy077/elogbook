@@ -30,9 +30,15 @@ function ComponentStatus({ check, label }: { check: UpdateCheck | null; label: s
   );
 }
 
+interface BackupStatus {
+  count: number;
+  latest_at: string | null;
+  latest_id: string | null;
+}
+
 export default function UpdatePage() {
   const [loading, setLoading] = useState(true);
-  const [updates, setUpdates] = useState<{ elogbook: UpdateCheck | null; supabase: UpdateCheck | null }>({ elogbook: null, supabase: null });
+  const [updates, setUpdates] = useState<{ elogbook: UpdateCheck | null; supabase: UpdateCheck | null; backup?: BackupStatus | null }>({ elogbook: null, supabase: null });
   const [selected, setSelected] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -83,6 +89,14 @@ export default function UpdatePage() {
 
       <ComponentStatus check={updates.elogbook} label="E-Logbook" />
       <ComponentStatus check={updates.supabase} label="Supabase" />
+      {updates.backup && (
+        <p className="text-sm text-text-muted mb-4">
+          Verified pre-update backup:{' '}
+          {updates.backup.latest_at
+            ? `${updates.backup.count} set(s), latest ${new Date(updates.backup.latest_at).toLocaleString()}`
+            : 'none — back up before updating'}
+        </p>
+      )}
 
       {updates.elogbook?.state === 'update-available' && (
         <div className="p-4 rounded-lg border border-border mb-4">

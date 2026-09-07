@@ -24,7 +24,7 @@ export async function requirePlatformAdmin(supabase: SupabaseClient) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, status')
+    .select('id, tenant_id, status')
     .eq('user_id', user.id)
     .single();
 
@@ -64,5 +64,5 @@ export async function requirePlatformAdmin(supabase: SupabaseClient) {
     }
   }
 
-  return { ok: true as const, operator, user };
+  return { ok: true as const, operator, user, profile };
 }

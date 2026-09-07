@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { checkForUpdates } from '@/lib/setup/version-tracker';
+import { listBackups } from '@/lib/setup/backup-manager';
 import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 
-const ADMIN_ROLES = ['director', 'institution_admin', 'admin'];
+/** Marker path for completed setup; overridable for tests. */
+function setupMarkerPath(): string {
+  return process.env.SETUP_COMPLETE_PATH ?? '/app/data/.setup-complete';
+}
 
 export async function GET() {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
@@ -13,24 +18,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
-  if (!existsSync('/app/data/.setup-complete')) {
+  if (!existsSync(setupMarkerPath())) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
   }
 
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || !ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  // T16: update management is platform-operator-only. Tenant admins and
+  // directors are denied here as well as in the UI.
+  const platform = await requirePlatformAdmin(await createServerSupabase());
+  if (!platform.ok) {
+    return NextResponse.json({ error: platform.error }, { status: platform.status });
   }
 
   const [elogbookUpdate, supabaseUpdate] = await Promise.all([
@@ -38,5 +34,15 @@ export async function GET() {
     checkForUpdates('supabase'),
   ]);
 
-  return NextResponse.json({ elogbook: elogbookUpdate, supabase: supabaseUpdate });
+  // Backup freshness the operator must confirm before any update.
+  const backups = listBackups('auto');
+  const latest = backups.length > 0 ? backups[0] : null;
+
+  return NextResponse.json({
+    elogbook: elogbookUpdate,
+    supabase: supabaseUpdate,
+    backup: latest
+      ? { count: backups.length, latest_at: latest.created_at, latest_id: latest.backup_id }
+      : { count: 0, latest_at: null, latest_id: null },
+  });
 }
