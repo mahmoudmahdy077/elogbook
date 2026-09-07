@@ -2,16 +2,37 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-interface UpdateInfo {
+interface UpdateCheck {
+  state: 'update-available' | 'up-to-date' | 'check-failed' | 'offline' | 'unknown-current-version' | 'unsupported-source';
   component: string;
-  current_version: string;
-  available_version: string;
+  current_version?: string;
+  available_version?: string;
   changelog?: string;
+  reason?: string;
+}
+
+const STATE_COPY: Record<UpdateCheck['state'], string> = {
+  'update-available': '',
+  'up-to-date': 'Up to date.',
+  'check-failed': 'Update check failed.',
+  offline: 'Update check offline.',
+  'unknown-current-version': 'Installed version unknown.',
+  'unsupported-source': 'Managed separately.',
+};
+
+function ComponentStatus({ check, label }: { check: UpdateCheck | null; label: string }) {
+  if (!check || check.state === 'update-available') return null;
+  const detail = check.reason ?? check.current_version ?? '';
+  return (
+    <p className="text-sm text-text-muted mb-4">
+      {label}: {STATE_COPY[check.state]}{detail ? ` ${detail}` : ''}
+    </p>
+  );
 }
 
 export default function UpdatePage() {
   const [loading, setLoading] = useState(true);
-  const [updates, setUpdates] = useState<{ elogbook: UpdateInfo | null; supabase: UpdateInfo | null }>({ elogbook: null, supabase: null });
+  const [updates, setUpdates] = useState<{ elogbook: UpdateCheck | null; supabase: UpdateCheck | null }>({ elogbook: null, supabase: null });
   const [selected, setSelected] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -49,17 +70,21 @@ export default function UpdatePage() {
 
   if (loading) return <div className="p-8 text-center">Checking for updates...</div>;
 
-  const hasUpdates = updates.elogbook || updates.supabase;
+  // T13: only explicit update-available entries are actionable. Every other
+  // state renders its own line — a failed check never reads as up to date.
+  const offerable = [updates.elogbook, updates.supabase].filter(
+    (u): u is UpdateCheck & { state: 'update-available' } => u?.state === 'update-available',
+  );
+  const hasUpdates = offerable.length > 0;
 
   return (
     <div className="panel p-6 sm:p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Update Wizard</h1>
 
-      {!hasUpdates && !result && (
-        <p className="text-text-muted">Your system is up to date.</p>
-      )}
+      <ComponentStatus check={updates.elogbook} label="E-Logbook" />
+      <ComponentStatus check={updates.supabase} label="Supabase" />
 
-      {updates.elogbook && (
+      {updates.elogbook?.state === 'update-available' && (
         <div className="p-4 rounded-lg border border-border mb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -69,18 +94,6 @@ export default function UpdatePage() {
             <span className="text-sm text-text-muted">{updates.elogbook.current_version} → {updates.elogbook.available_version}</span>
           </div>
           {updates.elogbook.changelog && <p className="text-sm text-text-muted mt-2 ml-6">{updates.elogbook.changelog.slice(0, 200)}...</p>}
-        </div>
-      )}
-
-      {updates.supabase && (
-        <div className="p-4 rounded-lg border border-border mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <input type="checkbox" checked={selected.includes('supabase')} onChange={e => setSelected(prev => e.target.checked ? [...prev, 'supabase'] : prev.filter(s => s !== 'supabase'))} className="mr-2" />
-              <span className="font-semibold">Supabase</span>
-            </div>
-            <span className="text-sm text-text-muted">{updates.supabase.current_version} → {updates.supabase.available_version}</span>
-          </div>
         </div>
       )}
 
