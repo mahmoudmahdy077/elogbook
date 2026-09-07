@@ -1,68 +1,68 @@
 {
-  "generated_at": "2026-09-07T19:34:00.243Z",
-  "commit": "ec51b81",
+  "generated_at": "2026-09-07T19:39:30.906Z",
+  "commit": "379d2e1",
   "node": "v22.23.1",
   "mode": "fast",
   "results": [
     {
       "name": "gate:verify-tenant-scope.mjs",
       "status": "pass",
-      "ms": 108
+      "ms": 313
     },
     {
       "name": "gate:verify-phi-claim.mjs",
       "status": "pass",
-      "ms": 82
+      "ms": 328
     },
     {
       "name": "gate:verify-single-ip.mjs",
       "status": "pass",
-      "ms": 122
+      "ms": 420
     },
     {
       "name": "gate:verify-exports.mjs",
       "status": "pass",
-      "ms": 210
+      "ms": 683
     },
     {
       "name": "gate:verify-security-tests.mjs",
       "status": "pass",
-      "ms": 78
+      "ms": 251
     },
     {
       "name": "gate:verify-credential-fail-closed.mjs",
       "status": "pass",
-      "ms": 82
+      "ms": 209
     },
     {
       "name": "gate:verify-boot.mjs",
       "status": "pass",
-      "ms": 75
+      "ms": 263
     },
     {
       "name": "gate:verify-e2e-auth.mjs",
       "status": "pass",
-      "ms": 78
+      "ms": 282
     },
     {
       "name": "gate:verify-tokens.mjs",
       "status": "pass",
-      "ms": 75
+      "ms": 207
     },
     {
       "name": "unit:security-core",
       "status": "pass",
-      "ms": 45029
+      "ms": 49853
     },
     {
       "name": "unit:ops",
       "status": "pass",
-      "ms": 20031
+      "ms": 9388
     },
     {
       "name": "unit:shared",
       "status": "pass",
-      "ms": 17370
+      "ms": 9245
     },
     {
       "name": "typecheck/lint/full-unit",
