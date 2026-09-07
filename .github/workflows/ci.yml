@@ -48,6 +48,42 @@ jobs:
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
+  docker-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image (authoritative Dockerfile)
+        run: docker build --tag elogbook-web:boot --file apps/web/Dockerfile .
+      - name: Assert non-root runtime user
+        run: |
+          set -euo pipefail
+          test "$(docker inspect -f '{{.Config.User}}' elogbook-web:boot)" = "nextjs"
+      - name: Misconfigured production boot must fail fast (non-zero exit)
+        run: |
+          set -euo pipefail
+          if docker run --rm -e NODE_ENV=production elogbook-web:boot; then
+            echo "::error::production boot without RATE_LIMIT_MODE exited 0; fail-fast broken"
+            exit 1
+          fi
+      - name: Boot with valid env and probe liveness/readiness
+        run: |
+          set -euo pipefail
+          docker run -d --name elogbook-boot -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-for-boot-probe-only \
+            -e SUPABASE_SERVICE_ROLE_KEY=dummy-service-key-for-boot-probe-only \
+            -e NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+            -e RATE_LIMIT_MODE=single-instance \
+            -e TRUSTED_PROXY_HOPS=1 \
+            elogbook-web:boot
+          for i in $(seq 1 24); do
+            if curl -fsS http://localhost:3000/api/health; then break; fi
+            sleep 5
+          done
+          node scripts/verify-boot.mjs --probe-base-url=http://localhost:3000
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/setup/deploy-supabase -H 'Content-Type: application/json' -d '{}')" = "404"
+          docker stop elogbook-boot
   db-tests:
     runs-on: ubuntu-latest
     steps:
