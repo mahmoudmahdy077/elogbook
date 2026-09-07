@@ -186,7 +186,9 @@ export async function updateSession(request: NextRequest) {
   // API mutation to the dashboard. Skip scope enforcement here — the
   // handlers enforce tenant scoping themselves (and RLS backstops it).
   const segments = pathname.split('/').filter(Boolean);
-  if (!pathname.startsWith('/api/')) {
+  // T17: /platform is the operator area, never a tenant slug. Auth is still
+  // required above; the platform layout enforces registry authority itself.
+  if (!pathname.startsWith('/api/') && segments[0] !== 'platform') {
     const urlTenantSlug = segments[0];
 
     if (urlTenantSlug) {
