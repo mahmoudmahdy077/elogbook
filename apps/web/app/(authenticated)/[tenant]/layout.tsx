@@ -1,4 +1,5 @@
 import { getAuthContext, canAccessTenant } from '@/lib/supabase/auth';
+import { parseBranding, brandingCssVars } from '@/lib/tenant-branding';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
@@ -85,8 +86,12 @@ export default async function TenantLayout({
     }
   }
 
+  // T21: tenant branding applies on initial server render (no flash, no
+  // client fetch). Only validated values reach the style attribute.
+  const brandingStyle = brandingCssVars(parseBranding(auth.tenant.custom_branding));
+
   return (
-    <div className="min-h-screen bg-backdrop flex">
+    <div className="min-h-screen bg-backdrop flex" style={brandingStyle}>
       <Sidebar
         visibleLinks={visibleLinks}
         tenantSlug={tenantSlug}
