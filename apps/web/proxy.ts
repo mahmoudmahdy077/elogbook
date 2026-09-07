@@ -2,23 +2,9 @@ import { updateSession } from '@/lib/supabase/middleware';
 import type { NextRequest } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
+import { buildCsp as generateCsp } from '@/lib/csp';
 
 const isProd = process.env.NODE_ENV === 'production';
-
-function generateCsp(nonce: string): string {
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? '' : " 'unsafe-eval'"}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.supabase.co",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.posthog.com https://api.stripe.com",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "report-uri /api/csp-violation",
-  ].join('; ');
-}
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = new URL(request.url);
