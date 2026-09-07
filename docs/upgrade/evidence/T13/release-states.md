@@ -35,7 +35,7 @@ Status: IMPLEMENTED (state model + tracker repair; signing deferred)
 
 ## Verification
 
-- ops 47/47 (40 prior + 7 new), version-tracker 6/6, web typecheck 0,
+- ops 40/40 (33 prior + 7 new), version-tracker 6/6, web typecheck 0,
   lint 0.
 
 ## Deferred to T13-full
