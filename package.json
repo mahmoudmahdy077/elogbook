@@ -26,7 +26,7 @@
     "lint": "pnpm lint:all",
     "lint:all": "pnpm --filter @elogbook/web lint && pnpm --filter @elogbook/mobile lint",
     "test": "pnpm test:unit",
-    "test:unit": "pnpm --filter @elogbook/shared test && pnpm --filter @elogbook/web test && pnpm --filter @elogbook/mobile test",
+    "test:unit": "pnpm --filter @elogbook/shared test && pnpm --filter @elogbook/ops test && pnpm --filter @elogbook/web test && pnpm --filter @elogbook/mobile test",
     "test:db": "supabase db test",
     "test:watch": "pnpm --filter @elogbook/web test:watch",
     "test:coverage": "pnpm --filter @elogbook/web test:coverage",

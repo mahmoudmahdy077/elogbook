@@ -37,6 +37,17 @@ function resolveImport(fromFile, importPath){
  return null;
 }
 let failures=[];
+// T09 boundary: the web/mobile artifacts must never import the host
+// manager (no Docker execution, host shell, or installation secrets in
+// the app bundle). apps/ops may import shared/env, never the reverse.
+for(const file of files){
+  if (/apps[\\/](web|mobile)[\\/]/.test(file)) {
+    const src0=readFileSync(file,'utf8');
+    if (/@elogbook\/ops/.test(src0)) {
+      failures.push({file:file.replace(ROOT+'/',''), sym:'*', mod:'@elogbook/ops', modPath:'FORBIDDEN: app artifacts must not import the host manager (T09 boundary)'});
+    }
+  }
+}
 for(const file of files){
  const src=readFileSync(file,'utf8');
  let m;
