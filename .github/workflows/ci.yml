@@ -109,7 +109,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql supabase/tests/p2_09_role_destination_guard.sql supabase/tests/p2_10_no_debug_artifacts.sql supabase/tests/p2_11_platform_authority.sql supabase/tests/p2_12_tenant_lifecycle.sql
+          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql supabase/tests/p2_09_role_destination_guard.sql supabase/tests/p2_10_no_debug_artifacts.sql supabase/tests/p2_11_platform_authority.sql supabase/tests/p2_12_tenant_lifecycle.sql supabase/tests/p2_13_data_mode_policy.sql
   e2e:
     runs-on: ubuntu-latest
     # Full-stack harness (T02). Runs only when the owner enables it and
