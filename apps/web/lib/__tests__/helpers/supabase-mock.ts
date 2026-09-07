@@ -30,9 +30,15 @@ function getRows(table: string): Record<string, unknown>[] {
   return rows;
 }
 
-function builder(table: string, state: { op?: string; col?: string; val?: unknown; limit?: number; single?: boolean; maybeSingle?: boolean }) {
+function builder(table: string, state: { op?: string; col?: string; val?: unknown; limit?: number; single?: boolean; maybeSingle?: boolean; updateVals?: Record<string, unknown> }) {
   const exec = (): { data: unknown; error: null } => {
     let rows = getRows(table);
+    // PostgREST conditional-update semantics: the update applies to the
+    // FILTERED rows only (not the whole table), and the awaited result is
+    // the matched set — so `.eq('status','draft')` mismatches yield [].
+    if (state.updateVals) {
+      for (const r of rows) Object.assign(r, state.updateVals);
+    }
     if (state.single) return { data: rows[0] ?? null, error: null };
     if (state.maybeSingle) return { data: rows[0] ?? null, error: null };
     if (state.limit !== undefined) rows = rows.slice(0, state.limit);
@@ -48,8 +54,7 @@ function builder(table: string, state: { op?: string; col?: string; val?: unknow
       return { ...chain, then: undefined, error: null };
     },
     update: (vals: Record<string, unknown>) => {
-      const rows = tables.get(table) ?? [];
-      tables.set(table, rows.map((r) => ({ ...r, ...vals })));
+      state.updateVals = vals;
       return { eq: (...a: unknown[]) => { filters.push({ table, filter: { op: 'eq', col: a[0] as string, val: a[1] } }); return chain; } };
     },
     upsert: (rows: unknown) => {
