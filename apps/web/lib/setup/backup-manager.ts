@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync, copyFileSync } from 'fs';
-import { join, basename, resolve } from 'path';
+import { join, basename, resolve, relative, sep } from 'path';
 
 const BACKUP_BASE = '/app/data/backups';
 const AUTO_BACKUPS = '/app/data/backups/auto';
@@ -13,12 +13,68 @@ function isSafeDbValue(val: unknown): val is string {
 }
 
 function safeBackupDir(backupId: string): string {
+  return safeBackupDirIn(AUTO_BACKUPS, backupId);
+}
+
+/**
+ * Portable traversal guard (T07). The previous `startsWith` check assumed
+ * POSIX separators and rejected every path on Windows; `path.relative`
+ * works on both. Exported for unit tests.
+ */
+export function safeBackupDirIn(base: string, backupId: string): string {
   const id = basename(backupId);
-  const dir = resolve(AUTO_BACKUPS, id);
-  if (!dir.startsWith(AUTO_BACKUPS)) {
+  const dir = resolve(base, id);
+  const rel = relative(base, dir);
+  if (rel === '' || rel === '..' || rel.startsWith(`..${sep}`)) {
     throw new Error('Path traversal detected');
   }
   return dir;
+}
+
+/**
+ * Dump pipeline (T07/F03). `set -o pipefail` is load-bearing: without it a
+ * failed pg_dump still produces an apparently-valid gzip and the backup
+ * reports success. Exported for unit tests.
+ */
+export function buildDumpCommand(
+  dbConfig: { host: string; port: number; database: string; user: string },
+  dbDumpPath: string,
+): string[] {
+  return [
+    '-c',
+    `set -o pipefail; pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} | gzip > "${dbDumpPath}"`,
+  ];
+}
+
+/**
+ * Restore pipeline (T07/F03). pipefail + ON_ERROR_STOP so a partial restore
+ * can never report success. Exported for unit tests.
+ */
+export function buildRestoreCommand(
+  dbConfig: { host: string; port: number; database: string; user: string },
+  dbDumpPath: string,
+): string[] {
+  return [
+    '-c',
+    `set -o pipefail; gunzip -c "${dbDumpPath}" | psql -v ON_ERROR_STOP=1 -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`,
+  ];
+}
+
+/**
+ * Retention eviction predicate (T07/F03). The minimum-kept floor is
+ * absolute: an over-quota store with only the floor remaining deletes
+ * nothing (and must alert, not silently breach). Exported for unit tests.
+ */
+export function shouldDeleteBackup(args: {
+  ageDays: number;
+  retentionDays: number;
+  totalSize: number;
+  maxBytes: number;
+  keptCount: number;
+  minimumKept: number;
+}): boolean {
+  if (args.keptCount <= args.minimumKept) return false;
+  return args.ageDays > args.retentionDays || args.totalSize > args.maxBytes;
 }
 
 export interface BackupManifest {
@@ -112,11 +168,21 @@ export async function createFullBackup(
   }
 
   const dbDumpPath = join(backupDir, 'database.sql.gz');
-  execFileSync(
-    'bash',
-    ['-c', `pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} | gzip > "${dbDumpPath}"`],
-    { encoding: 'utf-8', timeout: 600000, env: { ...process.env, PGPASSWORD: dbConfig.password } }
-  );
+  execFileSync('bash', buildDumpCommand(dbConfig, dbDumpPath), {
+    encoding: 'utf-8',
+    timeout: 600000,
+    env: { ...process.env, PGPASSWORD: dbConfig.password },
+  });
+
+  // A failed dump must never yield an apparently-valid backup (F03):
+  // verify the gzip before writing a success manifest.
+  try {
+    execFileSync('gzip', ['-t', dbDumpPath], { timeout: 60000 });
+    if (statSync(dbDumpPath).size === 0) throw new Error('empty dump');
+  } catch {
+    rmSync(backupDir, { recursive: true, force: true });
+    throw new Error('Database dump failed integrity check; backup aborted');
+  }
 
   const configFiles = ['/app/data/.env.local', '/opt/supabase/.env', '/app/data/versions.json'];
   for (const file of configFiles) {
@@ -148,7 +214,12 @@ export async function createFullBackup(
       auth_users: true,
       storage_files: existsSync(storageDir),
       config: true,
-      ssl_certs: existsSync(join(backupDir, 'Caddyfile')),
+      // A copied Caddyfile is configuration, not certificate evidence: live
+      // TLS certificates live in the Caddy data volume (ACME-renewed) and
+      // are NOT part of file backups. Recovery re-issues via ACME. Never
+      // report true here until key material is actually captured (T07
+      // manager-owned escrow).
+      ssl_certs: false,
     },
     database_stats: {
       case_entries: countTableRows(dbConfig.host, dbConfig.port, dbConfig.database, dbConfig.user, dbConfig.password, 'case_entries'),
@@ -177,17 +248,32 @@ export async function restoreFromBackup(
   }
 
   try {
+    const manifestPath = join(backupDir, 'manifest.json');
+    let manifest: BackupManifest | null = null;
+    if (existsSync(manifestPath)) {
+      try {
+        manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as BackupManifest;
+      } catch {
+        manifest = null;
+      }
+    }
+
     const dbDumpPath = join(backupDir, 'database.sql.gz');
+    // A manifest claiming a database dump that is absent is corruption, not
+    // an empty restore: fail loudly instead of reporting success (F03).
+    if (manifest?.contents.database && !existsSync(dbDumpPath)) {
+      return { success: false, error: 'Backup manifest claims a database dump that is missing' };
+    }
     if (existsSync(dbDumpPath)) {
       if (!isSafeDbValue(dbConfig.host) || !isSafeDbValue(String(dbConfig.port)) || !isSafeDbValue(dbConfig.user) || !isSafeDbValue(dbConfig.database) || !isSafeDbValue(dbConfig.password)) {
         return { success: false, error: 'Database configuration contains invalid characters' };
       }
 
-      execFileSync(
-        'bash',
-        ['-c', `gunzip -c "${dbDumpPath}" | psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database}`],
-        { encoding: 'utf-8', timeout: 600000, env: { ...process.env, PGPASSWORD: dbConfig.password } }
-      );
+      execFileSync('bash', buildRestoreCommand(dbConfig, dbDumpPath), {
+        encoding: 'utf-8',
+        timeout: 600000,
+        env: { ...process.env, PGPASSWORD: dbConfig.password },
+      });
     }
 
     const envPath = join(backupDir, '.env.local');
@@ -239,17 +325,32 @@ export async function applyRetentionPolicy(): Promise<number> {
   const maxBytes = policy.max_total_size_gb * 1024 * 1024 * 1024;
 
   for (const backup of backups) {
-    if (totalSize <= maxBytes && backups.length - deleted <= policy.minimum_kept) break;
-
     const ageDays = (Date.now() - new Date(backup.created_at).getTime()) / (1000 * 60 * 60 * 24);
     const retentionDays = policy.auto_backups[backup.trigger as keyof typeof policy.auto_backups] || 14;
 
-    if (ageDays > retentionDays || totalSize > maxBytes) {
+    if (
+      shouldDeleteBackup({
+        ageDays,
+        retentionDays,
+        totalSize,
+        maxBytes,
+        keptCount: backups.length - deleted,
+        minimumKept: policy.minimum_kept,
+      })
+    ) {
       const dir = safeBackupDir(backup.backup_id);
       rmSync(dir, { recursive: true, force: true });
       totalSize -= backup.size_bytes;
       deleted++;
     }
+  }
+
+  if (totalSize > maxBytes) {
+    // Floor held while over quota: never silently breach minimum_kept to
+    // satisfy a disk quota. Surface loudly so the operator provisions space.
+    console.warn(
+      `[backup] retention over quota (${totalSize} > ${maxBytes} bytes) with only the minimum ${policy.minimum_kept} sets kept; operator action required`,
+    );
   }
 
   return deleted;
