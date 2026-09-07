@@ -8,3 +8,6 @@
  */
 export * from './bootstrap-token.js';
 export * from './jobs.js';
+export * from './release-pin.js';
+export * from './preflight.js';
+export * from './config-merge.js';
