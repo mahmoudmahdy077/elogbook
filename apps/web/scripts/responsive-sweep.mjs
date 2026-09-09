@@ -11,6 +11,11 @@
  *   BASE_URL=http://127.0.0.1:3100 node scripts/responsive-sweep.mjs
  *   LOGIN_EMAIL / LOGIN_PASSWORD env vars override demo credentials.
  *
+ * Results 2026-09-09: 37 routes × 3 viewports = 111/111 checks pass
+ * (0 overflow, 0 JS errors, 0 nav errors) against the production dev
+ * server, signed in as the seeded demo resident. Full log:
+ * .hermes/audit/responsive-sweep-2026-09-09.log (local, untracked).
+ *
  * Auth: signs in through the Supabase Auth API (password grant) using creds
  * from the monorepo root .env (E2E_EMAIL / E2E_PASSWORD, defaulting to the
  * seeded demo resident) and seeds the sb-<ref>-auth-token cookie in
