@@ -20,7 +20,7 @@ function MfaVerifyFallback() {
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
       <div className="w-full max-w-md panel p-8">
         <h1 className="text-2xl font-heading font-bold text-center">Verify with MFA</h1>
-        <p className="text-sm text-neutral-light/60 text-center mt-4">Loading…</p>
+        <p className="text-sm text-text-muted text-center mt-4">Loading…</p>
       </div>
     </div>
   );
@@ -85,7 +85,7 @@ function MfaVerifyInner() {
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
       <div className="w-full max-w-md panel p-8 space-y-4">
         <h1 className="text-2xl font-heading font-bold text-center">Verify with MFA</h1>
-        <p className="text-sm text-neutral-light/60 text-center">
+        <p className="text-sm text-text-muted text-center">
           Enter the 6-digit code from your authenticator app.
         </p>
         {factor ? (
@@ -98,7 +98,7 @@ function MfaVerifyInner() {
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
               autoFocus
-              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-neutral-light text-sm"
+              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-text-secondary text-sm"
             />
             {error && <ErrorDisplay message={error} />}
             <button
@@ -110,7 +110,7 @@ function MfaVerifyInner() {
             </button>
           </div>
         ) : (
-          <p className="text-sm text-neutral-light/50">Checking factors…</p>
+          <p className="text-sm text-text-muted">Checking factors…</p>
         )}
       </div>
     </div>

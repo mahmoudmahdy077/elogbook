@@ -61,7 +61,8 @@ const config: Config = {
           400: '#30d158',
           500: '#34c759',
           600: '#28a745',
-          DEFAULT: '#34c759',
+          // WCAG AA text on light surfaces (raw #34c759 = 2.2:1 on white)
+          DEFAULT: '#186B2E',
           700: '#1e7e34',
           800: '#155724',
           900: '#0d3616',
@@ -74,7 +75,8 @@ const config: Config = {
           400: '#ff9f0a',
           500: '#ff9500',
           600: '#e68600',
-          DEFAULT: '#ff9500',
+          // WCAG AA text on light surfaces (raw #ff9500 = 2.2:1 on white)
+          DEFAULT: '#8F4200',
           700: '#bf6e00',
           800: '#8a5000',
           900: '#553200',
@@ -87,7 +89,8 @@ const config: Config = {
           400: '#ff453a',
           500: '#ff3b30',
           600: '#e0352b',
-          DEFAULT: '#ff3b30',
+          // WCAG AA text on light surfaces (raw #ff3b30 = 3.55:1 on white)
+          DEFAULT: '#C20012',
           700: '#b82c23',
           800: '#8a211a',
           900: '#5c1611',

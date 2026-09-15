@@ -17,10 +17,10 @@ export default function ErrorDisplay({ message, onRetry }: ErrorDisplayProps) {
         <div>
           <p className="font-medium">{toUserMessage(message)}</p>
           <details className="mt-1.5">
-            <summary className="text-xs text-neutral-light/50 cursor-pointer hover:text-neutral-light/60">
+            <summary className="text-xs text-text-muted cursor-pointer hover:text-text-muted">
               Technical details
             </summary>
-            <p className="text-xs text-neutral-light/50 mt-1 font-mono break-all">{message}</p>
+            <p className="text-xs text-text-muted mt-1 font-mono break-all">{message}</p>
           </details>
         </div>
       </div>

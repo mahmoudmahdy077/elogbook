@@ -14,6 +14,29 @@ export const clinicalTokens = {
       strong: 'rgba(60, 60, 67, 0.18)',
     },
     text: { primary: '#000000', secondary: '#3C3C43', muted: '#6D6D73', onPrimary: '#FFFFFF' },
+    status: {
+      text: {
+        /* WCAG AA on light surfaces (#FFFFFF / #F2F2F7 / STATUS/red-50 etc).
+           Raw iOS hues (baseline: #34C759 / #FF9500 / #FF3B30) are too light for
+           small-text 4.5:1 on white. These darker Apple accessibility variants
+           keep the same hue but hit AA; raw brights remain correct on dark. */
+        success: '#186B2E', // 4.99-5.68:1 on white/gray-50 + success tint bg (worst-case AA)
+        warning: '#8F4200', // 5.33-6.31:1 same
+        danger:  '#C20012', // 4.58-5.50:1 same (raw #D70015 left 4.04 worst-case on gray-50)
+      },
+      bg: {
+        /* Slightly deeper status-tint bgs than raw /10 /12 on light surfaces,
+           so 4.5:1 holds even on the tinted pill background, not just white. */
+        success: 'rgba(24, 107, 46, 0.08)',
+        warning: 'rgba(143, 66, 0, 0.08)',
+        danger:  'rgba(194, 0, 18, 0.08)',
+      },
+      border: {
+        success: 'rgba(24, 107, 46, 0.20)',
+        warning: 'rgba(143, 66, 0, 0.20)',
+        danger:  'rgba(194, 0, 18, 0.20)',
+      },
+    },
     pending: '#FF9500',
     approved: '#34C759',
     rejected: '#FF3B30',

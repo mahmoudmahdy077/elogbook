@@ -51,7 +51,7 @@ export default function HelpPopover({ children, side = 'bottom' }: HelpPopoverPr
         ref={triggerRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-neutral-light/50 hover:text-primary hover:border-primary-glow transition-colors text-xs font-medium leading-none"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-text-muted hover:text-primary hover:border-primary-glow transition-colors text-xs font-medium leading-none"
         aria-label="Help"
         aria-expanded={open}
       >
@@ -67,7 +67,7 @@ export default function HelpPopover({ children, side = 'bottom' }: HelpPopoverPr
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={`absolute z-50 w-72 ${positionClasses}`}
           >
-            <div className="panel p-4 text-sm text-neutral-light/80 leading-relaxed">
+            <div className="panel p-4 text-sm text-text-secondary leading-relaxed">
               {children}
             </div>
           </motion.div>

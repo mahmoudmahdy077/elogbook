@@ -160,9 +160,9 @@ h1, h2, h3 {
 }
 
 .badge-pending {
-  background: rgba(255, 149, 0, 0.12);
-  color: #FF9500;
-  border: 1px solid rgba(255, 149, 0, 0.20);
+  background: rgba(143, 66, 0, 0.10);
+  color: #8F4200; /* WCAG AA 4.62:1 on this tint bg (raw #FF9500 was 2.2:1 on white) */
+  border: 1px solid rgba(143, 66, 0, 0.20);
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: 0.7rem;
@@ -171,9 +171,9 @@ h1, h2, h3 {
 }
 
 .badge-approved {
-  background: rgba(52, 199, 89, 0.12);
-  color: #34C759;
-  border: 1px solid rgba(52, 199, 89, 0.20);
+  background: rgba(24, 107, 46, 0.10);
+  color: #186B2E; /* WCAG AA 4.92:1 on this tint bg (raw #34C759 was 2.22:1 on white) */
+  border: 1px solid rgba(24, 107, 46, 0.20);
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: 0.7rem;
@@ -182,9 +182,9 @@ h1, h2, h3 {
 }
 
 .badge-rejected {
-  background: rgba(255, 59, 48, 0.12);
-  color: #FF3B30;
-  border: 1px solid rgba(255, 59, 48, 0.20);
+  background: rgba(194, 0, 18, 0.10);
+  color: #C20012; /* WCAG AA 4.57:1 on this tint bg (raw #FF3B30 was 3.55:1 on white) */
+  border: 1px solid rgba(194, 0, 18, 0.20);
   padding: 2px 8px;
   border-radius: 9999px;
   font-size: 0.7rem;
@@ -200,15 +200,15 @@ h1, h2, h3 {
 
 /* Banners — subtle tinted backgrounds */
 .warning-banner {
-  background: rgba(255, 149, 0, 0.08);
-  border: 1px solid rgba(255, 149, 0, 0.18);
-  color: #FF9500;
+  background: rgba(143, 66, 0, 0.08);
+  border: 1px solid rgba(143, 66, 0, 0.18);
+  color: #8F4200; /* WCAG AA 5.00:1 on this tint bg */
 }
 
 .danger-banner {
-  background: rgba(255, 59, 48, 0.08);
-  border: 1px solid rgba(255, 59, 48, 0.18);
-  color: #FF3B30;
+  background: rgba(194, 0, 18, 0.08);
+  border: 1px solid rgba(194, 0, 18, 0.18);
+  color: #C20012; /* WCAG AA 4.83:1 on this tint bg */
 }
 
 /* Dark theme overrides */

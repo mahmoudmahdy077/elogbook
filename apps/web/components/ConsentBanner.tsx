@@ -14,7 +14,7 @@ export default function ConsentBanner() {
       className="fixed bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:max-w-md panel p-4 z-50"
     >
       <h2 className="text-sm font-medium mb-1">Help us improve E-Logbook</h2>
-      <p className="text-xs text-neutral-light/60 mb-3">
+      <p className="text-xs text-text-muted mb-3">
         We use privacy-respecting analytics (no PHI) to understand which features are most useful.
         You can change this anytime in your profile.
       </p>
@@ -27,7 +27,7 @@ export default function ConsentBanner() {
         </button>
         <button
           onClick={() => { denyConsent(); setDismissed(true); }}
-          className="flex-1 py-2 rounded-lg border border-border text-sm text-neutral-light/80 hover:bg-neutral-dark/50"
+          className="flex-1 py-2 rounded-lg border border-border text-sm text-text-secondary hover:bg-neutral-dark/50"
         >
           Decline
         </button>

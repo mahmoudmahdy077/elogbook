@@ -81,7 +81,7 @@ export default async function ConsentPage({
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold mb-2">Consent management</h1>
-      <p className="text-sm text-neutral-light/60 mb-6">
+      <p className="text-sm text-text-muted mb-6">
         Withdraw or re-grant consent for each category. Changes apply
         immediately and are recorded in your tenant audit log.
       </p>

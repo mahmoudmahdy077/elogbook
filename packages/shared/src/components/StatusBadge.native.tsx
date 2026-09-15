@@ -14,23 +14,23 @@ export interface StatusBadgeProps {
 const statusConfig: Record<StatusVariant, { bg: string; text: string; border: string }> = {
   draft: {
     bg: 'rgba(142, 142, 147, 0.12)',
-    text: '#8E8E93',
+    text: '#6D6D73', // WCAG AA on #f1f1f2 (this bg) — 4.55:1; raw #8E8E93 was 3.06
     border: 'rgba(142, 142, 147, 0.18)',
   },
   pending: {
-    bg: 'rgba(255, 149, 0, 0.12)',
-    text: clinicalTokens.colors.pending,
-    border: 'rgba(255, 149, 0, 0.20)',
+    bg: 'rgba(163, 75, 0, 0.10)',
+    text: clinicalTokens.colors.status.text.warning,
+    border: clinicalTokens.colors.status.border.warning,
   },
   approved: {
-    bg: 'rgba(52, 199, 89, 0.12)',
-    text: clinicalTokens.colors.approved,
-    border: 'rgba(52, 199, 89, 0.20)',
+    bg: 'rgba(29, 122, 54, 0.10)',
+    text: clinicalTokens.colors.status.text.success,
+    border: clinicalTokens.colors.status.border.success,
   },
   rejected: {
-    bg: 'rgba(255, 59, 48, 0.12)',
-    text: clinicalTokens.colors.rejected,
-    border: 'rgba(255, 59, 48, 0.20)',
+    bg: 'rgba(215, 0, 21, 0.10)',
+    text: clinicalTokens.colors.status.text.danger,
+    border: clinicalTokens.colors.status.border.danger,
   },
   deidentified: {
     bg: 'rgba(88, 86, 214, 0.12)',

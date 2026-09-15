@@ -73,7 +73,7 @@ export default function ConsentRow({
     <div className="panel p-4 flex items-start gap-4">
       <div className="flex-1">
         <h3 className="text-sm font-medium">{label}</h3>
-        <p className="text-xs text-neutral-light/60 mt-1">{description}</p>
+        <p className="text-xs text-text-muted mt-1">{description}</p>
         {error && <ErrorDisplay message={error} />}
       </div>
       <button
@@ -84,8 +84,8 @@ export default function ConsentRow({
         className={
           'px-3 py-1.5 rounded-lg text-xs font-medium ' +
           (granted
-            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-            : 'bg-neutral-dark/50 text-neutral-light/70 border border-border')
+            ? 'bg-success/10 text-success border border-success/20'
+            : 'bg-neutral-dark/50 text-text-secondary/90 border border-border')
         }
       >
         {pending ? '…' : granted ? 'Granted' : 'Not granted'}

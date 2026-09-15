@@ -59,9 +59,9 @@ export default function RetentionForm({ currentDays, tenantId }: { currentDays: 
           max={3650}
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-neutral-light text-sm"
+          className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-text-secondary text-sm"
         />
-        <p className="text-xs text-neutral-light/50 mt-1">
+        <p className="text-xs text-text-muted mt-1">
           Allowed: 365–3650 days. HIPAA / GDPR / SCFHS reference: ≥ 1 year.
         </p>
       </div>
@@ -78,7 +78,7 @@ export default function RetentionForm({ currentDays, tenantId }: { currentDays: 
 
       {error && <ErrorDisplay message={error} />}
       {result && (
-        <div className="rounded-lg p-2.5 text-xs bg-emerald-900/20 text-emerald-300" role="status">{result}</div>
+        <div className="rounded-lg p-2.5 text-xs bg-success/10 text-success border border-success/20" role="status">{result}</div>
       )}
 
       <button

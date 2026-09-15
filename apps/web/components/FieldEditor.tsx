@@ -66,7 +66,7 @@ export default function FieldEditor({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="text-danger hover:text-danger/80 text-sm"
+          className="text-danger hover:text-danger text-sm"
         >
           Remove
         </button>
