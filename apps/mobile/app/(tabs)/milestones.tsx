@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
+import { logError } from '../../lib/logger';
 import { clinicalTokens, MILESTONE_MAX_LEVEL } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
@@ -216,11 +217,13 @@ export default function MilestonesScreen() {
   const isDirectorPlus = role === 'director' || role === 'institution_admin' || role === 'admin';
 
   const fetchMilestones = useCallback(async (residentId: string) => {
+    // N2: bounded typed projection (no select(*), 100-row page).
     const { data, error } = await supabase
       .from('milestones')
-      .select('*')
+      .select('id,competency_area,sub_competency,level,assessment_date,assessor_id,comments')
       .eq('resident_id', residentId)
-      .order('competency_area', { ascending: true });
+      .order('competency_area', { ascending: true })
+      .limit(100);
 
     if (!error) {
       setMilestones((data ?? []) as MilestoneData[]);
@@ -313,7 +316,7 @@ export default function MilestonesScreen() {
         }
       }
     } catch (err) {
-      console.error('Failed to load milestones:', err);
+      logError('milestones.load', err);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,12 @@
+/**
+ * DORMANT — do not use for new code (R3).
+ *
+ * No production callers (legacy helpers superseded by scoped stores in
+ * draft-store.ts, durable-queue.ts, and account-context.scopedKey()).
+ * The generic getPreference/setPreference pair is unscoped by construction
+ * and must never hold identity or PHI. Kept pending the one-release removal
+ * window with upgrade evidence.
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export async function getLastSyncTimestamp(): Promise<number | null> {

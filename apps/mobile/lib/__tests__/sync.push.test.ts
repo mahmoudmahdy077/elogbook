@@ -1,14 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { CaseEntry } from '../../lib/db/models/CaseEntry';
 
-// UXM-001: Offline sync is disabled in v1. These tests cover the no-op stubs.
-// Remove this skip when sync is re-enabled in v2.
-const syncDisabled = true;
-
-const mockGetDraftCases = vi.fn();
-const mockUpdateSyncStatus = vi.fn();
-const mockMarkCaseAsConflict = vi.fn();
-const mockUpsertCaseEntry = vi.fn();
+// M5.1: the disabled UXM-001 stub APIs are removed. The SyncService facade
+// owns one push path (durable per-account outbox). These tests prove the
+// facade contract at the real boundary (no native needed).
 
 vi.mock('react-native', () => ({
   AppState: { addEventListener: () => ({ remove: () => undefined }) },
@@ -21,243 +15,91 @@ vi.mock('@react-native-community/netinfo', () => ({
   },
 }));
 
-vi.mock('../db/database', () => ({ getDatabase: () => ({}) }));
+const { mockFlushDurable, mockDurableCounts, mockMigrateLegacy, mockLegacyFlush, mockNoteAuthFailure } = vi.hoisted(() => ({
+  mockFlushDurable: vi.fn(),
+  mockDurableCounts: vi.fn(),
+  mockMigrateLegacy: vi.fn(),
+  mockLegacyFlush: vi.fn(),
+  mockNoteAuthFailure: vi.fn(),
+}));
+// Facade tests stub the queue boundary; the real classifier + flush are
+// covered by durable-queue.test.ts. The stub mirrors auth-vs-other only.
+vi.mock('../durable-queue', () => ({
+  flushDurableQueue: (...args: unknown[]) => mockFlushDurable(...args),
+  getDurableCounts: (...args: unknown[]) => mockDurableCounts(...args),
+  classifyQueueError: (m: string) => (/jwt|expired|unauthorized|401|403/i.test(m) ? 'auth' : 'transient'),
+}));
+vi.mock('../legacy-migration', () => ({
+  migrateLegacyQueueOnce: (...args: unknown[]) => mockMigrateLegacy(...args),
+}));
+
 vi.mock('../offline-queue', () => ({
-  flushQueue: async () => ({ synced: 0, failed: 0, lastError: null }),
+  flushQueue: (...args: unknown[]) => mockLegacyFlush(...args),
 }));
-vi.mock('../db/storage', () => ({
-  getDraftCases: () => mockGetDraftCases(),
-  getConflictedCases: async () => [],
-  updateSyncStatus: (...args: unknown[]) => mockUpdateSyncStatus(...args),
-  markCaseAsConflict: (...args: unknown[]) => mockMarkCaseAsConflict(...args),
-  upsertCaseEntry: (...args: unknown[]) => mockUpsertCaseEntry(...args),
-  batchUpsertCaseEntries: async () => undefined,
-  batchUpsertTemplates: async () => undefined,
-  batchUpsertGoals: async () => undefined,
-  getLastSyncTimestamp: async () => null,
-  setLastSyncTimestamp: async () => undefined,
-}));
-
-interface SupabaseCall {
-  type: 'insert' | 'update' | 'upsert';
-  payload: Record<string, unknown> | Record<string, unknown>[];
-  targetId?: string;
-}
-
-const calls: SupabaseCall[] = [];
-
-const mockChain: {
-  select: ReturnType<typeof vi.fn>;
-  eq: ReturnType<typeof vi.fn>;
-  single: ReturnType<typeof vi.fn>;
-  insert: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  upsert: ReturnType<typeof vi.fn>;
-} = {
-  select: vi.fn(),
-  eq: vi.fn(),
-  single: vi.fn(),
-  insert: vi.fn(),
-  update: vi.fn(),
-  upsert: vi.fn(),
-};
 
 vi.mock('../supabase', () => ({
   supabase: {
     auth: {
+      getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
     },
-    from: (table: string) => {
-      if (table !== 'case_entries') throw new Error(`Unexpected table ${table}`);
-      mockChain.select.mockImplementation(() => mockChain);
-      mockChain.eq.mockImplementation(() => mockChain);
-      mockChain.insert.mockImplementation((payload: Record<string, unknown>) => {
-        calls.push({ type: 'insert', payload });
-        return mockChain;
-      });
-      mockChain.upsert.mockImplementation((payload: Record<string, unknown>[]) => {
-        calls.push({ type: 'upsert', payload });
-        return mockChain;
-      });
-      mockChain.update.mockImplementation((payload: Record<string, unknown>) => {
-        const entry: SupabaseCall = { type: 'update', payload };
-        const originalEq = mockChain.eq.getMockImplementation();
-        mockChain.eq.mockImplementation((_col: string, val: string) => {
-          entry.targetId = val;
-          mockChain.eq.mockImplementation(originalEq!);
-          return mockChain;
-        });
-        calls.push(entry);
-        return mockChain;
-      });
-      return mockChain;
-    },
+    from: () => ({ upsert: async () => ({ error: null }) }),
   },
+}));
+
+vi.mock('../session', () => ({
+  noteAuthFailure: (...args: unknown[]) => mockNoteAuthFailure(...args),
 }));
 
 import { syncService } from '../sync';
 
-function makeDraft(overrides: Partial<CaseEntry> = {}): CaseEntry {
-  return {
-    id: 'local-uuid-1',
-    serverId: null,
-    tenantId: 't-1',
-    residentId: 'r-1',
-    templateId: 'tmpl-1',
-    patientMrn: null,
-    patientDob: null,
-    patientAgeYears: 30,
-    patientHash: null,
-    caseDate: '2026-06-29',
-    fieldValues: {},
-    accreditationMappings: [],
-    isDeidentified: true,
-    status: 'draft',
-    localSyncStatus: 'draft',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    _raw: { field_values: '{}', accreditation_mappings: '[]' },
-    ...overrides,
-  } as unknown as CaseEntry;
-}
-
 beforeEach(() => {
-  calls.length = 0;
-  mockGetDraftCases.mockReset();
-  mockUpdateSyncStatus.mockReset();
-  mockMarkCaseAsConflict.mockReset();
-  mockUpsertCaseEntry.mockReset();
-  Object.values(mockChain).forEach((fn) => {
-    if (typeof fn.mockReset === 'function') fn.mockReset();
-  });
-  // Default: upsert returns a server id; updates return ok
-  mockChain.select.mockImplementation(() => mockChain);
-  mockChain.eq.mockImplementation(() => mockChain);
-  mockChain.insert.mockImplementation((payload: Record<string, unknown>) => {
-    calls.push({ type: 'insert', payload });
-    return mockChain;
-  });
-  mockChain.upsert.mockImplementation((payload: Record<string, unknown>[]) => {
-    calls.push({ type: 'upsert', payload });
-    return mockChain;
-  });
-  mockChain.update.mockImplementation((payload: Record<string, unknown>) => {
-    const entry: SupabaseCall = { type: 'update', payload };
-    const originalEq = mockChain.eq.getMockImplementation();
-    mockChain.eq.mockImplementation((_col: string, val: string) => {
-      entry.targetId = val;
-      mockChain.eq.mockImplementation(originalEq!);
-      return mockChain;
-    });
-    calls.push(entry);
-    return mockChain;
-  });
-  mockChain.single.mockResolvedValue({ data: { id: 'server-uuid-99' }, error: null });
+  vi.clearAllMocks();
+  mockFlushDurable.mockResolvedValue({ synced: 1, transient: 0, quarantined: 0, skippedForeign: 0, lastError: null });
+  mockDurableCounts.mockResolvedValue({ queued: 0, quarantined: 0, total: 0 });
+  mockMigrateLegacy.mockResolvedValue(0);
   syncService.cleanup();
-  syncService.setTenantId('t-1');
 });
 
-(syncDisabled ? describe.skip : describe)('pushCases — server id + conflict handling', () => {
-  it('inserts new drafts in a batch and writes the server id back to the local row', async () => {
-    const draft = makeDraft();
-    mockGetDraftCases.mockResolvedValueOnce([draft]);
-    // upsert().select('id') resolves directly to a data array (not .single())
-    mockChain.select.mockImplementationOnce(() => ({
-      ...mockChain,
-      // override the thenable: we want the chain itself to resolve
-      // the awaiter does `await supabase.from(...).upsert(...).select('id')`
-      // and the destructured { data, error } comes from this object
-    }));
-    // Simpler: make the chain a thenable
-    (mockChain as unknown as { then: unknown }).then = (resolve: (v: unknown) => void) =>
-      Promise.resolve({ data: [{ id: 'server-uuid-99' }], error: null }).then(resolve);
-
-    await syncService.pushCases();
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0].type).toBe('upsert');
-    expect(mockUpdateSyncStatus).toHaveBeenCalledWith(draft, 'synced', draft.id);
+describe('SyncService facade — single durable queue (M5.1)', () => {
+  it('flushes the durable outbox on initSync and reports synced', async () => {
+    await syncService.initSync('t1');
+    expect(mockFlushDurable).toHaveBeenCalledTimes(1);
+    expect(syncService.getStatus()).toBe('synced');
   });
 
-  it('targets server id (not local uuid) for `modified` updates', async () => {
-    const draft = makeDraft({ localSyncStatus: 'modified', serverId: 'server-uuid-99' });
-    mockGetDraftCases.mockResolvedValueOnce([draft]);
-
-    await syncService.pushCases();
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0].type).toBe('update');
-    expect(calls[0].targetId).toBe('server-uuid-99');
+  it('never submits through the legacy global queue', async () => {
+    await syncService.initSync('t1');
+    expect(mockLegacyFlush).not.toHaveBeenCalled();
   });
 
-  it('marks the row as conflict and fires the conflict callback on batch 409', async () => {
-    const draft = makeDraft();
-    mockGetDraftCases.mockResolvedValueOnce([draft]);
-    (mockChain as unknown as { then: unknown }).then = (resolve: (v: unknown) => void) =>
-      Promise.resolve({
-        data: null,
-        error: { code: '409', message: 'conflict detected' },
-      }).then(resolve);
-
-    const conflictListener = vi.fn();
-    const unsub = syncService.setConflictCallback(conflictListener);
-
-    await syncService.pushCases();
-    unsub();
-
-    expect(mockMarkCaseAsConflict).toHaveBeenCalledWith(draft);
-    expect(conflictListener).toHaveBeenCalledWith(draft.residentId, draft.id);
+  it('surfaces quarantine as a partial failure (never silent)', async () => {
+    mockFlushDurable.mockResolvedValue({
+      synced: 0, transient: 0, quarantined: 1, skippedForeign: 0, lastError: 'policy: revoked',
+    });
+    const seen: string[] = [];
+    const off = syncService.onPartialFailure((m) => seen.push(m));
+    await syncService.initSync('t1');
+    off();
+    expect(seen).toEqual(['policy: revoked']);
   });
 
-  it('does NOT mark conflict on a generic 500 batch error', async () => {
-    const draft = makeDraft();
-    mockGetDraftCases.mockResolvedValueOnce([draft]);
-    (mockChain as unknown as { then: unknown }).then = (resolve: (v: unknown) => void) =>
-      Promise.resolve({
-        data: null,
-        error: { code: '500', message: 'internal' },
-      }).then(resolve);
-
-    const conflictListener = vi.fn();
-    const unsub = syncService.setConflictCallback(conflictListener);
-
-    await syncService.pushCases();
-    unsub();
-
-    expect(mockMarkCaseAsConflict).not.toHaveBeenCalled();
-    expect(conflictListener).not.toHaveBeenCalled();
+  it('flags auth-class quarantine for capability refresh', async () => {
+    mockFlushDurable.mockResolvedValue({
+      synced: 0, transient: 0, quarantined: 1, skippedForeign: 0, lastError: 'JWT expired',
+    });
+    await syncService.initSync('t1');
+    expect(mockNoteAuthFailure).toHaveBeenCalledWith(401);
   });
 
-  it('surfaces a partial-failure message when one of the modified updates 409s', async () => {
-    const draft1 = makeDraft({ id: 'd-1', localSyncStatus: 'modified', serverId: 's-1' });
-    const draft2 = makeDraft({ id: 'd-2', localSyncStatus: 'modified', serverId: 's-2' });
-    mockGetDraftCases.mockResolvedValueOnce([draft1, draft2]);
-    // first update ok, second update 409s
-    mockChain.single
-      .mockResolvedValueOnce({ data: { id: 's-1', updated_at: '2026-06-29T10:00:00.000Z' }, error: null })
-      .mockResolvedValueOnce({ data: null, error: { code: '409', message: 'conflict' } });
-
-    const partialListener = vi.fn();
-    const unsub = syncService.onPartialFailure(partialListener);
-    syncService.consumePartialFailure();
-    // before sync there is nothing pending
-    expect(partialListener).not.toHaveBeenCalled();
-
-    await syncService.pushCases();
-    syncService.consumePartialFailure();
-    unsub();
-
-    expect(partialListener).toHaveBeenCalledWith('1 of 2 cases failed to sync');
-  });
-
-  it('sends modified drafts to the upsert path as a batch of size 1', async () => {
-    const draft = makeDraft({ localSyncStatus: 'modified', serverId: 's-1' });
-    mockGetDraftCases.mockResolvedValueOnce([draft]);
-
-    await syncService.pushCases();
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0].type).toBe('update');
-    expect(calls[0].targetId).toBe('s-1');
+  it('removed disabled stub APIs do not exist', () => {
+    const svc = syncService as unknown as Record<string, unknown>;
+    for (const name of [
+      'pullCases', 'pullTemplates', 'pullGoals', 'pullRotations', 'pullMilestones',
+      'pullEvaluations', 'pullComments', 'pullAllData', 'pushCases', 'handleConflicts',
+      'getConflictDrafts',
+    ]) {
+      expect(svc[name], name).toBeUndefined();
+    }
   });
 });

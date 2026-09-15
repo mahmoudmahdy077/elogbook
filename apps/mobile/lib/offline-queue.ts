@@ -1,11 +1,11 @@
 /**
- * Light offline queue v2 — encrypted case payloads stored in AsyncStorage.
+ * LEGACY MIGRATION-ONLY queue v2 (DEPRECATED for new writes).
  *
- * Replaces crypto-js with the dependency-free AEAD module (AES-256-CBC +
- * HMAC-SHA-256 EtM). Flushed on reconnect / app foreground via SyncService.
- *
- * SECURITY: each payload is individually authenticated with HMAC before
- * decryption, so tampered/corrupted items are rejected.
+ * Do not enqueue through this module: all screens and services use
+ * lib/durable-queue.ts (per-account scope, stable operation IDs, error
+ * taxonomy). This module remains ONLY so lib/legacy-migration.ts can read
+ * and drain `offline_case_queue_v2` once on upgrade; sync.ts never flushes
+ * it. It will be deleted after the migration window (one release).
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';

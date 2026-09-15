@@ -5,6 +5,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { scrubEventProperties } from '../telemetry';
 
 // ---------------------------------------------------------------------------
 // 1. Event Tracking (PostHog-compatible)
@@ -32,8 +33,16 @@ export function initTelemetry(userId: string): void {
   currentSessionId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+/** M1.3: drop user/session identity on sign-out (prevents cross-account attribution). */
+export function clearTelemetryIdentity(): void {
+  currentUserId = null;
+  currentSessionId = '';
+}
+
 /**
  * Track a named event with properties.
+ * M5.3: properties are denylist-scrubbed before persistence — PHI, tokens,
+ * URLs, ciphertext, and file paths never reach the analytics queue.
  */
 export async function trackEvent(
   event: string,
@@ -42,7 +51,7 @@ export async function trackEvent(
   const entry: TelemetryEvent = {
     event,
     properties: {
-      ...properties,
+      ...scrubEventProperties(properties),
       platform: 'mobile',
       app_version: '2.0.0',
     },
@@ -203,14 +212,49 @@ async function loadEventQueue(): Promise<TelemetryEvent[]> {
 }
 
 /**
- * Export the event queue for batch sending to analytics endpoint.
- * Returns the events and clears the local queue.
+ * Export a COPY of the event queue for upload. The local queue is NOT
+ * cleared here: call ackEventFlush() only after the upload succeeds, or
+ * requeueEvents() to restore a failed batch. (R3: upload failure must not
+ * lose events; the previous read-and-delete flush could drop them.)
  */
 export async function flushEventQueue(): Promise<TelemetryEvent[]> {
-  const queue = await loadEventQueue();
-  if (queue.length === 0) return [];
-  await AsyncStorage.removeItem(EVENT_QUEUE_KEY);
-  return queue;
+  return loadEventQueue();
+}
+
+/** Drop events up to (and including) the given timestamp after a confirmed upload. */
+export async function ackEventFlush(upToTimestamp: number): Promise<void> {
+  try {
+    const queue = await loadEventQueue();
+    const rest = queue.filter((e) => e.timestamp > upToTimestamp);
+    if (rest.length === queue.length) return;
+    await AsyncStorage.setItem(EVENT_QUEUE_KEY, JSON.stringify(rest));
+  } catch {
+    // best-effort
+  }
+}
+
+/** Restore a failed upload batch to the front (bounded, newest win). */
+export async function requeueEvents(events: TelemetryEvent[]): Promise<void> {
+  if (events.length === 0) return;
+  try {
+    const queue = await loadEventQueue();
+    const merged = [...events, ...queue].slice(-MAX_QUEUE_SIZE);
+    await AsyncStorage.setItem(EVENT_QUEUE_KEY, JSON.stringify(merged));
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * M1.3: wipe the persisted analytics queue on sign-out so the next account
+ * cannot export the previous account's events (identity + behavior).
+ */
+export async function clearTelemetryQueue(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(EVENT_QUEUE_KEY);
+  } catch {
+    // best-effort
+  }
 }
 
 /**

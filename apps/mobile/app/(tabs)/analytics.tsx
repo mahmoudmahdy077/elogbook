@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
+import { countCasesByStatus } from '../../lib/query';
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import { clinicalTokens } from '@elogbook/shared';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
@@ -150,31 +151,19 @@ export default function AnalyticsScreen() {
 
       if (!profile) { setLoading(false); return; }
 
-      // Fetch MY case entries
-      const { data: myCases } = await supabase
-        .from('case_entries')
-        .select('status')
-        .eq('resident_id', profileId);
+      // Fetch MY case entries (R2: exact bounded head-counts, no row fetch).
+      const counts = await countCasesByStatus(supabase as never, { tenantId: profile.tenant_id, residentId: profile.id });
+      setTotalCases(counts.total);
+      setApprovedCases(counts.approved);
+      setPendingCases(counts.pending);
+      setDraftCases(counts.draft);
 
-      if (myCases) {
-        let total = 0, approved = 0, pending = 0, draft = 0;
-        for (const c of myCases) {
-          total++;
-          if (c.status === 'approved') approved++;
-          else if (c.status === 'pending') pending++;
-          else if (c.status === 'draft') draft++;
-        }
-        setTotalCases(total);
-        setApprovedCases(approved);
-        setPendingCases(pending);
-        setDraftCases(draft);
-      }
-
-      // Fetch MY goals
+      // Fetch MY goals (R2: bounded list, 100-row page).
       const { data: myGoals } = await supabase
         .from('program_goals')
         .select('id, title, target_count, specialty, goal_progress(current_count)')
-        .eq('resident_id', profileId);
+        .eq('resident_id', profileId)
+        .limit(100);
 
       if (myGoals) {
         setGoals(

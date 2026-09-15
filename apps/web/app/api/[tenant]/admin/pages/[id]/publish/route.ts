@@ -63,26 +63,27 @@ export async function POST(
     return NextResponse.json({ error: `Revision no longer validates: ${validation.errors.join('; ')}` }, { status: 400 });
   }
 
-  if (currentPointer) {
-    await adminClient.from('site_page_revisions').update({ status: 'archived' }).eq('id', currentPointer);
-  }
-  await adminClient.from('site_page_revisions').update({ status: 'published' }).eq('id', rev.id);
-  const { error: pointerError } = await adminClient
-    .from('site_pages')
-    .update({ published_revision_id: rev.id })
-    .eq('id', pageId);
-  if (pointerError) {
-    return NextResponse.json({ error: pointerError.message }, { status: 500 });
-  }
-
-  await adminClient.from('audit_logs').insert({
-    tenant_id: auth.profile.tenant_id,
-    user_id: auth.user.id,
-    action: 'tenant_page_publish',
-    resource_type: 'site_pages',
-    resource_id: pageId,
-    changes: { revision_id: rev.id },
+  // M8 atomic CAS (same contract as platform publish; tenant scope enforced
+  // by the scoped page lookup above + deny-by-default RLS).
+  const expectationSet = body.expected_current_revision_id !== undefined;
+  const { error: rpcError } = await adminClient.rpc('publish_site_page', {
+    p_page_id: pageId,
+    p_revision_id: rev.id,
+    p_expected_pointer: body.expected_current_revision_id ?? null,
+    p_expectation_set: expectationSet,
+    p_actor: auth.user.id,
+    p_tenant_id: auth.profile.tenant_id,
   });
+  if (rpcError) {
+    const msg = rpcError.message ?? '';
+    if (/pointer_conflict/i.test(msg) || (rpcError as { code?: string }).code === 'P0003') {
+      return NextResponse.json(
+        { error: 'Page was published since you loaded it; reload and retry' },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: msg || 'Publish failed' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, published_revision_id: rev.id });
 }

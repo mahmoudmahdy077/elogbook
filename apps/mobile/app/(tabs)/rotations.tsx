@@ -386,11 +386,13 @@ export default function RotationsScreen() {
       }
 
       // Build query — residents see their own, supervisors/directors see tenant-wide
+      // (N2/R2: bounded typed projection, no select(*), 100-row page).
       let query = supabase
         .from('rotations')
-        .select('*')
+        .select('id,title,specialty,start_date,end_date,site,status,notes,resident_id')
         .eq('tenant_id', profile.tenant_id)
-        .order('start_date', { ascending: false });
+        .order('start_date', { ascending: false })
+        .limit(100);
 
       // Resident role scoping (fetch role to determine)
       const { data: roleProfile } = await supabase

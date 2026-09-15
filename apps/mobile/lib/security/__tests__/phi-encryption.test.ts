@@ -75,6 +75,12 @@ describe('PHI field encryption', () => {
     expect(decrypted.patient_dob).toBe('1990-01-01');
   });
 
+  it('fails closed (null) on tamper instead of returning the envelope', async () => {
+    const encrypted = (await encryptPHIField('MRN-12345')) as string;
+    const tampered = `${encrypted.slice(0, -4)}ffff`;
+    await expect(decryptPHIField(tampered)).resolves.toBeNull();
+  });
+
   it('PHI_FIELDS defines correct columns', () => {
     expect(PHI_FIELDS.case_entries).toHaveLength(3);
     expect(PHI_FIELDS.case_entries.map((c) => c.name)).toContain('patient_mrn');

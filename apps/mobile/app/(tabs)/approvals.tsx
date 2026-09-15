@@ -13,6 +13,8 @@ import {
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
+import { bestKnownCapability } from '../../lib/session';
+import { submitApproval } from '../../lib/operations';
 import { useHaptics } from '../../lib/haptics';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
@@ -136,7 +138,9 @@ export default function ApprovalsScreen() {
         'id, entry_id, status, comment, requested_at, case_entries(resident_id, case_date, template_id, case_templates(specialty, name)), profiles!supervisor_id(full_name)'
       )
       .eq('case_entries.tenant_id', profile.tenant_id)
-      .order('requested_at', { ascending: false });
+      .order('requested_at', { ascending: false })
+      // R2 bound: supervisor inbox pages at 100 (pagination follow-up).
+      .limit(100);
 
     if (requests) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,33 +182,37 @@ export default function ApprovalsScreen() {
       setProcessingIds((prev) => new Set(prev).add(approvalId));
       haptics.approvalAction();
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+      // N2: typed adapter (capability gate + server RPC, fixed UI copy).
+      const capability = await bestKnownCapability(supabase as never);
+      const outcome = await submitApproval({
+        capability,
+        entryId,
+        action,
+        comment,
+        rpc: async (fn, args) => {
+          const { error } = await supabase.rpc(fn as 'approve_case' | 'reject_case', args as never);
+          return { error: error ? { message: error.message } : null };
+        },
+      });
 
-        const { error } = await supabase.rpc(
-          action === 'approve' ? 'approve_case' : 'reject_case',
-          {
-            p_entry_id: entryId,
-            p_supervisor_id: user.id,
-            p_comment: action === 'reject' ? comment ?? '' : null,
-          }
-        );
-
-        if (error) throw error;
-
+      if (outcome.kind === 'confirmed') {
         haptics.submitSuccess();
         setApprovals((prev) => prev.filter((a) => a.id !== approvalId));
-      } catch {
+      } else if (outcome.kind === 'denied') {
         haptics.submitError();
-        Alert.alert('Error', `Failed to ${action} case. Please try again.`);
-      } finally {
-        setProcessingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(approvalId);
-          return next;
-        });
+        Alert.alert('Not permitted', outcome.reason);
+      } else if (outcome.kind === 'transient') {
+        haptics.submitError();
+        Alert.alert('Connection issue', `Could not ${action} the case. Check your connection and retry.`);
+      } else {
+        haptics.submitError();
+        Alert.alert('Error', outcome.copy);
       }
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(approvalId);
+        return next;
+      });
     },
     [haptics]
   );

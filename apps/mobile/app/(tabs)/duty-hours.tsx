@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
+import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
+import { submitDutyHours } from '../../lib/operations';
 import { buildDutyPeriodPayload } from '../../lib/duty-payload';
 import { clinicalTokens, DUTY_SHIFT_TYPES } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -25,35 +27,40 @@ export default function DutyHoursScreen() {
     }
 
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setSaving(false);
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, tenant_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) {
-      setSaving(false);
-      Alert.alert('Error', 'Unable to save duty hours.');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('duty_periods')
-      .insert(buildDutyPeriodPayload(profile as { id: string; tenant_id: string }, date, hours, shiftType, notes));
+    // N2: typed adapter (capability gate + fixed UI copy; raw errors logged).
+    const capability = await bestKnownCapability(supabase as never);
+    const outcome = await submitDutyHours({
+      capability,
+      write: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('policy: no verified session');
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tenant_id')
+          .eq('user_id', user.id)
+          .single();
+        if (!profile) throw new Error('policy: profile_not_found');
+        const { error } = await supabase
+          .from('duty_periods')
+          .insert(buildDutyPeriodPayload(profile as { id: string; tenant_id: string }, date, hours, shiftType, notes));
+        if (error) {
+          if (/401|403/.test(error.message)) noteAuthFailure(403);
+          throw new Error(error.message);
+        }
+      },
+    });
 
     setSaving(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
+    if (outcome.kind === 'confirmed') {
       Alert.alert('Saved', 'Duty hours recorded.');
       setHours('');
       setNotes('');
+    } else if (outcome.kind === 'denied') {
+      Alert.alert('Not permitted', outcome.reason);
+    } else if (outcome.kind === 'transient') {
+      Alert.alert('Connection issue', 'Could not save duty hours. Check your connection and retry.');
+    } else {
+      Alert.alert('Error', outcome.copy);
     }
   };
 

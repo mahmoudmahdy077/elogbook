@@ -33,6 +33,14 @@ vi.mock('../offline-queue', () => ({
   flushQueue: async () => ({ synced: 0, failed: 0, lastError: null }),
 }));
 
+vi.mock('../legacy-migration', () => ({
+  migrateLegacyQueueOnce: async () => 0,
+}));
+
+vi.mock('../session', () => ({
+  noteAuthFailure: () => undefined,
+}));
+
 vi.mock('../db/storage', () => ({
   getDraftCases: async () => [],
   getConflictedCases: async () => [],
@@ -97,7 +105,7 @@ describe('attachSyncAuthListener', () => {
     await capturedCallback!('SIGNED_IN', { user: { id: 'user-1' } });
 
     expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockSelect).toHaveBeenCalledWith('tenant_id');
+    expect(mockSelect).toHaveBeenCalledWith('id,tenant_id');
     expect(mockEq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(syncService.getTenantId()).toBe('tenant-abc');
   });

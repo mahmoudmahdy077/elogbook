@@ -37,7 +37,9 @@ export function useCaseNotifications(
           .select('id, entry_id, status, comment, resolved_at, case_entries!inner(resident_id)')
           .eq('case_entries.resident_id', residentId)
           .not('resolved_at', 'is', null)
-          .gt('resolved_at', new Date(since).toISOString());
+          .gt('resolved_at', new Date(since).toISOString())
+          // R2 bound: polling window queries stay small.
+          .limit(100);
 
         if (!data) return;
 

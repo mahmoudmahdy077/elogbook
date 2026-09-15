@@ -85,7 +85,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const headersList = await headers();
   const nonce = headersList.get('x-nonce') ?? '';
   const locale = await getLocale();
-  const dir = 'ltr';
+  // M6: direction follows the locale (Arabic RTL is a shared requirement).
+  const dir = locale.toLowerCase().startsWith('ar') ? 'rtl' : 'ltr';
 
   const jsonLd = {
     '@context': 'https://schema.org',

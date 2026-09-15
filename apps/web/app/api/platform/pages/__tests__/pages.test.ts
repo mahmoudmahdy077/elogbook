@@ -53,6 +53,20 @@ function mockAdmin(fx: Fixture = {}) {
     return chain;
   };
   vi.mocked(createServiceRoleClient).mockReturnValue({
+    rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+      if (fn === 'publish_site_page') {
+        const expectationSet = (args as { p_expectation_set?: boolean }).p_expectation_set;
+        const expected = (args as { p_expected_pointer?: string | null }).p_expected_pointer ?? null;
+        const page = (fx.pageSingle ?? null) as { published_revision_id?: string | null } | null;
+        const current = page?.published_revision_id ?? null;
+        if (expectationSet && expected !== current) {
+          return { error: { message: 'pointer_conflict', code: 'P0003' } };
+        }
+        calls.update.push({ rpc: fn, args });
+        return { error: null };
+      }
+      return { error: null };
+    }),
     from: vi.fn((table: string) => {
       if (table === 'site_pages') {
         return {

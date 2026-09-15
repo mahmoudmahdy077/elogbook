@@ -13,13 +13,15 @@ const cwd = process.cwd();
 const rendererDir = path.join(cwd, 'node_modules', 'react-native', 'Libraries', 'Renderer', 'implementations');
 
 if (!fs.existsSync(rendererDir)) {
-  console.warn('[patch-renderer] React Native renderer not found, skipping.');
+  // N6: silent skip — react-native is not installed in this workspace
+  // (hoisted install or CI without native deps). Patching is a best-effort
+  // dev convenience; absence is an expected state, not a warning.
   process.exit(0);
 }
 
 const rendererFiles = fs.readdirSync(rendererDir).filter(f => f.startsWith('ReactNativeRenderer') && f.endsWith('.js'));
 if (rendererFiles.length === 0) {
-  console.warn('[patch-renderer] No ReactNativeRenderer files found.');
+  // Expected when the installed renderer has no version gate to patch.
   process.exit(0);
 }
 

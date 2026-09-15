@@ -1,0 +1,284 @@
+# E-Logbook mobile production qualification ledger (M0).
+# Machine-checked by scripts/check-mobile-ledger.mjs (schema, artifacts,
+# forbidden claims). Status vocabulary: wired | tested | artifact-verified | blocked.
+# "tested" = automated test at the real boundary. "artifact-verified" = signed
+# binary/device/CI artifact inspected by the owner. No expiry dates are used;
+# expiryPolicy is event-based (e.g. re-verify on next release candidate).
+version: 1
+updated: '2026-09-09'
+baseCommit: 165f9ae
+releaseDecision: NO-GO
+entries:
+  - id: P1-queue-active-path
+    claim: The visible case screen submits through case-submit.ts (fail-closed capability + mode match); the durable queue flushes via the tenant-scoped submit_case_operation RPC with tombstone deletes.
+    requirement: M3.1 + N1/N3 — one supported queue; edits never silently online-only.
+    source: apps/mobile/app/(tabs)/log-case.tsx, apps/mobile/lib/case-submit.ts, apps/mobile/lib/durable-queue.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/case-submit.test.ts, apps/mobile/lib/__tests__/durable-queue.test.ts
+    artifact: null
+    artifactPolicy: device run proving op ID reaches server on retry
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-legacy-queue-removed
+    claim: Legacy global queue (offline-queue.ts) is migration-only; sync.ts never submits through it.
+    requirement: M3.1, M5.1 — one queue format, one sync owner.
+    source: apps/mobile/lib/sync.ts, apps/mobile/lib/offline-queue.ts, apps/mobile/lib/legacy-migration.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/legacy-migration.test.ts
+    artifact: null
+    artifactPolicy: upgrade install proving legacy items migrate once and key is deleted
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-server-idempotency
+    claim: client_operation_id is mandatory for new case writes and idempotent server-side.
+    requirement: M3.2 — canonical IDs, audited outcomes.
+    source: supabase/migrations/20260909000000_durable_queue_idempotency.sql, supabase/migrations/20260909000003_case_operation_rpc.sql, apps/mobile/lib/durable-queue.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/durable-queue.test.ts, supabase/tests/p3_03_case_operation_rpc.sql
+    artifact: null
+    artifactPolicy: fresh + upgrade replay proving duplicate delivery yields one row
+    owner: platform
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-disposable-db-replay
+  - id: P1-session-boundary
+    claim: Boot resolves user/profile/tenant/status/mode/policy/expiry/step-up before protected routes render.
+    requirement: M1.1 — authoritative session, no metadata authorization.
+    source: apps/mobile/lib/session.ts, apps/mobile/app/_layout.tsx
+    implementation: wired
+    test: apps/mobile/lib/__tests__/session.test.ts
+    artifact: null
+    artifactPolicy: device matrix run (sign-in, expiry, suspension, MFA, switch)
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-account-context-full
+    claim: Account context carries user, tenant, profile, policy version, and mode before stores initialize.
+    requirement: M1.2.
+    source: apps/mobile/lib/account-context.ts, apps/mobile/lib/session.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/account-context.test.ts
+    artifact: null
+    artifactPolicy: none
+    owner: mobile
+    status: tested
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-context-disposal
+    claim: Sign-out/switch stops workers, cancels requests, wipes drafts/telemetry/analytics-queue/audit-memory/push identity, quarantines queue/audit rows of the old scope.
+    requirement: M1.3 + N1.
+    source: apps/mobile/lib/session-disposal.ts, apps/mobile/lib/security/audit-trail.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/session-disposal.test.ts, apps/mobile/lib/security/__tests__/audit-trail.test.ts
+    artifact: null
+    artifactPolicy: device run proving old scope unreadable after switch
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-screen-authorization
+    claim: Create/edit/approve/export/AI/attachment/admin actions check a fresh capability; server denial is authoritative.
+    requirement: M1.4.
+    source: apps/mobile/lib/authorization.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/authorization.test.ts
+    artifact: null
+    artifactPolicy: device run with suspended tenant + revoked mode
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-storage-contract
+    claim: Every draft and PHI field goes through one AEAD contract (fail-closed both row layers); legacy global buffers migrate with ownership checks (foreign entries quarantined, never reattributed); plaintext remnants deleted.
+    requirement: M2.1 + N1.
+    source: apps/mobile/lib/draft-store.ts, apps/mobile/lib/legacy-migration.ts, apps/mobile/lib/data-access.ts, apps/mobile/lib/security/audit-trail.ts, apps/mobile/lib/security/phi-encryption.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/legacy-migration.test.ts, apps/mobile/lib/security/__tests__/audit-trail.test.ts
+    artifact: null
+    artifactPolicy: upgrade install proving no plaintext PHI at rest
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-key-hierarchy
+    claim: Device/account/tenant key hierarchy, rotation triggers, loss, deletion, and backup behavior are defined and tested; device-loss residual risk is owner-accepted.
+    requirement: M2.3.
+    source: docs/upgrade/evidence/mobile/adr-002-storage-key.md
+    implementation: wired
+    test: apps/mobile/lib/__tests__/key-lifecycle.test.ts
+    artifact: null
+    artifactPolicy: Android + iOS artifact inspection (keystore/keychain, backup restore)
+    owner: security
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-security-owner-approval
+  - id: P1-sqlcipher-boundary
+    claim: Local-at-rest encryption is field-level AEAD only; SQLCipher is NOT configured or claimed.
+    requirement: M2.2 — precise storage claim.
+    source: apps/mobile/lib/db/database.ts, docs/upgrade/evidence/mobile/adr-002-storage-key.md
+    implementation: wired
+    test: null
+    artifact: null
+    artifactPolicy: binary inspection before any at-rest database claim
+    owner: security
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-server-policy-proof
+    claim: Fresh + upgrade replay proves deny-by-default for tenant admin, platform admin, suspended, stale JWT, cross-tenant, both modes, exports, attachments, AI, secret views, RPCs.
+    requirement: M2-M8 RLS/RPC audit.
+    source: supabase/tests/
+    implementation: blocked
+    test: supabase/tests/p3_01_mobile_qualification_boundaries.sql, supabase/tests/p3_02_publish_contract.sql, supabase/tests/p3_03_case_operation_rpc.sql, supabase/tests/p3_04_mode_immutable.sql, supabase/tests/p3_05_definer_audit.sql
+    artifact: null
+    artifactPolicy: green pgTAP run on fresh and upgraded disposable databases
+    owner: platform
+    status: blocked
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-disposable-db-replay
+  - id: P1-native-release-proof
+    claim: Clean checkout produces reproducible signed Android + iOS artifacts with SBOM, provenance, cert fingerprint, and test report; failures fail the workflow.
+    requirement: M7.
+    source: .github/workflows/deploy-mobile.yml, .github/workflows/cd.yml, apps/mobile/eas.json
+    implementation: wired
+    test: null
+    artifact: null
+    artifactPolicy: completed EAS run with downloaded AAB/IPA inspection record
+    owner: release
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-ci-run-and-device-inspection
+  - id: P1-clinical-matrix
+    claim: Role/mode/route matrix with supported vs server-denied surfaces; all create/edit/duplicate/repeat flows share the policy + encryption contract.
+    requirement: M4.
+    source: apps/mobile/lib/clinical-matrix.ts, docs/upgrade/evidence/mobile/clinical-matrix.md
+    implementation: wired
+    test: apps/mobile/lib/__tests__/clinical-matrix.test.ts
+    artifact: null
+    artifactPolicy: actual-device scripted + manual journeys per role
+    owner: clinical
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-device-journeys
+  - id: P2-design-parity
+    claim: Native tokens derive from packages/shared; system/light/dark theme, status-bar contrast, RTL direction, and locale dates/numbers match the web contract.
+    requirement: M6.1-M6.2.
+    source: apps/mobile/lib/theme.tsx, apps/mobile/lib/design-tokens.ts, apps/web/app/layout.tsx
+    implementation: wired
+    test: apps/mobile/lib/__tests__/design-parity.test.ts
+    artifact: null
+    artifactPolicy: screenshot comparison + contrast/TalkBack/VoiceOver reports
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-device-a11y-run
+  - id: P2-log-hygiene
+    claim: One allowlisted redacted logger; no PHI/tokens/URLs/ciphertext/paths in logs, Sentry, analytics, notifications, or breadcrumbs; CI fails on unapproved console output.
+    requirement: M5.3 + warnings ticket.
+    source: apps/mobile/lib/logger.ts, apps/mobile/lib/telemetry.ts, scripts/check-mobile-ledger.mjs
+    implementation: wired
+    test: apps/mobile/lib/__tests__/logger.test.ts
+    artifact: null
+    artifactPolicy: CI log proving zero unapproved warnings + fixture scan
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-sync-ownership
+    claim: One sync owner (root layout) and one documented sync mode (push-only retry); full-sync engine is test-only behind a flag.
+    requirement: M5.1-M5.2.
+    source: apps/mobile/lib/sync.ts, apps/mobile/lib/feature-flags.ts
+    implementation: wired
+    test: apps/mobile/lib/__tests__/sync.push.test.ts, apps/mobile/lib/__tests__/sync.tenant.test.ts
+    artifact: null
+    artifactPolicy: intermittent-network + process-death device runs
+    owner: mobile
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: null
+  - id: P1-setup-control-plane
+    claim: Setup routes require localhost/bootstrap boundary, replay-bounded one-time token, origin/CSRF checks, proxy-trust IP rate limits, strict validation, durable leased locks, transactional completion, audit, and rollback.
+    requirement: M8.1 + audit-delta setup P1 + N9.
+    source: apps/web/lib/setup/guard.ts, apps/web/app/api/setup/*/route.ts
+    implementation: wired
+    test: apps/web/lib/setup/__tests__/guard.test.ts
+    artifact: null
+    artifactPolicy: disposable-host probe (anonymous, replay, concurrent, malformed, post-completion)
+    owner: platform
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-disposable-host-probe
+  - id: P1-publish-contract
+    claim: Publication converges under concurrency with transactional audit and in-database tenant authorization.
+    requirement: M8.2.
+    source: supabase/migrations/20260909000002_publish_contract.sql
+    implementation: wired
+    test: supabase/tests/p3_01_mobile_qualification_boundaries.sql, supabase/tests/p3_02_publish_contract.sql
+    artifact: null
+    artifactPolicy: concurrent-publisher probe + fresh/upgrade replay
+    owner: platform
+    status: wired
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-disposable-db-replay
+  - id: P1-perf-baselines
+    claim: Cold/warm start, TTI, list/form, memory, battery, sync bytes, and crash-free sessions are measured on low/mid/high devices before budgets gate releases.
+    requirement: M6.3-M6.4.
+    source: docs/upgrade/evidence/mobile/perf-budgets.md, apps/mobile/lib/performance/index.ts
+    implementation: blocked
+    test: null
+    artifact: null
+    artifactPolicy: traces + threshold sign-off by release owner
+    owner: release
+    status: blocked
+    reviewedAt: '2026-09-09'
+    expiryPolicy: re-verify-on-next-release-candidate
+    blocker: needs-device-traces
+  - id: HUMAN-product-mode
+    claim: Product/clinical owner records whether the qualified release is online-first-with-retry or full-offline identifiable.
+    requirement: Human decision M0.
+    source: docs/upgrade/evidence/mobile/adr-002-storage-key.md
+    implementation: blocked
+    test: null
+    artifact: null
+    artifactPolicy: signed decision record
+    owner: product
+    status: blocked
+    reviewedAt: '2026-09-09'
+    expiryPolicy: decision-required
+    blocker: needs-product-owner-decision
+  - id: HUMAN-admin-boundary
+    claim: Platform owner records the exact tenant-admin vs super-admin boundary.
+    requirement: Human decision M0.
+    source: docs/upgrade/evidence/T27/gate-matrix.md
+    implementation: blocked
+    test: null
+    artifact: null
+    artifactPolicy: signed decision record
+    owner: platform
+    status: blocked
+    reviewedAt: '2026-09-09'
+    expiryPolicy: decision-required
+    blocker: needs-platform-owner-decision

@@ -1,17 +1,18 @@
 /**
  * WatermelonDB database initialization.
  *
- * v2: Offline storage re-enabled. SQLCipher encryption is applied via
- * the device key from SecureStore. If SQLCipher is unavailable at native
- * level, the database is still encrypted at the application layer by
- * the AEAD module (lib/crypto/aead.ts) for PHI fields.
- *
- * SEC-006 resolution: field-level AEAD for PHI (patient_mrn, patient_dob,
- * field_values) provides encryption at rest regardless of SQLCipher build.
+ * Storage claim (precise, see ADR-002): this adapter is a NORMAL
+ * SQLiteAdapter with NO native key / SQLCipher option wired. Database
+ * encryption at rest is NOT provided by this module. PHI confidentiality
+ * at rest comes ONLY from field-level AEAD envelopes (lib/crypto/aead.ts
+ * via data-access.ts sealPhi and lib/security/phi-encryption.ts) keyed by
+ * the SecureStore device key. Do not claim otherwise without a signed
+ * artifact inspection (ledger P1-sqlcipher-boundary).
  */
 
 import { Database } from '@nozbe/watermelondb';
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
+import { logError } from '../logger';
 import { schema } from './schema';
 import { migrations } from './migrations';
 import { CaseEntry } from './models/CaseEntry';
@@ -38,7 +39,7 @@ export async function initDatabase(): Promise<Database> {
     migrations,
     jsi: true,
     onSetUpError: (error: Error) => {
-      console.error('[Database] setup error:', error);
+      logError('database.setup', error);
     },
   });
 

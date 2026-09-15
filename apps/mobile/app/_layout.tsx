@@ -31,6 +31,14 @@ import {
 import { BiometricGate } from '../components/BiometricGate';
 import { supabase } from '../lib/supabase';
 import { Sentry } from '../lib/sentry';
+import { syncService } from '../lib/sync';
+import { bootSession, requireFreshCapability, resetSessionForTests, getSession } from '../lib/session';
+import { disposeAccountContext } from '../lib/session-disposal';
+import { clearTelemetryIdentity } from '../lib/production/telemetry';
+import { logInfo, logWarn } from '../lib/logger';
+import { guardDeepLink } from '../lib/route-guard';
+import { ThemeProvider, useTheme } from '../lib/theme';
+import { statusBarStyleFor } from '../lib/design-tokens';
 
 // Font assets
 import OutfitRegular from '../assets/fonts/Outfit-Regular.ttf';
@@ -96,6 +104,11 @@ function ScreenshotAwareLayout({ children }: { children: React.ReactNode }) {
 
 // ── Root Layout ───────────────────────────────────────────────────────────
 
+function ThemedStatusBar() {
+  const { mode } = useTheme();
+  return <StatusBar style={statusBarStyleFor(mode)} />;
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Outfit': OutfitRegular,
@@ -111,6 +124,54 @@ export default function RootLayout() {
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard();
   const router = useRouter();
   const pathname = usePathname();
+
+  // ── M1 authoritative session ──────────────────────────────────────
+  // Boot resolves capability + full account context before protected
+  // routes render. sessionReady gates the tab stack (never metadata).
+  const [sessionReady, setSessionReady] = useState(false);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      resetSessionForTests();
+      setSessionReady(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await bootSession(supabase as never);
+        logInfo('session.boot', { state: s.state });
+        if (!cancelled) setSessionReady(s.state === 'ready' || s.state === 'suspended');
+      } catch {
+        if (!cancelled) setSessionReady(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated]);
+
+  // M1.3: sign-out disposal with real hooks (stop sync, wipe draft,
+  // quarantine queue under old scope, clear telemetry + push identity).
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event !== 'SIGNED_OUT') return;
+      try {
+        await disposeAccountContext({
+          stopWorkers: [() => syncService.stopPeriodicSync()],
+          clearTelemetryIdentity: () => clearTelemetryIdentity(),
+          rotatePushContext: () => {
+            clearBadge().catch(() => undefined);
+          },
+        });
+      } catch {
+        // best-effort
+      }
+      setSessionReady(false);
+      router.replace('/login');
+    });
+    return () => subscription?.unsubscribe?.();
+  }, [router]);
 
   // ── Global session guard ────────────────────────────────────────
   // When the session expires (or is cleared), send the user to login
@@ -143,6 +204,10 @@ export default function RootLayout() {
             clearBiometricAuthCache();
             setShowBiometricGate(true);
           }
+        }
+        // M1: foreground capability refresh (expiry/suspension/tenant change).
+        if (isAuthenticated) {
+          requireFreshCapability(supabase as never).catch(() => undefined);
         }
       }
     };
@@ -182,6 +247,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     const handler = ({ url }: { url: string }) => {
+      // N1: deep links pass the centralized guard (admin/denied targets refused).
+      const verdict = guardDeepLink(url, getSession().capability);
+      if (!verdict.allowed) {
+        logWarn('deeplink.denied', { reason: verdict.reason ?? 'denied' });
+        return;
+      }
       const route = parseDeepLink(url);
       if (route) navigateToDeepLink(route);
     };
@@ -191,11 +262,24 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null;
 
+  // M1 boot barrier: authenticated users wait for the capability-backed
+  // session (never render protected routes on session presence alone).
+  if (!authLoading && isAuthenticated && !sessionReady) {
+    return (
+      <SafeAreaProvider>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: clinicalTokens.colors.backdrop.dark }}>
+          <Text style={{ fontSize: 14, color: clinicalTokens.colors.text.muted }}>Verifying session…</Text>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <ScreenshotAwareLayout>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <ThemedStatusBar />
+          <ScreenshotAwareLayout>
           <Stack
             screenOptions={{
               headerShown: false,
@@ -206,16 +290,17 @@ export default function RootLayout() {
             <Stack.Screen name="login" />
             <Stack.Screen name="(tabs)" />
           </Stack>
-        </ScreenshotAwareLayout>
+          </ScreenshotAwareLayout>
 
-        {!authLoading && (
-          <BiometricGate
-            visible={showBiometricGate}
-            onAuthenticated={handleBiometricAuthed}
-            onFallbackToPasscode={handleBiometricFallback}
-          />
-        )}
-      </SafeAreaProvider>
+          {!authLoading && (
+            <BiometricGate
+              visible={showBiometricGate}
+              onAuthenticated={handleBiometricAuthed}
+              onFallbackToPasscode={handleBiometricFallback}
+            />
+          )}
+        </SafeAreaProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

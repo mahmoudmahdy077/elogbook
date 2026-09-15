@@ -4,14 +4,14 @@ import path from 'path';
 
 export default defineWorkspace([
   {
-    extends: './packages/shared/vitest.config.ts',
+    extends: './packages/shared/vitest.config.mts',
     test: {
       name: 'shared',
       root: './packages/shared',
     },
   },
   {
-    extends: './apps/web/vitest.config.ts',
+    extends: './apps/web/vitest.config.mts',
     plugins: [tsconfigPaths({ root: path.resolve(__dirname, './apps/web') })],
     test: {
       name: 'web',
@@ -19,7 +19,7 @@ export default defineWorkspace([
     },
   },
   {
-    extends: './apps/mobile/vitest.config.ts',
+    extends: './apps/mobile/vitest.config.mts',
     test: {
       name: 'mobile',
       root: './apps/mobile',

@@ -11,6 +11,9 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { logError } from '../../lib/logger';
+import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
+import { submitEvaluation } from '../../lib/operations';
 import { clinicalTokens, EVALUATION_FORM_TYPES } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
@@ -175,22 +178,31 @@ function NewEvaluationSheet({
       selectedResident ?? evaluatorId;
 
     setSaving(true);
-    const { error } = await supabase.from('evaluation_forms').insert({
-      tenant_id: tenantId,
-      resident_id: residentId,
-      evaluator_id: evaluatorId,
-      form_type: selectedType,
-      encounter_date: encounterDate || null,
-      setting: setting || null,
-      ratings: {},
-      status: 'pending',
+    // N2: typed adapter (capability gate + fixed UI copy; raw errors logged).
+    const capability = await bestKnownCapability(supabase as never);
+    const outcome = await submitEvaluation({
+      capability,
+      write: async () => {
+        const { error } = await supabase.from('evaluation_forms').insert({
+          tenant_id: tenantId,
+          resident_id: residentId,
+          evaluator_id: evaluatorId,
+          form_type: selectedType,
+          encounter_date: encounterDate || null,
+          setting: setting || null,
+          ratings: {},
+          status: 'pending',
+        });
+        if (error) {
+          if (/401|403/.test(error.message)) noteAuthFailure(403);
+          throw new Error(error.message);
+        }
+      },
     });
 
     setSaving(false);
 
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
+    if (outcome.kind === 'confirmed') {
       Alert.alert('Saved', 'Evaluation created successfully.');
       onSaved();
       onClose();
@@ -201,6 +213,12 @@ function NewEvaluationSheet({
       setSetting('');
       setFeedback('');
       setEncounterDate(new Date().toISOString().slice(0, 10));
+    } else if (outcome.kind === 'denied') {
+      Alert.alert('Not permitted', outcome.reason);
+    } else if (outcome.kind === 'transient') {
+      Alert.alert('Connection issue', 'Could not save the evaluation. Check your connection and retry.');
+    } else {
+      Alert.alert('Error', outcome.copy);
     }
   }, [selectedType, evaluatorId, selectedResident, tenantId, encounterDate, setting, onSaved, onClose]);
 
@@ -461,10 +479,11 @@ export default function EvaluationsScreen() {
       setEvaluatorId(profile.id);
       setTenantId(profile.tenant_id);
 
-      // Build query
+      // Build query (N2: bounded typed projection, tenant scope, 100-row page)
       let query = supabase
         .from('evaluation_forms')
-        .select('*')
+        .select('id,form_type,resident_id,evaluator_id,encounter_date,setting,overall_score,status,created_at')
+        .limit(100)
         .eq('tenant_id', profile.tenant_id)
         .order('created_at', { ascending: false });
 
@@ -482,7 +501,7 @@ export default function EvaluationsScreen() {
         setEvaluations((data ?? []) as EvaluationData[]);
       }
     } catch (err) {
-      console.error('Failed to load evaluations:', err);
+      logError('evaluations.load', err);
     } finally {
       setLoading(false);
     }

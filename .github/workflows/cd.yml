@@ -39,9 +39,9 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.14.0'
           cache: 'pnpm'
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v42
@@ -99,32 +99,8 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   # ----------------------------------------------------------------------
-  # Build mobile (EAS Build)
+  # Mobile builds: CANONICAL workflow is deploy-mobile.yml (exact build IDs,
+  # artifact download/hash, provenance, SBOM, fork-safe path). This file must
+  # not build mobile independently — a second chain cannot be the release
+  # artifact. (R1 canonical provenance; N8.)
   # ----------------------------------------------------------------------
-  mobile:
-    name: Build Mobile (EAS)
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --no-frozen-lockfile
-      - uses: expo/expo-github-action@v9
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-      - run: NODE_OPTIONS="--no-experimental-strip-types" pnpm --filter @elogbook/mobile expo prebuild --clean
-      - name: Build Android (EAS)
-        run: |
-          eas build --platform android --non-interactive --no-wait 2>&1 || echo "EAS_BUILD_EXIT_CODE=$?"
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

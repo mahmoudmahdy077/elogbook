@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SyncTable, RemoteRow } from './repository';
+import { logWarn } from '../logger';
 
 export interface SyncRemote {
   pullChanges(table: SyncTable, tenantId: string, sinceEpochMs: number, limit: number): Promise<RemoteRow[]>;
@@ -40,6 +41,11 @@ export class SupabaseSyncRemote implements SyncRemote {
   ): Promise<RemoteRow[]> {
     const sinceISO = epochToISO(sinceEpochMs);
 
+    // R2 note: full-row select is intentional HERE ONLY — the engine merges
+    // complete rows into the local store — and always page-bounded by `limit`.
+    // This module is test-only unless FULL_SYNC_ENABLED (see feature-flags);
+    // all production screens use the typed projections in lib/query.ts.
+
     // Use RLS: the Supabase client's JWT scopes the query to the correct tenant.
     // We fetch rows updated since the cursor, including soft-deleted rows
     // (deleted_at IS NOT NULL) so the client can mirror deletes.
@@ -52,7 +58,7 @@ export class SupabaseSyncRemote implements SyncRemote {
       .limit(limit);
 
     if (error) {
-      console.error(`[SyncRemote] pull ${table} failed:`, error.message);
+      logWarn('sync-remote.pull-failed', { table });
       return [];
     }
     return (data as RemoteRow[]) ?? [];

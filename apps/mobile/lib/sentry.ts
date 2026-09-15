@@ -5,8 +5,12 @@ import * as Sentry from '@sentry/react-native';
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
-// PHI-sensitive fields to scrub from Sentry events
-const PHI_FIELDS = ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values'];
+// PHI/token-sensitive fields to scrub from Sentry events (M5.3: keys are
+// matched exactly at every depth; values never leave the device).
+const PHI_FIELDS = [
+  'patient_mrn', 'patient_dob', 'patient_hash', 'field_values', 'field-values',
+  'mrn', 'dob', 'ssn', 'token', 'ciphertext', 'authorization', 'apikey', 'api_key',
+];
 
 function scrubPhi<T>(event: T, fields: string[] = PHI_FIELDS): T {
   if (!event || typeof event !== 'object') return event;

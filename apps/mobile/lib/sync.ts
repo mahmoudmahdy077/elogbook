@@ -2,8 +2,11 @@ import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
-import { flushQueue } from './offline-queue';
+import { migrateLegacyQueueOnce } from './legacy-migration';
 import { RETRY_DELAYS_MS } from './sync-retry';
+import { clearAccountContext, setAccountContext } from './account-context';
+import { noteAuthFailure } from './session';
+import { logInfo, logError } from './logger';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
@@ -18,7 +21,7 @@ type SupabaseLike = {
   from: (table: string) => {
     select: (cols: string) => {
       eq: (col: string, val: string) => {
-        single: () => Promise<{ data: { tenant_id: string } | null; error: unknown }>;
+        single: () => Promise<{ data: { id?: string; tenant_id: string } | null; error: unknown }>;
       };
     };
   };
@@ -121,64 +124,41 @@ class SyncService {
     }
   }
 
-  async pullCases(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullTemplates(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullGoals(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullRotations(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullMilestones(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullEvaluations(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullComments(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pullAllData(_tenantId: string) {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async pushCases() {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
-  async handleConflicts() {
-    console.warn('Sync disabled in v1 (UXM-001). Use Supabase directly.');
-  }
-
   async initSync(_tenantId?: string) {
-    // WatermelonDB full sync remains disabled (UXM-001). The light offline
-    // queue IS live: flush encrypted queued cases when we have a session.
+    // M5 single-queue sync: the durable per-account outbox is the ONLY push
+    // path (push-only retry is the documented qualified-release sync mode;
+    // the full SyncEngine pull/push lives in lib/sync/ and is test-only
+    // unless FULL_SYNC_ENABLED is set — see feature-flags.ts).
+    const started = Date.now();
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const result = await flushQueue();
+      const { flushDurableQueue, getDurableCounts, classifyQueueError } = await import('./durable-queue');
+      const result = await flushDurableQueue(supabase as never);
+      // One-time upgrade migration: move legacy global-queue items into the
+      // durable outbox, then delete the legacy key (never submit both formats).
+      const migrated = await migrateLegacyQueueOnce().catch(() => 0);
+      const counts = await getDurableCounts().catch(() => ({ queued: 0, quarantined: 0, total: 0 }));
+      logInfo('sync.flush', {
+        queueDepth: counts.queued,
+        quarantined: counts.quarantined,
+        latencyMs: Date.now() - started,
+        retryClass: result.quarantined > 0 ? 'policy' : result.transient > 0 ? 'transient' : 'none',
+        migrated,
+      });
       if (result.synced > 0) {
         this.lastSyncedAt = Date.now();
         this.setStatus('synced');
         this.emitStatus();
       }
-      if (result.failed > 0 && result.lastError) {
+      if ((result.transient > 0 || result.quarantined > 0) && result.lastError) {
+        // M1/M5: auth-class failures force a capability refresh (expiry/revocation).
+        if (classifyQueueError(result.lastError) === 'auth') noteAuthFailure(401);
         this.partialFailureMessage = result.lastError;
         this.consumePartialFailure();
       }
-    } catch {
-      // stay quiet; next periodic tick retries
+    } catch (err) {
+      logError('sync.init', err);
     }
   }
 
@@ -205,10 +185,6 @@ class SyncService {
     return this.lastSyncedAt;
   }
 
-  async getConflictDrafts() {
-    return [];
-  }
-
   cleanup() {
     this.stopPeriodicSync();
     if (this.netInfoUnsubscribe) {
@@ -233,22 +209,28 @@ export function attachSyncAuthListener(
       if (event === 'SIGNED_OUT') {
         svc.setTenantId(null);
         svc.cleanup();
+        // M1: stop workers + drop account scope so old drafts/queue rows
+        // are not queryable after sign-out. Callers wipe/quarantine
+        // context-scoped AsyncStorage keys via scopedKey().
+        clearAccountContext();
       }
       return;
     }
     try {
       const { data: profile } = await sb
         .from('profiles')
-        .select('tenant_id')
+        .select('id,tenant_id')
         .eq('user_id', session.user.id)
         .single();
       const tenantId = profile?.tenant_id;
       if (tenantId) {
         svc.setTenantId(tenantId);
+        // M1: bind the full account scope (incl. profile id) before sync work.
+        setAccountContext({ userId: session.user.id, tenantId, profileId: profile?.id ?? '' });
         svc.startPeriodicSync();
       }
     } catch (err) {
-      console.error('attachSyncAuthListener: failed to resolve tenant', err);
+      logError('sync.tenant-resolve', err);
     }
   });
   return subscription?.unsubscribe ?? (() => undefined);

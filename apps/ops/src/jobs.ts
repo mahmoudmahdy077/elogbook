@@ -220,3 +220,29 @@ export function redactSecrets(line: string): string {
     .replace(/Bearer\s+[A-Za-z0-9\-._~+/=]+/g, 'Bearer [REDACTED]')
     .replace(/\b(PGPASSWORD|api_key|apikey|secret|passwd|password|token)\s*=\s*\S+/gi, '$1=[REDACTED]');
 }
+
+/**
+ * M8 — crash-recovery takeover for stale locks (no transport/execution).
+ * If the active operation has not been updated within `staleAfterMs`,
+ * the new worker fences it by bumping the fencing token and persisting.
+ * Returns the fenced operation, or null when there is no active op or it
+ * is still fresh. Transport/Docker/VPS execution remains behind the T09
+ * review gate — this only makes the lock recoverable, never executes.
+ */
+export function tryTakeoverStale(
+  journal: Journal,
+  installationId: string,
+  args: { now: number; staleAfterMs: number },
+): Operation | null {
+  const active = journal.activeFor(installationId);
+  if (!active) return null;
+  if (args.now - active.updatedAt <= args.staleAfterMs) return null;
+  const fenced: Operation = {
+    ...active,
+    fencingToken: journal.nextFencingToken(),
+    updatedAt: args.now,
+    log: [...active.log, `fenced stale ${active.status} at ${args.now}`],
+  };
+  journal.save(fenced);
+  return fenced;
+}

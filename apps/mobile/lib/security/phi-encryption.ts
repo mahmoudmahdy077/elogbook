@@ -1,20 +1,17 @@
 /**
- * PHI Field-Level Encryption at Rest.
+ * PHI Field-Level Encryption at Rest (raw-row layer).
  *
- * Encrypts sensitive patient data (patient_mrn, patient_dob, field_values)
- * before storing in WatermelonDB. Uses the AEAD module (AES-256-CBC +
- * HMAC-SHA-256 EtM) with keys derived from the device keystore.
- *
- * SEC-006 resolution: provides encryption at rest regardless of SQLCipher
- * native build flag. PHI fields are encrypted individually so the database
- * file can be inspected without exposing patient data.
- *
- * Key rotation: supported via versioned key derivation. When a new key is
- * generated, re-encryption happens lazily on next read (transparent to callers).
+ * Contract (ADR-002, same as data-access.ts model layer): every PHI value
+ * is an AEAD envelope from lib/crypto/aead.ts keyed by the SecureStore
+ * device key; decrypt failure fails closed to null (never plaintext
+ * fallback, never envelope passthrough). data-access.ts covers Watermelon
+ * model objects; this module covers raw snake_case rows (sync/migration
+ * paths). Both layers share the primitive, key, and fail-closed rule.
  */
 
 import { encryptText, decryptText, CryptoError } from '../crypto/aead';
 import { getOrCreateDbEncryptionKey } from '../db/encryption-key';
+import { logWarn } from '../logger';
 
 // ---------------------------------------------------------------------------
 // PHI field definitions per table
@@ -88,8 +85,10 @@ export async function decryptPHIField(encryptedValue: unknown): Promise<string |
     return decryptText(keyBytes, encryptedValue);
   } catch (err) {
     if (err instanceof CryptoError) {
-      console.warn('[PHI] Decryption failed (key mismatch or tamper):', err.message);
-      return encryptedValue; // return as-is to avoid data loss
+      // M2: fail closed to null (never render envelopes, never plaintext
+      // fallback). Callers surface a quarantine/retry state for the row.
+      logWarn('phi.decrypt-failed');
+      return null;
     }
     throw err;
   }

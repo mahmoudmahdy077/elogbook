@@ -40,10 +40,10 @@ const DENIED = {
   status: 403 as const,
 } as unknown as GuardResult;
 
-function postReq(body: unknown) {
+function postReq(body: unknown, headers: Record<string, string> = {}) {
   return new Request('http://localhost/api/update/execute', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'content-length': '10' },
+    headers: { 'Content-Type': 'application/json', 'content-length': '10', ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -129,5 +129,58 @@ describe('POST /api/update/execute (T16)', () => {
     vi.mocked(requirePlatformAdmin).mockResolvedValue(OPERATOR);
     const res = await executePost(postReq({ component: 'nonsense' }));
     expect(res.status).toBe(400);
+  });
+
+  it('refuses the hatch without a human-approval token (R8 fencing)', async () => {
+    process.env.ELOGBOOK_LEGACY_UPDATER = 'true';
+    delete process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN;
+    vi.mocked(requirePlatformAdmin).mockResolvedValue(OPERATOR);
+    const res = await executePost(postReq({ component: 'elogbook' }));
+    expect(res.status).toBe(403);
+  });
+
+  it('refuses a concurrent second executor with 409 (R8 lease)', async () => {
+    process.env.ELOGBOOK_LEGACY_UPDATER = 'true';
+    process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN = 'approve-me';
+    const { mkdtempSync } = await import('fs');
+    const { join } = await import('path');
+    const { tmpdir } = await import('os');
+    const OLD_STATE = process.env.SETUP_STATE_DIR;
+    process.env.SETUP_STATE_DIR = mkdtempSync(join(tmpdir(), 'update-lock-'));
+    try {
+      const { acquireDurableLock, releaseDurableLock } = await import('@/lib/setup/guard');
+      expect(acquireDurableLock('update-executor')).toBe(true);
+      try {
+        vi.mocked(requirePlatformAdmin).mockResolvedValue(OPERATOR);
+        const res = await executePost(postReq({ component: 'elogbook' }, { 'x-update-token': 'approve-me' }));
+        expect(res.status).toBe(409);
+      } finally {
+        releaseDurableLock('update-executor');
+      }
+    } finally {
+      if (OLD_STATE === undefined) delete process.env.SETUP_STATE_DIR;
+      else process.env.SETUP_STATE_DIR = OLD_STATE;
+      delete process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN;
+    }
+  });
+
+  it('refuses to mutate without backup config even with approval (R8)', async () => {
+    process.env.ELOGBOOK_LEGACY_UPDATER = 'true';
+    process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN = 'approve-me';
+    const { mkdtempSync } = await import('fs');
+    const { join } = await import('path');
+    const { tmpdir } = await import('os');
+    const OLD_STATE = process.env.SETUP_STATE_DIR;
+    process.env.SETUP_STATE_DIR = mkdtempSync(join(tmpdir(), 'update-lock-'));
+    try {
+      vi.mocked(requirePlatformAdmin).mockResolvedValue(OPERATOR);
+      const res = await executePost(postReq({ component: 'elogbook' }, { 'x-update-token': 'approve-me' }));
+      // No /app/data/supabase-config.json in test env: must fail closed, never pull.
+      expect(res.status).toBe(400);
+    } finally {
+      if (OLD_STATE === undefined) delete process.env.SETUP_STATE_DIR;
+      else process.env.SETUP_STATE_DIR = OLD_STATE;
+      delete process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN;
+    }
   });
 });
