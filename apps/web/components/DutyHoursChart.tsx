@@ -47,7 +47,7 @@ export default function DutyHoursChart({ periods }: { periods: DutyPeriod[] }) {
       </div>
       <div className="grid grid-cols-7 gap-1 text-xs">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-          <div key={d} className="text-center font-medium text-neutral-light">{d}</div>
+          <div key={d} className="text-center font-medium text-text-secondary">{d}</div>
         ))}
         {days.map((day) => {
           const key = day.toISOString().split('T')[0];

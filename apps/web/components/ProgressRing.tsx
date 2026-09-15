@@ -83,7 +83,7 @@ export default function ProgressRing({
           0%
         </text>
       </svg>
-      <span className="text-xs text-neutral-light/50 text-center">{label}</span>
+      <span className="text-xs text-text-muted text-center">{label}</span>
     </motion.div>
   );
 }

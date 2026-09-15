@@ -145,12 +145,12 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
       <div className="panel p-5 mt-6">
         <h2 className="text-lg font-heading font-semibold mb-4">Pending Verification by Resident</h2>
         {pendingRows.length === 0 ? (
-          <p className="text-sm text-neutral-light/50">No pending cases to review.</p>
+          <p className="text-sm text-text-muted">No pending cases to review.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-neutral-light/50 border-b border-border">
+                <tr className="text-left text-text-muted border-b border-border">
                   <th className="pb-2 font-medium">Resident Name</th>
                   <th className="pb-2 font-medium">Specialty</th>
                   <th className="pb-2 font-medium text-right">Pending Cases</th>
@@ -161,7 +161,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
                 {pendingRows.map((row) => (
                   <tr key={row.residentId} className="border-b border-border last:border-0">
                     <td className="py-3">{row.name}</td>
-                    <td className="py-3 text-neutral-light/70">{row.specialty}</td>
+                    <td className="py-3 text-text-secondary/90">{row.specialty}</td>
                     <td className="py-3 text-right clinical-data">{row.pendingCases}</td>
                     <td className="py-3 text-right clinical-data">{row.lastActivityDays}</td>
                   </tr>

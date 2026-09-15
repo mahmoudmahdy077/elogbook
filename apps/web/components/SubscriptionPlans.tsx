@@ -62,7 +62,7 @@ export default function SubscriptionPlans({
   if (!plans || plans.length === 0) {
     return (
       <div className="panel p-6 text-center">
-        <p className="text-neutral-light/50">No plans available.</p>
+        <p className="text-text-muted">No plans available.</p>
       </div>
     );
   }
@@ -131,12 +131,12 @@ export default function SubscriptionPlans({
                 <span className="text-3xl font-bold font-heading">
                   {isFree ? 'Free' : `$${Number(plan.price_monthly).toFixed(2)}`}
                 </span>
-                {!isFree && <span className="text-sm text-neutral-light/50">/mo</span>}
+                {!isFree && <span className="text-sm text-text-muted">/mo</span>}
               </div>
               <ul className="space-y-2.5 flex-1 text-sm">
                 {features.map((f) => (
-                  <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-neutral-light' : 'text-neutral-light/30 line-through'}`}>
-                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-primary' : 'text-neutral-light/20'}`}>
+                  <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-text-secondary' : 'text-text-muted/70 line-through'}`}>
+                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-primary' : 'text-text-muted'}`}>
                       {f.included ? '✓' : '✗'}
                     </span>
                     {f.label}

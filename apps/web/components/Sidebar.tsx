@@ -231,7 +231,7 @@ export default function Sidebar({
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
-                  className="p-2 rounded-lg hover:bg-danger/10 text-danger/60 hover:text-danger transition-colors"
+                  className="p-2 rounded-lg hover:bg-danger/10 text-danger hover:text-danger transition-colors"
                   aria-label="Sign out"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

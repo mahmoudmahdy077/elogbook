@@ -43,7 +43,7 @@ export default async function RetentionAdminPage({
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold mb-2">Data Retention</h1>
-      <p className="text-sm text-neutral-light/60 mb-6">
+      <p className="text-sm text-text-muted mb-6">
         Configure how long case entries are kept before being soft-deleted
         (365–3650 days; minimum 1 year, maximum 10 years).
       </p>
@@ -51,17 +51,17 @@ export default async function RetentionAdminPage({
       <div className="panel p-4 mb-4">
         <h2 className="text-sm font-medium mb-2">Current policy</h2>
         <p className="text-2xl font-bold">{retentionDays} days</p>
-        <p className="text-xs text-neutral-light/60 mt-1">
+        <p className="text-xs text-text-muted mt-1">
           {Math.round(retentionDays / 365 * 10) / 10} years
         </p>
       </div>
 
       <div className="panel p-4 mb-4">
         <h2 className="text-sm font-medium mb-2">Forecast</h2>
-        <p className="text-sm text-neutral-light/80">
+        <p className="text-sm text-text-secondary">
           {forecastCount ?? 0} cases would be soft-deleted if the purge ran now.
         </p>
-        <p className="text-xs text-neutral-light/50 mt-1">
+        <p className="text-xs text-text-muted mt-1">
           Based on entries created before {new Date(cutoff).toLocaleDateString()}.
         </p>
       </div>

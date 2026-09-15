@@ -77,7 +77,7 @@ export default function MobileNav({
                 'relative flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
                 (isActive
                   ? 'text-primary font-medium'
-                  : 'text-neutral-light/50')
+                  : 'text-text-muted')
               }
             >
               {/* U7.1: active state has a top indicator bar (not color-only). */}
@@ -100,7 +100,7 @@ export default function MobileNav({
                 'flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
                 (moreOpen || overflowLinks.some((l) => isLinkActive(l.href))
                   ? 'text-primary font-medium'
-                  : 'text-neutral-light/50')
+                  : 'text-text-muted')
               }
               aria-expanded={moreOpen}
               aria-label="More navigation"

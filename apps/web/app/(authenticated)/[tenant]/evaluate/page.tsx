@@ -35,12 +35,12 @@ export default async function EvaluatePage({ params }: { params: Promise<{ tenan
               className="panel p-4 hover:bg-neutral-dark/50 transition-colors"
             >
               <p className="font-medium">{r.full_name}</p>
-              <p className="text-xs text-neutral-light/50">{r.specialty || ' — '}</p>
+              <p className="text-xs text-text-muted">{r.specialty || ' — '}</p>
             </Link>
           ))}
         </div>
       ) : (
-        <p className="text-neutral-light/50">No residents in your program.</p>
+        <p className="text-text-muted">No residents in your program.</p>
       )}
     </div>
   );

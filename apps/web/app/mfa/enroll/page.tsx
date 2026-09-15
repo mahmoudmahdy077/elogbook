@@ -19,7 +19,7 @@ function MfaEnrollFallback() {
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
       <div className="w-full max-w-md panel p-8">
         <h1 className="text-2xl font-heading font-bold text-center">Set up MFA</h1>
-        <p className="text-sm text-neutral-light/60 text-center mt-4">Loading…</p>
+        <p className="text-sm text-text-muted text-center mt-4">Loading…</p>
       </div>
     </div>
   );
@@ -86,7 +86,7 @@ function MfaEnrollInner() {
     <div className="flex min-h-screen items-center justify-center bg-backdrop p-4">
       <div className="w-full max-w-md panel p-8 space-y-4">
         <h1 className="text-2xl font-heading font-bold text-center">Set up MFA</h1>
-        <p className="text-sm text-neutral-light/60 text-center">
+        <p className="text-sm text-text-muted text-center">
           Scan this URI in your authenticator app, then enter the 6-digit code.
         </p>
         {qr ? (
@@ -95,8 +95,8 @@ function MfaEnrollInner() {
               <div className="bg-surface-solid p-4 rounded-lg">
                 <QRCodeSVG value={qr.uri} size={200} />
               </div>
-              <p className="text-xs text-neutral-light/50">Scan with your authenticator app</p>
-              <details className="text-xs text-neutral-light/50 w-full">
+              <p className="text-xs text-text-muted">Scan with your authenticator app</p>
+              <details className="text-xs text-text-muted w-full">
                 <summary>Can&apos;t scan? Enter manually</summary>
                 <code className="block mt-2 p-2 bg-neutral-dark rounded text-xs break-all">{qr.secret}</code>
               </details>
@@ -108,7 +108,7 @@ function MfaEnrollInner() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
-              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-neutral-light text-sm"
+              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-text-secondary text-sm"
             />
             {error && <ErrorDisplay message={error} />}
             <button
@@ -120,7 +120,7 @@ function MfaEnrollInner() {
             </button>
           </div>
         ) : (
-          <p className="text-sm text-neutral-light/50">Generating QR…</p>
+          <p className="text-sm text-text-muted">Generating QR…</p>
         )}
       </div>
     </div>
