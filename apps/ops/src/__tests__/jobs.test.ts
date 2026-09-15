@@ -5,6 +5,7 @@ import {
   acceptIdempotent,
   createMemoryJournal,
   redactSecrets,
+  tryTakeoverStale,
   type OperationType,
 } from '../jobs';
 
@@ -146,5 +147,16 @@ describe('redactSecrets (T10)', () => {
 
   it('leaves ordinary log lines intact', () => {
     expect(redactSecrets('backup step 3/9 complete')).toBe('backup step 3/9 complete');
+  });
+});
+
+describe('tryTakeoverStale (M8 crash recovery)', () => {
+  it('ignores fresh locks and fences stale ones', () => {
+    const journal = createMemoryJournal();
+    acceptIdempotent(journal, { type: 'update', installationId: 'i1', idempotencyKey: 'k1', now: 0 });
+    expect(tryTakeoverStale(journal, 'i1', { now: 1000, staleAfterMs: 5000 })).toBeNull();
+    const fenced = tryTakeoverStale(journal, 'i1', { now: 9000, staleAfterMs: 5000 });
+    expect(fenced).not.toBeNull();
+    expect(fenced!.fencingToken).toBeGreaterThan(1);
   });
 });

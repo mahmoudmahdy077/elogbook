@@ -39,6 +39,8 @@ This document lists every environment variable used across the monorepo. Actual 
 - Supabase anon key is safe for public exposure (RLS provides authorization).
 - Service role key, Sentry auth token, and Redis credentials must never enter browser code.
 - Mobile runtime config is set via EAS secrets, not committed to source.
+- Mobile Sentry is dedicated: EAS builds populate `EXPO_PUBLIC_SENTRY_DSN` from the GitHub secret `EXPO_PUBLIC_SENTRY_DSN` (not from server `SENTRY_DSN`); enforced by `scripts/check-sentry-consistency.mjs`. Missing value safely disables mobile telemetry.
+- Release rollback class (image-only / schema-compatible / restore-based) is decided before every update; see `docs/upgrade/runbooks/update.md` and `apps/ops` update-plan model.
 
 ## Setup
 

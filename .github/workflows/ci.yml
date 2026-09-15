@@ -4,9 +4,9 @@ on:
     branches: [main]
   push:
     branches: [main]
-env:
-  NODE_NO_WARNINGS: 1
-  VITE_CONFIG_NATIVE_IGNORE_WARNING: 1
+# N6: no global warning suppression (NODE_NO_WARNINGS /
+# VITE_CONFIG_NATIVE_IGNORE_WARNING are banned — fix or classify instead;
+# the test job fails on unapproved warning/error lines, see check-test-log).
 jobs:
   typecheck:
     runs-on: ubuntu-latest
@@ -37,7 +37,18 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - name: Unit tests (raw log captured as artifact)
+        run: |
+          set -o pipefail
+          pnpm test 2>&1 | tee test-output.log
+      - name: Warning gate (N6 — no unapproved warning/error lines)
+        run: node scripts/check-test-log.mjs test-output.log
+      - name: Upload raw test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-log
+          path: test-output.log
   build-web:
     runs-on: ubuntu-latest
     steps:
@@ -122,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql supabase/tests/p2_09_role_destination_guard.sql supabase/tests/p2_10_no_debug_artifacts.sql supabase/tests/p2_11_platform_authority.sql supabase/tests/p2_12_tenant_lifecycle.sql supabase/tests/p2_13_data_mode_policy.sql supabase/tests/p2_14_theme_revisions.sql supabase/tests/p2_15_site_pages.sql
+          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql supabase/tests/p2_09_role_destination_guard.sql supabase/tests/p2_10_no_debug_artifacts.sql supabase/tests/p2_11_platform_authority.sql supabase/tests/p2_12_tenant_lifecycle.sql supabase/tests/p2_13_data_mode_policy.sql supabase/tests/p2_14_theme_revisions.sql supabase/tests/p2_15_site_pages.sql supabase/tests/p3_01_mobile_qualification_boundaries.sql supabase/tests/p3_02_publish_contract.sql supabase/tests/p3_03_case_operation_rpc.sql supabase/tests/p3_04_mode_immutable.sql supabase/tests/p3_05_definer_audit.sql
   e2e:
     runs-on: ubuntu-latest
     # Full-stack harness (T02). Runs only when the owner enables it and

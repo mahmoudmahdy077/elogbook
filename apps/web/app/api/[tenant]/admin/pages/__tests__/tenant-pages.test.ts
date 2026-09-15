@@ -45,6 +45,14 @@ function mockAdmin(opts: {
     return chain;
   };
   vi.mocked(createServiceRoleClient).mockReturnValue({
+    rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
+      if (fn === 'publish_site_page') {
+        calls.update.push({ rpc: fn, args });
+        calls.audit.push({ tenant_id: (args as { p_tenant_id?: string }).p_tenant_id });
+        return { error: null };
+      }
+      return { error: null };
+    }),
     from: vi.fn((table: string) => {
       if (table === 'site_pages') {
         return {

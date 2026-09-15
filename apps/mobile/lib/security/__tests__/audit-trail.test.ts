@@ -98,6 +98,10 @@ import {
   logPhiWrite,
   type AuditEntry,
 } from '../audit-trail';
+import { setAccountContext, clearAccountContext } from '../../account-context';
+
+// N1: the audit buffer is per-account scoped.
+const SCOPED_AUDIT_KEY = 'user-123:tenant-1:audit_trail_buffer_v1';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -120,6 +124,8 @@ function hashJson(obj: unknown): string {
 describe('audit-trail', () => {
   beforeEach(async () => {
     storage.clear();
+    clearAccountContext();
+    setAccountContext({ userId: 'user-123', tenantId: 'tenant-1', profileId: 'profile-1' });
     mockInsert.mockReset().mockResolvedValue({ error: null });
     mockGetSession.mockReset().mockResolvedValue({
       data: { session: { user: { id: 'user-123' } } },
@@ -388,7 +394,7 @@ describe('audit-trail', () => {
 
       expect(await getAuditLog()).toHaveLength(0);
       // AsyncStorage key should be removed
-      expect(storage.has('audit_trail_buffer_v1')).toBe(false);
+      expect(storage.has(SCOPED_AUDIT_KEY)).toBe(false);
     });
   });
 
@@ -786,8 +792,8 @@ describe('audit-trail', () => {
         data: 'x',
       });
 
-      expect(storage.has('audit_trail_buffer_v1')).toBe(true);
-      const raw = storage.get('audit_trail_buffer_v1')!;
+      expect(storage.has(SCOPED_AUDIT_KEY)).toBe(true);
+      const raw = storage.get(SCOPED_AUDIT_KEY)!;
       const parsed = JSON.parse(raw) as AuditEntry[];
       expect(parsed).toHaveLength(1);
     });

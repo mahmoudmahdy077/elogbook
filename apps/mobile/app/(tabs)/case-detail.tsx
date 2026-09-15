@@ -11,6 +11,8 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
+import { bestKnownCapability } from '../../lib/session';
+import { submitApproval } from '../../lib/operations';
 
 import { useHaptics } from '../../lib/haptics';
 import Animated from 'react-native-reanimated';
@@ -130,29 +132,33 @@ export default function CaseDetailScreen() {
       setProcessing(true);
       haptics.approvalAction();
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+      // N2: typed adapter (capability gate + server RPC, fixed UI copy).
+      const capability = await bestKnownCapability(supabase as never);
+      const outcome = await submitApproval({
+        capability,
+        entryId: caseId,
+        action,
+        comment,
+        rpc: async (fn, args) => {
+          const { error } = await supabase.rpc(fn as 'approve_case' | 'reject_case', args as never);
+          return { error: error ? { message: error.message } : null };
+        },
+      });
 
-        const { error } = await supabase.rpc(
-          action === 'approve' ? 'approve_case' : 'reject_case',
-          {
-            p_entry_id: caseId,
-            p_supervisor_id: user.id,
-            p_comment: action === 'reject' ? comment ?? '' : null,
-          }
-        );
-
-        if (error) throw error;
-
+      if (outcome.kind === 'confirmed') {
         haptics.submitSuccess();
         await loadCase();
-      } catch {
+      } else if (outcome.kind === 'denied') {
         haptics.submitError();
-        Alert.alert('Error', `Failed to ${action} case. Please try again.`);
-      } finally {
-        setProcessing(false);
+        Alert.alert('Not permitted', outcome.reason);
+      } else if (outcome.kind === 'transient') {
+        haptics.submitError();
+        Alert.alert('Connection issue', `Could not ${action} the case. Check your connection and retry.`);
+      } else {
+        haptics.submitError();
+        Alert.alert('Error', outcome.copy);
       }
+      setProcessing(false);
     },
     [caseId, caseDetail, haptics, loadCase]
   );

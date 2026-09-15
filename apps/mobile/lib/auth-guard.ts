@@ -10,8 +10,12 @@ export type AuthGuardState = {
 export type AuthStateListener = (state: AuthGuardState) => void;
 
 /**
- * Extract role from JWT user_metadata (fast, no DB query).
- * Falls back to reading from profiles table if metadata is missing.
+ * DISPLAY-ONLY role hint (M1). Reads JWT metadata for fast UI labels.
+ * NEVER use for authorization — every capability/data query must be enforced
+ * by the server capability snapshot (lib/capability.ts) + RLS, which handles
+ * suspension, expiry, MFA step-up, and tenant changes.
+ * The promised profile fallback is intentionally NOT implemented here;
+ * use fetchCapabilitySnapshot() for authoritative user/tenant/status/policy.
  */
 export async function getRoleFromAuth(): Promise<{
   role: UserRole | null;

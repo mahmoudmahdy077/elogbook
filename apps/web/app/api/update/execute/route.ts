@@ -8,6 +8,7 @@ import { join } from 'path';
 import { createFullBackup } from '@/lib/setup/backup-manager';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
+import { acquireDurableLock, releaseDurableLock, tokensEqual } from '@/lib/setup/guard';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +58,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // R8/N9 hatch fencing: human-approval token + serialized executor lease.
+  // The env flag alone never authorizes a host-mutating run.
+  const approvalToken = process.env.ELOGBOOK_LEGACY_UPDATER_TOKEN;
+  const presented = request.headers.get('x-update-token') ?? undefined;
+  if (!approvalToken || !presented || !tokensEqual(presented, approvalToken)) {
+    return NextResponse.json({ error: 'Legacy updater requires a valid approval token' }, { status: 403 });
+  }
+  if (!acquireDurableLock('update-executor')) {
+    return NextResponse.json({ error: 'Another update operation is running' }, { status: 409 });
+  }
+
   // Audit
   try {
     const adminClient = createServiceRoleClient();
@@ -74,10 +86,17 @@ export async function POST(request: Request) {
   const config = existsSync(configPath) ? JSON.parse(readFileSync(configPath, 'utf-8')) : null;
 
   try {
-    if (config) {
+    // R8: no mutation without a proven pre-update backup.
+    if (!config?.postgresPassword) {
+      return NextResponse.json({ error: 'Supabase not configured — cannot back up before update' }, { status: 400 });
+    }
+    try {
       await createFullBackup('pre-update', {
         host: 'db', port: 5432, database: config.postgresDb, user: 'postgres', password: config.postgresPassword,
       }, { elogbook: '1.0.0', supabase: '1.0.0' });
+    } catch (backupError) {
+      const backupMsg = backupError instanceof Error ? backupError.message : String(backupError);
+      return NextResponse.json({ error: `Pre-update backup failed — refusing to mutate: ${backupMsg}` }, { status: 500 });
     }
 
     if (component === 'elogbook' || component === 'both') {
@@ -96,5 +115,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errMsg }, { status: 500 });
+  } finally {
+    releaseDurableLock('update-executor');
   }
 }

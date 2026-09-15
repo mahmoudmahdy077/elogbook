@@ -5,6 +5,8 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 
 import { getRoleFromAuth } from '../../lib/auth-guard';
+import { useTheme } from '../../lib/theme';
+import type { ThemeMode } from '../../lib/design-tokens';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
@@ -28,6 +30,41 @@ function titleCase(str: string): string {
     .split(/[_\\s]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/** N7.2 appearance setting (persisted override, system fallback). */
+function AppearanceSection() {
+  const { override, setMode } = useTheme();
+  const options: Array<{ value: ThemeMode | null; label: string }> = [
+    { value: null, label: 'System' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+  ];
+  return (
+    <Animated.View entering={FadeInDown.delay(225).springify()}>
+      <GlassPanel style={{ marginBottom: 12 }}>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>Appearance</Text>
+        <View className="flex-row gap-2">
+          {options.map((o) => (
+            <TouchableOpacity
+              key={o.label}
+              onPress={() => setMode(o.value)}
+              accessibilityLabel={`Theme ${o.label}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: override === o.value }}
+              className="flex-1 rounded-lg py-2.5 items-center border"
+              style={{
+                borderColor: override === o.value ? clinicalTokens.colors.primary.DEFAULT : clinicalTokens.colors.border.DEFAULT,
+                backgroundColor: override === o.value ? 'rgba(0, 122, 255, 0.10)' : 'transparent',
+              }}
+            >
+              <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.primary }}>{o.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </GlassPanel>
+    </Animated.View>
+  );
 }
 
 export default function ProfileScreen() {
@@ -305,6 +342,9 @@ export default function ProfileScreen() {
         </View>
       </GlassPanel>
       </Animated.View>
+
+      {/* Appearance (N7.2: persisted theme setting, system fallback) */}
+      <AppearanceSection />
 
       {/* Sign Out */}
       <Animated.View entering={FadeInDown.delay(250).springify()}>

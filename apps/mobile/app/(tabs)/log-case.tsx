@@ -13,15 +13,16 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/sync';
+import { saveDraft, loadDraft, clearDraft, clearLegacyPlaintextDraft } from '../../lib/draft-store';
 
 import { useHaptics } from '../../lib/haptics';
 import { buildCasePayload } from '../../lib/case-payload';
-import { enqueueCase } from '../../lib/offline-queue';
+import { submitCase } from '../../lib/case-submit';
+import { bestKnownCapability } from '../../lib/session';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
 import { clinicalTokens } from '@elogbook/shared';
@@ -82,18 +83,18 @@ export default function LogCaseScreen() {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [syncStatus, setSyncStatus] = useState(syncService.getStatus());
 
-  const AUTO_SAVE_KEY = 'case_form_draft';
+  // M2: encrypted, versioned, context-scoped autosave (no plaintext PHI at rest).
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
-        await AsyncStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({
+        await saveDraft({
           selectedTemplateId,
           patientMrn,
           patientDob,
           fieldValues,
           isDeidentified,
           step,
-        }));
+        });
       } catch { /* storage limit */ }
     }, 1500);
     return () => clearTimeout(timer);
@@ -121,8 +122,9 @@ export default function LogCaseScreen() {
 
     const { data, error } = await supabase
       .from('case_templates')
-      .select('*')
-      .eq('tenant_id', profile.tenant_id);
+      .select('id,name,specialty,fields,required_fields')
+      .eq('tenant_id', profile.tenant_id)
+      .limit(100);
 
     if (error) { setFetchError(true); setLoading(false); return; }
     if (data) {
@@ -141,7 +143,9 @@ export default function LogCaseScreen() {
       const { data: personalData } = await supabase
         .from('case_entries')
         .select('template_id')
-        .eq('resident_id', profile.id);
+        .eq('resident_id', profile.id)
+        // R2 bound: favorite sorting needs history depth, not full history.
+        .limit(1000);
       if (personalData) {
         personalCounts = new Map(
           Array.from(
@@ -178,7 +182,7 @@ export default function LogCaseScreen() {
     (async () => {
       const { data } = await supabase
         .from('case_entries')
-        .select('*')
+        .select('id,template_id,is_deidentified,patient_mrn,patient_dob,patient_age_years,case_date,field_values')
         .eq('id', editCaseId)
         .single();
       if (data) {
@@ -278,13 +282,13 @@ export default function LogCaseScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const draft = await AsyncStorage.getItem(AUTO_SAVE_KEY);
-        if (draft) {
-          const data = JSON.parse(draft);
+        await clearLegacyPlaintextDraft();
+        const data = await loadDraft();
+        if (data) {
           const hasData = data.selectedTemplateId || data.patientMrn;
           if (hasData) {
             Alert.alert('Unsaved Draft', 'You have an unsaved case draft. Recover it?', [
-              { text: 'Discard', style: 'destructive', onPress: () => AsyncStorage.removeItem(AUTO_SAVE_KEY) },
+              { text: 'Discard', style: 'destructive', onPress: () => clearDraft() },
               { text: 'Recover', onPress: () => {
                 if (data.selectedTemplateId) setSelectedTemplateId(data.selectedTemplateId);
                 if (data.patientMrn !== undefined) setPatientMrn(data.patientMrn);
@@ -295,7 +299,7 @@ export default function LogCaseScreen() {
               }},
             ]);
           } else {
-            await AsyncStorage.removeItem(AUTO_SAVE_KEY);
+            await clearDraft();
           }
         }
       } catch { /* ignore parse errors */ }
@@ -442,25 +446,34 @@ export default function LogCaseScreen() {
     });
 
     if (editCaseId) {
-      try {
-        const { error } = await supabase
-          .from('case_entries')
-          .update({
-            ...caseData,
-            status: 'pending',
-          })
-          .eq('id', editCaseId);
-        if (error) throw error;
+      // M3: edits go through the same durable submit path (never silently online-only).
+      const capability =
+        await bestKnownCapability(supabase as never);
+      const outcome = await submitCase(
+        {
+          capability,
+          insertRow: async () => ({ serverId: null }),
+          updateRow: async (targetId, payload) => {
+            const { error } = await supabase.from('case_entries').update(payload).eq('id', targetId);
+            if (error) throw new Error(error.message);
+          },
+        },
+        { action: 'update', targetId: editCaseId, payload: { ...caseData, status: 'pending' } },
+      );
+      if (outcome.kind === 'submitted') {
         haptics.submitSuccess();
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
         setShowConfirmation(true);
-      } catch (err) {
-        // Edits cannot be queued safely offline — surface the real error.
-        const msg = err instanceof Error ? err.message : 'Unknown error';
+      } else if (outcome.kind === 'queued-locally') {
+        haptics.offlineSave();
+        setConfirmationSuccess(false);
+        confirmationTypeRef.current = 'offline';
+        setShowConfirmation(true);
+      } else {
         setSubmitting(false);
         isSubmitting.current = false;
-        setValidationError(`Could not save this case (${msg}). Check your connection and try again.`);
+        setValidationError(`Could not save this case (${outcome.reason}). Check your connection and try again.`);
       }
       setTimeout(() => {
         setShowConfirmation(false);
@@ -471,30 +484,35 @@ export default function LogCaseScreen() {
       return;
     }
 
-    try {
-      const { error } = await supabase.from('case_entries').insert(caseData);
-      if (error) throw error;
-      await AsyncStorage.removeItem(AUTO_SAVE_KEY);
+    // M3: single durable submit path — submitted vs saved-on-device vs rejected.
+    const capability =
+      await bestKnownCapability(supabase as never);
+    const outcome = await submitCase(
+      {
+        capability,
+        insertRow: async (payload) => {
+          const { data, error } = await supabase.from('case_entries').insert(payload).select('id').single();
+          if (error) throw new Error(error.message);
+          return { serverId: (data as { id?: string } | null)?.id ?? null };
+        },
+        updateRow: async () => ({}),
+      },
+      { action: 'insert', payload: caseData },
+    );
+    if (outcome.kind === 'submitted') {
+      await clearDraft();
       haptics.submitSuccess();
       setConfirmationSuccess(true);
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      const isNetworkError = /network|fetch|timeout|abort|connect/i.test(msg);
-      if (isNetworkError) {
-        try {
-          await enqueueCase(caseData);
-          haptics.offlineSave();
-          setConfirmationSuccess(false);
-          confirmationTypeRef.current = 'offline';
-          setShowConfirmation(true);
-        } catch {
-          setValidationError('Could not save this case. Check your connection and try again.');
-        }
-      } else {
-        setValidationError(`Could not save this case (${msg}). Please try again.`);
-      }
+    } else if (outcome.kind === 'queued-locally') {
+      haptics.offlineSave();
+      // Queued means saved on this device, not submitted — say exactly that.
+      setConfirmationSuccess(false);
+      confirmationTypeRef.current = 'offline';
+      setShowConfirmation(true);
+    } else {
+      setValidationError(`Could not save this case (${outcome.reason}). Please try again.`);
     }
 
     setTimeout(() => {

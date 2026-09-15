@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-
+import { logError } from './logger';
 import NetInfo from '@react-native-community/netinfo';
 
 export interface TodayStats {
@@ -40,10 +40,13 @@ export async function fetchTodayStats(): Promise<TodayStats> {
       .from('case_entries')
       .select('status')
       .eq('resident_id', profile.id)
-      .eq('case_date', today);
+      .eq('case_date', today)
+      // R2 bound: a single day cannot legitimately exceed this; keeps the
+      // widget query small on slow devices.
+      .limit(500);
 
     if (error) {
-      console.error('Error fetching today stats:', error);
+      logError('today-stats.fetch', error.message);
       return emptyStats;
     }
 

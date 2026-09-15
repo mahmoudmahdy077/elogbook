@@ -1,9 +1,12 @@
 /**
- * Crash Recovery & Data Integrity.
+ * DORMANT — do not use for new code (R3).
  *
- * Cycle 6: Ensures the app can recover from crashes during sync, partial
- * writes, and data corruption. Provides rollback, integrity checks, and
- * graceful degradation.
+ * This WAL/checkpoint module has no production callers; crash recovery for
+ * the supported path lives in lib/durable-queue.ts (per-op states +
+ * sending→queued reset) and lib/legacy-migration.ts. Its unscoped keys
+ * (sync_checkpoint_v1, write_ahead_log_v1) must never carry PHI: WALEntry
+ * .data is a plaintext field. Kept (not deleted) pending the one-release
+ * removal window with upgrade evidence; do not write new keys here.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Share } from 'react-na
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { supabase } from '../lib/supabase';
 import { getRoleFromAuth } from '../lib/auth-guard';
+import { countCasesByStatus } from '../lib/query';
 import { clinicalTokens } from '@elogbook/shared';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 
@@ -44,17 +45,14 @@ export default function ResidentOverview() {
   const [sharing, setSharing] = useState(false);
 
   const load = useCallback(async () => {
-    const { profileId, fullName: name } = await getRoleFromAuth();
+    const { profileId, fullName: name, tenantId } = await getRoleFromAuth();
     setFullName(name ?? 'Resident');
-    if (!profileId) { setLoading(false); return; }
+    if (!profileId || !tenantId) { setLoading(false); return; }
     try {
-      const { data: cases } = await supabase.from('case_entries').select('status').eq('resident_id', profileId);
-      if (cases) {
-        let t=0,a=0,p=0,d=0;
-        cases.forEach(c => { t++; if(c.status==='approved') a++; else if(c.status==='pending') p++; else if(c.status==='draft') d++; });
-        setTotal(t); setApproved(a); setPending(p); setDraft(d);
-      }
-      const { data: g } = await supabase.from('program_goals').select('id,title,target_count,specialty,goal_progress(current_count)').eq('resident_id', profileId);
+      // R2: exact bounded head-counts (no unbounded row fetch for stats).
+      const counts = await countCasesByStatus(supabase as never, { tenantId, residentId: profileId });
+      setTotal(counts.total); setApproved(counts.approved); setPending(counts.pending); setDraft(counts.draft);
+      const { data: g } = await supabase.from('program_goals').select('id,title,target_count,specialty,goal_progress(current_count)').eq('resident_id', profileId).limit(100);
       if (g) setGoals((g as { title: string; target_count: number; specialty: string | null; goal_progress: Array<{ current_count: number }> | null }[]).map(x => ({ title: x.title, current: x.goal_progress?.[0]?.current_count ?? 0, target: x.target_count, specialty: x.specialty })));
     } catch { /* silent */ }
     setLoading(false);

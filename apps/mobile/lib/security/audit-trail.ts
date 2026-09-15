@@ -19,6 +19,8 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { scopedKey } from '../account-context';
+import { logWarn } from '../logger';
 import { supabase } from '../supabase';
 import { sha256, bytesToHex } from '../crypto/sha256';
 import { getRoleFromAuth } from '../auth-guard';
@@ -69,13 +71,20 @@ let _loaded = false;
 let _flushTimer: ReturnType<typeof setInterval> | null = null;
 
 // ---------------------------------------------------------------------------
-// AsyncStorage persistence helpers
+// AsyncStorage persistence helpers (N1: per-account scope — the buffer holds
+// actor-bound entries and must never be readable across account switch).
 // ---------------------------------------------------------------------------
+
+/** Scoped buffer key; unset context falls back to the legacy global key. */
+export function auditBufferKey(): string {
+  return scopedKey(STORAGE_KEY);
+}
 
 async function loadBuffer(): Promise<AuditEntry[]> {
   if (_loaded) return _buffer;
+  const key = auditBufferKey();
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const raw = await AsyncStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       _buffer = Array.isArray(parsed) ? (parsed as AuditEntry[]) : [];
@@ -87,6 +96,15 @@ async function loadBuffer(): Promise<AuditEntry[]> {
       _buffer = [];
     }
   } catch {
+    // N1 corrupt visibility: back the raw bytes up under a visible key
+    // instead of silently dropping the buffer.
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) await AsyncStorage.setItem(`${key}.corrupt.${Date.now()}`, raw);
+    } catch {
+      // best-effort backup
+    }
+    logWarn('audit-trail.corrupt-buffer-quarantined');
     _buffer = [];
   }
   _loaded = true;
@@ -94,7 +112,17 @@ async function loadBuffer(): Promise<AuditEntry[]> {
 }
 
 async function persistBuffer(): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_buffer));
+  await AsyncStorage.setItem(auditBufferKey(), JSON.stringify(_buffer));
+}
+
+/**
+ * N1 disposal: stop the flush worker and drop in-memory entries. The
+ * persisted scoped copy stays under the old scope (quarantine, not loss).
+ */
+export function disposeAuditBuffer(): void {
+  stopAuditFlush();
+  _buffer = [];
+  _loaded = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +207,7 @@ export async function exportAuditLog(): Promise<string> {
 export async function clearAuditLog(): Promise<void> {
   _buffer = [];
   _loaded = false;
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  await AsyncStorage.removeItem(auditBufferKey());
 }
 
 /**

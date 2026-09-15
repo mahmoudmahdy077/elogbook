@@ -41,3 +41,31 @@ export async function getOrCreateDbEncryptionKey(): Promise<string> {
 export function resetDbEncryptionKeyCacheForTests(): void {
   cachedKey = null;
 }
+
+/**
+ * M2 — rotation protocol. Generates a fresh key, persists it, and rebinds
+ * the process cache. Callers must re-seal local PHI (drafts/queue/DB rows)
+ * after rotation; old envelopes become unreadable by design. There is no
+ * recovery of the previous key — document data-loss, don't promise it.
+ */
+export async function rotateDbEncryptionKey(): Promise<string> {
+  const fresh = await generateDbEncryptionKeyHex();
+  await SecureStore.setItemAsync(DB_ENCRYPTION_KEY_NAME, fresh);
+  cachedKey = fresh;
+  return fresh;
+}
+
+/**
+ * M2 — secure wipe for logout / device transfer / reinstall. Deletes the
+ * key from the platform store and clears the process cache. The next
+ * getOrCreateDbEncryptionKey() creates a fresh key; data sealed with the
+ * old key is unrecoverable (by design — never silently resurrect).
+ */
+export async function invalidateDbEncryptionKey(): Promise<void> {
+  cachedKey = null;
+  try {
+    await SecureStore.deleteItemAsync(DB_ENCRYPTION_KEY_NAME);
+  } catch {
+    // best-effort wipe
+  }
+}

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react
 import { router, useFocusEffect } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
+import { countCasesByStatus } from '../../lib/query';
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 
@@ -74,7 +75,8 @@ export default function DashboardScreen() {
         .from('program_goals')
         .select('id, title, target_count, specialty, resident_id, tenant_id, goal_progress(current_count)')
         .eq('resident_id', profileId)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .limit(100);
 
       if (goalsWithProgress) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,20 +91,9 @@ export default function DashboardScreen() {
     }
 
     if (isOnline) {
-      const { data: cases } = await supabase
-        .from('case_entries')
-        .select('status')
-        .eq('resident_id', profileId);
-
-      if (cases) {
-        const counts = { draft: 0, pending: 0, approved: 0 };
-        for (const c of cases) {
-          if (c.status === 'draft') counts.draft++;
-          else if (c.status === 'pending') counts.pending++;
-          else if (c.status === 'approved') counts.approved++;
-        }
-        setStats(counts);
-      }
+      // R2: exact bounded head-counts (no unbounded row fetch for stats).
+      const counts = await countCasesByStatus(supabase as never, { tenantId, residentId: profileId });
+      setStats({ draft: counts.draft, pending: counts.pending, approved: counts.approved });
     }
 
     // Fetch today's stats for the widget

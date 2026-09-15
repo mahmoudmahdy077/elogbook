@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSyncInit } from '../../lib/sync';
 import { useAuthGuard, getRoleFromAuth } from '../../lib/auth-guard';
+import { useTheme } from '../../lib/theme';
 import { SideMenuProvider } from '../../lib/side-menu-context';
 import SideMenu from '../../components/SideMenu';
 import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
@@ -39,8 +39,10 @@ function CenterButton({ focused: _focused }: { focused: boolean }) {
 }
 
 export default function TabLayout() {
-  useSyncInit();
+  // M5: single sync owner is the root layout (useSyncInit there only).
   const { isAuthenticated } = useAuthGuard();
+  // N7.2: tab chrome follows the resolved theme (no fixed light assumption).
+  const { mode } = useTheme();
   const [role, setRole] = useState<UserRole | null>(null);
   const [userName, setUserName] = useState('');
 
@@ -60,7 +62,7 @@ export default function TabLayout() {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: '#FFFFFF',
+              backgroundColor: mode === 'dark' ? '#000000' : '#FFFFFF',
               borderTopColor: clinicalTokens.colors.border.DEFAULT,
               borderTopWidth: 1,
               height: 60,

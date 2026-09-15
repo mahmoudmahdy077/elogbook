@@ -331,6 +331,37 @@ describe('SyncEngine', () => {
     });
   });
 
+  // --- Resilience (M5.4: partial failure, duplicate delivery) ---
+  describe('resilience', () => {
+    it('partial push failure keeps failed rows pending without losing synced ones', async () => {
+      await repo.insert('case_entries', { tenant_id: TENANT, data: { a: 1 } });
+      await repo.insert('case_entries', { tenant_id: TENANT, data: { b: 2 } });
+      let calls = 0;
+      const origPush = remote.pushBatch.bind(remote);
+      remote.pushBatch = async (table, rows) => {
+        calls += 1;
+        // Fail the whole push on the first attempt (batch of 2), succeed after.
+        if (calls === 1) return { inserted: 0, errors: ['batch 0-2: connect timeout'] };
+        return origPush(table, rows);
+      };
+      const first = await engine.sync(TENANT);
+      expect(first.errors.length).toBeGreaterThan(0);
+      expect(await repo.findByStatus('case_entries', 'pending_create')).toHaveLength(2);
+      const second = await engine.sync(TENANT);
+      expect(second.pushed).toBe(2);
+      expect(await repo.findByStatus('case_entries', 'pending_create')).toHaveLength(0);
+      expect(remote.pushLog.length).toBeGreaterThan(0);
+    });
+
+    it('duplicate delivery of the same server row converges (no local duplicate)', async () => {
+      remote.seed('case_entries', [makeServerRow('s1', TENANT, '2025-01-01T00:00:00Z', { status: 'draft' })]);
+      await engine.sync(TENANT);
+      await repo.setLastPullAt('case_entries', 0);
+      await engine.sync(TENANT);
+      expect(repo.all('case_entries')).toHaveLength(1);
+    });
+  });
+
   // --- Multi-table ---
   describe('multi-table sync', () => {
     it('syncs data across multiple tables', async () => {

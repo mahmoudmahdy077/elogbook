@@ -20,6 +20,9 @@
 import * as Notifications from 'expo-notifications';
 import { parseDeepLink } from './linking';
 import { route, Routes, type TypedRoute } from './routes';
+import { guardPathname, guardDeepLink } from './route-guard';
+import { getSession } from './session';
+import { logWarn } from './logger';
 
 // ---------------------------------------------------------------------------
 // Notification payload types understood by this handler.
@@ -63,6 +66,12 @@ function payloadToDeepLink(
 
     case 'deep.link':
       if (payload.url) {
+        // N1: notification URLs pass the centralized deep-link guard.
+        const verdict = guardDeepLink(payload.url, getSession().capability);
+        if (!verdict.allowed) {
+          logWarn('notification.deep-link-denied');
+          return null;
+        }
         const link = parseDeepLink(payload.url);
         if (link) {
           return link.params
@@ -91,6 +100,15 @@ export function handleNotificationResponse(
 
   const deepLink = payloadToDeepLink(payload);
   if (!deepLink) return;
+
+  // N1: notification navigation targets pass the same route guard (a tap
+  // must not bypass menu affordances, e.g. approvals for residents).
+  const pathname = deepLink.pathname as string;
+  const verdict = guardPathname(pathname, getSession().capability);
+  if (!verdict.ok) {
+    logWarn('notification.navigation-denied');
+    return;
+  }
 
   // Use a small delay to ensure the navigation container is mounted.
   // Expo Router needs to be ready before router.navigate() works.
