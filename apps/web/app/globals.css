@@ -149,7 +149,7 @@ h1, h2, h3 {
 /* Status Badges — flat pills, no glow */
 .badge-draft {
   background: rgba(109, 109, 115, 0.12);
-  color: #6D6D73;
+  color: #48484A; /* WCAG AA 5.56-8.08:1 on this tint bg (raw #6D6D73 was 4.39 on white-tint, 3.98 over #F2F2F7 glass) */
   border: 1px solid rgba(109, 109, 115, 0.18);
   padding: 2px 8px;
   border-radius: 9999px;
