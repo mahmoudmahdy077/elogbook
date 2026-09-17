@@ -1,5 +1,9 @@
 export const clinicalTokens = {
   colors: {
+    /* De-identified tag — AA-safe darker apple-indigo. Raw #5856D6 was 4.31:1
+       worst-case (badge tint over glass on #F2F2F7); this passes ≥5.48:1
+       everywhere (white, #F2F2F7, tint bg) while keeping the hue. */
+    deidentified: { DEFAULT: '#4442C9' },
     backdrop: { dark: '#F2F2F7', light: '#FFFFFF' },
     primary: { DEFAULT: '#007AFF', hover: '#0066D6', glow: 'rgba(0, 122, 255, 0.08)' },
     secondary: { DEFAULT: '#5856D6', hover: '#6E6CF0', glow: 'rgba(88, 86, 214, 0.08)' },
@@ -19,7 +23,10 @@ export const clinicalTokens = {
         /* WCAG AA on light surfaces (#FFFFFF / #F2F2F7 / STATUS/red-50 etc).
            Raw iOS hues (baseline: #34C759 / #FF9500 / #FF3B30) are too light for
            small-text 4.5:1 on white. These darker Apple accessibility variants
-           keep the same hue but hit AA; raw brights remain correct on dark. */
+           keep the same hue but hit AA; raw brights remain correct on dark.
+           draft = Apple default-700 gray #48484A (5.56-8.08:1 on white/gray-50
+           + draft tint bg; raw #6D6D73 left 4.13 worst-case). */
+        draft: '#48484A',
         success: '#186B2E', // 4.99-5.68:1 on white/gray-50 + success tint bg (worst-case AA)
         warning: '#8F4200', // 5.33-6.31:1 same
         danger:  '#C20012', // 4.58-5.50:1 same (raw #D70015 left 4.04 worst-case on gray-50)

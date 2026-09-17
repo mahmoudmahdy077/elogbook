@@ -17,7 +17,7 @@ export interface StatusBadgeProps {
 const statusConfig: Record<StatusVariant, { bg: string; text: string; border: string }> = {
   draft: {
     bg: 'rgba(142, 142, 147, 0.12)',
-    text: '#6D6D73', // WCAG AA on #f1f1f2 (this bg) — 4.55:1; raw #8E8E93 was 3.06
+    text: clinicalTokens.colors.status.text.draft, // #48484A — 4.55-8.08:1 on this bg (raw #6D6D73 was 3.98 worst-case)
     border: 'rgba(142, 142, 147, 0.18)',
   },
   pending: {
@@ -37,7 +37,7 @@ const statusConfig: Record<StatusVariant, { bg: string; text: string; border: st
   },
   deidentified: {
     bg: 'rgba(88, 86, 214, 0.12)',
-    text: clinicalTokens.colors.secondary.DEFAULT,
+    text: clinicalTokens.colors.deidentified.DEFAULT, // #4442C9 — ≥5.48:1 on this bg (raw #5856D6 was 4.31 worst-case)
     border: 'rgba(88, 86, 214, 0.20)',
   },
 };
