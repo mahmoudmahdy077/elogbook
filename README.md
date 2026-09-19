@@ -108,6 +108,43 @@ Rules: every color change must pass WCAG AA worst-case (text on white, `#F2F2F7`
 
 Full contrast-audit rationale is inline in the token comments and `apps/web/app/globals.css`.
 
+## Environment Variables (`@elogbook/env`)
+
+All environment variables are validated at access time through [`packages/env/src/index.ts`](./packages/env/src/index.ts): Zod schemas parse `process.env` and throw an explicit `[env/<label>] Validation failed:` error listing every missing/invalid variable. There is no silent fallback — missing config fails fast at boot rather than at first request.
+
+**Schemas and who uses them:**
+
+| Export | Schema covers | Used by |
+|--------|--------------|---------|
+| `parseWebPublicEnv` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (default `http://localhost:3000`) | any web code creating a Supabase anon client (`apps/web/lib/supabase/server.ts`) |
+| `parseWebServerEnv` | `SUPABASE_SERVICE_ROLE_KEY` | service-role / admin Supabase clients (`apps/web/lib/supabase/admin.ts`) |
+| `parseWebFullEnv` / `env()` | union of all above + optional integrations | Next config / build-time checks |
+
+**Optional variables** (all validated when present, no defaults): Upstash Redis (`UPSTASH_REDIS_REST_URL/TOKEN`) + `RATE_LIMIT_MODE` (`distributed` \| `single-instance`), `TRUSTED_PROXY_HOPS` (0–10, per-hop proxy trust), Sentry (`NEXT_PUBLIC_SENTRY_DSN/ENV/TRACES_SAMPLE_RATE/REPLAYS_SESSION_SAMPLE_RATE`, `SENTRY_ORG/PROJECT/AUTH_TOKEN/TRACES_SAMPLE_RATE`), PostHog (`NEXT_PUBLIC_POSTHOG_KEY/HOST`), `NODE_ENV`, `ANALYZE` (coerced to boolean).
+
+**Production-only refinements** (`superRefine`):
+
+- `RATE_LIMIT_MODE` is **required** in production — `distributed` additionally requires both Upstash vars.
+- `TRUSTED_PROXY_HOPS` is **required** in production (set `0` to trust only the socket peer, or `1` for the single-Caddy-hop pilot deployment).
+
+**Usage pattern** — parse where you consume, never cache at module scope:
+
+```ts
+import { parseWebServerEnv, parseWebPublicEnv } from '@elogbook/env';
+
+export function createServiceRoleClient() {
+  const serverEnv = parseWebServerEnv(process.env);
+  const publicEnv = parseWebPublicEnv(process.env);
+  return createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, serverEnv.SUPABASE_SERVICE_ROLE_KEY, { /* ... */ });
+}
+```
+
+Rules:
+
+- **Never** read `process.env.X` directly in `apps/web` app code — go through `@elogbook/env` so validation and fail-fast behavior are centralized. (The `process.env` Proxy throws if required vars are absent; bypassing it means unvalidated config.)
+- Never put secrets into `NEXT_PUBLIC_*` — those are exposed to the browser bundle.
+- The service-role key must never appear in a `NEXT_PUBLIC_` var or client-imported module (see `SEC-008` tests in `apps/web/lib/__tests__/env-fail-fast.test.ts`, which pin this fail-fast contract).
+
 ## Security
 
 For vulnerability reports, see [`SECURITY.md`](./SECURITY.md).
