@@ -39,7 +39,8 @@
     "db:migrate": "supabase db push",
     "functions:deploy": "supabase functions deploy generate-pdf && supabase functions deploy ai-insights && supabase functions deploy payment-webhook && supabase functions deploy create-checkout",
     "security:scan": "pnpm audit --prod --audit-level=high && trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed elogbook-web:scan",
-    "release:verify": "pnpm check && pnpm build:web && pnpm security:scan"
+    "release:verify": "pnpm check && pnpm build:web && pnpm security:scan",
+    "audit:wcag": "tsx scripts/wcag-audit.mts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
