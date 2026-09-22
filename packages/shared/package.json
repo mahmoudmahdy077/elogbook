@@ -38,6 +38,21 @@
       "browser": "./src/test/fixtures.ts",
       "default": "./src/test/fixtures.ts"
     },
+    "./email/send": {
+      "default": "./src/email/send.ts"
+    },
+    "./email/resend": {
+      "default": "./src/email/resend.ts"
+    },
+    "./email/smtp": {
+      "default": "./src/email/smtp.ts"
+    },
+    "./email/types": {
+      "default": "./src/email/types.ts"
+    },
+    "./email/templates": {
+      "default": "./src/email/templates.ts"
+    },
     "./*": {
       "react-native": "./src/*",
       "browser": "./src/*",
@@ -50,10 +65,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "nodemailer": "^6.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
+    "@types/nodemailer": "^6.4.0",
     "@types/react": "^19.0.0",
     "vitest": "^4.1.9"
   },

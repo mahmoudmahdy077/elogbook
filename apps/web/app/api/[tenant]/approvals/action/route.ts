@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse, after } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
@@ -153,6 +154,22 @@ export async function POST(
     notifyCaseApproval(entry_id, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name)
       .catch((err) => console.error('[push] approval push failed:', err))
   );
+
+  // Email fallback when no push token (best-effort; never fails the approval).
+  // Resolves resident email via service-role auth lookup; skips silently if unresolvable.
+  try {
+    const { data: prof } = await supabase.from('profiles').select('user_id').eq('id', entry.resident_id).maybeSingle();
+    const profUserId = (prof as { user_id?: string } | null)?.user_id;
+    const { data: tokens } = profUserId ? await supabase.from('push_tokens').select('token').eq('user_id', profUserId).eq('active', true).limit(1) : { data: [] as { token: string }[] };
+    if (!tokens?.length && profUserId) {
+      const serviceRole = createServiceRoleClient();
+      const { data: authUser } = await serviceRole.auth.admin.getUserById(profUserId);
+      const residentEmail = authUser?.user?.email?.toLowerCase();
+      if (residentEmail) {
+        await serviceRole.from('email_queue').insert({ template_key: approved ? 'case.approved' : 'case.rejected', to_email: residentEmail, tenant_id: profile.tenant_id, payload: { to_name: '', reviewer_name: profile.full_name, case_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/${tenantSlug}/cases/${entry_id}` }, priority: 5 });
+      }
+    }
+  } catch { /* email fallback is best-effort */ }
 
   return NextResponse.json({ success: true, action });
 }

@@ -15,6 +15,7 @@ const optionalSchema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   RATE_LIMIT_MODE: z.enum(['distributed', 'single-instance']).optional(),
   TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).optional(),
+  DISABLE_MFA: z.enum(['true', 'false']).optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_SENTRY_ENV: z.enum(['development', 'production', 'test']).optional(),
   SENTRY_ORG: z.string().optional(),
@@ -27,6 +28,18 @@ const optionalSchema = z.object({
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ANALYZE: z.string().optional().transform((v) => v === 'true'),
+  EMAIL_PROVIDER: z.enum(['resend+smtp', 'smtp-only']).default('resend+smtp'),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_WEBHOOK_SECRET: z.string().min(1).optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
+  EMAIL_REPLY_TO: z.string().optional(),
+  EMAIL_CRON_SECRET: z.string().min(1).optional(),
+  CONTACT_ALERT_TO: z.string().optional(),
+  EMAIL_RATE_PER_MIN: z.coerce.number().int().min(1).max(1000).default(60),
 });
 
 const baseEnvSchema = webPublicSchema.merge(webServerSchema).merge(optionalSchema);
@@ -58,6 +71,20 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
       message:
         'TRUSTED_PROXY_HOPS is required in production. Set 0 (trust nothing, use socket peer) or 1 (single Caddy hop, pilot default).',
     });
+  }
+  if (data.NODE_ENV === 'production' && data.DISABLE_MFA === 'true') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['DISABLE_MFA'],
+      message:
+        'DISABLE_MFA=true is forbidden in production. Unset it (fail-closed MFA enforcement) — local dev only.',
+    });
+  }
+  if (data.NODE_ENV === 'production' && (data as Record<string, unknown>).EMAIL_PROVIDER === 'resend+smtp' && !(data as Record<string, unknown>).RESEND_API_KEY) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['RESEND_API_KEY'], message: 'RESEND_API_KEY is required in production with EMAIL_PROVIDER=resend+smtp.' });
+  }
+  if (data.NODE_ENV === 'production' && !(data as Record<string, unknown>).EMAIL_FROM) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['EMAIL_FROM'], message: 'EMAIL_FROM is required in production.' });
   }
 });
 

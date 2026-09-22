@@ -43,5 +43,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not store message' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, message: 'Thank you for your inquiry. We will respond within 1 business day.' });
+  const contactAlertTo = (process.env.CONTACT_ALERT_TO || process.env.EMAIL_FROM)?.trim().toLowerCase() || '';
+  let warning: string | undefined;
+  if (!contactAlertTo) {
+    warning =
+      'Contact alert email is not configured; message stored but alert not queued.';
+  } else {
+    await admin.from('email_queue').insert({
+      template_key: 'contact.admin-alert',
+      to_email: contactAlertTo,
+      payload: { name, email, message: message.slice(0, 2000) },
+      priority: 5,
+    });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Thank you for your inquiry. We will respond within 1 business day.',
+    ...(warning ? { warning } : {}),
+  });
 }

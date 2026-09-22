@@ -17,6 +17,12 @@ const deployInputSchema = z.object({
   postgresPassword: z.string().min(8).max(256).optional(),
   postgresDb: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_$]{0,62}$/).optional(),
   siteUrl: z.string().url().max(256).optional(),
+  smtpHost: z.string().min(1).max(256).optional(),
+  smtpPort: z.coerce.number().int().min(1).max(65535).optional(),
+  smtpUser: z.string().max(256).optional(),
+  smtpPass: z.string().max(1024).optional(),
+  smtpAdminEmail: z.string().email().max(320).optional(),
+  smtpSenderName: z.string().min(1).max(120).optional(),
 });
 
 
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Another setup operation is running' }, { status: 409 });
   }
 
-  const { postgresPassword, postgresDb, siteUrl } = parsed.data;
+  const { postgresPassword, postgresDb, siteUrl, smtpHost, smtpPort, smtpUser, smtpPass, smtpAdminEmail, smtpSenderName } = parsed.data;
 
   try {
     const config = generateSupabaseSecrets();
@@ -77,7 +83,17 @@ export async function POST(request: Request) {
     if (siteUrl) config.siteUrl = siteUrl;
 
     await cloneSupabase();
-    writeSupabaseEnv(config);
+    // Task 9: carry real SMTP values (wizard answers win, env is fallback).
+    // Empty host fails closed inside writeSupabaseEnv — never writes
+    // silently-broken Supabase env.
+    writeSupabaseEnv(config, {
+      host: smtpHost ?? process.env.SMTP_HOST ?? '',
+      port: smtpPort ?? (Number(process.env.SMTP_PORT ?? 587) || 587),
+      user: smtpUser ?? process.env.SMTP_USER ?? '',
+      pass: smtpPass ?? process.env.SMTP_PASS ?? '',
+      adminEmail: smtpAdminEmail ?? process.env.SMTP_ADMIN_EMAIL ?? process.env.EMAIL_FROM ?? '',
+      senderName: smtpSenderName ?? process.env.SMTP_SENDER_NAME ?? 'E-Logbook',
+    });
 
     const images = [
       'supabase/postgres:17',

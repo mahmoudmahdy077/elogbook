@@ -69,5 +69,16 @@ export async function POST(
 
   await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'invite_user', resource_type: 'profiles', resource_id: newUser!.user!.id, changes: { email, full_name, role: inviteRole } });
 
-  return NextResponse.json({ success: true, message: `Invitation sent to ${email}` });
+  const { data: queued, error: queueError } = await adminClient.from('email_queue').insert({
+    template_key: 'invite.welcome',
+    to_email: (email as string).toLowerCase(),
+    to_name: full_name,
+    tenant_id: profile.tenant_id,
+    payload: { to_name: full_name, tenant_name: tenantSlug, role: inviteRole, onboarding_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/onboarding` },
+    priority: 10,
+  }).select('id').single();
+  if (queueError) {
+    return NextResponse.json({ success: true, warning: 'User created but welcome email not queued', queueError: queueError.message }, { status: 201 });
+  }
+  return NextResponse.json({ success: true, queued: (queued as { id: string }).id });
 }
