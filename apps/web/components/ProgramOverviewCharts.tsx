@@ -25,10 +25,10 @@ const STATUS_LABELS: Record<Status, string> = {
 };
 
 const STATUS_COLORS: Record<Status, string> = {
-  approved: '#34C759',
-  pending: '#FF9500',
-  draft: '#8E8E93',
-  rejected: '#FF3B30',
+  approved: '#186B2E',
+  pending: '#8F4200',
+  draft: '#48484A',
+  rejected: '#C20012',
 };
 
 function DonutChart({ data, total }: { data: DonutData[]; total: number }) {

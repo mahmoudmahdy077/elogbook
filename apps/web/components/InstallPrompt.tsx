@@ -110,7 +110,7 @@ export default function InstallPrompt() {
         <div
           style={{
             fontSize: 13,
-            color: '#8E8E93',
+            color: '#6D6D73',
             lineHeight: 1.3,
           }}
         >
@@ -147,7 +147,7 @@ export default function InstallPrompt() {
         style={{
           background: 'transparent',
           border: 'none',
-          color: '#8E8E93',
+          color: '#6D6D73',
           fontSize: 20,
           cursor: 'pointer',
           padding: '4px 8px',

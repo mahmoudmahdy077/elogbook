@@ -219,7 +219,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
           Pending Approvals
         </h2>
         {pendingCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-50 text-warning border border-warning/20">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-50 text-fg-warning border border-warning/20">
             {pendingCount}
           </span>
         )}
@@ -229,7 +229,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
               type="checkbox"
               checked={selectedIds.size === entries.length && entries.length > 0}
               onChange={toggleSelectAll}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary"
+              className="w-4 h-4 rounded border-border text-fg-primary focus:ring-primary accent-primary"
             />
             <span className="text-xs text-text-muted">Select All</span>
           </label>
@@ -241,7 +241,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
               type="button"
               disabled={bulkLoading !== null}
               onClick={() => handleBulkAction('approve')}
-              className="inline-flex items-center px-3 py-1.5 rounded-full bg-success text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="inline-flex items-center px-3 py-1.5 rounded-full bg-success-700 text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {bulkLoading === 'approve' ? 'Approving…' : 'Approve Selected'}
             </button>
@@ -251,8 +251,8 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
               onClick={() => handleBulkAction('reject')}
               className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-opacity disabled:opacity-50 ${
                 confirmBulkReject
-                  ? 'bg-danger text-white hover:opacity-90'
-                  : 'bg-danger/10 text-danger hover:bg-danger/20'
+                  ? 'bg-danger-700 text-white hover:opacity-90'
+                  : 'bg-danger/10 text-fg-danger hover:bg-danger/20'
               }`}
             >
               {bulkLoading === 'reject'
@@ -265,17 +265,17 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
         )}
       </div>
       {confirmBulkReject && (
-        <p className="text-xs text-warning" role="alert">
+        <p className="text-xs text-fg-warning" role="alert">
           Click Reject Selected again to confirm. This action is irreversible.
         </p>
       )}
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard value={pendingCount} label="Pending" color="#FF9500" />
+        <StatCard value={pendingCount} label="Pending" color="#8F4200" />
         <StatCard value={todayCount} label="Today" color="#007AFF" />
         <StatCard value={thisWeekCount} label="This Week" color="#5856D6" />
-        <StatCard value={approvalRate} label="Approval Rate" color="#34C759" />
+        <StatCard value={approvalRate} label="Approval Rate" color="#186B2E" />
       </div>
 
       {/* Pending Entries List */}
@@ -316,7 +316,7 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                           type="checkbox"
                           checked={selectedIds.has(entry.id)}
                           onChange={() => toggleSelect(entry.id)}
-                          className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary shrink-0"
+                          className="mt-0.5 w-4 h-4 rounded border-border text-fg-primary focus:ring-primary accent-primary shrink-0"
                         />
                         <div className="space-y-1 min-w-0">
                         <p className="text-sm font-semibold text-text-primary truncate">

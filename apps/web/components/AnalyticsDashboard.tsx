@@ -413,7 +413,7 @@ function ApprovalSparkline({ data }: { data: MonthlyRate[] }) {
         })}
       </svg>
       <div className="text-xs text-text-muted whitespace-nowrap">
-        <span className="text-success font-semibold text-sm">
+        <span className="text-fg-success font-semibold text-sm">
           {displayRate}
         </span>
         <br />
@@ -489,7 +489,7 @@ export default function AnalyticsDashboard({
         <MiniStat
           label="Monthly Avg"
           value={avgMonthly.toLocaleString()}
-          color="#34C759"
+          color="#186B2E"
         />
         <MiniStat
           label="Specialties"
@@ -499,7 +499,7 @@ export default function AnalyticsDashboard({
         <MiniStat
           label="Supervisors"
           value={supervisors.toLocaleString()}
-          color="#FF9500"
+          color="#8F4200"
         />
       </div>
 
