@@ -184,7 +184,7 @@ function DataAccessSection({ data, tenantSlug }: { data: DataAccessSummary; tena
               className="flex items-center justify-between rounded-lg bg-backdrop px-3 py-2 text-sm"
             >
               <span className="text-text-secondary truncate mr-2">{a.action}</span>
-              <span className="font-semibold text-primary">{a.count}</span>
+              <span className="font-semibold text-fg-primary">{a.count}</span>
             </div>
           ))}
         </div>
@@ -200,7 +200,7 @@ function DataAccessSection({ data, tenantSlug }: { data: DataAccessSummary; tena
               className="flex items-center justify-between rounded-lg bg-backdrop px-3 py-2 text-sm"
             >
               <span className="text-text-secondary truncate mr-2">{r.resource_type}</span>
-              <span className="font-semibold text-primary">{r.count}</span>
+              <span className="font-semibold text-fg-primary">{r.count}</span>
             </div>
           ))}
         </div>
@@ -313,8 +313,8 @@ function PhiInventorySection({ data, tenantSlug }: { data: PhiInventoryRow[]; te
                 <tr key={row.table_name} className="border-b border-border">
                   <td className="py-2 pr-3 text-sm font-medium text-text-primary">{row.table_name}</td>
                   <td className="py-2 pr-3 text-sm text-text-secondary">{row.total_records}</td>
-                  <td className="py-2 pr-3 text-sm text-danger">{row.phi_present}</td>
-                  <td className="py-2 pr-3 text-sm text-success">{row.phi_redacted}</td>
+                  <td className="py-2 pr-3 text-sm text-fg-danger">{row.phi_present}</td>
+                  <td className="py-2 pr-3 text-sm text-fg-success">{row.phi_redacted}</td>
                   <td className="py-2 text-sm text-text-secondary">{row.phi_percentage.toFixed(1)}%</td>
                 </tr>
               ))}
@@ -394,7 +394,7 @@ function ConsentSection({ data, tenantSlug }: { data: ConsentSummary; tenantSlug
                     {t.granted} granted / {t.revoked} revoked
                   </span>
                 </div>
-                <span className="font-semibold text-primary">{t.granted + t.revoked}</span>
+                <span className="font-semibold text-fg-primary">{t.granted + t.revoked}</span>
               </div>
             ))}
           </div>
@@ -491,10 +491,10 @@ function RetentionSection({ data, tenantSlug }: { data: RetentionSummary; tenant
     >
       {/* Summary stats */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <StatPill label="Active" value={data.activeRecords.toLocaleString()} color="#34C759" />
-        <StatPill label="Soft-deleted" value={data.softDeletedRecords.toLocaleString()} color="#FF9500" />
+        <StatPill label="Active" value={data.activeRecords.toLocaleString()} color="#186B2E" />
+        <StatPill label="Soft-deleted" value={data.softDeletedRecords.toLocaleString()} color="#8F4200" />
         <StatPill label="Total" value={data.totalRecords.toLocaleString()} color="#007AFF" />
-        <StatPill label="Deleted %" value={`${retentionPct}%`} color="#8E8E93" />
+        <StatPill label="Deleted %" value={`${retentionPct}%`} color="#6D6D73" />
       </div>
 
       {/* By table */}
@@ -517,7 +517,7 @@ function RetentionSection({ data, tenantSlug }: { data: RetentionSummary; tenant
                 {data.byTable.map((row) => (
                   <tr key={row.table_name} className="border-b border-border">
                     <td className="py-2 pr-3 text-sm text-text-primary">{row.table_name}</td>
-                    <td className="py-2 text-sm text-warning">{row.deleted_count}</td>
+                    <td className="py-2 text-sm text-fg-warning">{row.deleted_count}</td>
                   </tr>
                 ))}
               </tbody>
