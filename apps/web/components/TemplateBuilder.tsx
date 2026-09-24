@@ -83,7 +83,7 @@ export default function TemplateBuilder({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
+        <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-fg-danger text-sm">
           {error}
         </div>
       )}
@@ -120,7 +120,7 @@ export default function TemplateBuilder({
           <button
             type="button"
             onClick={() => setShowPreview(true)}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-fg-primary hover:underline"
           >
             Preview Template
           </button>

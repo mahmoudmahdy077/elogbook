@@ -126,7 +126,7 @@ export default function OnboardingPage() {
                 {loading ? 'Saving...' : 'Complete Setup'}
               </button>
             </div>
-            {error && <p className="text-danger text-sm mt-2">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mt-2">{error}</p>}
           </div>
         )}
       </div>

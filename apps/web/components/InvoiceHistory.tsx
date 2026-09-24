@@ -39,7 +39,7 @@ export default function InvoiceHistory() {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
         <h2 className="text-lg font-semibold mb-2">Invoice History</h2>
-        <p className="text-sm text-danger">{error}</p>
+        <p className="text-sm text-fg-danger">{error}</p>
         <button
           type="button"
           onClick={() => void load()}
@@ -94,7 +94,7 @@ export default function InvoiceHistory() {
                       href={inv.hosted_invoice_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+                      className="text-xs font-medium text-fg-primary hover:opacity-80 transition-opacity"
                     >
                       View
                     </a>

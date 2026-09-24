@@ -79,8 +79,8 @@ export default async function InvitesPage({ params }: { params: Promise<{ tenant
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  invite.status === 'pending' ? 'bg-warning/10 text-warning' :
-                  invite.status === 'accepted' ? 'bg-success/10 text-success' :
+                  invite.status === 'pending' ? 'bg-warning/10 text-fg-warning' :
+                  invite.status === 'accepted' ? 'bg-success/10 text-fg-success' :
                   'bg-default-100 text-text-muted'
                 }`}>
                   {invite.status}

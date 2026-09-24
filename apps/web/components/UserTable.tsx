@@ -36,18 +36,18 @@ const STATUS_OPTIONS = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-success/10 text-success',
-  pending: 'bg-warning/10 text-warning',
-  suspended: 'bg-danger/10 text-danger',
+  active: 'bg-success/10 text-fg-success',
+  pending: 'bg-warning/10 text-fg-warning',
+  suspended: 'bg-danger/10 text-fg-danger',
   deactivated: 'bg-neutral-dark text-text-muted',
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  resident: 'bg-primary/10 text-primary',
-  supervisor: 'bg-primary/10 text-primary',
-  director: 'bg-warning/10 text-warning',
-  institution_admin: 'bg-danger/10 text-danger',
-  admin: 'bg-success/10 text-success',
+  resident: 'bg-primary/10 text-fg-primary',
+  supervisor: 'bg-primary/10 text-fg-primary',
+  director: 'bg-warning/10 text-fg-warning',
+  institution_admin: 'bg-danger/10 text-fg-danger',
+  admin: 'bg-success/10 text-fg-success',
 };
 
 export default function UserTable({ tenantSlug }: UserTableProps) {
@@ -230,7 +230,7 @@ export default function UserTable({ tenantSlug }: UserTableProps) {
                         <button
                           onClick={() => handleAction(u.id, 'deactivate')}
                           disabled={actionLoading === u.id}
-                          className="px-2 py-1 rounded text-xs border border-warning/30 text-warning hover:bg-warning/10"
+                          className="px-2 py-1 rounded text-xs border border-warning/30 text-fg-warning hover:bg-warning/10"
                         >
                           Deactivate
                         </button>
@@ -238,7 +238,7 @@ export default function UserTable({ tenantSlug }: UserTableProps) {
                         <button
                           onClick={() => handleAction(u.id, 'reactivate')}
                           disabled={actionLoading === u.id}
-                          className="px-2 py-1 rounded text-xs border border-success/30 text-success hover:bg-success/10"
+                          className="px-2 py-1 rounded text-xs border border-success/30 text-fg-success hover:bg-success/10"
                         >
                           Reactivate
                         </button>
@@ -253,7 +253,7 @@ export default function UserTable({ tenantSlug }: UserTableProps) {
                       <button
                         onClick={() => handleDelete(u.id)}
                         disabled={actionLoading === u.id}
-                        className="px-2 py-1 rounded text-xs border border-danger/30 text-danger hover:bg-danger/10"
+                        className="px-2 py-1 rounded text-xs border border-danger/30 text-fg-danger hover:bg-danger/10"
                       >
                         Delete
                       </button>

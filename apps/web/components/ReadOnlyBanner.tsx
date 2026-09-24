@@ -14,7 +14,7 @@ export default function ReadOnlyBanner({ tenantSlug }: { tenantSlug: string }) {
       className="bg-pending/10 border-b border-pending/30 px-4 py-3"
     >
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-pending/80">
+        <p className="text-sm text-fg-pending">
           <span className="font-semibold">Subscription renewal required</span>
           {' — '}
           Logging is temporarily disabled.
@@ -24,7 +24,7 @@ export default function ReadOnlyBanner({ tenantSlug }: { tenantSlug: string }) {
         </p>
         <Link
           href={`/${tenantSlug}/billing`}
-          className="text-sm font-medium text-pending/80 underline hover:text-pending focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pending-glow rounded"
+          className="text-sm font-medium text-fg-pending underline hover:text-fg-pending focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pending-glow rounded"
         >
           Renew now to restore full access
         </Link>

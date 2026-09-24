@@ -11,7 +11,7 @@ function Denied({ reason }: { reason: string }) {
       <div className="w-full max-w-sm bg-surface-solid border border-border rounded-2xl p-6 sm:p-8 text-center space-y-3">
         <h1 className="text-lg font-heading font-semibold text-text-primary">Platform access required</h1>
         <p className="text-sm text-text-muted">{reason}</p>
-        <a href="/login" className="inline-block text-sm text-primary hover:underline">
+        <a href="/login" className="inline-block text-sm text-fg-primary hover:underline">
           Back to sign-in
         </a>
       </div>

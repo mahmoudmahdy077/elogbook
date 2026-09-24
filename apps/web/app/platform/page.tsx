@@ -37,7 +37,7 @@ export default async function PlatformHomePage() {
       <p className="text-sm text-text-muted mb-6">
         {tenants.length} tenant(s). Read-only overview; lifecycle management arrives with tenant settings.
       </p>
-      {error && <p className="text-danger text-sm mb-4">{error}</p>}
+      {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
       <div className="rounded-14 border border-border bg-surface overflow-hidden">
         <table className="w-full text-sm">
           <thead>

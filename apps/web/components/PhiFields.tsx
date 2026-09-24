@@ -48,7 +48,7 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
         <div className="flex items-center gap-2">
           <p>{mrnRevealed ? (mrn || '—') : maskMrn(mrn)}</p>
           {!mrnRevealed && mrn && (
-            <button onClick={() => reveal('mrn')} className="text-xs text-primary hover:underline">
+            <button onClick={() => reveal('mrn')} className="text-xs text-fg-primary hover:underline">
               Reveal
             </button>
           )}
@@ -59,7 +59,7 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
         <div className="flex items-center gap-2">
           <p>{dobRevealed ? (dob || '—') : maskDob(dob)}</p>
           {!dobRevealed && dob && (
-            <button onClick={() => reveal('dob')} className="text-xs text-primary hover:underline">
+            <button onClick={() => reveal('dob')} className="text-xs text-fg-primary hover:underline">
               Reveal
             </button>
           )}

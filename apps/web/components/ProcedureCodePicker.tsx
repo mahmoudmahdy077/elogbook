@@ -96,13 +96,13 @@ export default function ProcedureCodePicker({
           {selectedCodes.map((codeId, idx) => (
             <span
               key={codeId}
-              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+              className="inline-flex items-center gap-1 bg-primary/10 text-fg-primary text-xs px-2 py-1 rounded-full"
             >
               <span className="font-medium">{codeId.slice(0, 8)}</span>
               <button
                 type="button"
                 onClick={() => removeCode(codeId)}
-                className="hover:text-primary/80 transition-colors"
+                className="hover:text-fg-primary transition-colors"
                 aria-label={`Remove code ${idx}`}
               >
                 <svg
@@ -174,7 +174,7 @@ export default function ProcedureCodePicker({
                     isSelected ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded font-mono font-medium shrink-0">
+                  <span className="inline-flex items-center bg-primary/10 text-fg-primary text-xs px-1.5 py-0.5 rounded font-mono font-medium shrink-0">
                     {code.code}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -189,7 +189,7 @@ export default function ProcedureCodePicker({
                   </div>
                   {isSelected && (
                     <svg
-                      className="w-4 h-4 text-approved shrink-0"
+                      className="w-4 h-4 text-fg-approved shrink-0"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"

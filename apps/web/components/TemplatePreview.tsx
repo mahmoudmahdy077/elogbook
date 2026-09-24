@@ -157,7 +157,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
               {field.type !== 'checkbox' && (
                 <label className="block text-xs mb-1 text-text-muted">
                   {field.label}
-                  {field.required && <span className="text-danger ml-1">*</span>}
+                  {field.required && <span className="text-fg-danger ml-1">*</span>}
                 </label>
               )}
               {renderField(field)}
@@ -165,7 +165,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
                 <p className="text-xs text-text-muted mt-1">{field.description}</p>
               )}
               {errors[field.key] && (
-                <p className="text-xs text-danger mt-1">{errors[field.key]}</p>
+                <p className="text-xs text-fg-danger mt-1">{errors[field.key]}</p>
               )}
             </div>
           ))}

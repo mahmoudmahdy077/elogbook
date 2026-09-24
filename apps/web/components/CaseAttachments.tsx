@@ -150,7 +150,7 @@ export default function CaseAttachments({ caseId, tenantSlug, tenantId, viewerPr
         </label>
       </div>
 
-      {error && <p className="text-sm text-danger mb-2">{error}</p>}
+      {error && <p className="text-sm text-fg-danger mb-2">{error}</p>}
 
       {loading ? (
         <p className="text-sm text-text-muted py-2">Loading…</p>
@@ -163,13 +163,13 @@ export default function CaseAttachments({ caseId, tenantSlug, tenantId, viewerPr
               <button
                 type="button"
                 onClick={() => handleDownload(a)}
-                className="text-sm text-primary hover:underline text-left truncate min-w-0"
+                className="text-sm text-fg-primary hover:underline text-left truncate min-w-0"
                 title={a.file_name ?? a.file_path}
               >
                 {a.file_name ?? a.file_path.split('/').pop()}
                 <span className="text-text-muted ml-2 text-xs">{formatSize(a.file_size)}</span>
                 {a.malware_scan_status === 'infected' && (
-                  <span className="ml-2 text-xs text-danger">[blocked]</span>
+                  <span className="ml-2 text-xs text-fg-danger">[blocked]</span>
                 )}
               </button>
               {canDelete(a) && (
@@ -177,7 +177,7 @@ export default function CaseAttachments({ caseId, tenantSlug, tenantId, viewerPr
                   type="button"
                   aria-label={`Delete ${a.file_name ?? 'attachment'}`}
                   onClick={() => handleDelete(a)}
-                  className="text-xs text-text-muted hover:text-danger transition-colors shrink-0"
+                  className="text-xs text-text-muted hover:text-fg-danger transition-colors shrink-0"
                 >
                   Delete
                 </button>

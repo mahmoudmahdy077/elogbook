@@ -51,7 +51,7 @@ export default function HelpPopover({ children, side = 'bottom' }: HelpPopoverPr
         ref={triggerRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-text-muted hover:text-primary hover:border-primary-glow transition-colors text-xs font-medium leading-none"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-border text-text-muted hover:text-fg-primary hover:border-primary-glow transition-colors text-xs font-medium leading-none"
         aria-label="Help"
         aria-expanded={open}
       >

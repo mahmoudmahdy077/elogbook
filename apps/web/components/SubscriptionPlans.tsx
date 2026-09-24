@@ -136,7 +136,7 @@ export default function SubscriptionPlans({
               <ul className="space-y-2.5 flex-1 text-sm">
                 {features.map((f) => (
                   <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-text-secondary' : 'text-text-muted/70 line-through'}`}>
-                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-primary' : 'text-text-muted'}`}>
+                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-fg-primary' : 'text-text-muted'}`}>
                       {f.included ? '✓' : '✗'}
                     </span>
                     {f.label}
@@ -146,7 +146,7 @@ export default function SubscriptionPlans({
               <button
                 className={`mt-5 w-full py-2.5 rounded-lg text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   isCurrent
-                    ? 'bg-primary/10 text-primary cursor-default'
+                    ? 'bg-primary/10 text-fg-primary cursor-default'
                     : 'bg-primary-hover hover:bg-primary-hover text-white'
                 } ${loadingPlanId === plan.id ? 'opacity-50' : ''}`}
                 disabled={isCurrent || loadingPlanId !== null}

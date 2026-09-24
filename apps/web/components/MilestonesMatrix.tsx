@@ -150,7 +150,7 @@ export default function MilestonesMatrix({
                             level === currentLevel
                               ? 'bg-primary text-white scale-110'
                               : level < currentLevel
-                                ? 'bg-primary/30 text-primary'
+                                ? 'bg-primary/30 text-fg-primary'
                                 : 'bg-neutral-dark border border-border text-text-muted'
                           } ${isEditable ? 'cursor-pointer hover:scale-125' : 'cursor-default'}`}
                         >

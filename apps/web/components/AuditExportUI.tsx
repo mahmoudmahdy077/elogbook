@@ -143,7 +143,7 @@ export default function AuditExportUI({ tenantSlug, dateFrom, dateTo }: AuditExp
           )}
         </button>
         {error && (
-          <span className="text-sm text-danger">{error}</span>
+          <span className="text-sm text-fg-danger">{error}</span>
         )}
       </div>
 

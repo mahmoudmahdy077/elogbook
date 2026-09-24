@@ -90,7 +90,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
     >
       <div className="text-center mb-8">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-          <svg className="w-8 h-8 text-primary" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="w-8 h-8 text-fg-primary" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
         </div>
@@ -110,7 +110,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
               onClick={() => { setSelected(spec); setError(''); setCustom(''); }}
               className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
                 selected === spec
-                  ? 'bg-primary/10 text-primary border-2 border-primary/30'
+                  ? 'bg-primary/10 text-fg-primary border-2 border-primary/30'
                   : 'bg-white dark:bg-neutral-dark border-2 border-border text-text-secondary hover:border-primary/30 hover:text-text-primary'
               }`}
             >
@@ -137,7 +137,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
         )}
 
         {error && (
-          <p className="text-xs text-danger text-center">{error}</p>
+          <p className="text-xs text-fg-danger text-center">{error}</p>
         )}
 
         <div className="flex justify-end pt-2">

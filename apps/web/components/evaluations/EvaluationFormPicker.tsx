@@ -24,7 +24,7 @@ const FORM_TYPES: {
     domains: 7,
     icon: (
       <svg
-        className="w-8 h-8 text-primary"
+        className="w-8 h-8 text-fg-primary"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -66,7 +66,7 @@ const FORM_TYPES: {
     domains: 6,
     icon: (
       <svg
-        className="w-8 h-8 text-approved"
+        className="w-8 h-8 text-fg-approved"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

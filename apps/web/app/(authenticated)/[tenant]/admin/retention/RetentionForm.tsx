@@ -78,7 +78,7 @@ export default function RetentionForm({ currentDays, tenantId }: { currentDays: 
 
       {error && <ErrorDisplay message={error} />}
       {result && (
-        <div className="rounded-lg p-2.5 text-xs bg-success/10 text-success border border-success/20" role="status">{result}</div>
+        <div className="rounded-lg p-2.5 text-xs bg-success/10 text-fg-success border border-success/20" role="status">{result}</div>
       )}
 
       <button

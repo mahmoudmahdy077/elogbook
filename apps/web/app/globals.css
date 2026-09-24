@@ -38,6 +38,17 @@
   --color-pending: #FF9500;
   --color-approved: #34C759;
   --color-rejected: #FF3B30;
+  /* WCAG AA foreground variants for text/icon usage of semantic colors.
+     Raw iOS hues ship on bg-* utilities directly; text-* needs the darker
+     Apple accessibility variants (mirrors clinicalTokens.status.text).
+     Values verified ≥4.5:1 on white, #F2F2F7, and 10-20% tint backgrounds. */
+  --color-fg-success: #186B2E;
+  --color-fg-warning: #8F4200;
+  --color-fg-danger: #C20012;
+  --color-fg-pending: #8F4200;
+  --color-fg-approved: #186B2E;
+  --color-fg-rejected: #C20012;
+  --color-fg-primary: #0066D6;
   --color-amber-glow: rgba(255, 149, 0, 0.08);
   --color-emerald-glow: rgba(52, 199, 89, 0.08);
   --color-crimson-glow: rgba(255, 59, 48, 0.08);
@@ -213,6 +224,9 @@ h1, h2, h3 {
 
 /* Dark theme overrides */
 .dark {
+  /* Note: solid-button fill steps (success/danger/warning-700) are deliberately
+     kept to the darkened light-theme values further down — white label text
+     needs them (the lightened dark 700s like #FF6961 fail with white text). */
   --color-backdrop: #000000;
   --color-surface: rgba(28, 28, 30, 0.72);
   --color-surface-solid: #1C1C1E;
@@ -246,6 +260,14 @@ h1, h2, h3 {
   --color-pending: #FF9F0A;
   --color-approved: #30D158;
   --color-rejected: #FF453A;
+  /* Dark theme AA text variants — raw iOS hues all pass ≥4.8:1 on #1C1C1E. */
+  --color-fg-success: #30D158;
+  --color-fg-warning: #FF9F0A;
+  --color-fg-danger: #FF453A;
+  --color-fg-pending: #FF9F0A;
+  --color-fg-approved: #30D158;
+  --color-fg-rejected: #FF453A;
+  --color-fg-primary: #339DFF;
 
   --color-default-50: #1c1c1e;
   --color-default-100: #2c2c2e;
@@ -265,7 +287,7 @@ h1, h2, h3 {
   --color-success-400: #30D158;
   --color-success-500: #30D158;
   --color-success-600: #28A745;
-  --color-success-700: #4CD964;
+  --color-success-700: #1E7E34; /* kept dark: white-on-fill buttons pass AA */
   --color-success-800: #6EE58A;
   --color-success-900: #A3F0B5;
 
@@ -276,7 +298,7 @@ h1, h2, h3 {
   --color-warning-400: #FF9F0A;
   --color-warning-500: #FF9F0A;
   --color-warning-600: #E68600;
-  --color-warning-700: #FFB340;
+  --color-warning-700: #BF6E00; /* kept dark: white-on-fill buttons pass AA */
   --color-warning-800: #FFCC80;
   --color-warning-900: #FFE0B8;
 
@@ -287,7 +309,7 @@ h1, h2, h3 {
   --color-danger-400: #FF453A;
   --color-danger-500: #FF453A;
   --color-danger-600: #E0352B;
-  --color-danger-700: #FF6961;
+  --color-danger-700: #B82C23; /* kept dark: white-on-fill buttons pass AA */
   --color-danger-800: #FF8C86;
   --color-danger-900: #FFB3AE;
 }

@@ -147,7 +147,7 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
 
       {inviteLink && (
         <div className="mb-4 bg-success/10 border border-success/30 rounded-lg p-4">
-          <p className="text-sm text-success font-medium mb-2">
+          <p className="text-sm text-fg-success font-medium mb-2">
             {mode === 'single' ? 'Invite created!' : 'Registration link generated!'}
           </p>
           <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
           </div>
           <button
             onClick={() => { setInviteLink(''); setEmail(''); setBulkEmails(''); }}
-            className="mt-2 text-sm text-primary hover:opacity-80"
+            className="mt-2 text-sm text-fg-primary hover:opacity-80"
           >
             Create another
           </button>
@@ -174,13 +174,13 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
       )}
 
       {errors.length > 0 && (
-        <div className="mb-4 bg-danger/10 border border-danger/30 rounded-lg p-3 text-sm text-danger">
+        <div className="mb-4 bg-danger/10 border border-danger/30 rounded-lg p-3 text-sm text-fg-danger">
           {errors.map((e, i) => <p key={i}>{e}</p>)}
         </div>
       )}
 
       {successCount > 0 && (
-        <div className="mb-4 bg-success/10 border border-success/30 rounded-lg p-3 text-sm text-success">
+        <div className="mb-4 bg-success/10 border border-success/30 rounded-lg p-3 text-sm text-fg-success">
           Successfully invited {successCount} users
         </div>
       )}

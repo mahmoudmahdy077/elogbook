@@ -27,7 +27,7 @@ export default function ErrorDisplay({ message, onRetry }: ErrorDisplayProps) {
       {onRetry && (
         <button
           onClick={onRetry}
-          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          className="text-sm font-medium text-fg-primary hover:text-fg-primary transition-colors"
         >
           Try again
         </button>

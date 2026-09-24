@@ -30,7 +30,7 @@ const SEVERITY_HEADER: Record<string, string> = {
 const BUTTON_STYLES: Record<string, string> = {
   primary: 'rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium',
   secondary: 'rounded-full bg-secondary text-white px-4 py-2.5 text-sm font-medium',
-  danger: 'rounded-full bg-rejected text-white px-4 py-2.5 text-sm font-medium',
+  danger: 'rounded-full bg-danger-700 text-white px-4 py-2.5 text-sm font-medium',
 };
 
 export default function ImpactDialog({

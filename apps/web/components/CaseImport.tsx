@@ -258,7 +258,7 @@ export default function CaseImport({
               <div className="text-center py-8 space-y-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-50 border border-success/20">
                   <svg
-                    className="w-8 h-8 text-approved"
+                    className="w-8 h-8 text-fg-approved"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -335,7 +335,7 @@ export default function CaseImport({
                             resetForm();
                             fileInputRef.current?.click();
                           }}
-                          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                          className="text-xs font-medium text-fg-primary hover:text-fg-primary transition-colors"
                         >
                           Choose different file
                         </button>

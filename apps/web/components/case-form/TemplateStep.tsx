@@ -88,7 +88,7 @@ export default function TemplateStep({
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary text-sm font-semibold" aria-hidden="true">{getMonogram(t.specialty)}</span>
+                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-fg-primary text-sm font-semibold" aria-hidden="true">{getMonogram(t.specialty)}</span>
                   <div>
                     <div className="text-text-primary font-sans font-semibold text-sm tracking-[-0.01em]">
                       {t.specialty} — {t.name}
