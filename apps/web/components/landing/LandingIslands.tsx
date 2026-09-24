@@ -158,7 +158,7 @@ export function CustodyDemo() {
               data-testid={`approve-${c.id}`}
               className={`min-h-[44px] min-w-[96px] rounded-8 border px-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 approved[c.id]
-                  ? 'border-approved/40 bg-success-50 text-success-700'
+                  ? 'border-approved/40 bg-success-50 text-fg-success-700'
                   : 'border-border-active bg-surface-solid text-text-secondary hover:border-primary-glow'
               }`}
               style={approved[c.id] ? { opacity: 1 } : { opacity: 1 }}
@@ -185,7 +185,7 @@ export function CustodyDemo() {
             <p className="text-sm font-medium text-text-primary">That took two clicks.</p>
             <p className="mt-1 text-xs text-text-muted">Audit excerpt — generated in your browser, from your clicks.</p>
             <p className="mt-2 break-all font-mono text-xs tabular-nums text-text-secondary">sha256 {artifact}</p>
-            <a href="/signup" className="mt-2 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline">
+            <a href="/signup" className="mt-2 inline-block text-sm font-medium text-fg-primary underline-offset-2 hover:underline">
               Create your first logbook →
             </a>
           </div>
@@ -383,7 +383,7 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
         ref={triggerRef}
         type="button"
         onClick={() => setVisible(true)}
-        className="sr-only focus:not-sr-only focus:absolute focus:bottom-4 focus:right-4 focus:z-50 focus:min-h-[44px] focus:rounded-8 focus:border focus:border-border focus:bg-surface-solid focus:px-3 focus:text-sm focus:text-primary"
+        className="sr-only focus:not-sr-only focus:absolute focus:bottom-4 focus:right-4 focus:z-50 focus:min-h-[44px] focus:rounded-8 focus:border focus:border-border focus:bg-surface-solid focus:px-3 focus:text-sm focus:text-fg-primary"
       >
         Your session logbook entry
       </button>
@@ -419,11 +419,11 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
               <fieldset className="flex gap-2" role="radiogroup" aria-label="I am a">
                 <label className="cursor-pointer">
                   <input type="radio" name="role" value="resident" defaultChecked className="peer sr-only" />
-                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-primary">Resident</span>
+                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Resident</span>
                 </label>
                 <label className="cursor-pointer">
                   <input type="radio" name="role" value="director" className="peer sr-only" />
-                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-primary">Director</span>
+                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Director</span>
                 </label>
               </fieldset>
               <label className="block text-sm">
@@ -439,7 +439,7 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
               </label>
               <p className="text-xs text-text-muted">Send my entry and one sample export. No marketing. Unsubscribe anytime.</p>
               {errMsg && (
-                <p role="alert" className="text-xs text-danger-600" data-testid="sle-error">
+                <p role="alert" className="text-xs text-fg-danger-600" data-testid="sle-error">
                   {errMsg}
                 </p>
               )}
@@ -454,13 +454,13 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
             </form>
           ) : (
             <div className="mt-4" data-testid="sle-success">
-              <p className="text-sm font-medium text-success-700">Saved. Your sample export is unlocked below.</p>
+              <p className="text-sm font-medium text-fg-success-700">Saved. Your sample export is unlocked below.</p>
               {sampleExportPath && (
                 <a href={sampleExportPath} download className="mt-2 inline-block min-h-[44px] rounded-8 border border-border px-4 text-sm leading-[42px] text-text-secondary hover:border-border-active">
                   Download sample export
                 </a>
               )}
-              <a href={`/signup?role=${role}`} className="mt-2 block text-sm font-medium text-primary underline-offset-2 hover:underline">
+              <a href={`/signup?role=${role}`} className="mt-2 block text-sm font-medium text-fg-primary underline-offset-2 hover:underline">
                 Continue to signup →
               </a>
               <button type="button" onClick={close} className="mt-2 text-xs text-text-muted underline-offset-2 hover:underline">

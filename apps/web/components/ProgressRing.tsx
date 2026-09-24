@@ -75,7 +75,7 @@ export default function ProgressRing({
           y={size / 2 + 2}
           textAnchor="middle"
           dominantBaseline="central"
-          fill="var(--color-text-primary)"
+          fill="var(--color-text-fg-primary)"
           fontSize={size * 0.22}
           fontFamily="var(--font-heading)"
           transform={`rotate(90, ${size / 2}, ${size / 2})`}

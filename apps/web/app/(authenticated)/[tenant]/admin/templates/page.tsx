@@ -151,7 +151,7 @@ export default function TemplatesPage() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm mb-4">
+        <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-fg-danger text-sm mb-4">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
         </div>
@@ -185,7 +185,7 @@ export default function TemplatesPage() {
               <div className="flex items-center gap-2">
                 <span className="font-medium">{template.name}</span>
                 {template.is_global && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">Global</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-fg-primary">Global</span>
                 )}
               </div>
               <div className="text-xs text-text-muted mt-1">
@@ -215,7 +215,7 @@ export default function TemplatesPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(template)}
-                    className="px-3 py-1.5 rounded border border-danger/30 text-danger text-xs hover:bg-danger/10"
+                    className="px-3 py-1.5 rounded border border-danger/30 text-fg-danger text-xs hover:bg-danger/10"
                   >
                     Delete
                   </button>

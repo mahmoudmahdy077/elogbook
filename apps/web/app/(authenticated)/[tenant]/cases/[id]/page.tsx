@@ -46,19 +46,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   const statusColor = (s: string) => {
     switch (s) {
-      case 'draft': return 'bg-warning/10 text-warning';
-      case 'pending': return 'bg-primary/10 text-primary';
-      case 'approved': return 'bg-success/10 text-success';
-      case 'rejected': return 'bg-danger/10 text-danger';
+      case 'draft': return 'bg-warning/10 text-fg-warning';
+      case 'pending': return 'bg-primary/10 text-fg-primary';
+      case 'approved': return 'bg-success/10 text-fg-success';
+      case 'rejected': return 'bg-danger/10 text-fg-danger';
       default: return 'bg-default-100 text-text-muted';
     }
   };
 
   const approvalStatusColor = (s: string) => {
     switch (s) {
-      case 'approved': return 'bg-success/10 text-success';
-      case 'rejected': return 'bg-danger/10 text-danger';
-      default: return 'bg-primary/10 text-primary';
+      case 'approved': return 'bg-success/10 text-fg-success';
+      case 'rejected': return 'bg-danger/10 text-fg-danger';
+      default: return 'bg-primary/10 text-fg-primary';
     }
   };
 
@@ -68,11 +68,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           the MRN/DOB are intentionally blank; identified cases warn the
           viewer that the data is sensitive (HIPAA). */}
       {entry.is_deidentified ? (
-        <div className="bg-pending/10 border border-pending/30 text-pending text-xs rounded-lg p-2.5" role="status">
+        <div className="bg-pending/10 border border-pending/30 text-fg-pending text-xs rounded-lg p-2.5" role="status">
           This case is de-identified. Patient MRN and DOB are not stored; a hash is used for matching.
         </div>
       ) : (
-        <div className="bg-danger/10 border border-danger/30 text-danger text-xs rounded-lg p-2.5" role="status">
+        <div className="bg-danger/10 border border-danger/30 text-fg-danger text-xs rounded-lg p-2.5" role="status">
           <strong>PHI:</strong> This case contains identified patient data. Handle with care per HIPAA guidelines.
         </div>
       )}
@@ -126,14 +126,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           )}
           {entry.status === 'approved' && isResident && (
             <div className="pt-4 flex items-center gap-3">
-              <div className="bg-success/10 border border-success/30 text-success text-sm rounded-lg p-3 flex-1">
+              <div className="bg-success/10 border border-success/30 text-fg-success text-sm rounded-lg p-3 flex-1">
                 This case has been logged and is part of your permanent record.
               </div>
               {(!approvals || approvals.length === 0) && (
                 <form action={`/${tenantSlug}/cases/${id}/request-verification`} method="POST">
                   <button
                     type="submit"
-                    className="rounded-full border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors"
+                    className="rounded-full border border-primary text-fg-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors"
                   >
                     Request Verification
                   </button>
@@ -143,7 +143,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           )}
           {entry.status === 'approved' && !isResident && (
             <div className="pt-4">
-              <div className="bg-success/10 border border-success/30 text-success text-sm rounded-lg p-3">
+              <div className="bg-success/10 border border-success/30 text-fg-success text-sm rounded-lg p-3">
                 This case has been logged and is part of the resident&apos;s permanent record.
               </div>
             </div>

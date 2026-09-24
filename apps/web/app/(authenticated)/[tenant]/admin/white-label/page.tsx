@@ -50,7 +50,7 @@ export default async function WhiteLabelPage({
             Customize logo and primary color for {tenantSlug}. Stored in <code className="text-xs bg-muted px-1 py-0.5 rounded">tenants.custom_branding</code> (JSONB).
           </p>
         </div>
-        <Link href={`/${tenantSlug}/admin`} className="text-sm text-primary hover:underline">
+        <Link href={`/${tenantSlug}/admin`} className="text-sm text-fg-primary hover:underline">
           ← Back to Admin
         </Link>
       </div>

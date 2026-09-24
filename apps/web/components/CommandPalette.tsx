@@ -173,14 +173,14 @@ export default function CommandPalette() {
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${
                   index === activeIndex
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-primary/10 text-fg-primary'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 text-text-secondary'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xs font-medium text-text-muted uppercase shrink-0 w-16 text-right tabular-nums">
                     {item.category === 'Actions' ? (
-                      <span className="text-primary/60">⌘</span>
+                      <span className="text-fg-primary">⌘</span>
                     ) : item.category === 'Navigation' ? (
                       <span className="text-secondary/60">↗</span>
                     ) : (

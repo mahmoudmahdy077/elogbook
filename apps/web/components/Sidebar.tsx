@@ -125,7 +125,7 @@ export default function Sidebar({
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
-                    ? 'bg-primary/10 text-primary font-medium'
+                    ? 'bg-primary/10 text-fg-primary font-medium'
                     : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
@@ -156,7 +156,7 @@ export default function Sidebar({
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
-                    ? 'bg-primary/10 text-primary font-medium'
+                    ? 'bg-primary/10 text-fg-primary font-medium'
                     : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
@@ -190,7 +190,7 @@ export default function Sidebar({
                 className={
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
                   (isActive
-                    ? 'bg-primary/10 text-primary font-medium'
+                    ? 'bg-primary/10 text-fg-primary font-medium'
                     : 'text-text-secondary hover:bg-neutral-dark') +
                   (collapsed ? ' justify-center' : '')
                 }
@@ -231,7 +231,7 @@ export default function Sidebar({
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
-                  className="p-2 rounded-lg hover:bg-danger/10 text-danger hover:text-danger transition-colors"
+                  className="p-2 rounded-lg hover:bg-danger/10 text-fg-danger hover:text-fg-danger transition-colors"
                   aria-label="Sign out"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -248,7 +248,7 @@ export default function Sidebar({
                 <form action="/auth/signout" method="post" className="flex-1">
                 <button
                   type="submit"
-                  className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+                  className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-danger/10 text-fg-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
                 >
                   Sign Out
                 </button>

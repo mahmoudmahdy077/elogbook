@@ -35,7 +35,7 @@ export default function UninstallPage() {
 
   return (
     <div className="panel p-6 sm:p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-danger">Uninstall Wizard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-fg-danger">Uninstall Wizard</h1>
 
       <div className="space-y-4 mb-6">
         <label className="flex items-center gap-3 p-3 rounded-lg border border-border cursor-pointer">
@@ -65,7 +65,7 @@ export default function UninstallPage() {
         <label className="flex items-center gap-3 p-3 rounded-lg border border-border cursor-pointer">
           <input type="radio" name="scope" value="full" checked={scope === 'full'} onChange={() => setScope('full')} />
           <div>
-            <span className="font-semibold text-danger">Full Removal</span>
+            <span className="font-semibold text-fg-danger">Full Removal</span>
             <p className="text-sm text-text-muted">Remove everything. This cannot be undone.</p>
           </div>
         </label>
@@ -76,10 +76,10 @@ export default function UninstallPage() {
         <input value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="DELETE" />
       </div>
 
-      {error && <p className="text-danger text-sm mb-4">{error}</p>}
-      {result && <p className="text-success text-sm mb-4">{result}</p>}
+      {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
+      {result && <p className="text-fg-success text-sm mb-4">{result}</p>}
 
-      <button onClick={handleUninstall} disabled={loading || confirm !== 'DELETE'} className="px-6 py-2 rounded-lg bg-danger text-white disabled:opacity-50">
+      <button onClick={handleUninstall} disabled={loading || confirm !== 'DELETE'} className="px-6 py-2 rounded-lg bg-danger-700 text-white disabled:opacity-50">
         {loading ? 'Processing...' : 'Execute Uninstall'}
       </button>
     </div>

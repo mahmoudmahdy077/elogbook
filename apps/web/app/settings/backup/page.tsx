@@ -76,8 +76,8 @@ export default function BackupSettingsPage() {
         </button>
       </div>
 
-      {error && <p className="text-danger text-sm mb-4">{error}</p>}
-      {result && <p className="text-success text-sm mb-4">{result}</p>}
+      {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
+      {result && <p className="text-fg-success text-sm mb-4">{result}</p>}
 
       {loading ? <p>Loading backups...</p> : (
         <div className="space-y-3">

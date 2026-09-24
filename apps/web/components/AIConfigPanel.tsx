@@ -116,7 +116,7 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
       <div className="pt-4 space-y-4">
         {error && <ErrorDisplay message={error} />}
         {success && (
-          <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
+          <div className="bg-success/10 text-fg-success p-3 rounded-lg text-sm">{success}</div>
         )}
 
         <div>

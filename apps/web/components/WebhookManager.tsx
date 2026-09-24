@@ -289,7 +289,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-fg-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── Add/Edit Form ── */}
@@ -299,12 +299,12 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {formError && (
-              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-fg-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Webhook URL <span className="text-danger">*</span>
+                Webhook URL <span className="text-fg-danger">*</span>
               </label>
               <input
                 type="url"
@@ -319,7 +319,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Events <span className="text-danger">*</span>
+                Events <span className="text-fg-danger">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {EVENT_TYPES.map((evt) => (
@@ -358,7 +358,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Secret Key <span className="text-danger">*</span>
+                Secret Key <span className="text-fg-danger">*</span>
               </label>
               <input
                 type="password"
@@ -465,7 +465,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                     {wh.events.map((evt) => (
                       <span
                         key={evt}
-                        className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                        className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-fg-primary font-medium"
                       >
                         {evt}
                       </span>
@@ -477,7 +477,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
                       <span>
                         Last sent {formatDate(wh.last_sent)}
                         {wh.last_succeeded !== null && (
-                          <span className={`ml-1 ${wh.last_succeeded ? 'text-success' : 'text-danger'}`}>
+                          <span className={`ml-1 ${wh.last_succeeded ? 'text-fg-success' : 'text-fg-danger'}`}>
                             {wh.last_succeeded ? '✓' : '✗'}
                           </span>
                         )}
@@ -540,9 +540,9 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
               {testResult && testingId === null && (
                 <div className={`mt-3 p-3 rounded-xl text-xs font-mono whitespace-pre-wrap ${
-                  testResult.includes('✓') ? 'bg-success/10 text-success' :
-                  testResult.startsWith('Status') ? 'bg-danger/10 text-danger' :
-                  'bg-danger/10 text-danger'
+                  testResult.includes('✓') ? 'bg-success/10 text-fg-success' :
+                  testResult.startsWith('Status') ? 'bg-danger/10 text-fg-danger' :
+                  'bg-danger/10 text-fg-danger'
                 }`}>
                   {testResult}
                 </div>

@@ -114,13 +114,13 @@ export default function SubscriptionManager({ tenantSlug }: SubscriptionManagerP
             <div>
               <span className="font-medium">{subscription.plan?.name ?? 'Unknown'}</span>
               <span className="ml-2 text-text-muted">${subscription.plan?.price_monthly ?? 0}/mo</span>
-              <span className={`ml-2 text-xs px-2 py-0.5 rounded ${subscription.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+              <span className={`ml-2 text-xs px-2 py-0.5 rounded ${subscription.status === 'active' ? 'bg-success/10 text-fg-success' : 'bg-danger/10 text-fg-danger'}`}>
                 {subscription.status}
               </span>
             </div>
             <div className="flex gap-2">
               {subscription.status === 'active' && (
-                <button onClick={handleCancel} disabled={changing} className="px-3 py-1 rounded border border-danger/30 text-danger text-xs hover:bg-danger/10">
+                <button onClick={handleCancel} disabled={changing} className="px-3 py-1 rounded border border-danger/30 text-fg-danger text-xs hover:bg-danger/10">
                   Cancel
                 </button>
               )}
@@ -144,7 +144,7 @@ export default function SubscriptionManager({ tenantSlug }: SubscriptionManagerP
             <div key={plan.id} className={`panel p-4 ${subscription?.plan_id === plan.id ? 'ring-2 ring-primary' : ''}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">{plan.name}</span>
-                {plan.is_custom && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">Custom</span>}
+                {plan.is_custom && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-fg-primary">Custom</span>}
               </div>
               <div className="text-2xl font-bold mb-2">${plan.price_monthly}<span className="text-sm font-normal text-text-muted">/mo</span></div>
               <div className="text-xs text-text-muted mb-3">
@@ -180,7 +180,7 @@ export default function SubscriptionManager({ tenantSlug }: SubscriptionManagerP
                   <span className="font-mono text-sm">${p.amount}</span>
                   <span className="ml-2 text-xs text-text-muted">{new Date(p.created_at).toLocaleDateString()}</span>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded ${p.status === 'completed' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded ${p.status === 'completed' ? 'bg-success/10 text-fg-success' : 'bg-warning/10 text-fg-warning'}`}>
                   {p.status}
                 </span>
               </div>

@@ -82,7 +82,7 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Log New Case</h1>
         {!duplicateFrom && !repeatLast && (
-          <Link href={`/${tenantSlug}/cases/new?repeatLast=true`} className="text-sm text-primary hover:text-primary/80 transition-colors">
+          <Link href={`/${tenantSlug}/cases/new?repeatLast=true`} className="text-sm text-fg-primary hover:text-fg-primary transition-colors">
             ↻ Repeat last entry
           </Link>
         )}

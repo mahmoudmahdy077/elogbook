@@ -30,6 +30,7 @@ export const clinicalTokens = {
         success: '#186B2E', // 4.99-5.68:1 on white/gray-50 + success tint bg (worst-case AA)
         warning: '#8F4200', // 5.33-6.31:1 same
         danger:  '#C20012', // 4.58-5.50:1 same (raw #D70015 left 4.04 worst-case on gray-50)
+        primary: '#0066D6', // 4.71-5.42:1 same (raw #007AFF is 4.02:1 on white — AA-large only)
       },
       bg: {
         /* Slightly deeper status-tint bgs than raw /10 /12 on light surfaces,

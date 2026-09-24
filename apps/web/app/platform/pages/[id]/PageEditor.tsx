@@ -111,7 +111,7 @@ export default function PageEditor({
             <ErrorDisplay message={error} />
           </div>
         )}
-        {success && <p className="mt-3 text-sm text-success">{success}</p>}
+        {success && <p className="mt-3 text-sm text-fg-success">{success}</p>}
       </div>
       <div>
         <h2 className="text-lg font-semibold text-text-primary mb-2">Revisions</h2>
@@ -120,7 +120,7 @@ export default function PageEditor({
             <li key={r.id} className="flex items-center justify-between rounded-14 border border-border bg-surface p-3">
               <div>
                 <p className="font-mono text-xs text-text-primary">
-                  {r.id.slice(0, 8)} {r.id === publishedId && <span className="text-success">(published)</span>}
+                  {r.id.slice(0, 8)} {r.id === publishedId && <span className="text-fg-success">(published)</span>}
                 </p>
                 <p className="text-xs text-text-muted">
                   {r.status} · {new Date(r.created_at).toLocaleString()}

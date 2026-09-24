@@ -175,16 +175,16 @@ export default function LoginScreen() {
             <View
               className="mb-4 px-4 py-3 rounded-xl"
               style={{
-                backgroundColor: clinicalTokens.colors.danger.bg,
+                backgroundColor: clinicalTokens.colors.status.bg.danger,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 59, 48, 0.15)',
+                borderColor: clinicalTokens.colors.status.border.danger,
               }}
             >
               <Text
                 className="text-sm"
                 style={{
                   fontFamily: clinicalTokens.fonts.body,
-                  color: clinicalTokens.colors.danger.DEFAULT,
+                  color: clinicalTokens.colors.status.text.danger,
                 }}
               >
                 {error}
@@ -197,16 +197,16 @@ export default function LoginScreen() {
             <View
               className="mb-4 px-4 py-3 rounded-xl"
               style={{
-                backgroundColor: clinicalTokens.colors.success.bg,
+                backgroundColor: clinicalTokens.colors.status.bg.success,
                 borderWidth: 1,
-                borderColor: 'rgba(52, 199, 89, 0.15)',
+                borderColor: clinicalTokens.colors.status.border.success,
               }}
             >
               <Text
                 className="text-sm"
                 style={{
                   fontFamily: clinicalTokens.fonts.body,
-                  color: clinicalTokens.colors.success.DEFAULT,
+                  color: clinicalTokens.colors.status.text.success,
                 }}
               >
                 Account created! Check your email for a confirmation link, then sign in.

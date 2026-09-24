@@ -13,7 +13,7 @@ export default function ContactPage() {
         </p>
         <p className="text-center text-sm text-text-muted mb-8">
           Email us directly at{' '}
-          <a href="mailto:sales@elogbook.app" className="text-primary underline font-medium">
+          <a href="mailto:sales@elogbook.app" className="text-fg-primary underline font-medium">
             sales@elogbook.app
           </a>
         </p>
@@ -74,7 +74,7 @@ export default function ContactPage() {
         </div>
 
         <p className="text-center text-xs text-text-muted mt-8">
-          <Link href="/" className="text-primary underline">{APP_NAME}</Link>
+          <Link href="/" className="text-fg-primary underline">{APP_NAME}</Link>
         </p>
       </main>
     </div>

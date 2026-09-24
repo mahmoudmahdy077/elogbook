@@ -65,7 +65,7 @@ export default function CaseFilters({ basePath }: { basePath: string }) {
               key={status}
               className={`px-3 py-1.5 text-xs font-medium rounded-full border cursor-pointer transition-colors ${
                 checked
-                  ? 'bg-primary/10 border-primary text-primary'
+                  ? 'bg-primary/10 border-primary text-fg-primary'
                   : 'bg-surface-solid border-border text-text-muted hover:border-border'
               }`}
             >

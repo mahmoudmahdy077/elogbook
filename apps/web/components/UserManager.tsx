@@ -73,11 +73,11 @@ export default function UserManager({ tenantId, users: initialUsers, currentUser
   }
 
   const roleColors: Record<string, string> = {
-    resident: 'bg-primary/10 text-primary',
+    resident: 'bg-primary/10 text-fg-primary',
     supervisor: 'bg-secondary/10 text-secondary',
-    director: 'bg-success/10 text-success',
-    institution_admin: 'bg-warning/10 text-warning',
-    admin: 'bg-danger/10 text-danger',
+    director: 'bg-success/10 text-fg-success',
+    institution_admin: 'bg-warning/10 text-fg-warning',
+    admin: 'bg-danger/10 text-fg-danger',
   };
 
   return (
@@ -154,7 +154,7 @@ export default function UserManager({ tenantId, users: initialUsers, currentUser
                         </button>
                         <button
                           onClick={() => handleDeactivate(user.id)}
-                          className="px-3 py-1 rounded text-xs font-medium border border-danger text-danger hover:bg-danger/10"
+                          className="px-3 py-1 rounded text-xs font-medium border border-danger text-fg-danger hover:bg-danger/10"
                         >
                           Deactivate
                         </button>

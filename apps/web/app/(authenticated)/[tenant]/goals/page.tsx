@@ -134,10 +134,10 @@ export default async function GoalsPage({ params }: { params: Promise<{ tenant: 
                       </span>
                     </div>
                     {isComplete && (
-                      <p className="text-success text-sm font-medium">Goal completed!</p>
+                      <p className="text-fg-success text-sm font-medium">Goal completed!</p>
                     )}
                     {isOverdue && (
-                      <p className="text-danger text-sm font-medium">Overdue</p>
+                      <p className="text-fg-danger text-sm font-medium">Overdue</p>
                     )}
                     {goal.description && (
                       <p className="text-sm text-text-muted mt-1">{goal.description}</p>

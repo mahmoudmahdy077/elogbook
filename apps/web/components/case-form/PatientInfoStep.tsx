@@ -56,7 +56,7 @@ function FormField({
     <div className="space-y-1.5">
       <label className="block text-sm font-medium text-text-primary">
         {label}
-        {required && <span className="text-danger ml-0.5">*</span>}
+        {required && <span className="text-fg-danger ml-0.5">*</span>}
       </label>
       <input
         type={type}
@@ -112,7 +112,7 @@ export default function PatientInfoStep({
         <>
           <div className="flex items-center gap-3 mb-3">
             <span className="badge-approved text-xs px-2.5 py-1 rounded-full">Safe Harbor Compliant</span>
-            <span className="text-xs text-approved font-medium">No PHI stored</span>
+            <span className="text-xs text-fg-approved font-medium">No PHI stored</span>
           </div>
           <div className="warning-banner text-xs rounded-xl p-3">
             De-identified mode: safe for portfolio logging. No PHI is stored. Patient hash will be computed server-side.

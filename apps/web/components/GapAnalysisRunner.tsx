@@ -84,7 +84,7 @@ export default function GapAnalysisRunner({
       </div>
 
       {error && (
-        <p className="mt-3 text-sm text-danger" role="alert">
+        <p className="mt-3 text-sm text-fg-danger" role="alert">
           {error}
         </p>
       )}
@@ -102,7 +102,7 @@ export default function GapAnalysisRunner({
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="text-text-secondary font-medium truncate pr-2">
                       {g.competency}
-                      {behind && <span className="text-danger font-semibold ml-2">−{g.gap}</span>}
+                      {behind && <span className="text-fg-danger font-semibold ml-2">−{g.gap}</span>}
                     </span>
                     <span className="text-text-muted font-medium tabular-nums">
                       {g.current}/{g.target}

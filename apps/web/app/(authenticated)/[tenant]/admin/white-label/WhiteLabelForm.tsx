@@ -62,7 +62,7 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
     <div className="panel p-5 space-y-4">
       <h2 className="text-base font-semibold">Branding Settings</h2>
       {error && <ErrorDisplay message={error} />}
-      {success && <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>}
+      {success && <div className="bg-success/10 text-fg-success p-3 rounded-lg text-sm">{success}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

@@ -73,7 +73,7 @@ export default function FieldList({ fields, onChange }: FieldListProps) {
       <button
         type="button"
         onClick={handleAdd}
-        className="w-full p-3 rounded-lg border border-dashed border-border hover:border-primary/50 text-text-muted hover:text-primary text-sm transition-colors"
+        className="w-full p-3 rounded-lg border border-dashed border-border hover:border-primary/50 text-text-muted hover:text-fg-primary text-sm transition-colors"
       >
         + Add Field
       </button>

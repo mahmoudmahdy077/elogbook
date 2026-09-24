@@ -111,8 +111,8 @@ export default function UpdatePage() {
         </div>
       )}
 
-      {error && <p className="text-danger text-sm mb-4">{error}</p>}
-      {result && <p className="text-success text-sm mb-4">{result}</p>}
+      {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
+      {result && <p className="text-fg-success text-sm mb-4">{result}</p>}
 
       {hasUpdates && (
         <button onClick={handleUpdate} disabled={updating || selected.length === 0} className="px-6 py-2 rounded-lg bg-primary text-white disabled:opacity-50">

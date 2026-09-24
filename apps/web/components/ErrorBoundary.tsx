@@ -50,7 +50,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
 
       return (
         <div role="alert" className="p-8 text-center rounded-xl bg-surface-solid border border-danger/30">
-          <h2 className="text-xl font-heading font-semibold text-danger mb-2">
+          <h2 className="text-xl font-heading font-semibold text-fg-danger mb-2">
             Something went wrong
           </h2>
           <p className="text-sm text-text-secondary mb-6">
@@ -58,7 +58,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
           </p>
           <button
             onClick={this.reset}
-            className="px-5 py-2 rounded-lg border border-primary bg-transparent text-primary cursor-pointer text-sm font-medium transition-colors duration-200 hover:bg-primary hover:text-text-on-primary"
+            className="px-5 py-2 rounded-lg border border-primary bg-transparent text-fg-primary cursor-pointer text-sm font-medium transition-colors duration-200 hover:bg-primary hover:text-text-on-primary"
           >
             Try again
           </button>

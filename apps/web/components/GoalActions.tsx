@@ -64,7 +64,7 @@ export default function GoalActions({ goal, tenantId, directorId, residents }: G
         <button
           type="button"
           onClick={() => setShowDeleteDialog(true)}
-          className="rounded-full bg-red-50 text-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors"
+          className="rounded-full bg-red-50 text-fg-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors"
         >
           Delete
         </button>

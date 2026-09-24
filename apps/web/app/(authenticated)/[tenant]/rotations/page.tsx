@@ -59,7 +59,7 @@ export default async function RotationsPage({
           <h1 className="text-[2rem] font-semibold text-text-primary tracking-[-0.03em]">Rotations</h1>
           <p className="text-[0.9rem] text-text-muted mt-1">Error loading rotations.</p>
         </div>
-        <div className="panel p-6 text-danger text-sm">{rotationsError.message}</div>
+        <div className="panel p-6 text-fg-danger text-sm">{rotationsError.message}</div>
       </div>
     );
   }

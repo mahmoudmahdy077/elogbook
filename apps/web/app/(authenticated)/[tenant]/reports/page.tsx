@@ -131,13 +131,13 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
         <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
           <div className="w-[68px] h-[68px] rounded-full bg-success/10 flex items-center justify-center">
-            <span className="text-xl font-semibold text-success tracking-tight">{approvedCount ?? 0}</span>
+            <span className="text-xl font-semibold text-fg-success tracking-tight">{approvedCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Approved</span>
         </div>
         <div className="bg-surface-solid rounded-2xl border border-border p-5 flex flex-col items-center gap-2.5">
           <div className="w-[68px] h-[68px] rounded-full bg-warning/10 flex items-center justify-center">
-            <span className="text-xl font-semibold text-warning tracking-tight">{pendingCount ?? 0}</span>
+            <span className="text-xl font-semibold text-fg-warning tracking-tight">{pendingCount ?? 0}</span>
           </div>
           <span className="text-[0.7rem] font-semibold text-text-muted uppercase tracking-wider">Pending</span>
         </div>
@@ -160,7 +160,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Cases by Specialty</h2>
             <Link
               href={`/api/${tenantSlug}/reports/specialty.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
-              className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+              className="text-xs font-medium text-fg-primary hover:opacity-80 transition-opacity"
             >
               Export CSV
             </Link>
@@ -195,7 +195,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
             <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Status Distribution</h2>
             <Link
               href={`/api/${tenantSlug}/reports/status.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
-              className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+              className="text-xs font-medium text-fg-primary hover:opacity-80 transition-opacity"
             >
               Export CSV
             </Link>
@@ -220,7 +220,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
               <h2 className="text-lg font-semibold text-text-primary tracking-[-0.02em] font-sans">Evaluation Averages</h2>
               <Link
                 href={`/api/${tenantSlug}/reports/evaluations.csv?date_from=${date_from || ''}&date_to=${date_to || ''}`}
-                className="text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+                className="text-xs font-medium text-fg-primary hover:opacity-80 transition-opacity"
               >
                 Export CSV
               </Link>

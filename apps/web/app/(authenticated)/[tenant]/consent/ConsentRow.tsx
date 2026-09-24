@@ -84,7 +84,7 @@ export default function ConsentRow({
         className={
           'px-3 py-1.5 rounded-lg text-xs font-medium ' +
           (granted
-            ? 'bg-success/10 text-success border border-success/20'
+            ? 'bg-success/10 text-fg-success border border-success/20'
             : 'bg-neutral-dark/50 text-text-secondary/90 border border-border')
         }
       >

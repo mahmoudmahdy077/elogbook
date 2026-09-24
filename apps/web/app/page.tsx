@@ -204,7 +204,7 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/pricing" className="mt-3 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-2 hover:underline">
+              <Link href="/pricing" className="mt-3 inline-flex min-h-[44px] items-center text-sm font-medium text-fg-primary underline-offset-2 hover:underline">
                 See plans →
               </Link>
             </div>

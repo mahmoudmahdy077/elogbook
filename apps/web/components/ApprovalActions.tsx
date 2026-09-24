@@ -78,7 +78,7 @@ export default function ApprovalActions({ requestId: _requestId, entryId, tenant
       />
       {error && <ErrorDisplay message={error} />}
       {confirmReject && (
-        <p className="text-xs text-warning" role="alert">
+        <p className="text-xs text-fg-warning" role="alert">
           Click Reject again to confirm. This action is irreversible.
         </p>
       )}
@@ -89,8 +89,8 @@ export default function ApprovalActions({ requestId: _requestId, entryId, tenant
           onClick={onRejectClick}
           className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 ${
             confirmReject
-              ? 'bg-danger text-white hover:opacity-90'
-              : 'bg-danger/10 text-danger hover:bg-danger/20'
+              ? 'bg-danger-700 text-white hover:opacity-90'
+              : 'bg-danger/10 text-fg-danger hover:bg-danger/20'
           }`}
         >
           {loading === 'reject' ? 'Rejecting…' : confirmReject ? 'Confirm Reject' : 'Reject'}

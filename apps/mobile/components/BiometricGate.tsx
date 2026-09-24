@@ -227,7 +227,7 @@ export function BiometricGate({
             <Ionicons
               name={attempts >= MAX_ATTEMPTS ? 'warning' : 'close-circle'}
               size={18}
-              color={clinicalTokens.colors.danger.DEFAULT}
+              color={clinicalTokens.colors.status.text.danger}
               accessibilityElementsHidden
             />
             <Text style={styles.statusText}>{statusMessage}</Text>
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: clinicalTokens.colors.danger.bg,
+    backgroundColor: clinicalTokens.colors.status.bg.danger,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: clinicalTokens.radius.md,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: clinicalTokens.fonts.body,
     fontSize: 14,
-    color: clinicalTokens.colors.danger.DEFAULT,
+    color: clinicalTokens.colors.status.text.danger,
     flexShrink: 1,
   },
   verifyButton: {

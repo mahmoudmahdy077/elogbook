@@ -212,7 +212,7 @@ export default async function EvaluationsPage({
                 <h2 className="text-xl font-semibold text-text-primary">
                   {formType}
                 </h2>
-                <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium">
+                <span className="inline-flex items-center bg-primary/10 text-fg-primary text-xs px-2 py-0.5 rounded-full font-medium">
                   {grouped[formType].length}
                 </span>
               </div>
@@ -267,8 +267,8 @@ export default async function EvaluationsPage({
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                             form.status === 'completed' || form.status === 'acknowledged'
-                              ? 'bg-success-50 text-approved'
-                              : 'bg-warning-50 text-pending'
+                              ? 'bg-success-50 text-fg-approved'
+                              : 'bg-warning-50 text-fg-pending'
                           }`}
                         >
                           {form.status === 'completed' || form.status === 'acknowledged'

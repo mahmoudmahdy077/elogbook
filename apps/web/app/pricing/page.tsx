@@ -49,7 +49,7 @@ export default async function PricingPage() {
           ))}
         </div>
         <p className="text-center text-sm text-text-muted mt-12">
-          Need SSO, SCIM, or a BAA? <Link href="/contact" className="inline-flex min-h-[44px] items-center text-primary underline">Contact us</Link>.
+          Need SSO, SCIM, or a BAA? <Link href="/contact" className="inline-flex min-h-[44px] items-center text-fg-primary underline">Contact us</Link>.
         </p>
       </main>
     </div>

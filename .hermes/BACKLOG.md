@@ -40,7 +40,7 @@
 
 - [x] Verify page responsiveness at 375px / 768px / 1440px (verified 2026-09-09 in commit e66f86f: 111/111 checks pass, 37 routes x 3 viewports, 0 overflow/JS/nav errors; evidence .hermes/audit/responsive-sweep-2026-09-09.log)
 - [x] Run `pnpm build:web` to verify production build succeeds (verified 2026-09-11: Next.js 16.3.1 prod build compiles clean, 30 static pages, 89 routes; only warning = metadataBase not set, non-blocking)
-- [ ] Audit WCAG AA contrast on all light-theme text colors
+- [x] Audit WCAG AA contrast on all light-theme text colors (audited 2026-09-22/24: audit app + script commit; fg-* token variants land in this commit — 22/22 checks pass, 0 hardcoded violations)
 
 ## Phase: Documentation
 

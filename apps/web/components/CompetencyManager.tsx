@@ -313,7 +313,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                     <div>
                       <h3 className="font-semibold">{framework.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium">
+                        <span className="inline-flex items-center bg-primary/10 text-fg-primary text-xs px-2 py-0.5 rounded-full font-medium">
                           {framework.framework_type.toUpperCase()}
                         </span>
                         <span className="text-xs text-text-muted">v{framework.version}</span>
@@ -329,7 +329,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                       type="button"
                       onClick={() => confirmDelete(framework.id)}
                       disabled={deleting === framework.id}
-                      className="rounded-full bg-red-50 text-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      className="rounded-full bg-red-50 text-fg-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors disabled:opacity-50"
                     >
                       Delete
                     </button>
@@ -367,7 +367,7 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                                 key={m.code}
                                 className="flex items-start gap-3 p-2.5 rounded-lg bg-neutral-dark/30"
                               >
-                                <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium shrink-0">
+                                <span className="inline-flex items-center bg-primary/10 text-fg-primary text-xs px-2 py-0.5 rounded-full font-medium shrink-0">
                                   {m.code}
                                 </span>
                                 <div className="flex-1 min-w-0">

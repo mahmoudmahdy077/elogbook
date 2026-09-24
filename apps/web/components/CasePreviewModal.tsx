@@ -252,7 +252,7 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
                           >
                             <span className="text-sm text-text-secondary">
                               {f.label}
-                              {f.required && <span className="text-danger ml-0.5">*</span>}
+                              {f.required && <span className="text-fg-danger ml-0.5">*</span>}
                             </span>
                             <span className="text-sm font-medium text-text-primary text-right max-w-[60%] break-words">
                               {String((caseData.field_values as Record<string, unknown>)?.[f.key] ?? '\u2014')}
@@ -275,7 +275,7 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
                     />
                     {actionError && <ErrorDisplay message={actionError} />}
                     {confirmReject && (
-                      <p className="text-xs text-warning" role="alert">
+                      <p className="text-xs text-fg-warning" role="alert">
                         Click Reject again to confirm. This action is irreversible.
                       </p>
                     )}
@@ -286,8 +286,8 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
                         onClick={onRejectClick}
                         className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 ${
                           confirmReject
-                            ? 'bg-danger text-white hover:opacity-90'
-                            : 'bg-danger/10 text-danger hover:bg-danger/20'
+                            ? 'bg-danger-700 text-white hover:opacity-90'
+                            : 'bg-danger/10 text-fg-danger hover:bg-danger/20'
                         }`}
                       >
                         {actionLoading === 'reject' ? 'Rejecting\u2026' : confirmReject ? 'Confirm Reject' : 'Reject'}

@@ -355,7 +355,7 @@ export default function CaseComments({
                       setReplyTo(null);
                       setReplyContent('');
                     }}
-                    className="text-xs text-primary hover:text-primary/80 transition-colors"
+                    className="text-xs text-fg-primary hover:text-fg-primary transition-colors"
                   >
                     Cancel
                   </button>
@@ -437,7 +437,7 @@ function CommentCard({
       className="space-y-1"
     >
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-fg-primary text-[10px] font-semibold">
           {comment.author_name?.charAt(0).toUpperCase() || '?'}
         </span>
         <span className="text-sm font-medium text-text-primary">
@@ -447,7 +447,7 @@ function CommentCard({
           {formatDate(comment.created_at)}
         </span>
         {comment.author_id === currentUserId && (
-          <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+          <span className="inline-flex items-center bg-primary/10 text-fg-primary text-[10px] px-1.5 py-0.5 rounded-full font-medium">
             You
           </span>
         )}
@@ -457,7 +457,7 @@ function CommentCard({
         <button
           type="button"
           onClick={onReply}
-          className="ml-8 text-xs text-text-muted hover:text-primary transition-colors"
+          className="ml-8 text-xs text-text-muted hover:text-fg-primary transition-colors"
         >
           Reply
         </button>
