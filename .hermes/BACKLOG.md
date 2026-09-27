@@ -44,5 +44,5 @@
 
 ## Phase: Documentation
 
-- [ ] Add README section about the design token system
-- [ ] Document the env package usage pattern
+- [x] Add README section about the design token system (commit 6bd269c)
+- [x] Document the env package usage pattern (commit b7a229e)
