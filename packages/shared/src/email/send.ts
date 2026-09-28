@@ -1,6 +1,19 @@
-// packages/shared/src/email/send.ts
 import type { OutboundMessage } from './types';
+
 type Sender = (msg: OutboundMessage) => Promise<{ id: string }>;
+
+export class EmailTransportError extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string) {
+    super(code);
+    this.name = 'EmailTransportError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export async function sendWithFailover(msg: OutboundMessage, transports: { resend: Sender; smtp: Sender }): Promise<{ id: string; via: 'resend' | 'smtp' }> {
   try {
     const r = await transports.resend(msg);

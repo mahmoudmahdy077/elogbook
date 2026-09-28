@@ -1,14 +1,24 @@
 name: Security
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0' }
       - name: Audit (with documented image-size exception)
         run: |
           pnpm audit --audit-level=high --json > /tmp/audit.json || true
@@ -23,3 +33,29 @@ jobs:
             jq -r '.advisories | to_entries[] | select(.value.severity == "high") | "\(.key) \(.value.module_name) \(.value.url)"' /tmp/audit-filtered.json
             exit 1
           fi
+  secret-containment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0' }
+      - name: Test secret containment scanner
+        run: node --test tests/security/secret-containment.test.mjs
+      - name: Scan tracked files for secrets
+        run: node scripts/verify-secret-containment.mjs
+      - name: Test pinned supply-chain checker
+        run: node --test tests/security/pinned-supply-chain.test.mjs
+      - name: Verify pinned supply-chain inputs
+        run: node scripts/verify-pinned-supply-chain.mjs
+      - name: Test single release path checker
+        run: node --test tests/security/single-release-path.test.mjs
+      - name: Verify single release path
+        run: node scripts/verify-single-release-path.mjs
+      - name: Test release evidence tooling
+        run: node --test tests/security/release-evidence.test.mjs
+      - name: Test compliance evidence validator
+        run: node --test tests/security/compliance-evidence.test.mjs
+      - name: Verify compliance evidence
+        run: node scripts/verify-compliance-evidence.mjs

@@ -5,8 +5,8 @@ function readPackage(pkg, context) {
       context.log('override postcss to 8.5.24 in ' + pkg.name)
     }
     if (pkg.optionalDependencies && pkg.optionalDependencies.sharp) {
-      pkg.optionalDependencies.sharp = '0.35.3'
-      context.log('override sharp to 0.35.3 in ' + pkg.name)
+      pkg.optionalDependencies.sharp = '0.35.4'
+      context.log('override sharp to 0.35.4 in ' + pkg.name)
     }
   }
   if (pkg.name === 'minimizer-webpack-plugin') {
@@ -31,8 +31,8 @@ function readPackage(pkg, context) {
 
   // fast-uri (ajv chain, webpack) — GHSA-7p8r-x3mc-p8w7
   if (pkg.dependencies && pkg.dependencies['fast-uri'] && /^(\^|~)?3\./.test(pkg.dependencies['fast-uri'])) {
-    pkg.dependencies['fast-uri'] = '3.1.5'
-    context.log('override fast-uri to 3.1.5 in ' + pkg.name)
+    pkg.dependencies['fast-uri'] = '3.1.6'
+    context.log('override fast-uri to 3.1.6 in ' + pkg.name)
   }
 
   // brace-expansion v5 (minimatch 10 / glob 13) — GHSA-rgw5-rvv9-x895
@@ -50,8 +50,8 @@ function readPackage(pkg, context) {
       pkg.dependencies['js-yaml'] = '3.15.1'
       context.log('override js-yaml to 3.15.1 in ' + pkg.name)
     } else if (/^(\^|~)?4\./.test(pkg.dependencies['js-yaml'])) {
-      pkg.dependencies['js-yaml'] = '4.3.1'
-      context.log('override js-yaml to 4.3.1 in ' + pkg.name)
+      pkg.dependencies['js-yaml'] = '4.3.2'
+      context.log('override js-yaml to 4.3.2 in ' + pkg.name)
     }
   }
 
@@ -64,11 +64,11 @@ function readPackage(pkg, context) {
   // undici (@sentry/cli ^6, others ^7) — GHSA-8xcm-r25x-g524 / GHSA-1130718
   if (pkg.dependencies && pkg.dependencies['undici']) {
     if (/^(\^|~)?6\./.test(pkg.dependencies['undici'])) {
-      pkg.dependencies['undici'] = '6.28.0'
-      context.log('override undici to 6.28.0 in ' + pkg.name)
+      pkg.dependencies['undici'] = '6.28.1'
+      context.log('override undici to 6.28.1 in ' + pkg.name)
     } else if (/^(\^|~)?7\./.test(pkg.dependencies['undici'])) {
-      pkg.dependencies['undici'] = '7.29.0'
-      context.log('override undici to 7.29.0 in ' + pkg.name)
+      pkg.dependencies['undici'] = '7.29.1'
+      context.log('override undici to 7.29.1 in ' + pkg.name)
     }
   }
 
@@ -82,6 +82,25 @@ function readPackage(pkg, context) {
   if (pkg.dependencies && pkg.dependencies['@babel/runtime'] && /^(\^|~)?7\./.test(pkg.dependencies['@babel/runtime'])) {
     pkg.dependencies['@babel/runtime'] = '7.26.10'
     context.log('override @babel/runtime to 7.26.10 in ' + pkg.name)
+  }
+
+  if (pkg.dependencies && pkg.dependencies['@xmldom/xmldom']) {
+    if (/^(\^|~)?0\.8\./.test(pkg.dependencies['@xmldom/xmldom'])) {
+      pkg.dependencies['@xmldom/xmldom'] = '0.8.15'
+      context.log('override @xmldom/xmldom to 0.8.15 in ' + pkg.name)
+    } else if (/^(\^|~)?0\.9\./.test(pkg.dependencies['@xmldom/xmldom'])) {
+      pkg.dependencies['@xmldom/xmldom'] = '0.9.12'
+      context.log('override @xmldom/xmldom to 0.9.12 in ' + pkg.name)
+    }
+  }
+
+  if (pkg.dependencies) {
+    for (const dependency of Object.keys(pkg.dependencies)) {
+      if (/^metro(?:-.+)?$/.test(dependency) && /^(?:\^|~)?0\.84\.[0-4]$/.test(pkg.dependencies[dependency])) {
+        pkg.dependencies[dependency] = '0.84.6'
+        context.log('override ' + dependency + ' to 0.84.6 in ' + pkg.name)
+      }
+    }
   }
 
   return pkg

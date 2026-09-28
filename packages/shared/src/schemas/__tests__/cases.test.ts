@@ -336,44 +336,24 @@ describe('accreditationFrameworkSchema', () => {
 });
 
 describe('aiQuerySchema', () => {
-  it('should accept a valid query', () => {
+  it('accepts a supported structured intent', () => {
     const result = aiQuerySchema.safeParse({
-      query: 'Analyze this case',
+      intent: 'overview',
       resident_id: '123e4567-e89b-12d3-a456-426614174000',
       tenant_id: '123e4567-e89b-12d3-a456-426614174000',
     });
     expect(result.success).toBe(true);
   });
 
-  it('should accept query with streaming', () => {
-    const result = aiQuerySchema.safeParse({
-      query: 'Analyze this case',
+  it('rejects free-text queries and streaming', () => {
+    const base = {
+      intent: 'overview',
       resident_id: '123e4567-e89b-12d3-a456-426614174000',
       tenant_id: '123e4567-e89b-12d3-a456-426614174000',
-      stream: true,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.stream).toBe(true);
-    }
-  });
-
-  it('should reject empty query', () => {
-    const result = aiQuerySchema.safeParse({
-      query: '',
-      resident_id: '123e4567-e89b-12d3-a456-426614174000',
-      tenant_id: '123e4567-e89b-12d3-a456-426614174000',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('should reject query exceeding 2000 chars', () => {
-    const result = aiQuerySchema.safeParse({
-      query: 'x'.repeat(2001),
-      resident_id: '123e4567-e89b-12d3-a456-426614174000',
-      tenant_id: '123e4567-e89b-12d3-a456-426614174000',
-    });
-    expect(result.success).toBe(false);
+    };
+    expect(aiQuerySchema.safeParse({ ...base, query: 'What patterns do you see?' }).success).toBe(false);
+    expect(aiQuerySchema.safeParse({ ...base, intent: 'free-text' }).success).toBe(false);
+    expect(aiQuerySchema.safeParse({ ...base, stream: true }).success).toBe(false);
   });
 });
 

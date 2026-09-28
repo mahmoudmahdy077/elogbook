@@ -1,106 +1,31 @@
 name: CD
 
 on:
-  push:
-    branches: [main]
-    # Docs/history-only pushes never need a production deploy (Vercel free
-    # tier is quota-limited; each push burns a deployment).
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - '.hermes/**'
-      - 'specs/**'
-      - 'supabase/tests/**'
-      - 'scripts/verify-*.mjs'
   workflow_dispatch:
+    inputs:
+      staging_approved:
+        description: Explicit approval after staging verification
+        required: true
+        type: boolean
+        default: false
+      staging_url:
+        description: HTTPS URL for the canonical staging smoke test
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-${{ github.ref }}
-  # Superseded queued deploys are pure quota burn on a free tier: only the
-  # latest main matters. Vercel deployments are atomic, so cancelling a
-  # still-queued build cannot half-deploy.
   cancel-in-progress: true
 
 jobs:
-  # ----------------------------------------------------------------------
-  # Deploy web to Vercel
-  # ----------------------------------------------------------------------
-  web:
-    name: Deploy Web (Vercel)
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: ${{ steps.deploy.outputs.url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22.14.0'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build:web
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v42
-        id: deploy
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod --yes'
-
-  # ----------------------------------------------------------------------
-  # Push database migrations
-  # ----------------------------------------------------------------------
-  db:
-    name: Push DB migrations
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
-        with:
-          version: 2.109.1
-        env:
-          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
-      - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase db push --linked --include-all
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-  # ----------------------------------------------------------------------
-  # Deploy edge functions (depends on db migrations being done first)
-  # ----------------------------------------------------------------------
-  functions:
-    name: Deploy Edge Functions
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    needs: [db]
-    strategy:
-      matrix:
-        function: [ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
-        with:
-          version: 2.109.1
-        env:
-          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
-      - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-  # ----------------------------------------------------------------------
-  # Mobile builds: CANONICAL workflow is deploy-mobile.yml (exact build IDs,
-  # artifact download/hash, provenance, SBOM, fork-safe path). This file must
-  # not build mobile independently — a second chain cannot be the release
-  # artifact. (R1 canonical provenance; N8.)
-  # ----------------------------------------------------------------------
+  release:
+    name: Delegate to protected release gate
+    if: github.event_name == 'workflow_dispatch' && inputs.staging_approved == true
+    uses: ./.github/workflows/release.yml
+    with:
+      staging_approved: ${{ inputs.staging_approved }}
+      staging_url: ${{ inputs.staging_url }}
+    secrets: inherit

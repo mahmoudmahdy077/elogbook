@@ -181,6 +181,7 @@ jobs:
             supabase/tests/p1_32_clinical_command_boundary.sql \
             supabase/tests/p1_33_billing_entitlement_authority.sql \
             supabase/tests/p1_34_save_case_draft_command.sql \
+            supabase/tests/p1_35_consent_and_invitation_authority.sql \
             supabase/tests/p2_01_secret_views_role_gate.sql \
             supabase/tests/p2_02_rpc_tenant_checks.sql \
             supabase/tests/p2_03_duty_faculty_rls.sql \
@@ -258,3 +259,6 @@ jobs:
         run: |
           set -o pipefail
           deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20
+      - name: Privileged Edge handlers keep the shared AAL2 guard
+        shell: bash
+        run: deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-read supabase/functions/privileged-auth.static.test.ts

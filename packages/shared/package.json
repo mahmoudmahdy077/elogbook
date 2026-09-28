@@ -23,6 +23,10 @@
       "types": "./src/components/native.ts",
       "default": "./src/components/native.ts"
     },
+    "./security/outbound-url": {
+      "types": "./src/security/outbound-url.ts",
+      "default": "./src/security/outbound-url.ts"
+    },
     "./types/database.server": {
       "react-native": "./src/types/database.server.ts",
       "browser": "./src/types/database.server.ts",
@@ -37,6 +41,14 @@
       "react-native": "./src/test/fixtures.ts",
       "browser": "./src/test/fixtures.ts",
       "default": "./src/test/fixtures.ts"
+    },
+    "./email/safety": {
+      "types": "./src/email/safety.ts",
+      "default": "./src/email/safety.ts"
+    },
+    "./email/webhook": {
+      "types": "./src/email/webhook.ts",
+      "default": "./src/email/webhook.ts"
     },
     "./email/send": {
       "default": "./src/email/send.ts"
@@ -65,7 +77,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "nodemailer": "^6.9.0",
+    "nodemailer": "^9.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

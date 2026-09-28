@@ -51,6 +51,7 @@ for (const script of [
   'verify-boot.mjs',
   'verify-e2e-auth.mjs',
   'verify-tokens.mjs',
+  'verify-compliance-evidence.mjs',
 ]) {
   run(`gate:${script}`, [node, join(ROOT, 'scripts', script)]);
 }
