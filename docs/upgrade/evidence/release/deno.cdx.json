@@ -1,0 +1,3229 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:02137dfb-5cb9-4db5-a976-045427550fd8",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "E-Logbook",
+        "name": "generate-release-evidence",
+        "version": "1"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "elogbook-release",
+      "version": "b5b6dbc2b35f",
+      "bom-ref": "release:b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+    },
+    "properties": [
+      {
+        "name": "elogbook.evidence.kind",
+        "value": "deno"
+      },
+      {
+        "name": "elogbook.release.commit",
+        "value": "b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+      },
+      {
+        "name": "elogbook.lock.sha256",
+        "value": "cb3d907b93421e4df47882d98ec42d2354031ad3cac25b2dc6b1f5a0e4fda511"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "abortable",
+      "version": "0.168.0",
+      "bom-ref": "deno:a82e1016fee0dc57052ece3e08a91d2a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/abortable.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "deadline",
+      "version": "0.168.0",
+      "bom-ref": "deno:ca41eac72a7b10b2bb47f22f0bbe45bf",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/deadline.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "debounce",
+      "version": "0.168.0",
+      "bom-ref": "deno:0e65d64955802496cccd8e9a0e48f046",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/debounce.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "deferred",
+      "version": "0.168.0",
+      "bom-ref": "deno:25ba1c167db461f26d83d71166c1ccc4",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/deferred.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "delay",
+      "version": "0.168.0",
+      "bom-ref": "deno:9147ba42e52a97f26134d5af00338afa",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/delay.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mod",
+      "version": "0.168.0",
+      "bom-ref": "deno:b1d3555e6465fbc05f1469ac02639abc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/mod.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mux_async_iterator",
+      "version": "0.168.0",
+      "bom-ref": "deno:499535f0179763917710c3f32addb56d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/mux_async_iterator.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pool",
+      "version": "0.168.0",
+      "bom-ref": "deno:8b0161b68e13f7264049750c4d4b7351",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/pool.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "retry",
+      "version": "0.168.0",
+      "bom-ref": "deno:12bb09f84baf1af283acb17ffd6311ac",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/retry.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tee",
+      "version": "0.168.0",
+      "bom-ref": "deno:9fb20b19be9b9ee54808ad526d179636",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/async/tee.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "colors",
+      "version": "0.168.0",
+      "bom-ref": "deno:279e7126dfaca59a55dcb2d0493e0065",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/fmt/colors.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "server",
+      "version": "0.168.0",
+      "bom-ref": "deno:535c29c017b5296dfdcf7f6ac09430e8",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/http/server.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_diff",
+      "version": "0.168.0",
+      "bom-ref": "deno:cc76dd7ca1d3a8a3f0f9da08d9cd0462",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/testing/_diff.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_format",
+      "version": "0.168.0",
+      "bom-ref": "deno:7b9db69bf0f64aded42c655980efde52",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/testing/_format.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "asserts",
+      "version": "0.168.0",
+      "bom-ref": "deno:416fcb8e6660db08e3ff9b667d195d71",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.168.0/testing/asserts.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "asserts",
+      "version": "0.177.1",
+      "bom-ref": "deno:b77b73d43edd0959f8ad42f54917767a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/_util/asserts.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "os",
+      "version": "0.177.1",
+      "bom-ref": "deno:075257ca38542df1b7af48168917aa91",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/_util/os.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "abortable",
+      "version": "0.177.1",
+      "bom-ref": "deno:fee9675fa43f854fa16ff713ceb0639c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/abortable.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "deadline",
+      "version": "0.177.1",
+      "bom-ref": "deno:a049ee063e05041c4d59863794ea54cc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/deadline.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "debounce",
+      "version": "0.177.1",
+      "bom-ref": "deno:8794f1fb11719f642364ebbf1a37aea2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/debounce.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "deferred",
+      "version": "0.177.1",
+      "bom-ref": "deno:276066da0b6a42c66384abe69e576fae",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/deferred.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "delay",
+      "version": "0.177.1",
+      "bom-ref": "deno:4d56bdeb156eace3a4c2ed1a9a8df809",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/delay.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mod",
+      "version": "0.177.1",
+      "bom-ref": "deno:bf0efb16765b892aa2bb4cb190e25315",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/mod.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mux_async_iterator",
+      "version": "0.177.1",
+      "bom-ref": "deno:7a273a3883f51e7b13f5eb0c975fd6bc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/mux_async_iterator.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pool",
+      "version": "0.177.1",
+      "bom-ref": "deno:348592d3609468b7289c95b031b9173d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/pool.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "retry",
+      "version": "0.177.1",
+      "bom-ref": "deno:27624d67117a53c8ce43c5785c92911f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/retry.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tee",
+      "version": "0.177.1",
+      "bom-ref": "deno:5b814b0bc92a8153d40e7349325d1476",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/async/tee.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "index_of_needle",
+      "version": "0.177.1",
+      "bom-ref": "deno:e1ec9019c2d29a5b868f8a63378fde4c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/bytes/index_of_needle.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "timing_safe_equal",
+      "version": "0.177.1",
+      "bom-ref": "deno:8d4ce33b9147c304db3a41c2e43c39ee",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/crypto/timing_safe_equal.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "base64",
+      "version": "0.177.1",
+      "bom-ref": "deno:f08ba0046e76aeebe864f6568700f6ef",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/encoding/base64.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "base64url",
+      "version": "0.177.1",
+      "bom-ref": "deno:08901d9c2ef6a6b177d9ad5b5c9b9e8d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/encoding/base64url.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mod",
+      "version": "0.177.1",
+      "bom-ref": "deno:c4260f568b83e66e5d5f6e1369e8db69",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/flags/mod.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "printf",
+      "version": "0.177.1",
+      "bom-ref": "deno:644cf2919d656b29d0ffbc5598a8a615",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/fmt/printf.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_core",
+      "version": "0.177.1",
+      "bom-ref": "deno:0f2aa3817f0d443f47ff267ca924ce44",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_core.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_events.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:80b3e3e48c6b30bcf1e8c1a233b06451",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_events.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_next_tick",
+      "version": "0.177.1",
+      "bom-ref": "deno:98cc46602753bb242ab4857bb76f5735",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_next_tick.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "exiting",
+      "version": "0.177.1",
+      "bom-ref": "deno:6b0d8573f91d2f9fea0a0fb5f53a33b6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_process/exiting.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "process",
+      "version": "0.177.1",
+      "bom-ref": "deno:dac7c967095c6a498810d808886b649e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_process/process.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "stdio.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:958a90bca299c0a39dea462bb523744e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_process/stdio.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "streams.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:c9e9da87037f8d03a30e98bc1bdae9b0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_process/streams.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_stream.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:b2eb58bcb6a0a714c01becfbaab1b30c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_stream.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_util_callbackify",
+      "version": "0.177.1",
+      "bom-ref": "deno:115acd38e5038dd01a575cb925ea0e50",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_util/_util_callbackify.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_utils",
+      "version": "0.177.1",
+      "bom-ref": "deno:0ed772ec825761614830dc59aa9e0b27",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/_utils.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "buffer",
+      "version": "0.177.1",
+      "bom-ref": "deno:f47b6403ce0f0f725b9c5cbfa1fe20c9",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/buffer.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "events",
+      "version": "0.177.1",
+      "bom-ref": "deno:33ebd564322c09ed2d5e01485e257b58",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/events.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "buffer.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:5bf4a95d308652a3910cbd58917c930c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/buffer.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_keys",
+      "version": "0.177.1",
+      "bom-ref": "deno:43831b7b9e5444ef437042284957950a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/crypto/_keys.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "constants",
+      "version": "0.177.1",
+      "bom-ref": "deno:13d04178c4dec9df12aae9ccf141d2ea",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/crypto/constants.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "error_codes",
+      "version": "0.177.1",
+      "bom-ref": "deno:b5850047c51ebc8b1c2ab111712b0863",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/error_codes.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "errors",
+      "version": "0.177.1",
+      "bom-ref": "deno:19db3c7a39ae0588b11f696bf6c30224",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/errors.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fixed_queue",
+      "version": "0.177.1",
+      "bom-ref": "deno:a0c7ec4e40b5b52e549770a0e428cb52",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/fixed_queue.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "hide_stack_frames",
+      "version": "0.177.1",
+      "bom-ref": "deno:958fe3bfab7043f9c982f0ae50c8c524",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/hide_stack_frames.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "net",
+      "version": "0.177.1",
+      "bom-ref": "deno:1ed4e2e7f5f61a26bd78cbc4763f88d7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/net.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "normalize_encoding.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:48ac3073a6fa9c407c342c9ae74c5254",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/normalize_encoding.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "options",
+      "version": "0.177.1",
+      "bom-ref": "deno:ae35023f083e2ebaec2d30586b3411b8",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/options.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "primordials.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:3d702815fb461ecc89ba16225617629c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/primordials.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "per_thread.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:a0be82c599c6f8011b181974e71dcf8e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/process/per_thread.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "callbacks.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:998d336084d12e46d770c142f1904751",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/readline/callbacks.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "utils.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:c24c0e9dfa3228c72859250d33d09f70",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/readline/utils.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "destroy.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:cde19e2750091a4b9e01d98a02741c5e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/streams/destroy.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "end-of-stream.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:d664e70c38fdafc64773df60954ac605",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/streams/end-of-stream.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "utils.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:942f906523b8cdf09b86d31dad109cfb",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/streams/utils.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "util.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:74707e957c5b45e5d5b852b0f20c9b40",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/util.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "comparisons",
+      "version": "0.177.1",
+      "bom-ref": "deno:5f9e7f53685b44f0fc256568fbe7d822",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/util/comparisons.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "debuglog",
+      "version": "0.177.1",
+      "bom-ref": "deno:0303f9c5dd8db46d876783b3497c153d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/util/debuglog.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "inspect.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:fb33c90ab2f4c84e59e3c3a7c873d557",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/util/inspect.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "types",
+      "version": "0.177.1",
+      "bom-ref": "deno:f22a22ffb2ea5b72d6d8b73d82393c23",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/util/types.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "validators.mjs",
+      "version": "0.177.1",
+      "bom-ref": "deno:8344f66c9fc11949350a3f9ab5701262",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal/validators.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_libuv_winerror",
+      "version": "0.177.1",
+      "bom-ref": "deno:0323fb4dbc65c08022857d94cf50812e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_libuv_winerror.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_listen",
+      "version": "0.177.1",
+      "bom-ref": "deno:e30594576235879ebabe2f182ed24351",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_listen.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_node",
+      "version": "0.177.1",
+      "bom-ref": "deno:f74c53e6c212eac46367fe8a1a49044b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_node.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_timingSafeEqual",
+      "version": "0.177.1",
+      "bom-ref": "deno:c5f8df5ffb46375c3e14593713c9b84f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_timingSafeEqual.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_utils",
+      "version": "0.177.1",
+      "bom-ref": "deno:9793859fbcb91bfa484893803fe99a60",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_utils.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_winerror",
+      "version": "0.177.1",
+      "bom-ref": "deno:03cb9173ed4100dd220b5878396a42ea",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/_winerror.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ares",
+      "version": "0.177.1",
+      "bom-ref": "deno:7a7c6a993a596c6b215ef8772635b568",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/ares.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:f2be2f829f80c3f59b0556e111e7803f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/async_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "buffer",
+      "version": "0.177.1",
+      "bom-ref": "deno:3b5e758660b31f97bbcca92fbc6d995a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/buffer.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "cares_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:8ad672b48fc349271bc99406bcaeaf47",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/cares_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "config",
+      "version": "0.177.1",
+      "bom-ref": "deno:5425c9052f714ef19b65dd0fb53fb1c1",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/config.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "connection_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:1aa0edef96a286dba6b67a5a4b6d377f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/connection_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "constants",
+      "version": "0.177.1",
+      "bom-ref": "deno:cbc675439554c8a4e50eccfe5e851201",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/constants.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "contextify",
+      "version": "0.177.1",
+      "bom-ref": "deno:c039cfbfc12669700cc98b59d8984d7d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/contextify.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "credentials",
+      "version": "0.177.1",
+      "bom-ref": "deno:2e1364e8befb5f321c3379f478df8add",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/credentials.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "crypto",
+      "version": "0.177.1",
+      "bom-ref": "deno:bd4e27f56675144a1059bdc994c82bed",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/crypto.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "errors",
+      "version": "0.177.1",
+      "bom-ref": "deno:4cf29cc24b546eb243ee2a6aef9d88d4",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/errors.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fs",
+      "version": "0.177.1",
+      "bom-ref": "deno:a758d9161e6e7cea9979f9bc26f95309",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/fs.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fs_dir",
+      "version": "0.177.1",
+      "bom-ref": "deno:ebe8b925d464956b79209a4f3882fa93",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/fs_dir.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fs_event_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:a0afe331872d2878272680eb1dd83dfc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/fs_event_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "handle_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:4093d5026ce48628d8b4839984af4122",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/handle_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "heap_utils",
+      "version": "0.177.1",
+      "bom-ref": "deno:835742e10277e86c1c9c70bcd11c4113",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/heap_utils.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "http_parser",
+      "version": "0.177.1",
+      "bom-ref": "deno:223d78f8d294a137a8dfdcef28628a70",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/http_parser.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "icu",
+      "version": "0.177.1",
+      "bom-ref": "deno:e813f50eba67409ae141ac04fb981cd6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/icu.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "inspector",
+      "version": "0.177.1",
+      "bom-ref": "deno:61b4fccee3158b751187f004650f6d90",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/inspector.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "js_stream",
+      "version": "0.177.1",
+      "bom-ref": "deno:91225f0bb1ce32859fb4e0fe032b0dce",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/js_stream.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "messaging",
+      "version": "0.177.1",
+      "bom-ref": "deno:ae8164fee9dbdf7904083c59d3d1f28d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/messaging.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mod",
+      "version": "0.177.1",
+      "bom-ref": "deno:aef109fb8e700d775118e5e377e0f4de",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/mod.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "module_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:708ea718aafae8a161b4a47cca494dc2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/module_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "native_module",
+      "version": "0.177.1",
+      "bom-ref": "deno:0b2f062f10b7edf82f76299490106e02",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/native_module.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "natives",
+      "version": "0.177.1",
+      "bom-ref": "deno:40ef9c0f54c74254878d4d7e482c1797",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/natives.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node_file",
+      "version": "0.177.1",
+      "bom-ref": "deno:52c672a2a1e165e5921a802319612b6d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/node_file.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node_options",
+      "version": "0.177.1",
+      "bom-ref": "deno:34cee78c27cea21b0651c173e2845cc7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/node_options.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "options",
+      "version": "0.177.1",
+      "bom-ref": "deno:a29066a87026af2707635b4c282bbd7f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/options.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "os",
+      "version": "0.177.1",
+      "bom-ref": "deno:27dd2c466676691b814f31501272557f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/os.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "performance",
+      "version": "0.177.1",
+      "bom-ref": "deno:4a300b41159d93fb5a7d47d8189e836e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/performance.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pipe_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:dabf8ac7fd46f08cd9e420cddd23a036",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/pipe_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "process_methods",
+      "version": "0.177.1",
+      "bom-ref": "deno:c9e23ff38957c7ca2e9cea893e62337f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/process_methods.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "report",
+      "version": "0.177.1",
+      "bom-ref": "deno:d6fdef64260e197699f6f9731cf1c0e0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/report.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "serdes",
+      "version": "0.177.1",
+      "bom-ref": "deno:e9ca8a4febdc1a9d9050149e9c9ec3c0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/serdes.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "signal_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:ad9ac61c3e3b874056177b35e82480aa",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/signal_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "spawn_sync",
+      "version": "0.177.1",
+      "bom-ref": "deno:16db7a8595a3ba57eeb338e52e36754a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/spawn_sync.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "stream_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:33bac4b85e9a14d151b635581403526d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/stream_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "string_decoder",
+      "version": "0.177.1",
+      "bom-ref": "deno:c2d21dc5ee1350e122d2dac0a9f9ade0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/string_decoder.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "symbols",
+      "version": "0.177.1",
+      "bom-ref": "deno:7669bab78daaed7c0284e9ca6e14622b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/symbols.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "task_queue",
+      "version": "0.177.1",
+      "bom-ref": "deno:84e76043b8790710c927326da7caa83d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/task_queue.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tcp_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:15ffed2a8fc0843058b7062b30ee0571",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/tcp_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "timers",
+      "version": "0.177.1",
+      "bom-ref": "deno:b89c0d514b773b4db7a58e41fec10599",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/timers.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tls_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:3115bebbb90d0450e5634d0978f6e191",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/tls_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "trace_events",
+      "version": "0.177.1",
+      "bom-ref": "deno:ad7a2213bdc8868145fb72c95c0f9d10",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/trace_events.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tty_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:ad7610260ad31877b7a6e95f0244d148",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/tty_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "types",
+      "version": "0.177.1",
+      "bom-ref": "deno:ae707c2bee161a1ff98effe32394feb2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/types.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "udp_wrap",
+      "version": "0.177.1",
+      "bom-ref": "deno:ba8b748d807d80e8936be03a269c0ac0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/udp_wrap.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "url",
+      "version": "0.177.1",
+      "bom-ref": "deno:f6424589a371782436d44974d81541c6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/url.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "util",
+      "version": "0.177.1",
+      "bom-ref": "deno:430ce881d3d906a9bb9c07354f489e03",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/util.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "uv",
+      "version": "0.177.1",
+      "bom-ref": "deno:e4e4dc7792ff3a485dc2fb7081bbcfcb",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/uv.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "v8",
+      "version": "0.177.1",
+      "bom-ref": "deno:8b101e08ca78f15d26939a6b6af553a2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/v8.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "worker",
+      "version": "0.177.1",
+      "bom-ref": "deno:b718a9b6860c583ca185b3b5f6a83e21",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/worker.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "zlib",
+      "version": "0.177.1",
+      "bom-ref": "deno:8d6db821baece408ea4b84775f751dbc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/internal_binding/zlib.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "process",
+      "version": "0.177.1",
+      "bom-ref": "deno:5d23d3807a1ce6c05f11ebe0f36b06c0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/process.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "stream",
+      "version": "0.177.1",
+      "bom-ref": "deno:fcf0d8ccc12d2f0ce3c36ab16b2c591f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/stream.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "string_decoder",
+      "version": "0.177.1",
+      "bom-ref": "deno:653d830034b9f05899fd231e41ca7452",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/string_decoder.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "util",
+      "version": "0.177.1",
+      "bom-ref": "deno:bf43bf1d2c4c07e201428fb8a1fd85d2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/util.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "types",
+      "version": "0.177.1",
+      "bom-ref": "deno:5c879e4107563e27417d29b08293e19b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/node/util/types.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_constants",
+      "version": "0.177.1",
+      "bom-ref": "deno:4fc58fa7395cc175df63dcda715b61e1",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/_constants.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_interface",
+      "version": "0.177.1",
+      "bom-ref": "deno:18afd85fbec46dec87d4339892f116e2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/_interface.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "_util",
+      "version": "0.177.1",
+      "bom-ref": "deno:1f11e80a3c1b9d926b59551a2f1c0d11",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/_util.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "common",
+      "version": "0.177.1",
+      "bom-ref": "deno:5a7b9bbf8828705d696a50723aead8c7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/common.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "glob",
+      "version": "0.177.1",
+      "bom-ref": "deno:89f10c3fee37206e4aa0ac6b6ef9733c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/glob.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mod",
+      "version": "0.177.1",
+      "bom-ref": "deno:5fc9b26b446b03ca33c33e5244f6d5d0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/mod.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "posix",
+      "version": "0.177.1",
+      "bom-ref": "deno:e03593f6b78501db7374d4005ac99938",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/posix.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "separator",
+      "version": "0.177.1",
+      "bom-ref": "deno:e157d51202bbbf9d84d2450c778cb19a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/separator.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "win32",
+      "version": "0.177.1",
+      "bom-ref": "deno:5edc8c1ce6945132920132fcb8786681",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/path/win32.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "write_all",
+      "version": "0.177.1",
+      "bom-ref": "deno:0a124c2f727eb7053f4288f17ffdf398",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://deno.land/std@0.177.1/streams/write_all.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functions-js.mjs",
+      "version": "2.117.1",
+      "bom-ref": "deno:53f7f0b2593a6be9dcbae8e4a44db61f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/functions-js@2.117.1/denonext/functions-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functions-js@2.117.1",
+      "version": "2.117.1",
+      "bom-ref": "deno:7053a4b7ba130fca7e2bc26b4ac11d69",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/functions-js@2.117.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functions-js@^2.1.5",
+      "version": "locked",
+      "bom-ref": "deno:22b1fc7da9d9fc35c8318907e6781c14",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/functions-js@^2.1.5?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gotrue-js.mjs",
+      "version": "2.117.1",
+      "bom-ref": "deno:576ddce16647687fd7d17cf135ae9b69",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/gotrue-js@2.117.1/denonext/gotrue-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gotrue-js@2.117.1",
+      "version": "2.117.1",
+      "bom-ref": "deno:06ee6f2da80afbef2c0f2418b3101c33",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/gotrue-js@2.117.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gotrue-js@^2.56.0",
+      "version": "locked",
+      "bom-ref": "deno:b23bc360b4f1aa738b61a83e55d6cc05",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/gotrue-js@^2.56.0?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node-fetch.mjs",
+      "version": "2.6.15",
+      "bom-ref": "deno:0bce189b17b39939428919945e6a2616",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/node-fetch@2.6.15/denonext/node-fetch.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node-fetch@2.6.15",
+      "version": "2.6.15",
+      "bom-ref": "deno:d6476eb760b326c6efa9534e2de942be",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node-fetch@^2.6.14",
+      "version": "locked",
+      "bom-ref": "deno:8fe5c436f370c025a7d3842d4db1f8e6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/node-fetch@^2.6.14?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "phoenix.mjs",
+      "version": "0.4.5",
+      "bom-ref": "deno:e67b1e0bbd7d4b53b55facfcee4707b7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "postgrest-js.mjs",
+      "version": "1.21.4",
+      "bom-ref": "deno:a67bcb8e00c067cc250bc24dd01da127",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/postgrest-js@1.21.4/denonext/postgrest-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "postgrest-js@1.21.4",
+      "version": "1.21.4",
+      "bom-ref": "deno:0eddc4a332bdae27c8b1a5213cd676b8",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/postgrest-js@1.21.4?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "postgrest-js@^1.8.6",
+      "version": "locked",
+      "bom-ref": "deno:e646a8c61e00a363c318966c416f3c3e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/postgrest-js@^1.8.6?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "realtime-js.mjs",
+      "version": "2.117.1",
+      "bom-ref": "deno:fc59bc66fdb75e09190f796a3d91df17",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/realtime-js@2.117.1/denonext/realtime-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "realtime-js@2.117.1",
+      "version": "2.117.1",
+      "bom-ref": "deno:c30b9d663a50e14f45df41777042024c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/realtime-js@2.117.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "realtime-js@^2.8.4",
+      "version": "locked",
+      "bom-ref": "deno:9d89d19a5f4340439d6362840e87b780",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/realtime-js@^2.8.4?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "storage-js.mjs",
+      "version": "2.117.1",
+      "bom-ref": "deno:1036a34a212739d6446611090db16665",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/storage-js@2.117.1/denonext/storage-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "storage-js@2.117.1",
+      "version": "2.117.1",
+      "bom-ref": "deno:6ae582512e6e53020aacdd6656662c0a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/storage-js@2.117.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "storage-js@^2.5.4",
+      "version": "locked",
+      "bom-ref": "deno:8062f5c3643b742e0590a4c1f8d1ecb2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/storage-js@^2.5.4?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "supabase-js@2.39.0",
+      "version": "2.39.0",
+      "bom-ref": "deno:eb311302d3d6e98d0d25791f8f1bf4b7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/supabase-js@2.39.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "supabase-js.mjs",
+      "version": "2.39.0",
+      "bom-ref": "deno:f2e3569ea69d48c2ea5e1da8c514faa6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@supabase/supabase-js@2.39.0/denonext/supabase-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "index.d",
+      "version": "locked",
+      "bom-ref": "deno:a3a42146a0a6d0a70856addaeaede072",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@types/get-intrinsic@~1.2.3/index.d.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "index.d",
+      "version": "locked",
+      "bom-ref": "deno:11a02234cb0f49377a64758561787afa",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@types/object-inspect@~1.13.0/index.d.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "index.d",
+      "version": "locked",
+      "bom-ref": "deno:726a2a044f9936cacf96e264c314d6a4",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/@types/qs@~6.15.1/index.d.ts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-function.mjs",
+      "version": "1.0.0",
+      "bom-ref": "deno:2133636a27e027c140ce62667fb98ad6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-function@1.0.0/deno/async-function.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-function@1.0.0",
+      "version": "1.0.0",
+      "bom-ref": "deno:6f0435eee1c148d52822f36c54a10979",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-function@1.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-function@^1.0.0",
+      "version": "locked",
+      "bom-ref": "deno:f3af8d7b87b5c1d44db2dfadda6a165f",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-function@^1.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-generator-function.mjs",
+      "version": "1.0.0",
+      "bom-ref": "deno:b20620fe2a15f7c6a161fb221eb8424b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-generator-function@1.0.0/deno/async-generator-function.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-generator-function@1.0.0",
+      "version": "1.0.0",
+      "bom-ref": "deno:6c18cdd09b437b28a0c5ad0294612764",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-generator-function@1.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "async-generator-function@^1.0.0",
+      "version": "locked",
+      "bom-ref": "deno:d8010f5e91f23dfbbe1518cd09daac25",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/async-generator-function@^1.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "actualApply.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:d000709ce3bd8b0aa95d81e6017f5c79",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/deno/actualApply.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bind-apply-helpers.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:71f0db8399c4420814bc2646a095e8a7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/deno/call-bind-apply-helpers.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionApply.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:144382a12e04f9336ac46f3dd2e95e74",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/deno/functionApply.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionCall.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:e81f257b177c1bf0af7da15c82935192",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/deno/functionCall.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "reflectApply.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:62230b18101e8b0138d4a054b97470de",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/deno/reflectApply.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionApply",
+      "version": "1.0.2",
+      "bom-ref": "deno:8038b82a5d5bc1b947b55f11bb063bca",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/functionApply?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionCall",
+      "version": "1.0.2",
+      "bom-ref": "deno:39b13974edf8ccbf34144b09c8aaa97b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2/functionCall?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bind-apply-helpers@1.0.2",
+      "version": "1.0.2",
+      "bom-ref": "deno:1df1cfba2da3bf29f4d22a019a469c5b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@1.0.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bind-apply-helpers@^1.0.1",
+      "version": "locked",
+      "bom-ref": "deno:7d1c34d1ee7c9b683aa585d6aaa46687",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@^1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionApply",
+      "version": "locked",
+      "bom-ref": "deno:f29dfef4c3f494b2edf4cf04a1eded16",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@^1.0.2/functionApply?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "functionCall",
+      "version": "locked",
+      "bom-ref": "deno:7683b1a9bb2f5b6ab1444f00dca61070",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@^1.0.2/functionCall?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bind-apply-helpers@^1.0.2",
+      "version": "locked",
+      "bom-ref": "deno:84f95bbc995ad67ad95b847f8c862848",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bind-apply-helpers@^1.0.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bound.mjs",
+      "version": "1.0.4",
+      "bom-ref": "deno:b9b6b911eb59a7f766eb4de4090cc082",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bound@1.0.4/deno/call-bound.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bound@1.0.4",
+      "version": "1.0.4",
+      "bom-ref": "deno:0b0b47080ef828d3290b3b962b630e96",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bound@1.0.4?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "call-bound@^1.0.2",
+      "version": "locked",
+      "bom-ref": "deno:76c9707b7ef723443158eb4422e78d3e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/call-bound@^1.0.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:5c90ee98d6aac7b388806634a6738d15",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/dunder-proto@1.0.1/deno/get.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get",
+      "version": "1.0.1",
+      "bom-ref": "deno:12d3a8dbf71021ce27c3c6b9c8f98c00",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/dunder-proto@1.0.1/get?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get",
+      "version": "locked",
+      "bom-ref": "deno:118b9ec50b3799dcd234eb5592d10606",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/dunder-proto@^1.0.1/get?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "es-object-atoms.mjs",
+      "version": "1.1.2",
+      "bom-ref": "deno:6ee8debe9eb48043b6c31157a5f986e6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/es-object-atoms@1.1.2/deno/es-object-atoms.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "es-object-atoms@1.1.2",
+      "version": "1.1.2",
+      "bom-ref": "deno:b1eb7bd557cd17ce9632b79fc9b00ab0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/es-object-atoms@1.1.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "es-object-atoms@^1.0.0",
+      "version": "locked",
+      "bom-ref": "deno:5b9fcc1869f884081563c9b8870052b2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/es-object-atoms@^1.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "es-object-atoms@^1.1.1",
+      "version": "locked",
+      "bom-ref": "deno:32f481dd9d8ffe3316cf9b56c4387ec7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/es-object-atoms@^1.1.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "generator-function.mjs",
+      "version": "2.0.1",
+      "bom-ref": "deno:a1f1ae5a56613fa28990504ce06a2135",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/generator-function@2.0.1/deno/generator-function.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "generator-function@2.0.1",
+      "version": "2.0.1",
+      "bom-ref": "deno:e24b201e9e4cba362af8e1056d115a59",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/generator-function@2.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "generator-function@^2.0.0",
+      "version": "locked",
+      "bom-ref": "deno:e8c2a3ff28dade329a9766499381e11c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/generator-function@^2.0.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-intrinsic.mjs",
+      "version": "1.3.1",
+      "bom-ref": "deno:28442986ea16b29fa911766704c9a24b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-intrinsic@1.3.1/deno/get-intrinsic.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-intrinsic@1.3.1",
+      "version": "1.3.1",
+      "bom-ref": "deno:48ce8d3e7f9f126f551d0b70cd1e909c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-intrinsic@1.3.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-intrinsic@^1.2.5",
+      "version": "locked",
+      "bom-ref": "deno:55e7e611b079f93aeb71357c45f866ac",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-intrinsic@^1.2.5?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-intrinsic@^1.3.0",
+      "version": "locked",
+      "bom-ref": "deno:b0cfef6f7b9ced9496e80f46278f4bac",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-intrinsic@^1.3.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Object.getPrototypeOf",
+      "version": "1.0.1",
+      "bom-ref": "deno:88908e66c59859bda73624f86eaf0d7e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1/Object.getPrototypeOf?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Reflect.getPrototypeOf",
+      "version": "1.0.1",
+      "bom-ref": "deno:eacd5f423c17966c34162fb62266eec5",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1/Reflect.getPrototypeOf?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Object.getPrototypeOf.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:959282237269afb331e5f49ed6eac933",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1/deno/Object.getPrototypeOf.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Reflect.getPrototypeOf.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:8e130f3c624b6495dc5e686ab845de03",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1/deno/Reflect.getPrototypeOf.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-proto.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:7ca951febd0bd1e024dd683d5c7833f9",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1/deno/get-proto.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-proto@1.0.1",
+      "version": "1.0.1",
+      "bom-ref": "deno:c4f8defcb85bd11804317c0e445a4148",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Object.getPrototypeOf",
+      "version": "locked",
+      "bom-ref": "deno:955ccbd9cf7cc4c86a007c5ec40ca565",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@^1.0.1/Object.getPrototypeOf?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Reflect.getPrototypeOf",
+      "version": "locked",
+      "bom-ref": "deno:99b9768b0359ee75ea23d6bc477ef4b6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@^1.0.1/Reflect.getPrototypeOf?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "get-proto@^1.0.1",
+      "version": "locked",
+      "bom-ref": "deno:a740283c6218e4172e85ec2ae158e4e3",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/get-proto@^1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "iceberg-js.mjs",
+      "version": "0.8.1",
+      "bom-ref": "deno:80ac78fd876cc80c4544f1c432249fe6",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "iceberg-js@0.8.1",
+      "version": "0.8.1",
+      "bom-ref": "deno:843c5ba51d960f1ed5fafa622c481beb",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "iceberg-js@^0.8.1",
+      "version": "locked",
+      "bom-ref": "deno:f736aebba9a813dbf4e392789672c718",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/iceberg-js@^0.8.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "abs",
+      "version": "1.1.0",
+      "bom-ref": "deno:1025c2ed13bddd971a89158454c39892",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/abs?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "abs.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:14ddd1134a23d76fe8dead4692eca5db",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/abs.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "floor.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:eccd5fbece90ba8948758cdf8294b255",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/floor.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "isNaN.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:cdb93adf9c7a874cc31c85e69bf02d7e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/isNaN.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "max.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:1b967b960a86a3e32a330dde6844835d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/max.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "min.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:80901fb61bfe3632eff442d63a867b5c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/min.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pow.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:af869f1f2dee5f4e0dcd40222a630a72",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/pow.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "round.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:485db28e327dd010d1d00651a02453dc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/round.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "sign.mjs",
+      "version": "1.1.0",
+      "bom-ref": "deno:efb9e12a736cb0e719363c720c7886c7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/deno/sign.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "floor",
+      "version": "1.1.0",
+      "bom-ref": "deno:8ffb6a9141c8145fe8a3ec47f586471a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/floor?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "max",
+      "version": "1.1.0",
+      "bom-ref": "deno:12873441ae2d70ac79869cc29d9dfbc3",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/max?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "min",
+      "version": "1.1.0",
+      "bom-ref": "deno:52d904d3edd31a4ef23c7a0df2f33f86",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/min?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pow",
+      "version": "1.1.0",
+      "bom-ref": "deno:7cdf357078a7d584b29c82cd0805510c",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/pow?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "round",
+      "version": "1.1.0",
+      "bom-ref": "deno:fcf0d7dbc1de24dfd93743c111947460",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/round?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "sign",
+      "version": "1.1.0",
+      "bom-ref": "deno:697ae5afb19617b2fda381b5be62b197",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@1.1.0/sign?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "abs",
+      "version": "locked",
+      "bom-ref": "deno:976be8baee6cd69feaec41b9aa2a98a5",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/abs?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "floor",
+      "version": "locked",
+      "bom-ref": "deno:89985af6ce679fd091fd70a7207d44e5",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/floor?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "max",
+      "version": "locked",
+      "bom-ref": "deno:11f3860c11157938c55de5bde027e12a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/max?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "min",
+      "version": "locked",
+      "bom-ref": "deno:4ce7b1f2f1f5a383b390df3282866957",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/min?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pow",
+      "version": "locked",
+      "bom-ref": "deno:a465a30848b06239559e096ddb7677fe",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/pow?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "round",
+      "version": "locked",
+      "bom-ref": "deno:c0aa4f9d0921e3bb27bc05d4d819f286",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/round?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "sign",
+      "version": "locked",
+      "bom-ref": "deno:d218e70135d62174c5e3e36c086d4fd7",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/math-intrinsics@^1.1.0/sign?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "object-inspect.mjs",
+      "version": "1.13.4",
+      "bom-ref": "deno:703b2069492d7f85887637457e09f319",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/object-inspect@1.13.4/deno/object-inspect.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "object-inspect@1.13.4",
+      "version": "1.13.4",
+      "bom-ref": "deno:f0cde15d55c074b8207beba8aabd7141",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/object-inspect@1.13.4?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "object-inspect@^1.13.3",
+      "version": "locked",
+      "bom-ref": "deno:68688c3132f6f2c558675b3d662c7440",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/object-inspect@^1.13.3?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "object-inspect@^1.13.4",
+      "version": "locked",
+      "bom-ref": "deno:ffa3ba94dae00d256f2a21d705733e91",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/object-inspect@^1.13.4?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "qs.mjs",
+      "version": "6.15.3",
+      "bom-ref": "deno:52dc70210892483dde915a060cbca642",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/qs@6.15.3/deno/qs.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "qs@6.15.3",
+      "version": "6.15.3",
+      "bom-ref": "deno:8b8b2c80ff989545e8d7c9c5df1393e8",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/qs@6.15.3?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "qs@^6.11.0",
+      "version": "locked",
+      "bom-ref": "deno:47b575d3c3288c8d7e8a50c76b7e34af",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/qs@^6.11.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-list.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:2126a46335f27423efb8af34fdc65fec",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-list@1.0.1/deno/side-channel-list.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-list@1.0.1",
+      "version": "1.0.1",
+      "bom-ref": "deno:afbd65887353cd021c12c2f406da9273",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-list@1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-list@^1.0.1",
+      "version": "locked",
+      "bom-ref": "deno:f511a690b2f9677a9e7dd62a6caacb4a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-list@^1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-map.mjs",
+      "version": "1.0.1",
+      "bom-ref": "deno:2056c354dfb62ef56b966f1e8fe08082",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-map@1.0.1/deno/side-channel-map.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-map@1.0.1",
+      "version": "1.0.1",
+      "bom-ref": "deno:10160a5badb7a34437a3ea1f3989d17e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-map@1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-map@^1.0.1",
+      "version": "locked",
+      "bom-ref": "deno:8a0c66a6366149831b0cd1a00cc89cd3",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-map@^1.0.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-weakmap.mjs",
+      "version": "1.0.2",
+      "bom-ref": "deno:faf78f31903793cbe3570d8b41a84e09",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-weakmap@1.0.2/deno/side-channel-weakmap.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-weakmap@1.0.2",
+      "version": "1.0.2",
+      "bom-ref": "deno:8002ad7f484a3640b1b825a84b9bfcf0",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-weakmap@1.0.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel-weakmap@^1.0.2",
+      "version": "locked",
+      "bom-ref": "deno:c19d30e56129eb1ac9845ab55bede847",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel-weakmap@^1.0.2?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel.mjs",
+      "version": "1.1.1",
+      "bom-ref": "deno:aaf2a11eccc6c105e18a61073808c76a",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel@1.1.1/deno/side-channel.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel@1.1.1",
+      "version": "1.1.1",
+      "bom-ref": "deno:3f803629bbf9cf6ce2f54e768cc0330b",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel@1.1.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "side-channel@^1.1.1",
+      "version": "locked",
+      "bom-ref": "deno:0e02744c8c7a9aa9547569ee64de34ad",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/side-channel@^1.1.1?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "stripe.mjs",
+      "version": "14.21.0",
+      "bom-ref": "deno:7d42a0b94785e47d755206648e867b32",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/stripe@14.21.0/deno/stripe.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "stripe@14.21.0",
+      "version": "14.21.0",
+      "bom-ref": "deno:b05ce13bfb5940ee92d39f923f29200d",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/stripe@14.21.0?target=deno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tr46.mjs",
+      "version": "0.0.3",
+      "bom-ref": "deno:b77ee1984adac5aca840baa3f11d3265",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/tr46@0.0.3/denonext/tr46.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tr46@0.0.3",
+      "version": "0.0.3",
+      "bom-ref": "deno:ccf2406bf8d2b9519c34c0c07dc74130",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/tr46@0.0.3?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tr46@~0.0.3",
+      "version": "locked",
+      "bom-ref": "deno:4d48c93f3bb591ba4f8a92a07116c4e2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/tr46@~0.0.3?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tslib.mjs",
+      "version": "2.8.1",
+      "bom-ref": "deno:436744e4038e5d8051c79f549cd5ffda",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "webidl-conversions.mjs",
+      "version": "3.0.1",
+      "bom-ref": "deno:a0943b39916396be354a3d6b9a13dcd2",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/webidl-conversions@3.0.1/denonext/webidl-conversions.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "webidl-conversions@3.0.1",
+      "version": "3.0.1",
+      "bom-ref": "deno:c769f61979cd626fc8d202ae9955a3a8",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/webidl-conversions@3.0.1?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "webidl-conversions@^3.0.0",
+      "version": "locked",
+      "bom-ref": "deno:c861ad2c920f5f274d0188415121a910",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/webidl-conversions@^3.0.0?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "whatwg-url.mjs",
+      "version": "5.0.0",
+      "bom-ref": "deno:855779118b7c638eea0976ec4b331a7e",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/whatwg-url@5.0.0/denonext/whatwg-url.mjs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "whatwg-url@5.0.0",
+      "version": "5.0.0",
+      "bom-ref": "deno:98f2f4377da15fb84145ccb88d0745c4",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/whatwg-url@5.0.0?target=denonext"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "whatwg-url@^5.0.0",
+      "version": "locked",
+      "bom-ref": "deno:6a11a8eaab7f4acc4f5310cdb77d92cc",
+      "properties": [
+        {
+          "name": "elogbook.deno.lock-key",
+          "value": "https://esm.sh/whatwg-url@^5.0.0?target=denonext"
+        }
+      ]
+    }
+  ]
+}

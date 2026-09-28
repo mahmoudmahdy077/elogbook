@@ -1,0 +1,57 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:78fcea12-624c-472c-967d-13b55cad60e8",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "E-Logbook",
+        "name": "generate-release-evidence",
+        "version": "1"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "elogbook-release",
+      "version": "b5b6dbc2b35f",
+      "bom-ref": "release:b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+    },
+    "properties": [
+      {
+        "name": "elogbook.evidence.kind",
+        "value": "container"
+      },
+      {
+        "name": "elogbook.release.commit",
+        "value": "b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+      },
+      {
+        "name": "elogbook.docker.base-images",
+        "value": "node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402"
+      },
+      {
+        "name": "elogbook.evidence.source",
+        "value": "apps/web/Dockerfile"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "container",
+      "name": "elogbook-web",
+      "version": "b5b6dbc2b35f",
+      "bom-ref": "container:1976664b46aea14d0ac4c955740613c5",
+      "properties": [
+        {
+          "name": "elogbook.docker.base-images",
+          "value": "node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402"
+        },
+        {
+          "name": "elogbook.evidence.source",
+          "value": "apps/web/Dockerfile"
+        }
+      ]
+    }
+  ]
+}

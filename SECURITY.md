@@ -6,9 +6,9 @@ The E-Logbook team takes security vulnerabilities seriously. We appreciate your 
 
 **Please DO NOT file a public issue for security bugs.** Instead:
 
-📧 **Email:** `security@elogbook.example`
-🔐 **PGP key:** `<key-fingerprint-or-paste-here>`
-⏱️ **Response SLA:** within 72 hours (acknowledgement), within 14 days (triage + fix plan)
+**Email:** `security@elogbook.example` (replace with the monitored production mailbox before launch)
+**PGP key:** Not configured; publish a reviewed key before relying on encrypted email
+**Target response window:** acknowledgement within 72 hours and a triage plan within 14 days, subject to owner confirmation
 
 When reporting, please include:
 
@@ -25,7 +25,7 @@ When reporting, please include:
 - Source code in this repository (web, mobile, shared, supabase)
 - Edge Functions deployed from this repository
 - The production web app (`https://app.elogbook.example`) and the production mobile app (TestFlight / Play Store builds)
-- Authentication, authorization, RLS, audit, encryption, sync, AI, billing
+- Authentication, authorization, RLS, audit, cryptographic safeguards, sync, AI, billing
 
 **Out of scope:**
 
@@ -58,28 +58,42 @@ We use CVSS v3.1. Severity is determined by impact × exploitability × scope.
 
 ## Recognition
 
-We maintain a security acknowledgments page for researchers who report valid issues (with their consent). Significant findings are eligible for our responsible-disclosure bounty program (TBD).
+We maintain a security acknowledgments page for researchers who report valid issues (with their consent). No bounty commitment is published; any future program requires separate approval and terms.
 
 ## Security architecture overview
 
-- **Database:** Row-level security (FORCE RLS) on every tenant-scoped table; audit_logs is append-only; PHI is hashed/encrypted at rest.
-- **Application:** Server components verify auth; client components respect subscription read-only state; cross-tenant access audited.
-- **API:** Server actions validated with Zod; CSRF via Origin/Referer check; rate-limited per-user via DB-backed `check_rate_limit` RPC.
-- **Edge functions:** Authenticated via Supabase JWT; service_role only for admin operations; SSE streaming with safety guardrails for AI.
-- **Mobile:** SQLCipher at rest; biometrics gate; screenshot prevention; certificate pinning; SecureStore for tokens.
-- **Web:** CSP with nonce + `strict-dynamic`; `frame-ancestors 'none'`; `SameSite=Lax` cookies; explicit `Secure`/`HttpOnly`.
+- **Database:** Reviewed tenant-scoped tables use RLS and `FORCE RLS`; the maintained catalog and negative policy suites verify the intended scope. Audit coverage is control-specific and uses metadata-only records for covered tables; it is not a blanket audit of every PHI read. Data-at-rest protection is limited to the field, secret, backup, or provider mechanism named by linked evidence; this repository does not claim blanket TDE or whole-database encryption.
+- **Application:** Server components and route handlers verify authentication, tenant context, role, status, and request bounds. Client-side subscription state is not authorization evidence. Cross-tenant denials and selected security events are reviewable, subject to the coverage described in the [threat model](docs/security/threat-model.md).
+- **API:** State-changing routes use the shared [request guard](apps/web/lib/http/request-guard.ts), schema validation, origin/content-type checks, bounded bodies, and rate limits where implemented. Route coverage is checked by [`scripts/verify-request-guards.mjs`](scripts/verify-request-guards.mjs).
+- **Edge functions:** Authenticated functions derive context from the request and database; service-role use is limited to reviewed server paths. AI requests remain de-identified, tenant-scoped, budgeted, and schema-validated by [`supabase/functions/_shared/ai-guard.ts`](supabase/functions/_shared/ai-guard.ts).
+- **Mobile:** Field-level AEAD covers explicitly sealed local fields only. The production plaintext SQLite path is disabled pending verified SQLCipher evidence; biometrics, screenshot prevention, SecureStore token handling, and native certificate decisions remain release-gated as described in [`docs/security/mobile-native-security.md`](docs/security/mobile-native-security.md).
+- **Web:** CSP, frame restrictions, cookie attributes, and security headers are implemented and regression-tested; deployment configuration and provider evidence remain part of release qualification.
+- **Backups and vendors:** Backup durability requires approved encryption, remote checksum verification, and a disposable restore drill. Vendor/BAA status remains `pending` until the accountable owner records the legal and security review in [`docs/compliance/vendor-register.yaml`](docs/compliance/vendor-register.yaml).
+
+These statements describe repository controls and evidence; they do not claim HIPAA, GDPR, SOC 2, or other legal certification. Provider configuration, BAAs, legal review, workforce evidence, and independent testing remain external requirements.
 
 ## Compliance artifacts
 
 | Artifact | Location |
 |----------|----------|
-| Penetration test report template | [`docs/compliance/pen-test-report-template.md`](docs/compliance/pen-test-report-template.md) |
-| Data Protection Impact Assessment (DPIA) template | [`docs/compliance/dpia-template.md`](docs/compliance/dpia-template.md) |
-| HIPAA Security Rule checklist | [`docs/compliance/hipaa-checklist.md`](docs/compliance/hipaa-checklist.md) |
-| GDPR Article-by-article checklist | [`docs/compliance/gdpr-checklist.md`](docs/compliance/gdpr-checklist.md) |
+| HIPAA control matrix | [`docs/compliance/hipaa-control-matrix.yaml`](docs/compliance/hipaa-control-matrix.yaml) |
+| Vendor and BAA register | [`docs/compliance/vendor-register.yaml`](docs/compliance/vendor-register.yaml) |
+| Security overview | [`docs/compliance/security-overview.md`](docs/compliance/security-overview.md) |
+| HIPAA-aware controls and limitations | [`docs/compliance/hipaa.md`](docs/compliance/hipaa.md) |
+| GDPR-aware rights and vendor notes | [`docs/compliance/gdpr.md`](docs/compliance/gdpr.md) |
+| Threat model | [`docs/security/threat-model.md`](docs/security/threat-model.md) |
+| Access review procedure | [`docs/security/access-review.md`](docs/security/access-review.md) |
+| Retention and deletion baseline | [`docs/security/retention-policy.md`](docs/security/retention-policy.md) |
+| Operating cadence | [`docs/security/operating-cadence.md`](docs/security/operating-cadence.md) |
+| Exception register | [`docs/security/exception-register.yaml`](docs/security/exception-register.yaml) |
 
-Past pen-test reports are kept under `docs/compliance/pen-test-YYYY-MM-DD-<vendor>.md`
-and treated as confidential (do not push to a public fork).
+The evidence validator is run by security CI:
+
+```bash
+node scripts/verify-compliance-evidence.mjs
+```
+
+It rejects missing control fields, ownerless controls, missing evidence paths, expired exceptions, and unsupported affirmative security claims without repository evidence links. Findings are redacted and deterministic; the validator is not a certification process.
 
 ## Out-of-band disclosures
 

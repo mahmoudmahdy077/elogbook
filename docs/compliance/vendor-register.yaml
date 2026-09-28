@@ -1,0 +1,223 @@
+version: 1
+schema: elogbook.vendor-register/v1
+as_of: 2026-09-24
+status: draft-not-certified
+notes: Vendor and BAA status is pending until the accountable operator records the executed agreement, scope, subprocessors, and review approval.
+vendors:
+  - id: VND-001
+    name: Supabase
+    service: Auth, Postgres, Storage, and Edge Functions
+    owner: Platform Engineering
+    data_categories:
+      - ePHI
+      - account data
+      - operational metadata
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - docs/compliance/security-overview.md
+      - docs/security/exception-register.yaml
+      - .github/workflows/release.yml
+    review_notes: Confirm executed BAA, service configuration, region, subprocessors, and incident terms before ePHI processing.
+  - id: VND-002
+    name: Vercel
+    service: Web hosting and edge delivery
+    owner: Release Engineering
+    data_categories:
+      - application data
+      - operational metadata
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - SECURITY.md
+      - .github/workflows/release.yml
+      - apps/web/Dockerfile
+    review_notes: Confirm production data paths, log retention, support access, region, and BAA applicability.
+  - id: VND-003
+    name: Resend
+    service: Transactional email delivery
+    owner: Messaging Engineering
+    data_categories:
+      - recipient identifiers
+      - message content
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - apps/web/lib/notifications.ts
+      - packages/shared/src/email/safety.ts
+      - packages/shared/src/email/webhook.ts
+      - supabase/migrations/20260925000009_email_delivery_event_rpc.sql
+      - packages/env/src/index.ts
+      - docs/compliance/vendor-register.yaml
+    review_notes: Confirm whether any message can contain ePHI, webhook retention and replay handling, subprocessors, and BAA status. The repository enforces signed webhook ingress and metadata-only operational templates but does not establish provider approval.
+  - id: VND-004
+    name: Operator-selected SMTP provider
+    service: Backup SMTP delivery
+    owner: Messaging Engineering
+    data_categories:
+      - recipient identifiers
+      - message content
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - packages/env/src/index.ts
+      - docs/compliance/vendor-register.yaml
+    review_notes: The provider and legal entity are not selected in the repository; record them before production email activation.
+  - id: VND-005
+    name: Upstash Redis
+    service: Rate-limit state
+    owner: Platform Engineering
+    data_categories:
+      - request metadata
+      - pseudonymous identifiers
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - apps/web/lib/rate-limit-redis.ts
+      - scripts/verify-credential-fail-closed.mjs
+      - apps/web/lib/__tests__/rate-limit-contract.test.ts
+    review_notes: Confirm no clinical payloads or secrets enter rate-limit keys or telemetry.
+  - id: VND-006
+    name: Sentry
+    service: Error and performance observability
+    owner: Security Operations
+    data_categories:
+      - telemetry metadata
+      - redacted error context
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - apps/web/lib/observability/redact.ts
+      - apps/web/sentry.server.config.ts
+      - apps/web/lib/__tests__/logger.observability.test.ts
+    review_notes: External error reporting remains opt-in and must retain the redaction boundary and retention decision.
+  - id: VND-007
+    name: PostHog
+    service: Product analytics
+    owner: Product Engineering
+    data_categories:
+      - usage telemetry
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - packages/env/src/index.ts
+      - docs/compliance/security-overview.md
+      - docs/security/threat-model.md
+    review_notes: Confirm analytics is disabled for clinical routes and that event properties cannot contain ePHI.
+  - id: VND-008
+    name: OpenAI
+    service: AI provider boundary
+    owner: AI Platform Engineering
+    data_categories:
+      - de-identified prompts
+      - generated output
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - supabase/functions/_shared/ai-guard.ts
+      - supabase/functions/ai-insights/index.ts
+      - apps/web/lib/__tests__/ai-guard.test.ts
+    review_notes: AI requests are restricted by the application guard; vendor terms, retention, training use, region, and BAA status remain to be recorded.
+  - id: VND-009
+    name: Anthropic
+    service: AI provider boundary
+    owner: AI Platform Engineering
+    data_categories:
+      - de-identified prompts
+      - generated output
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - supabase/functions/_shared/ai-guard.ts
+      - packages/shared/src/schemas/ai.ts
+      - docs/security/threat-model.md
+    review_notes: Record whether this provider is enabled, its data handling terms, subprocessors, retention, region, and BAA status.
+  - id: VND-010
+    name: Expo and EAS
+    service: Mobile build and distribution
+    owner: Mobile Engineering
+    data_categories:
+      - build metadata
+      - application credentials
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+    evidence_artifacts:
+      - apps/mobile/eas.json
+      - .github/workflows/deploy-mobile.yml
+      - docs/security/mobile-native-security.md
+    review_notes: Confirm build provenance, artifact access, support access, and whether any build input can contain ePHI.
+  - id: VND-011
+    name: GitHub
+    service: Source control, CI, release workflow, and protected environments
+    owner: Release Engineering
+    data_categories:
+      - source code
+      - build metadata
+      - deployment metadata
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-RELEASE-ATTESTATION
+    exception_expiry: 2026-12-31
+    evidence_artifacts:
+      - .github/workflows/release.yml
+      - scripts/verify-single-release-path.mjs
+      - scripts/verify-release-evidence.mjs
+    review_notes: Confirm environment reviewers, runner controls, retention, organization policy, and external attestation status.
+  - id: VND-012
+    name: Operator-selected backup object storage and KMS
+    service: Durable encrypted backup storage and key management
+    owner: Operations and Incident Response
+    data_categories:
+      - encrypted database artifacts
+      - backup metadata
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-BACKUP-REVIEW
+    exception_expiry: 2026-12-31
+    evidence_artifacts:
+      - docs/backup-strategy.md
+      - scripts/backup-config.sh
+      - scripts/backup-db.sh
+      - scripts/restore-db.sh
+      - tests/security/backup-flow.test.mjs
+    review_notes: Provider, region, object lock, key custody, KMS verification hook, recovery, retention, and BAA are operator decisions and remain open. Local placeholders and fixtures are not production evidence.
+  - id: VND-013
+    name: Operator-selected malware and document scanner
+    service: Attachment scan before release
+    owner: Application and Platform Engineering
+    data_categories:
+      - attachment bytes
+      - scan status
+    baa_status: pending
+    review_date: 2026-09-24
+    exception_id: EXC-SCANNER-REVIEW
+    exception_expiry: 2026-12-31
+    evidence_artifacts:
+      - apps/web/lib/attachments/scanner-config.ts
+      - supabase/functions/process-attachment/index.ts
+      - supabase/functions/process-attachment/scanner.ts
+      - supabase/migrations/20260923000006_attachment_quarantine_storage.sql
+      - supabase/migrations/20260925000006_attachment_scanner_release_gate.sql
+      - supabase/tests/p1_30_attachment_scanner_gate.sql
+      - tests/security/attachment-broker-boundary.test.mjs
+    review_notes: No scanner vendor is selected. Uploads are rejected before storage until an approved connector, isolation, data handling, retention, timeout, failure behavior, and BAA review are established in the repository.

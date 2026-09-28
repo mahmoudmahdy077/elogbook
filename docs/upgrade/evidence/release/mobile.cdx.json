@@ -1,0 +1,81 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:9cf1638d-c79e-4424-9cad-c9d40fed078e",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "E-Logbook",
+        "name": "generate-release-evidence",
+        "version": "1"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "elogbook-release",
+      "version": "b5b6dbc2b35f",
+      "bom-ref": "release:b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+    },
+    "properties": [
+      {
+        "name": "elogbook.evidence.kind",
+        "value": "mobile"
+      },
+      {
+        "name": "elogbook.release.commit",
+        "value": "b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+      },
+      {
+        "name": "elogbook.evidence.source",
+        "value": "apps/mobile/eas.json"
+      },
+      {
+        "name": "elogbook.mobile.eas-cli",
+        "value": "14.0.0"
+      },
+      {
+        "name": "elogbook.mobile.production.channel",
+        "value": "production"
+      },
+      {
+        "name": "elogbook.mobile.production.distribution",
+        "value": "store"
+      },
+      {
+        "name": "elogbook.mobile.profiles",
+        "value": "development,preview,production"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "application",
+      "name": "elogbook-t5plytminvsqg3jhrtlw",
+      "version": "1.0.0",
+      "bom-ref": "mobile:180736e1603e31a465b091f06c65add6",
+      "properties": [
+        {
+          "name": "elogbook.evidence.source",
+          "value": "apps/mobile/eas.json"
+        },
+        {
+          "name": "elogbook.mobile.eas-cli",
+          "value": "14.0.0"
+        },
+        {
+          "name": "elogbook.mobile.production.channel",
+          "value": "production"
+        },
+        {
+          "name": "elogbook.mobile.production.distribution",
+          "value": "store"
+        },
+        {
+          "name": "elogbook.mobile.profiles",
+          "value": "development,preview,production"
+        }
+      ]
+    }
+  ]
+}

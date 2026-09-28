@@ -143,105 +143,45 @@ You can also trigger a preview deployment from the Actions tab:
 
 ## 3. Production Deployment
 
-Production deployments are **automatically triggered** on pushes to the `main` branch.
+Production has one repository-controlled deployment path: `.github/workflows/release.yml`.
+The `cd.yml`, `deploy-web.yml`, and `deploy-mobile.yml` workflows are dispatch-only wrappers that delegate to the reusable release workflow. They contain no independent production deployment commands.
 
-### Automatic Deployment (CI/CD)
+### Protected Release Gate
 
-```yaml
-# .github/workflows/deploy-web.yml
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:  # manual trigger available
-```
+Dispatch `Protected Release` (or one of the dispatch-only wrappers) with:
 
-**Pipeline stages:**
-1. **Type-check** — runs `pnpm -r typecheck`
-2. **Test** — runs `pnpm test`
-3. **Deploy** — builds and deploys to Vercel with `--prod`
+- `staging_approved=true` only after the staging checks have been reviewed.
+- `staging_url` set to the candidate staging URL.
 
-The production environment URL is: **https://elogbook.app** (configured in Vercel)
+The canonical workflow then runs the release commit check, frozen dependency installs, typecheck, tests, migration replay, SAST, secret and dependency scans, container and manifest-wide Edge Function scans, SBOM/evidence verification, staging smoke testing, DAST, and the production job. The production job is the only workflow job allowed to deploy web, database, Edge Functions, or mobile artifacts.
 
-### Manual Production Deploy
+Production deployment is not triggered by pushes to `main`. The wrappers do not provide a second deployment path.
 
-```bash
-# Option 1: Via GitHub UI
-#   Actions → Deploy Web → Run workflow → Branch: main
+### External Environment Protection
 
-# Option 2: Via Vercel CLI
-pnpm add -g vercel
-vercel pull --environment=production --token=$VERCEL_TOKEN
-pnpm install
-vercel build --prod
-vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
-```
+GitHub Environment protection for the `production` environment, including required reviewers, wait timers, and branch restrictions, is an external repository/provider configuration. This document and the workflow YAML do not create, verify, or substitute for that approval. An authorized operator must configure and verify the protection and retain the external approval evidence before promotion. A workflow input is not an environment approval.
 
-### Supabase Migrations
+### Database Migrations
 
-Database migrations are managed via the Supabase CLI. Apply before or after code deploys (migrations are backward-compatible):
+Migrations are applied by the canonical production job only after the migration replay and evidence gates pass. Do not run an independent production database push from a deployment wrapper or workstation.
 
-```bash
-# Review pending migrations
-supabase db diff
-
-# Apply migrations
-supabase db push
-
-# For production: use the Supabase dashboard or CI
-supabase db push --linked
-```
+The production environment URL is: **https://elogbook.app** (configured in Vercel).
 
 ---
 
 ## 4. Rollback Procedure
 
-### Rollback Vercel Deployment
+### Application Rollback
 
-#### Option A: Vercel Dashboard (recommended)
+Use the hosting provider's protected rollback or promotion interface under an externally approved incident runbook. Record the target deployment, approver, reason, and resulting health evidence. Do not run an independent production deployment command from this repository or a developer workstation.
 
-1. Go to [Vercel Dashboard → E-Logbook → Deployments](https://vercel.com/<org>/elogbook/deployments)
-2. Find the last known-good deployment
-3. Click the **⋮** menu → **Promote to Production**
-4. Confirm
-
-#### Option B: Vercel CLI
-
-```bash
-# List recent deployments
-vercel list --token=$VERCEL_TOKEN
-
-# Get the deployment URL of the target rollback
-vercel deploy --prod <deployment-url> --token=$VERCEL_TOKEN
-```
-
-#### Option C: Git revert + push
-
-```bash
-# Revert the problematic commit
-git revert HEAD
-git push origin main
-# CI will deploy the reverted version automatically
-```
+If the rollback requires a code change, merge a reviewed revert and promote that commit through `.github/workflows/release.yml`; a push to `main` does not deploy it.
 
 ### Database Rollback
 
-Supabase does not automatically version migrations. To roll back:
+Database changes remain forward-only in the normal release path. A rollback migration must be reviewed, tested against a disposable database, backed up, and applied through an externally controlled database-change process. The canonical release workflow must not be replaced with an ad hoc production database command.
 
-```bash
-# 1. Check current migration state
-supabase db diff
-
-# 2. Create a rollback migration
-#     supabase/migrations/<timestamp>_rollback.sql
-# Write the SQL to reverse the last migration
-
-# 3. Apply the rollback
-supabase db push
-
-# 4. Verify data integrity
-```
-
-> **⚠️ Important:** Always test rollbacks in preview/staging first. Back up production data before applying destructive migrations.
+Test rollback procedures in preview/staging first and retain the provider and database evidence with the incident record.
 
 ### Rollback Checklist
 
@@ -269,17 +209,17 @@ supabase db push
 
 | Secret | Used By | Description |
 |--------|---------|-------------|
-| `VERCEL_TOKEN` | deploy-web, deploy-preview | Vercel API auth |
-| `VERCEL_ORG_ID` | deploy-web, deploy-preview | Vercel org |
-| `VERCEL_PROJECT_ID` | deploy-web, deploy-preview | Vercel project |
-| `NEXT_PUBLIC_SUPABASE_URL` | deploy-web | Production Supabase URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | deploy-web | Production Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | deploy-web | Production service role key |
+| `VERCEL_TOKEN` | release, deploy-preview | Vercel API auth |
+| `VERCEL_ORG_ID` | release, deploy-preview | Vercel org |
+| `VERCEL_PROJECT_ID` | release, deploy-preview | Vercel project |
+| `NEXT_PUBLIC_SUPABASE_URL` | release | Production Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | release | Production Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | release | Production service role key |
 | `PREVIEW_SUPABASE_URL` | deploy-preview | Staging Supabase URL |
 | `PREVIEW_SUPABASE_ANON_KEY` | deploy-preview | Staging Supabase anon key |
-| `SENTRY_AUTH_TOKEN` | deploy-web | Sentry source map upload |
-| `SENTRY_ORG` | deploy-web | Sentry org slug |
-| `SENTRY_PROJECT` | deploy-web | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | release | Sentry source map upload |
+| `SENTRY_ORG` | release | Sentry org slug |
+| `SENTRY_PROJECT` | release | Sentry project slug |
 
 ### Vercel Environment Variables
 
@@ -335,26 +275,28 @@ vercel whoami --token=$VERCEL_TOKEN
 ## Deployment Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   GitHub Repository                   │
-│                                                        │
-│  main branch           PR branch                       │
-│     │                      │                            │
-│     ▼                      ▼                            │
-│  deploy-web.yml      deploy-preview.yml                 │
-│     │                      │                            │
-│     ▼                      ▼                            │
-│  typecheck + test     typecheck + test                  │
-│     │                      │                            │
-│     ▼                      ▼                            │
-│  Vercel (--prod)      Vercel (preview)                  │
-│     │                      │                            │
-│     ▼                      ▼                            │
-│  Production URL       Preview URL + PR comment          │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    GitHub Repository                      │
+│                                                            │
+│  PR / push validation              workflow_dispatch       │
+│       │                                    │                │
+│       ▼                                    ▼                │
+│  deploy-preview.yml                 cd / deploy-web /       │
+│  preview only                       deploy-mobile wrappers   │
+│                                          │                 │
+│                                          ▼                 │
+│                              release.yml protected gate    │
+│                                          │                 │
+│                                          ▼                 │
+│                         evidence + staging + external      │
+│                         environment approval                │
+│                                          │                 │
+│                                          ▼                 │
+│                              canonical production job       │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-> **Last updated:** July 2026
+> **Last updated:** September 2026
 > **Maintainer:** DevOps Team

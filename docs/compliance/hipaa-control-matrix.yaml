@@ -1,0 +1,417 @@
+version: 1
+schema: elogbook.hipaa-control-matrix/v1
+as_of: 2026-09-24
+status: draft-not-certified
+scope: ePHI-aware technical and administrative safeguards
+notes: This matrix is an evidence inventory and operating control map. It is not a legal determination or a certification. A null exception_expiry means no open exception; vendor and BAA decisions remain pending until evidence is recorded.
+controls:
+  - id: AC-01
+    title: Unique user identification and authoritative authentication context
+    category: access_management
+    regulation_reference: 164.312(a)(1)
+    owner: Security Engineering
+    implementation_paths:
+      - apps/web/lib/supabase/security-context.ts
+      - apps/web/lib/supabase/middleware.ts
+      - supabase/migrations/20260923000002_authoritative_principal_status.sql
+    test_ci_references:
+      - apps/web/lib/supabase/__tests__/security-context.test.ts
+      - .github/workflows/ci.yml#db-tests
+    evidence_artifacts:
+      - docs/security/access-review.md
+      - scripts/verify-compliance-evidence.mjs
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: AC-02
+    title: Role and tenant authorization with fail-closed privileged operations
+    category: access_management
+    regulation_reference: 164.312(a)(2)
+    owner: Database Engineering
+    implementation_paths:
+      - supabase/migrations/20260923000002_authoritative_principal_status.sql
+      - supabase/migrations/20260923000003_tenant_role_policy_convergence.sql
+      - apps/web/lib/supabase/require-admin.ts
+      - apps/web/lib/supabase/require-platform-admin.ts
+    test_ci_references:
+      - supabase/tests/p1_18_principal_status_rls.sql
+      - supabase/tests/p1_21_policy_convergence.sql
+      - apps/web/lib/supabase/__tests__/require-admin.test.ts
+      - apps/web/lib/supabase/__tests__/require-platform-admin.test.ts
+      - .github/workflows/ci.yml#db-tests
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - docs/security/access-review.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: AC-03
+    title: Access authorization review and revocation
+    category: administrative_safeguards
+    regulation_reference: 164.308(a)(3)
+    owner: Security and Privacy Operations
+    implementation_paths:
+      - apps/web/lib/supabase/session-revocation.ts
+      - apps/web/lib/supabase/security-context.ts
+      - apps/mobile/lib/authorization.ts
+    test_ci_references:
+      - apps/web/lib/supabase/__tests__/security-context.test.ts
+      - apps/mobile/lib/security/__tests__/mobile-security.test.ts
+      - tests/security/compliance-evidence.test.mjs
+    evidence_artifacts:
+      - docs/security/access-review.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: AC-04
+    title: Session termination and assurance requirements
+    category: access_management
+    regulation_reference: 164.312(a)(2)(iii)
+    owner: Identity Engineering
+    implementation_paths:
+      - apps/web/lib/supabase/session-revocation.ts
+      - apps/web/lib/supabase/security-context.ts
+      - apps/mobile/lib/session.ts
+      - apps/mobile/lib/capability.ts
+    test_ci_references:
+      - apps/web/lib/supabase/__tests__/security-context.test.ts
+      - apps/mobile/lib/__tests__/session.test.ts
+      - apps/mobile/lib/security/__tests__/mobile-security.test.ts
+    evidence_artifacts:
+      - docs/security/access-review.md
+      - docs/security/threat-model.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: AU-01
+    title: Metadata-only audit records and append-only review controls
+    category: audit_controls
+    regulation_reference: 164.312(b)
+    owner: Database Engineering
+    implementation_paths:
+      - supabase/migrations/20260923000004_metadata_only_audit.sql
+      - supabase/migrations/00001_schema.sql
+      - supabase/migrations/00012_rls_security_fixes.sql
+    test_ci_references:
+      - supabase/tests/p1_19_audit_secret_idempotency.sql
+      - .github/workflows/ci.yml#db-tests
+      - tests/security/compliance-evidence.test.mjs
+    evidence_artifacts:
+      - docs/compliance/security-overview.md
+      - docs/security/operating-cadence.md
+    review_date: 2026-09-24
+    vendor_baa_status: not_applicable
+    exception_id: null
+    exception_expiry: null
+  - id: AU-02
+    title: Audit review, alert ownership, and evidence cadence
+    category: administrative_safeguards
+    regulation_reference: 164.308(a)(1)
+    owner: Security Operations
+    implementation_paths:
+      - apps/web/lib/observability/redact.ts
+      - apps/web/lib/logger.ts
+      - supabase/functions/_shared/logging.ts
+      - .github/workflows/security.yml
+    test_ci_references:
+      - apps/web/lib/__tests__/logger.observability.test.ts
+      - supabase/functions/_shared/logging.test.ts
+      - tests/security/compliance-evidence.test.mjs
+    evidence_artifacts:
+      - docs/security/operating-cadence.md
+      - scripts/verify-compliance-evidence.mjs
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: IN-01
+    title: Data integrity, tenant-scoped idempotency, and bounded quotas
+    category: integrity
+    regulation_reference: 164.312(c)
+    owner: Database Engineering
+    implementation_paths:
+      - supabase/migrations/20260923000005_secret_idempotency_quota_guards.sql
+      - supabase/migrations/20260923000004_metadata_only_audit.sql
+    test_ci_references:
+      - supabase/tests/p1_19_audit_secret_idempotency.sql
+      - tests/security/rotate-tenant-secrets.test.mjs
+      - .github/workflows/ci.yml#db-tests
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - docs/security/operating-cadence.md
+    review_date: 2026-09-24
+    vendor_baa_status: not_applicable
+    exception_id: null
+    exception_expiry: null
+  - id: IN-02
+    title: Attachment quarantine, scan state, and object authorization
+    category: integrity
+    regulation_reference: 164.312(c)(1)
+    owner: Application and Platform Engineering
+    implementation_paths:
+      - apps/web/lib/attachments/upload-policy.ts
+      - apps/web/lib/attachments/scanner-config.ts
+      - apps/web/app/api/[tenant]/attachments/upload/route.ts
+      - apps/web/app/api/[tenant]/attachments/[id]/download/route.ts
+      - supabase/functions/process-attachment/index.ts
+      - supabase/functions/process-attachment/scanner.ts
+      - supabase/migrations/20260923000006_attachment_quarantine_storage.sql
+      - supabase/migrations/20260925000006_attachment_scanner_release_gate.sql
+    test_ci_references:
+      - apps/web/lib/attachments/__tests__/scanner-config.test.ts
+      - tests/security/attachment-broker-boundary.test.mjs
+      - supabase/tests/p1_20_attachment_authorization.sql
+      - supabase/tests/p1_30_attachment_scanner_gate.sql
+      - .github/workflows/ci.yml#db-tests
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-SCANNER-REVIEW
+    exception_expiry: 2026-12-31
+  - id: EM-01
+    title: Transactional email payload, consent, audit, and webhook integrity
+    category: transmission_security
+    regulation_reference: 164.312(e)(1)
+    owner: Messaging Engineering
+    implementation_paths:
+      - packages/shared/src/email/safety.ts
+      - packages/shared/src/email/webhook.ts
+      - apps/web/app/api/platform/email/process/route.ts
+      - apps/web/app/api/platform/email/webhook/route.ts
+      - apps/web/app/api/email/unsubscribe/route.ts
+      - supabase/migrations/20260925000007_email_operational_safety.sql
+      - supabase/migrations/20260925000008_email_legacy_payload_scrub.sql
+      - supabase/migrations/20260925000009_email_delivery_event_rpc.sql
+      - supabase/migrations/20260925000010_email_queue_delivery_contract.sql
+    test_ci_references:
+      - packages/shared/src/email/__tests__/safety.test.ts
+      - packages/shared/src/email/__tests__/webhook.test.ts
+      - apps/web/app/api/platform/email/__tests__/process.test.ts
+      - apps/web/app/api/platform/email/__tests__/webhook.test.ts
+      - tests/security/email-containment.test.mjs
+      - supabase/tests/p1_31_email_operational_safety.sql
+      - .github/workflows/ci.yml#db-tests
+    evidence_artifacts:
+      - docs/compliance/vendor-register.yaml
+      - docs/compliance/security-overview.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: TR-01
+    title: Transport security and outbound request boundary
+    category: transmission_security
+    regulation_reference: 164.312(e)(1)
+    owner: Platform Engineering
+    implementation_paths:
+      - packages/shared/src/security/outbound-url.ts
+      - apps/web/lib/http/request-guard.ts
+      - apps/web/lib/outbound-request.ts
+      - supabase/functions/_shared/outbound-request.ts
+      - config/Caddyfile
+    test_ci_references:
+      - packages/shared/src/security/__tests__/outbound-url.test.ts
+      - apps/web/lib/http/__tests__/request-guard.test.ts
+      - apps/web/lib/__tests__/outbound-request.test.ts
+      - scripts/verify-request-guards.mjs
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - .github/workflows/gates.yml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: PH-01
+    title: PHI field handling and minimum-necessary data boundaries
+    category: privacy_and_minimum_necessary
+    regulation_reference: 164.502(b)
+    owner: Privacy and Compliance
+    implementation_paths:
+      - supabase/migrations/20260923000004_metadata_only_audit.sql
+      - supabase/functions/_shared/ai-guard.ts
+      - packages/shared/src/schemas/ai.ts
+      - apps/web/lib/observability/redact.ts
+    test_ci_references:
+      - apps/web/lib/__tests__/ai-guard.test.ts
+      - apps/web/lib/__tests__/logger.observability.test.ts
+      - supabase/functions/_shared/logging.test.ts
+      - packages/shared/src/schemas/__tests__/ai-boundaries.test.ts
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - docs/compliance/hipaa.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: PH-02
+    title: AI output, provider, and tenant-scope boundary
+    category: privacy_and_minimum_necessary
+    regulation_reference: 164.502(b)
+    owner: AI Platform Engineering
+    implementation_paths:
+      - supabase/functions/_shared/ai-guard.ts
+      - supabase/functions/_shared/outbound-request.ts
+      - packages/shared/src/schemas/ai.ts
+      - apps/web/lib/outbound-request.ts
+    test_ci_references:
+      - apps/web/lib/__tests__/ai-guard.test.ts
+      - packages/shared/src/schemas/__tests__/ai-boundaries.test.ts
+      - tests/security/agent-boundaries.test.mjs
+    evidence_artifacts:
+      - docs/security/threat-model.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: CO-01
+    title: Encrypted, external, checksum-verified backup operation
+    category: contingency_planning
+    regulation_reference: 164.308(a)(7)
+    owner: Operations and Incident Response
+    implementation_paths:
+      - apps/web/lib/setup/backup-manager.ts
+      - scripts/backup-config.sh
+      - scripts/backup-db.sh
+      - scripts/restore-db.sh
+      - .github/workflows/backup.yml
+    test_ci_references:
+      - tests/security/backup-flow.test.mjs
+      - .github/workflows/backup.yml
+    evidence_artifacts:
+      - docs/backup-strategy.md
+      - docs/security/retention-policy.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-BACKUP-REVIEW
+    exception_expiry: 2026-12-31
+  - id: CO-02
+    title: Restore drill and measured recovery objectives
+    category: contingency_planning
+    regulation_reference: 164.308(a)(7)
+    owner: Operations and Incident Response
+    implementation_paths:
+      - scripts/restore-db.sh
+      - docs/operations/backup-drill.md
+      - docs/upgrade/runbooks/restore.md
+    test_ci_references:
+      - tests/security/backup-flow.test.mjs
+      - .github/workflows/backup.yml
+    evidence_artifacts:
+      - docs/operations/backup-drill.md
+      - docs/upgrade/runbooks/restore.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-BACKUP-REVIEW
+    exception_expiry: 2026-12-31
+  - id: VM-01
+    title: Vendor inventory, BAA review, and ePHI transfer gate
+    category: vendor_management
+    regulation_reference: 164.308(b)
+    owner: Privacy and Compliance
+    implementation_paths:
+      - docs/compliance/vendor-register.yaml
+      - scripts/verify-compliance-evidence.mjs
+      - .github/workflows/security.yml
+    test_ci_references:
+      - tests/security/compliance-evidence.test.mjs
+      - .github/workflows/security.yml
+    evidence_artifacts:
+      - docs/compliance/vendor-register.yaml
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-VENDOR-REVIEW
+    exception_expiry: 2027-03-31
+  - id: TRN-01
+    title: Security and privacy training assignment and completion evidence
+    category: administrative_safeguards
+    regulation_reference: 164.308(a)(6)
+    owner: People Operations
+    implementation_paths:
+      - docs/security/access-review.md
+      - docs/security/operating-cadence.md
+    test_ci_references:
+      - tests/security/compliance-evidence.test.mjs
+      - .github/workflows/security.yml
+    evidence_artifacts:
+      - docs/security/operating-cadence.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: not_applicable
+    exception_id: EXC-TRAINING-REVIEW
+    exception_expiry: 2027-03-31
+  - id: IR-01
+    title: Security incident response, escalation, and evidence preservation
+    category: incident_response
+    regulation_reference: 164.308(a)(6)
+    owner: Security and Privacy Operations
+    implementation_paths:
+      - docs/security/incidents/2026-09-23-service-role-exposure.md
+      - docs/security/operating-cadence.md
+      - scripts/verify-release-containment.mjs
+    test_ci_references:
+      - tests/security/verify-release-containment.test.mjs
+      - scripts/verify-release-containment.mjs
+      - .github/workflows/security.yml
+    evidence_artifacts:
+      - docs/security/incidents/2026-09-23-service-role-exposure.md
+      - docs/security/operating-cadence.md
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-CREDENTIAL-ROTATION
+    exception_expiry: 2026-10-15
+  - id: REL-01
+    title: Protected release path, dependency pinning, and artifact evidence
+    category: security_operations
+    regulation_reference: 164.308(a)(8)
+    owner: Release Engineering
+    implementation_paths:
+      - .github/workflows/release.yml
+      - scripts/generate-release-evidence.mjs
+      - scripts/verify-single-release-path.mjs
+      - scripts/verify-pinned-supply-chain.mjs
+      - scripts/verify-release-evidence.mjs
+    test_ci_references:
+      - tests/security/single-release-path.test.mjs
+      - tests/security/pinned-supply-chain.test.mjs
+      - tests/security/release-evidence.test.mjs
+      - .github/workflows/release.yml
+    evidence_artifacts:
+      - docs/security/operating-cadence.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-RELEASE-ATTESTATION
+    exception_expiry: 2026-12-31
+  - id: MOB-01
+    title: Mobile local clinical storage qualification
+    category: technical_safeguards
+    regulation_reference: 164.312(a)(2)(iv)
+    owner: Mobile Engineering
+    implementation_paths:
+      - apps/mobile/plugins/withNetworkSecurityConfig.js
+      - apps/mobile/lib/db/database.ts
+      - apps/mobile/lib/security/phi-encryption.ts
+      - apps/mobile/native/android/network_security_config.xml
+      - scripts/verify-mobile-security.mjs
+    test_ci_references:
+      - apps/mobile/lib/security/__tests__/mobile-security.test.ts
+      - apps/mobile/lib/security/__tests__/phi-encryption.test.ts
+      - tests/security/compliance-evidence.test.mjs
+    evidence_artifacts:
+      - apps/mobile/PRODUCTION_CHECKLIST.md
+      - docs/security/mobile-native-security.md
+      - docs/security/exception-register.yaml
+    review_date: 2026-09-24
+    vendor_baa_status: pending
+    exception_id: EXC-MOBILE-QUALIFICATION
+    exception_expiry: 2027-03-31
