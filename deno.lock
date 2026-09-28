@@ -299,7 +299,7 @@
         "npm:eslint-plugin-react@^7.37.5",
         "npm:framer-motion@^12.40.0",
         "npm:jsdom@^29.1.1",
-        "npm:next@^16.3.3",
+        "npm:next@^16.3.6",
         "npm:react-dom@^19.2.8",
         "npm:react@^19.2.8",
         "npm:tailwindcss@^4.1.0",
@@ -410,7 +410,7 @@
             "npm:globals@^17.6.0",
             "npm:jsdom@^29.1.1",
             "npm:next-intl@^4.13.0",
-            "npm:next@^16.3.3",
+            "npm:next@^16.3.6",
             "npm:pg@^8.13.0",
             "npm:postcss@^8.4.0",
             "npm:posthog-js@^1.396.2",
@@ -440,7 +440,7 @@
           "dependencies": [
             "npm:@types/nodemailer@^6.4.0",
             "npm:@types/react@19",
-            "npm:nodemailer@^6.9.0",
+            "npm:nodemailer@^9.1.0",
             "npm:typescript@^6.0.3",
             "npm:vitest@^4.1.9",
             "npm:zod@^4.4.3"

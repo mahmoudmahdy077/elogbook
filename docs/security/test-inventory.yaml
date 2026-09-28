@@ -119,6 +119,7 @@
     {"path":"supabase/tests/p3_02_publish_contract.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
     {"path":"supabase/tests/p3_03_case_operation_rpc.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":["ADR-002"],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
     {"path":"supabase/tests/p3_04_mode_immutable.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
-    {"path":"supabase/tests/p3_05_definer_audit.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]}
+    {"path":"supabase/tests/p3_05_definer_audit.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_06_audit_write_authority.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-PRODUCTION-READINESS"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]}
   ]
 }

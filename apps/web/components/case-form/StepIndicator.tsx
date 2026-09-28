@@ -14,7 +14,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
             <div
               className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 ${
                 i < currentStep
-                  ? 'bg-approved text-white'
+                  ? 'bg-success-700 text-white'
                   : i === currentStep
                     ? 'bg-primary text-white'
                     : 'bg-black/5 text-text-muted border border-black/10'
@@ -39,7 +39,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
             <span
               className={`text-xs mt-1.5 font-medium ${
                 i < currentStep
-                  ? 'text-approved'
+                  ? 'text-fg-approved'
                   : i === currentStep
                     ? 'text-text-primary'
                     : 'text-text-muted'

@@ -1,22 +1,24 @@
 import { requirePrincipal, corsHeaders, escapeHtml } from '../_shared/auth.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { writeAuditEvent } from '../_shared/audit.ts';
 import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
+import {
+  PDF_SCOPE_ROLES,
+  authorizePdfScope,
+  buildPdfReportRows,
+  type PdfRequestBody,
+  type PdfRow,
+} from './export-policy.ts';
 
-interface CaseData {
-  case_date: string;
-  patient_mrn?: string;
-  specialty: string;
-  name: string;
-}
-
-interface GeneratePdfPayload {
-  case_ids: string[];
-  resident_name: string;
-  tenant: string;
-}
-
-const MAX_CASE_IDS = 100;
-
+/**
+ * Case report PDF — the documented single-resident supervisor scope.
+ *
+ * See ./export-policy.ts. The endpoint only produces a report for one
+ * resident of the caller's own tenant, requested by a supervisor/director/
+ * institution_admin/admin at AAL2, over that resident's approved, non-deleted
+ * cases. The resident label is resolved server-side (a caller-supplied
+ * `resident_name` is rejected), the query no longer selects `field_values`, and
+ * a failed audit write withholds the document.
+ */
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('Origin');
   const headers = corsHeaders(origin);
@@ -26,59 +28,38 @@ Deno.serve(async (req: Request) => {
   }
 
   const authResult = await requirePrincipal(req, {
-    roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'],
+    roles: PDF_SCOPE_ROLES,
     aal: 'aal2',
   });
   if (authResult instanceof Response) return authResult;
   const { supabase, tenantId, principal } = authResult;
 
-  // Audit rows must be written with a client that can bypass the
-  // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
-  const serviceSupabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  );
+  const json = (status: number, error: string) =>
+    new Response(JSON.stringify({ error }), {
+      status,
+      headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
 
-  let payload: GeneratePdfPayload;
+  let payload: PdfRequestBody;
   try {
     payload = await req.json();
   } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
+    return json(400, 'Invalid JSON body');
   }
+  if (!payload || typeof payload !== 'object') return json(400, 'Invalid JSON body');
 
-  // JSON `null` parses successfully but cannot be destructured — reject early
-  if (!payload || typeof payload !== 'object') {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const { case_ids, resident_name, tenant } = payload;
-
-  if (!case_ids || !Array.isArray(case_ids) || case_ids.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'No cases specified' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (case_ids.length > MAX_CASE_IDS) {
-    return new Response(
-      JSON.stringify({ error: `Too many cases (max ${MAX_CASE_IDS})` }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!resident_name || !tenant) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required fields: resident_name, tenant' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-  }
+  const scope = authorizePdfScope({
+    principal: {
+      role: principal.role,
+      profileId: principal.profileId,
+      tenantId: principal.tenantId,
+      aal: principal.aal,
+      profileStatus: principal.profileStatus,
+      tenantStatus: principal.tenantStatus,
+    },
+    body: payload,
+  });
+  if (!scope.ok) return json(scope.status, scope.error);
 
   // Per-user rate limit (P2.10): max 10 PDFs per minute.
   const { data: userRow } = await supabase.auth.getUser();
@@ -90,49 +71,47 @@ Deno.serve(async (req: Request) => {
       p_window_seconds: 60,
     }) as { data?: { allowed?: boolean; retry_after?: number } | null; error?: unknown };
     if (rl && rl.allowed === false) {
-      return new Response(
-        JSON.stringify({ error: 'Too many PDF requests', retry_after: rl.retry_after }),
-        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
+      return json(429, 'Too many PDF requests');
     }
   }
 
-  // Supervisors requesting bulk export must scope to a single resident.
-  // The body must include `resident_filter` (a profile id) when the
-  // caller is supervisor+ but NOT the resident whose cases they are.
-  // Resident callers can only export their own cases (enforced via
-  // the inner query's resident_id IN filter below).
-
-  let query = supabase
-    .from('case_entries')
-    .select(`
-      case_date,
-      field_values,
-      template_id,
-      case_templates!inner(specialty, name, fields)
-    `)
-    .in('id', case_ids)
+  // The resident label is server-resolved from the tenant-scoped profile, never
+  // asserted by the caller.
+  const { data: residentRow, error: residentError } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', scope.residentId)
     .eq('tenant_id', tenantId)
-    .eq('status', 'approved');
+    .maybeSingle();
 
-  if (principal.role === 'resident') {
-    query = query.eq('resident_id', principal.profileId);
+  const resident = (residentRow ?? null) as { full_name?: string | null } | null;
+  if (residentError || !resident) {
+    return json(404, 'Resident not found in this tenant');
   }
 
-  const { data: cases, error: casesError } = await query;
+  const { data: cases, error: casesError } = await supabase
+    .from('case_entries')
+    .select('id, resident_id, tenant_id, status, case_date, deleted_at, case_templates!inner(specialty, name)')
+    .in('id', scope.caseIds)
+    .eq('tenant_id', tenantId);
 
   if (casesError) {
-    console.error('Failed to fetch cases for PDF', { error: casesError.message });
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch case data' }),
-      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
+    console.error('Failed to fetch cases for PDF');
+    return json(500, 'Failed to fetch case data');
   }
 
-  if (!cases || cases.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'No valid cases found for this tenant' }),
-      { status: 404, headers: { ...headers, 'Content-Type': 'application/json' } }
+  const report = buildPdfReportRows({
+    rows: (cases ?? []) as unknown as PdfRow[],
+    residentId: scope.residentId,
+    tenantId,
+  });
+
+  if (!report.ok) {
+    return json(
+      report.reason === 'resident_scope_violation' ? 403 : 404,
+      report.reason === 'resident_scope_violation'
+        ? 'Requested cases are outside the authorized resident scope'
+        : 'No valid cases found for this tenant',
     );
   }
 
@@ -173,9 +152,9 @@ Deno.serve(async (req: Request) => {
   page.drawText('E-Logbook Case Report', { x: marginLeft, y, size: 22, font: fontBold, color: darkGray });
   y -= 28;
 
-  page.drawText(`Resident: ${escapeHtml(resident_name)}`, { x: marginLeft, y, size: 11, font, color: darkGray });
+  page.drawText(`Resident: ${escapeHtml(resident.full_name ?? '')}`, { x: marginLeft, y, size: 11, font, color: darkGray });
   y -= 16;
-  page.drawText(`Tenant: ${escapeHtml(tenant)}`, { x: marginLeft, y, size: 11, font, color: darkGray });
+  page.drawText(`Report scope: single resident (${scope.residentId})`, { x: marginLeft, y, size: 11, font, color: darkGray });
   y -= 16;
   page.drawText(`Generated: ${now}`, { x: marginLeft, y, size: 11, font, color: mediumGray });
   y -= 14;
@@ -193,14 +172,12 @@ Deno.serve(async (req: Request) => {
   page.drawLine({ start: { x: marginLeft + dateColW, y }, end: { x: marginLeft + dateColW, y: y - rowH }, thickness: 0.5, color: mediumGray });
   y -= rowH;
 
-  for (const c of cases as any[]) {
+  for (const row of report.rows) {
     addPageIfNeeded(rowH + 2);
-    const template = c.case_templates as any;
-    const date = c.case_date ?? '';
-    const text = `${template?.specialty ?? 'N/A'} - ${template?.name ?? 'N/A'}`;
+    const text = `${row.specialty || 'N/A'} - ${row.templateName || 'N/A'}`;
 
     drawTableBorder(marginLeft, y, contentWidth, rowH);
-    page.drawText(date, { x: marginLeft + 8, y: y - 13, size: 10, font, color: black });
+    page.drawText(row.caseDate, { x: marginLeft + 8, y: y - 13, size: 10, font, color: black });
     page.drawText(text, { x: marginLeft + dateColW + 8, y: y - 13, size: 10, font, color: black });
     page.drawLine({ start: { x: marginLeft + dateColW, y }, end: { x: marginLeft + dateColW, y: y - rowH }, thickness: 0.5, color: mediumGray });
     y -= rowH;
@@ -216,21 +193,32 @@ Deno.serve(async (req: Request) => {
 
   const pdfBytes = await pdfDoc.save();
 
-  // P2.10: write an audit log entry for every PDF export.
-  await serviceSupabase.from('audit_logs').insert({
-    tenant_id: tenantId,
-    user_id: userId,
-    action: 'pdf_export',
-    resource_type: 'case_entries',
-    resource_id: case_ids.join(','),
-    changes: {
-      case_count: case_ids.length,
-      resident_name,
-      format: 'pdf',
-    },
-  });
+  // Required audit event: a chart disclosure without a record is a compliance
+  // failure, so a failed write withholds the document.
+  try {
+    await writeAuditEvent(supabase, {
+      action: 'pdf_export',
+      resourceType: 'profiles',
+      resourceId: scope.residentId,
+      tenantId,
+      changes: {
+        case_count: report.rows.length,
+        requested_count: scope.caseIds.length,
+        format: 'pdf',
+        scope: 'single_resident',
+      },
+    });
+  } catch {
+    return json(500, 'Audit write failed; report withheld');
+  }
 
   return new Response(pdfBytes as unknown as BodyInit, {
-    headers: { ...headers, 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="case-report.pdf"' },
+    headers: {
+      ...headers,
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline; filename="case-report.pdf"',
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+    },
   });
 });

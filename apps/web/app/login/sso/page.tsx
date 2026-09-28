@@ -9,7 +9,7 @@ export default async function SsoPage() {
           <p className="text-sm text-text-muted">
             SSO is not available. Enterprise SSO is not yet enabled.
           </p>
-          <a href="/login" className="inline-block text-sm text-primary hover:underline">
+          <a href="/login" className="inline-block text-sm text-fg-primary hover:underline">
             Back to sign-in
           </a>
         </div>

@@ -114,7 +114,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
           {/* Case Date */}
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-text-primary">
-              Case Date<span className="text-danger ml-0.5">*</span>
+              Case Date<span className="text-fg-danger ml-0.5">*</span>
             </label>
             <input
               type="date"
@@ -132,7 +132,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
               id="edit-deidentify"
               checked={entry.is_deidentified}
               disabled
-              className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary opacity-50"
+              className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary opacity-50"
             />
             <label htmlFor="edit-deidentify" className="text-sm text-text-secondary">
               De-identify patient data (cannot be changed after creation)
@@ -187,7 +187,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                       return (
                         <div key={key} className="space-y-1.5">
                           <label className="block text-sm font-medium text-text-primary">
-                            {label}{field.required && <span className="text-danger ml-0.5">*</span>}
+                            {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <textarea
                             value={value as string}
@@ -201,7 +201,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                       return (
                         <div key={key} className="space-y-1.5">
                           <label className="block text-sm font-medium text-text-primary">
-                            {label}{field.required && <span className="text-danger ml-0.5">*</span>}
+                            {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <select
                             value={value as string}
@@ -220,7 +220,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                       return (
                         <div key={key} className="space-y-1.5">
                           <label className="block text-sm font-medium text-text-primary">
-                            {label}{field.required && <span className="text-danger ml-0.5">*</span>}
+                            {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
                             type="number"
@@ -235,7 +235,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                       return (
                         <div key={key} className="space-y-1.5">
                           <label className="block text-sm font-medium text-text-primary">
-                            {label}{field.required && <span className="text-danger ml-0.5">*</span>}
+                            {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
                             type="date"
@@ -254,7 +254,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                             id={`edit-field-${key}`}
                             checked={!!value}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.checked }))}
-                            className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary"
+                            className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
                             aria-label={label}
                           />
                           <label htmlFor={`edit-field-${key}`} className="text-sm text-text-secondary">
@@ -266,7 +266,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                       return (
                         <div key={key} className="space-y-1.5">
                           <label className="block text-sm font-medium text-text-primary">
-                            {label}{field.required && <span className="text-danger ml-0.5">*</span>}
+                            {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
                             type="text"

@@ -291,7 +291,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-fg-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── Add/Edit Form ── */}
@@ -301,13 +301,13 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {formError && (
-              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-fg-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             {/* Protocol selector */}
             <div>
               <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Protocol <span className="text-danger">*</span>
+                Protocol <span className="text-fg-danger">*</span>
               </label>
               <div className="flex gap-3">
                 {(['saml', 'oidc'] as const).map((p) => (
@@ -315,7 +315,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                     key={p}
                     className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
                       formProtocol === p
-                        ? 'border-primary bg-primary/5 text-primary font-medium'
+                        ? 'border-primary bg-primary/5 text-fg-primary font-medium'
                         : 'border-border hover:border-neutral-light/30 text-text-secondary'
                     }`}
                   >
@@ -338,7 +338,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <>
                 <div>
                   <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                    Metadata URL <span className="text-danger">*</span>
+                    Metadata URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
                     type="url"
@@ -392,7 +392,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <>
                 <div>
                   <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                    Discovery URL <span className="text-danger">*</span>
+                    Discovery URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
                     type="url"
@@ -522,7 +522,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
               <p className="text-xs text-text-muted/50 mt-1">
                 Provide this URL to your identity provider as the SAML/OIDC callback endpoint.
               </p>
-              <p className="text-xs text-warning mt-2" role="note">
+              <p className="text-xs text-fg-warning mt-2" role="note">
                 Note: SSO sign-in callbacks are not yet enabled server-side. Configurations
                 can be prepared and saved now; authentication via SSO will fail until the
                 callback endpoint is activated.

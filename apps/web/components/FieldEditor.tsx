@@ -61,12 +61,12 @@ export default function FieldEditor({
           {field.label || 'New Field'}
         </button>
         {field.required && (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">Required</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-fg-primary">Required</span>
         )}
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="text-danger hover:text-danger text-sm"
+          className="text-fg-danger hover:text-fg-danger text-sm"
         >
           Remove
         </button>

@@ -61,7 +61,7 @@ export default function WebAdsExportButton({
         {loading ? 'Exporting…' : 'Export WebADS'}
       </button>
       {error && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm text-fg-danger" role="alert">
           {error}
         </p>
       )}

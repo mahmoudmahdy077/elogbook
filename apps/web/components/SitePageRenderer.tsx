@@ -18,7 +18,7 @@ function SafeLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      className="text-primary underline-offset-2 hover:underline"
+      className="text-fg-primary underline-offset-2 hover:underline"
       {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
       {label}

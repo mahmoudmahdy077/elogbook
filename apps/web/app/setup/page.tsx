@@ -216,13 +216,13 @@ export default function SetupPage() {
               {requirements.map((check) => (
                 <div key={check.name} className="flex items-center justify-between p-3 rounded-lg border border-border">
                   <span>{check.name}</span>
-                  <span className={`text-sm ${check.status === 'pass' ? 'text-success' : check.status === 'fail' ? 'text-danger' : 'text-warning'}`}>
+                  <span className={`text-sm ${check.status === 'pass' ? 'text-fg-success' : check.status === 'fail' ? 'text-fg-danger' : 'text-fg-warning'}`}>
                     {check.message}
                   </span>
                 </div>
               ))}
             </div>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">
               <button onClick={handleCheckRequirements} disabled={loading} className="px-4 py-2 rounded-lg border border-border">Re-check</button>
               <button onClick={() => setStep(2)} disabled={!requirementsReady} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">Continue</button>
@@ -251,7 +251,7 @@ export default function SetupPage() {
                 <input value={siteUrl} onChange={e => setSiteUrl(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
             </div>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => setStep(1)} className="px-4 py-2 rounded-lg border border-border">Back</button>
               <button onClick={handleDeploySupabase} disabled={loading || !postgresPassword} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">
@@ -265,7 +265,7 @@ export default function SetupPage() {
           <motion.div key="step-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <h2 className="text-xl font-bold mb-4">Database Migrations</h2>
             <p className="text-text-muted mb-4">Running database migrations to set up tables, policies, and seed data.</p>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => setStep(2)} className="px-4 py-2 rounded-lg border border-border">Back</button>
               <button onClick={handleRunMigrations} disabled={loading} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">
@@ -292,7 +292,7 @@ export default function SetupPage() {
                 <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
             </div>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => setStep(4)} className="px-4 py-2 rounded-lg border border-border">Back</button>
               <button onClick={handleCreateAdmin} disabled={loading || !adminEmail || !adminPassword || !adminFullName} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">
@@ -310,7 +310,7 @@ export default function SetupPage() {
               <label className="block text-xs mb-1">Domain Name</label>
               <input value={domain} onChange={e => setDomain(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="elogbook.example.com" />
             </div>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => setStep(5)} className="px-4 py-2 rounded-lg border border-border">Back</button>
               <button onClick={handleConfigureDomain} disabled={loading || !domain} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">
@@ -324,7 +324,7 @@ export default function SetupPage() {
           <motion.div key="step-7" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <h2 className="text-xl font-bold mb-4">Setup Complete</h2>
             <p className="text-text-muted mb-4">E-Logbook has been installed successfully. The application will restart in normal mode.</p>
-            {error && <p className="text-danger text-sm mb-4">{error}</p>}
+            {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <button onClick={handleComplete} disabled={loading} className="px-6 py-2 rounded-lg bg-primary text-white disabled:opacity-50">
               {loading ? 'Finishing...' : 'Go to Dashboard'}
             </button>

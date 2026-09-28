@@ -1,86 +1,43 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { requirePrincipal, corsHeaders } from '../_shared/auth.ts';
+import { writeAuditEvent } from '../_shared/audit.ts';
+import {
+  WEBADS_EXPORT_ROLES,
+  WEBADS_PAYLOAD_POLICY,
+  authorizeWebadsExport,
+  buildWebadsExportQuerySpec,
+  buildWebadsXml,
+  projectWebadsEntries,
+  type WebadsRequestBody,
+  type WebadsVendorPolicy,
+} from './export-policy.ts';
 
-interface WebadsExportPayload {
-  tenant_id: string;
-  resident_ids: string[];
-  date_from?: string;
-  date_to?: string;
+/**
+ * ACGME WebADS export — default-deny external PHI egress.
+ *
+ * See ./export-policy.ts for the full rationale. In short: the feed used to
+ * carry resident names, MRNs, DOBs, the free-text field_values blob and
+ * unapproved cases. It is now gated on a configured vendor with an approved
+ * `metadata_only` payload policy, an explicit de-identified confirmation, an
+ * AAL2 director/institution_admin/admin of the same tenant, and an
+ * approved-only, non-deleted query whose projection contains no identifier
+ * column at all. The export is refused entirely (501) when no vendor is
+ * configured, which is the default state of this repository.
+ */
+function vendorPolicy(): WebadsVendorPolicy {
+  return {
+    vendorEnabled: Deno.env.get('WEBADS_EXPORT_ENABLED') === 'true',
+    approvedPolicy: Deno.env.get('WEBADS_PAYLOAD_POLICY') === WEBADS_PAYLOAD_POLICY
+      ? WEBADS_PAYLOAD_POLICY
+      : null,
+  };
 }
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function buildWebadsXml(
-  cases: any[],
-  tenantId: string,
-  dateFrom: string | undefined,
-  dateTo: string | undefined,
-): string {
-  const now = new Date().toISOString();
-  const dateFromAttr = dateFrom ? escapeXml(dateFrom) : '';
-  const dateToAttr = dateTo ? escapeXml(dateTo) : '';
-
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<WebADSExport xmlns="http://www.acgme.org/WebADS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.acgme.org/WebADS WebADS.xsd">\n`;
-  xml += `  <ExportMetadata>\n`;
-  xml += `    <GeneratedAt>${escapeXml(now)}</GeneratedAt>\n`;
-  xml += `    <TenantId>${escapeXml(tenantId)}</TenantId>\n`;
-  xml += `    <DateFrom>${escapeXml(dateFromAttr)}</DateFrom>\n`;
-  xml += `    <DateTo>${escapeXml(dateToAttr)}</DateTo>\n`;
-  xml += `    <RecordCount>${cases.length}</RecordCount>\n`;
-  xml += `    <System>E-Logbook</System>\n`;
-  xml += `    <Version>1.0</Version>\n`;
-  xml += `  </ExportMetadata>\n`;
-  xml += `  <CaseEntries>\n`;
-
-  for (const c of cases) {
-    const template = c.case_templates as any;
-    const residentProfile = c.profiles as any;
-
-    xml += `    <CaseEntry>\n`;
-    xml += `      <EntryId>${escapeXml(c.id)}</EntryId>\n`;
-    xml += `      <CaseDate>${escapeXml(c.case_date ?? '')}</CaseDate>\n`;
-    xml += `      <Resident>\n`;
-    xml += `        <ResidentId>${escapeXml(c.resident_id)}</ResidentId>\n`;
-    xml += `        <FullName>${escapeXml(residentProfile?.full_name ?? '')}</FullName>\n`;
-    xml += `        <Specialty>${escapeXml(residentProfile?.specialty ?? '')}</Specialty>\n`;
-    xml += `      </Resident>\n`;
-    xml += `      <Template>\n`;
-    xml += `        <TemplateId>${escapeXml(c.template_id)}</TemplateId>\n`;
-    xml += `        <TemplateName>${escapeXml(template?.name ?? '')}</TemplateName>\n`;
-    xml += `        <Specialty>${escapeXml(template?.specialty ?? '')}</Specialty>\n`;
-    xml += `      </Template>\n`;
-    xml += `      <Patient>\n`;
-    xml += `        <MRN>${escapeXml(c.patient_mrn ?? '')}</MRN>\n`;
-    xml += `        <DOB>${escapeXml(c.patient_dob ?? '')}</DOB>\n`;
-    xml += `      </Patient>\n`;
-    xml += `      <Status>${escapeXml(c.status)}</Status>\n`;
-
-    if (c.field_values && typeof c.field_values === 'object') {
-      xml += `      <FieldValues>\n`;
-      for (const [key, value] of Object.entries(c.field_values)) {
-        xml += `        <Field name="${escapeXml(key)}">${escapeXml(String(value ?? ''))}</Field>\n`;
-      }
-      xml += `      </FieldValues>\n`;
-    }
-
-    xml += `      <CreatedAt>${escapeXml(c.created_at ?? '')}</CreatedAt>\n`;
-    xml += `      <UpdatedAt>${escapeXml(c.updated_at ?? '')}</UpdatedAt>\n`;
-    xml += `    </CaseEntry>\n`;
-  }
-
-  xml += `  </CaseEntries>\n`;
-  xml += `</WebADSExport>\n`;
-
-  return xml;
+function jsonResponse(headers: Record<string, string>, status: number, body: unknown): Response {
+  return new Response(JSON.stringify({ error: body }), {
+    status,
+    headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 }
 
 serve(async (req) => {
@@ -92,136 +49,94 @@ serve(async (req) => {
   }
 
   const authResult = await requirePrincipal(req, {
-    roles: ['director', 'institution_admin', 'admin'],
+    roles: WEBADS_EXPORT_ROLES,
     aal: 'aal2',
   });
   if (authResult instanceof Response) return authResult;
-  const { supabase, tenantId } = authResult;
+  const { supabase, tenantId, principal } = authResult;
 
-  // Audit rows must be written with a client that can bypass the
-  // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
-  const serviceSupabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  );
-
-    let body: WebadsExportPayload;
-    try {
-      body = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-      );
-    }
-    if (!body || typeof body !== 'object') {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    const { tenant_id, resident_ids, date_from, date_to } = body;
-
-  if (!tenant_id) {
-    return new Response(
-      JSON.stringify({ error: 'tenant_id is required' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
+  let body: WebadsRequestBody;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse(headers, 400, 'Invalid JSON body');
   }
+  if (!body || typeof body !== 'object') return jsonResponse(headers, 400, 'Invalid JSON body');
 
-  if (!resident_ids || !Array.isArray(resident_ids) || resident_ids.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'resident_ids must be a non-empty array' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+  const decision = authorizeWebadsExport({
+    principal: {
+      role: principal.role,
+      profileId: principal.profileId,
+      tenantId: principal.tenantId,
+      aal: principal.aal,
+      profileStatus: principal.profileStatus,
+      tenantStatus: principal.tenantStatus,
+    },
+    policy: vendorPolicy(),
+    body,
+  });
+  if (!decision.ok) return jsonResponse(headers, decision.status, decision.error);
 
-  // Security: ensure requested tenant matches caller's tenant
-  if (tenant_id !== tenantId) {
-    return new Response(
-      JSON.stringify({ error: 'tenant_id mismatch' }),
-      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+  const residentIds = body.resident_ids as string[];
+  const dateFrom = typeof body.date_from === 'string' ? body.date_from : null;
+  const dateTo = typeof body.date_to === 'string' ? body.date_to : null;
 
-  // Validate resident_ids count
-  if (resident_ids.length > 500) {
-    return new Response(
-      JSON.stringify({ error: 'Maximum 500 resident_ids per export' }),
-      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+  const spec = buildWebadsExportQuerySpec({ tenantId, residentIds, dateFrom, dateTo });
 
-  // Build query
   let query = supabase
     .from('case_entries')
-    .select(`
-      id,
-      tenant_id,
-      resident_id,
-      template_id,
-      patient_mrn,
-      patient_dob,
-      case_date,
-      field_values,
-      status,
-      created_at,
-      updated_at,
-      case_templates!inner(id, name, specialty),
-      profiles!inner(id, full_name, specialty)
-    `)
-    .eq('tenant_id', tenantId)
-    .in('resident_id', resident_ids);
+    .select(spec.select)
+    .eq('tenant_id', spec.tenantId)
+    .in('resident_id', spec.residentIds)
+    .in('status', spec.status)
+    .order('case_date', { ascending: true })
+    .limit(spec.limit);
 
-  // Apply date range filter
-  if (date_from) {
-    query = query.gte('case_date', date_from);
-  }
-  if (date_to) {
-    query = query.lte('case_date', date_to);
-  }
-
-  // Only export approved or pending entries
-  query = query.in('status', ['approved', 'pending']);
-  query = query.is('deleted_at', null);
-  query = query.order('case_date', { ascending: true });
-  query = query.limit(10000);
+  if (spec.onlyNotDeleted) query = query.is('deleted_at', null);
+  if (spec.dateFrom) query = query.gte('case_date', spec.dateFrom);
+  if (spec.dateTo) query = query.lte('case_date', spec.dateTo);
 
   const { data: cases, error: casesError } = await query;
 
   if (casesError) {
-    console.error('Failed to fetch cases for WebADS export', { error: casesError.message });
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch case data' }),
-      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
+    console.error('Failed to fetch cases for WebADS export');
+    return jsonResponse(headers, 500, 'Failed to fetch case data');
   }
 
   if (!cases || cases.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'No cases found for the specified criteria' }),
-      { status: 404, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
+    return jsonResponse(headers, 404, 'No cases found for the specified criteria');
   }
 
-  const xml = buildWebadsXml(cases, tenantId, date_from, date_to);
-
-  // Audit log
-  await serviceSupabase.from('audit_logs').insert({
-    tenant_id: tenantId,
-    user_id: (await supabase.auth.getUser()).data.user?.id,
-    action: 'webads_export',
-    resource_type: 'case_entries',
-    resource_id: resident_ids.join(','),
-    changes: {
-      resident_count: resident_ids.length,
-      case_count: cases.length,
-      date_from: date_from ?? null,
-      date_to: date_to ?? null,
-      format: 'webads_xml',
-    },
+  const entries = projectWebadsEntries(cases as never[]);
+  const xml = buildWebadsXml({
+    tenantId,
+    dateFrom,
+    dateTo,
+    generatedAt: new Date().toISOString(),
+    entries,
   });
+
+  // Required audit event. A disclosure without a record is a compliance
+  // failure, so a failed write fails the export closed rather than shipping the
+  // document unlogged.
+  try {
+    await writeAuditEvent(supabase, {
+      action: 'webads_export',
+      resourceType: 'tenant',
+      resourceId: null,
+      tenantId,
+      changes: {
+        resident_count: residentIds.length,
+        case_count: entries.length,
+        date_from: dateFrom,
+        date_to: dateTo,
+        format: 'webads_xml',
+        payload_policy: WEBADS_PAYLOAD_POLICY,
+      },
+    });
+  } catch {
+    return jsonResponse(headers, 500, 'Audit write failed; export withheld');
+  }
 
   return new Response(xml, {
     status: 200,
@@ -229,6 +144,8 @@ serve(async (req) => {
       ...headers,
       'Content-Type': 'application/xml',
       'Content-Disposition': `attachment; filename="webads-export-${tenantId}.xml"`,
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
     },
   });
 });

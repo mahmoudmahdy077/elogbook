@@ -76,7 +76,7 @@ export default function MobileNav({
               className={
                 'relative flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
                 (isActive
-                  ? 'text-primary font-medium'
+                  ? 'text-fg-primary font-medium'
                   : 'text-text-muted')
               }
             >
@@ -99,7 +99,7 @@ export default function MobileNav({
               className={
                 'flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
                 (moreOpen || overflowLinks.some((l) => isLinkActive(l.href))
-                  ? 'text-primary font-medium'
+                  ? 'text-fg-primary font-medium'
                   : 'text-text-muted')
               }
               aria-expanded={moreOpen}
@@ -124,7 +124,7 @@ export default function MobileNav({
                       className={
                         'block px-3 py-2 rounded-md text-sm ' +
                         (isLinkActive(link.href)
-                          ? 'bg-primary/15 text-primary font-medium'
+                          ? 'bg-primary/15 text-fg-primary font-medium'
                           : 'hover:bg-neutral-dark/50')
                       }
                     >

@@ -160,7 +160,7 @@ export default function NotificationBell({
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4.5 h-4.5 rounded-full bg-rejected text-white text-[10px] font-bold leading-none min-w-[18px] min-h-[18px]">
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4.5 h-4.5 rounded-full bg-danger-700 text-white text-[10px] font-bold leading-none min-w-[18px] min-h-[18px]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -185,7 +185,7 @@ export default function NotificationBell({
                 <button
                   type="button"
                   onClick={markAllAsRead}
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  className="text-xs font-medium text-fg-primary hover:text-fg-primary transition-colors"
                 >
                   Mark all read
                 </button>

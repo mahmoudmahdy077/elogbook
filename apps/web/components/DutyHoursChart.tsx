@@ -43,7 +43,7 @@ export default function DutyHoursChart({ periods }: { periods: DutyPeriod[] }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Week of {latestWeekStart.toISOString().split('T')[0]}</h3>
-        {isViolation && <span className="px-2 py-1 text-xs bg-danger text-white rounded">Violation: {totalWeek}h &gt; 80h</span>}
+        {isViolation && <span className="px-2 py-1 text-xs bg-danger-700 text-white rounded">Violation: {totalWeek}h &gt; 80h</span>}
       </div>
       <div className="grid grid-cols-7 gap-1 text-xs">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (

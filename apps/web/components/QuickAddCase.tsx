@@ -248,7 +248,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {errors.length > 0 && (
-                <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
+                <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-fg-danger">
                   {errors.map((e, i) => <p key={i}>{e}</p>)}
                 </div>
               )}
@@ -256,7 +256,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
               {/* Template selector */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-text-primary">
-                  Template<span className="text-danger ml-0.5">*</span>
+                  Template<span className="text-fg-danger ml-0.5">*</span>
                 </label>
                 <select
                   value={selectedTemplateId}
@@ -282,7 +282,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
                   id="quickadd-deidentify"
                   checked={isDeidentified}
                   onChange={(e) => setIsDeidentified(e.target.checked)}
-                  className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary"
+                  className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
                 />
                 <label htmlFor="quickadd-deidentify" className="text-sm text-text-secondary">
                   De-identify patient
@@ -293,7 +293,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
               {!isDeidentified && (
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-text-primary">
-                    Patient MRN<span className="text-danger ml-0.5">*</span>
+                    Patient MRN<span className="text-fg-danger ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
@@ -323,7 +323,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
               {/* Case Date */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-text-primary">
-                  Case Date<span className="text-danger ml-0.5">*</span>
+                  Case Date<span className="text-fg-danger ml-0.5">*</span>
                 </label>
                 <input
                   type="date"
@@ -409,7 +409,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
                                 id={`quickadd-field-${key}`}
                                 checked={!!fieldValues[key]}
                                 onChange={(e) => handleFieldChange(key, e.target.checked)}
-                                className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary"
+                                className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
                                 aria-label={label}
                               />
                               <label htmlFor={`quickadd-field-${key}`} className="text-sm text-text-secondary">

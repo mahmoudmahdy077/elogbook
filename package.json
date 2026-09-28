@@ -45,7 +45,8 @@
     "security:release-path": "node scripts/verify-single-release-path.mjs",
     "release:evidence:generate": "node scripts/generate-release-evidence.mjs --all",
     "release:evidence:verify": "node scripts/verify-release-evidence.mjs --verify",
-    "release:verify": "pnpm check && pnpm security:release-path && pnpm security:mobile && pnpm security:supply-chain && pnpm security:compliance && pnpm build:web && pnpm security:scan"
+    "release:verify": "pnpm check && pnpm security:release-path && pnpm security:mobile && pnpm security:supply-chain && pnpm security:compliance && pnpm build:web && pnpm security:scan",
+    "audit:wcag": "tsx scripts/wcag-audit.mts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",

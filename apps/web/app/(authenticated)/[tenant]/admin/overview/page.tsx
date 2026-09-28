@@ -134,7 +134,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
         <h1 className="text-2xl font-bold">Program Overview</h1>
         <Link
           href={`/${tenantSlug}/admin`}
-          className="text-sm text-primary hover:underline"
+          className="text-sm text-fg-primary hover:underline"
         >
           ← Back to Admin
         </Link>

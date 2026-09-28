@@ -163,7 +163,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                 <tr key={t.id} className="border-b border-divider">
                   <td className="py-2.5">{t.name}</td>
                   <td className="py-2.5">
-                    <span className="inline-flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-medium">
+                    <span className="inline-flex items-center bg-primary/10 text-fg-primary text-xs px-2 py-0.5 rounded-full font-medium">
                       {t.specialty}
                     </span>
                   </td>
@@ -173,7 +173,7 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                     <button
                       type="button"
                       onClick={() => confirmDelete(t.id)}
-                      className="rounded-full bg-red-50 text-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors"
+                      className="rounded-full bg-red-50 text-fg-rejected text-sm font-medium px-3 py-1.5 hover:bg-red-100 transition-colors"
                     >
                       Delete
                     </button>

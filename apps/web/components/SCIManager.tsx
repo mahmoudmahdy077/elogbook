@@ -205,7 +205,7 @@ export default function SCIManager({
 
       {error && <ErrorDisplay message={error} />}
       {success && (
-        <div className="bg-success/10 text-success p-3 rounded-lg text-sm">{success}</div>
+        <div className="bg-success/10 text-fg-success p-3 rounded-lg text-sm">{success}</div>
       )}
 
       {/* ── New token plaintext banner ── */}
@@ -213,7 +213,7 @@ export default function SCIManager({
         <div className="bg-primary/10 border border-primary/25 rounded-2xl p-5 ">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-primary mb-1">
+              <p className="text-sm font-semibold text-fg-primary mb-1">
                 ⚠️ Token generated — copy it now
               </p>
               <p className="text-xs text-text-muted mb-3">
@@ -292,7 +292,7 @@ export default function SCIManager({
 
           <form onSubmit={handleGenerate} className="space-y-5">
             {formError && (
-              <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">{formError}</div>
+              <div className="bg-danger/10 text-fg-danger p-3 rounded-lg text-sm">{formError}</div>
             )}
 
             <div>
@@ -372,7 +372,7 @@ export default function SCIManager({
                   <button
                     type="button"
                     onClick={() => handleRevoke(token)}
-                    className="rounded-full border border-danger text-danger px-3 py-1.5 text-xs font-medium hover:bg-danger/10 transition-colors"
+                    className="rounded-full border border-danger text-fg-danger px-3 py-1.5 text-xs font-medium hover:bg-danger/10 transition-colors"
                   >
                     Revoke
                   </button>

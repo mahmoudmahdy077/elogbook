@@ -88,7 +88,7 @@ export default function CaseDetailsStep({
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-text-primary">
-          Case Date<span className="text-danger ml-0.5">*</span>
+          Case Date<span className="text-fg-danger ml-0.5">*</span>
         </label>
         <input
           type="date"
@@ -170,7 +170,7 @@ export default function CaseDetailsStep({
                         id={`field-${key}`}
                         checked={!!fieldValues[key]}
                         onChange={(e) => onFieldChange(key, e.target.checked)}
-                        className="h-4 w-4 rounded border-black/20 text-primary focus:ring-primary accent-primary"
+                        className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
                         aria-label={label}
                       />
                       <label htmlFor={`field-${key}`} className="text-sm text-text-secondary">

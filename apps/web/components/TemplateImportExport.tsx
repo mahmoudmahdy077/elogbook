@@ -98,8 +98,8 @@ export default function TemplateImportExport({
         {importing ? 'Importing...' : 'Import'}
       </label>
 
-      {error && <span className="text-xs text-danger">{error}</span>}
-      {success && <span className="text-xs text-success">{success}</span>}
+      {error && <span className="text-xs text-fg-danger">{error}</span>}
+      {success && <span className="text-xs text-fg-success">{success}</span>}
     </div>
   );
 }
