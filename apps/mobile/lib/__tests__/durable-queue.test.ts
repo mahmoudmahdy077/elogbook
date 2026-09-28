@@ -101,6 +101,16 @@ describe('durable queue M3 (local-first outbox)', () => {
     expect(seen[0].p_action).toBe('insert');
   });
 
+  it('does not flush work from a prior session of the same account', async () => {
+    await enqueueDurable('case_entries', 'insert', { a: 1 });
+    clearAccountContext();
+    setAccountContext({ userId: 'u1', tenantId: 't1', profileId: 'p1' });
+    const sb = rpcWith(async () => okResult());
+    const res = await flushDurableQueue(sb as never);
+    expect(res.synced).toBe(0);
+    expect(res.skippedForeign).toBe(1);
+  });
+
   it('does not flush another account’s queue after switch (scoped isolation)', async () => {
     await enqueueDurable('case_entries', 'insert', { a: 1 });
     setAccountContext({ userId: 'u2', tenantId: 't1', profileId: 'p2' });

@@ -1,8 +1,8 @@
 /**
  * HIPAA Audit Trail for PHI Access.
  *
- * Every read/write of patient-identifiable data (patient_mrn, patient_dob,
- * field_values) is logged with:
+ * Every read/write of patient-identifiable data is logged with a tenant,
+ * profile/session-scoped actor, resource metadata, and a one-way hash.
  *   - ISO-8601 timestamp
  *   - authenticated user_id
  *   - action (read | create | update | delete)
@@ -19,7 +19,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { scopedKey } from '../account-context';
+import { getAccountContext, scopedKey, scopedKeyForContext, type AccountContext } from '../account-context';
 import { logWarn } from '../logger';
 import { supabase } from '../supabase';
 import { sha256, bytesToHex } from '../crypto/sha256';
@@ -31,20 +31,33 @@ import type { UserRole } from '@elogbook/shared';
 // ---------------------------------------------------------------------------
 
 export type AuditAction = 'read' | 'create' | 'update' | 'delete';
+export type AuditDeliveryState = 'pending' | 'failed';
 
 export interface AuditEntry {
-  /** ISO-8601 timestamp of the access event */
   timestamp: string;
-  /** Authenticated user UUID */
+  tenant_id: string;
   user_id: string;
-  /** Action performed */
+  session_id: string;
   action: AuditAction;
-  /** Database table that was accessed */
   table: string;
-  /** Row ID within the table */
   row_id: string;
-  /** One-way SHA-256 hex digest of the accessed PHI data */
   data_hash: string;
+  resource_type: string;
+  resource_id: string;
+  changes: Record<string, unknown>;
+  delivery_state: AuditDeliveryState;
+  attempts: number;
+  last_error: string | null;
+}
+
+export interface AuditDeliveryStatus {
+  pending: number;
+  failed: number;
+  lastError: string | null;
+  lastFailureAt: number | null;
+  lastSuccessAt: number | null;
+  storageUnavailable: boolean;
+  dropped: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +65,7 @@ export interface AuditEntry {
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = 'audit_trail_buffer_v1';
+const STATUS_KEY = 'audit_trail_status_v1';
 const MAX_ENTRIES = 500;
 const FLUSH_INTERVAL_MS = 30_000; // 30 seconds
 const SUPABASE_TABLE = 'audit_logs';
@@ -68,6 +82,9 @@ const PHI_ROLES: UserRole[] = ['resident', 'supervisor', 'director'];
 
 let _buffer: AuditEntry[] = [];
 let _loaded = false;
+let _loadedScope: string | null = null;
+let _status: AuditDeliveryStatus | null = null;
+let _statusScope: string | null = null;
 let _flushTimer: ReturnType<typeof setInterval> | null = null;
 
 // ---------------------------------------------------------------------------
@@ -75,34 +92,110 @@ let _flushTimer: ReturnType<typeof setInterval> | null = null;
 // actor-bound entries and must never be readable across account switch).
 // ---------------------------------------------------------------------------
 
-/** Scoped buffer key; unset context falls back to the legacy global key. */
+function activeContext(): AccountContext {
+  const context = getAccountContext();
+  if (!context) throw new Error('[audit-trail] active account context required');
+  if ((context.status && context.status !== 'active') || (context.tenantStatus && context.tenantStatus !== 'active')) {
+    throw new Error('[audit-trail] inactive account or tenant scope');
+  }
+  if (context.expiresAt !== undefined && context.expiresAt !== null && context.expiresAt <= Date.now()) {
+    throw new Error('[audit-trail] expired session scope');
+  }
+  return context;
+}
+
 export function auditBufferKey(): string {
   return scopedKey(STORAGE_KEY);
 }
 
+function scopeToken(context: AccountContext): string {
+  return `${context.userId}:${context.tenantId}:${context.profileId}:${context.sessionId ?? 'no-session'}`;
+}
+
+function statusKey(context: AccountContext): string {
+  return scopedKeyForContext(context, STATUS_KEY);
+}
+
+function emptyStatus(): AuditDeliveryStatus {
+  return {
+    pending: 0,
+    failed: 0,
+    lastError: null,
+    lastFailureAt: null,
+    lastSuccessAt: null,
+    storageUnavailable: false,
+    dropped: 0,
+  };
+}
+
+function normalizeEntry(value: unknown, context: AccountContext): AuditEntry | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const action = raw.action;
+  if (action !== 'read' && action !== 'create' && action !== 'update' && action !== 'delete') return null;
+  const timestamp = typeof raw.timestamp === 'string' ? raw.timestamp : new Date().toISOString();
+  const dataHash = typeof raw.data_hash === 'string' ? raw.data_hash : '';
+  const resourceType = typeof raw.resource_type === 'string' ? raw.resource_type : typeof raw.table === 'string' ? raw.table : '';
+  const resourceId = typeof raw.resource_id === 'string' ? raw.resource_id : typeof raw.row_id === 'string' ? raw.row_id : '';
+  if (!resourceType || !resourceId || !dataHash) return null;
+  const changes = { data_hash: dataHash };
+  const tenantId = typeof raw.tenant_id === 'string' ? raw.tenant_id : context.tenantId;
+  const userId = typeof raw.user_id === 'string' ? raw.user_id : context.userId;
+  return {
+    timestamp,
+    tenant_id: tenantId,
+    user_id: userId,
+    session_id: typeof raw.session_id === 'string' ? raw.session_id : '',
+    action,
+    table: typeof raw.table === 'string' ? raw.table : resourceType,
+    row_id: typeof raw.row_id === 'string' ? raw.row_id : resourceId,
+    data_hash: dataHash,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    changes,
+    delivery_state: raw.delivery_state === 'failed' ? 'failed' : 'pending',
+    attempts: typeof raw.attempts === 'number' && Number.isFinite(raw.attempts) ? raw.attempts : 0,
+    last_error: typeof raw.last_error === 'string' ? safeErrorMessage(raw.last_error) : null,
+  };
+}
+
 async function loadBuffer(): Promise<AuditEntry[]> {
-  if (_loaded) return _buffer;
+  const context = getAccountContext();
+  if (!context) {
+    _buffer = [];
+    _loaded = true;
+    _loadedScope = null;
+    return _buffer;
+  }
+  const scope = scopeToken(context);
+  if (_loaded && _loadedScope === scope) return _buffer;
+  if (_loaded && _loadedScope !== scope) {
+    _buffer = [];
+    _status = null;
+  }
+  _loadedScope = scope;
   const key = auditBufferKey();
   try {
     const raw = await AsyncStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      _buffer = Array.isArray(parsed) ? (parsed as AuditEntry[]) : [];
-      // Enforce ring-buffer cap on load (defensive — shouldn't exceed 500)
-      if (_buffer.length > MAX_ENTRIES) {
-        _buffer = _buffer.slice(-MAX_ENTRIES);
-      }
+      const values = Array.isArray(parsed) ? parsed : [];
+      _buffer = values
+        .map((value) => normalizeEntry(value, context))
+        .filter((value): value is AuditEntry => value !== null
+          && value.tenant_id === context.tenantId
+          && value.user_id === context.userId
+          && value.session_id === (context.sessionId ?? ''));
+      if (_buffer.length > MAX_ENTRIES) _buffer = _buffer.slice(-MAX_ENTRIES);
     } else {
       _buffer = [];
     }
   } catch {
-    // N1 corrupt visibility: back the raw bytes up under a visible key
-    // instead of silently dropping the buffer.
     try {
       const raw = await AsyncStorage.getItem(key);
       if (raw) await AsyncStorage.setItem(`${key}.corrupt.${Date.now()}`, raw);
     } catch {
-      // best-effort backup
+      logWarn('audit-trail.corrupt-backup-failed');
     }
     logWarn('audit-trail.corrupt-buffer-quarantined');
     _buffer = [];
@@ -112,17 +205,49 @@ async function loadBuffer(): Promise<AuditEntry[]> {
 }
 
 async function persistBuffer(): Promise<void> {
-  await AsyncStorage.setItem(auditBufferKey(), JSON.stringify(_buffer));
+  const context = activeContext();
+  await AsyncStorage.setItem(scopedKeyForContext(context, STORAGE_KEY), JSON.stringify(_buffer));
 }
 
-/**
- * N1 disposal: stop the flush worker and drop in-memory entries. The
- * persisted scoped copy stays under the old scope (quarantine, not loss).
- */
+async function loadStatus(): Promise<AuditDeliveryStatus> {
+  const context = activeContext();
+  const scope = scopeToken(context);
+  if (_status && _statusScope === scope) return _status;
+  if (_status && _statusScope !== scope) _status = null;
+  _statusScope = scope;
+  try {
+    const raw = await AsyncStorage.getItem(statusKey(context));
+    const parsed = raw ? JSON.parse(raw) as Partial<AuditDeliveryStatus> : {};
+    _status = { ...emptyStatus(), ...parsed, storageUnavailable: false };
+  } catch {
+    _status = { ...emptyStatus(), storageUnavailable: true };
+  }
+  return _status;
+}
+
+async function persistStatus(): Promise<void> {
+  const context = activeContext();
+  if (!_status) return;
+  try {
+    await AsyncStorage.setItem(statusKey(context), JSON.stringify(_status));
+  } catch {
+    _status.storageUnavailable = true;
+  }
+}
+
+async function updateStatus(update: Partial<AuditDeliveryStatus>): Promise<void> {
+  const status = await loadStatus();
+  _status = { ...status, ...update };
+  await persistStatus();
+}
+
 export function disposeAuditBuffer(): void {
   stopAuditFlush();
   _buffer = [];
+  _status = null;
   _loaded = false;
+  _loadedScope = null;
+  _statusScope = null;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +270,14 @@ function hashData(data: unknown): string {
   return bytesToHex(digest);
 }
 
+function safeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/network|fetch|timeout|connect|offline/i.test(message)) return 'network: audit delivery unavailable';
+  if (/401|403|auth|jwt|rls|permission|policy/i.test(message)) return 'auth: audit delivery rejected';
+  if (/relation|column|schema|contract/i.test(message)) return 'schema: audit delivery rejected';
+  return 'audit delivery failed';
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -160,25 +293,41 @@ export async function logAuditEvent(params: {
   rowId: string;
   data: unknown;
 }): Promise<void> {
+  const context = activeContext();
+  const dataHash = hashData(params.data);
   const entry: AuditEntry = {
     timestamp: new Date().toISOString(),
-    user_id: params.userId,
+    tenant_id: context.tenantId,
+    user_id: context.userId,
+    session_id: context.sessionId ?? '',
     action: params.action,
     table: params.table,
     row_id: params.rowId,
-    data_hash: hashData(params.data),
+    data_hash: dataHash,
+    resource_type: params.table,
+    resource_id: params.rowId,
+    changes: { data_hash: dataHash },
+    delivery_state: 'pending',
+    attempts: 0,
+    last_error: null,
   };
 
   const buffer = await loadBuffer();
-
-  // Ring-buffer: if at capacity, drop the oldest entry
   if (buffer.length >= MAX_ENTRIES) {
+    const status = await loadStatus();
+    _status = { ...status, dropped: status.dropped + 1, lastError: 'audit queue full; oldest entry evicted' };
+    await persistStatus();
     buffer.shift();
   }
-
   buffer.push(entry);
   _buffer = buffer;
-  await persistBuffer();
+  try {
+    await persistBuffer();
+    await updateStatus({ pending: _buffer.length, failed: _buffer.filter((item) => item.delivery_state === 'failed').length });
+  } catch (error) {
+    await updateStatus({ storageUnavailable: true, lastError: safeErrorMessage(error) });
+    throw error;
+  }
 }
 
 /**
@@ -204,10 +353,39 @@ export async function exportAuditLog(): Promise<string> {
  * Clear the local audit log. Called on logout to prevent cross-user
  * data leakage on shared devices.
  */
-export async function clearAuditLog(): Promise<void> {
+export async function getAuditDeliveryStatus(): Promise<AuditDeliveryStatus> {
+  const buffer = await loadBuffer();
+  const status = await loadStatus();
+  return {
+    ...status,
+    pending: buffer.filter((entry) => entry.delivery_state === 'pending').length,
+    failed: buffer.filter((entry) => entry.delivery_state === 'failed').length,
+  };
+}
+
+export async function clearAuditLogForContext(context: AccountContext): Promise<void> {
   _buffer = [];
+  _status = null;
   _loaded = false;
+  _loadedScope = null;
+  _statusScope = null;
+  await AsyncStorage.removeItem(scopedKeyForContext(context, STORAGE_KEY));
+  await AsyncStorage.removeItem(statusKey(context));
+}
+
+export async function clearAuditLog(): Promise<void> {
+  const context = getAccountContext();
+  if (context) {
+    await clearAuditLogForContext(context);
+    return;
+  }
+  _buffer = [];
+  _status = null;
+  _loaded = false;
+  _loadedScope = null;
+  _statusScope = null;
   await AsyncStorage.removeItem(auditBufferKey());
+  await AsyncStorage.removeItem(`global:${STATUS_KEY}`);
 }
 
 /**
@@ -218,37 +396,71 @@ export async function clearAuditLog(): Promise<void> {
  * Returns the number of entries successfully flushed.
  */
 export async function flushAuditLog(): Promise<number> {
+  const context = activeContext();
   const buffer = await loadBuffer();
-  if (buffer.length === 0) return 0;
+  const entries = buffer.filter((entry) =>
+    entry.tenant_id === context.tenantId
+    && entry.user_id === context.userId
+    && entry.session_id === (context.sessionId ?? ''));
+  if (entries.length === 0) return 0;
 
-  // Clone to avoid mutation during iteration
-  const entries = [...buffer];
-  let flushed = 0;
+  const serverRows = entries.map((entry) => ({
+    tenant_id: entry.tenant_id,
+    user_id: entry.user_id,
+    action: entry.action,
+    resource_type: entry.resource_type,
+    resource_id: entry.resource_id,
+    changes: entry.changes,
+  }));
 
   try {
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .insert(entries.map((e) => ({
-        timestamp: e.timestamp,
-        user_id: e.user_id,
-        action: e.action,
-        table_name: e.table,
-        row_id: e.row_id,
-        data_hash: e.data_hash,
-      })));
-
-    if (!error) {
-      flushed = entries.length;
-      // Clear the buffer on successful flush
-      _buffer = [];
+    const { error } = await supabase.from(SUPABASE_TABLE).insert(serverRows);
+    if (error) throw new Error(error.message);
+    _buffer = buffer.filter((entry) => !entries.includes(entry));
+    try {
       await persistBuffer();
+    } catch (storageError) {
+      _status = {
+        ...(await loadStatus()),
+        storageUnavailable: true,
+        lastError: safeErrorMessage(storageError),
+      };
+      await persistStatus();
+      throw storageError;
     }
-    // On error, entries remain in buffer for next flush attempt
-  } catch {
-    // Network failure — entries stay in buffer for retry
+    await updateStatus({
+      pending: _buffer.filter((entry) => entry.delivery_state === 'pending').length,
+      failed: _buffer.filter((entry) => entry.delivery_state === 'failed').length,
+      lastError: null,
+      lastFailureAt: null,
+      lastSuccessAt: Date.now(),
+      storageUnavailable: false,
+    });
+    return entries.length;
+  } catch (error) {
+    const message = safeErrorMessage(error);
+    const failedEntries = new Set(entries);
+    _buffer = buffer.map((entry) => failedEntries.has(entry)
+      ? { ...entry, delivery_state: 'failed' as const, attempts: entry.attempts + 1, last_error: message }
+      : entry);
+    try {
+      await persistBuffer();
+    } catch (storageError) {
+      _status = {
+        ...(await loadStatus()),
+        storageUnavailable: true,
+        lastError: safeErrorMessage(storageError),
+      };
+    }
+    await updateStatus({
+      pending: _buffer.filter((entry) => entry.delivery_state === 'pending').length,
+      failed: _buffer.filter((entry) => entry.delivery_state === 'failed').length,
+      lastError: message,
+      lastFailureAt: Date.now(),
+    });
+    logWarn('audit-trail.flush-failed', { error: message });
+    return 0;
   }
-
-  return flushed;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,14 +479,17 @@ export function startAuditFlush(): void {
     try {
       // Quick connectivity check via Supabase auth (lightweight, no extra dep)
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) return; // not authenticated — skip flush
+      if (error || !session) {
+        await updateStatus({ lastError: 'audit delivery unavailable: no authenticated session' });
+        return;
+      }
 
       const count = await flushAuditLog();
       if (count > 0 && __DEV__) {
         console.debug(`[AuditTrail] Flushed ${count} entries to ${SUPABASE_TABLE}`);
       }
-    } catch {
-      // Silently skip — next interval will retry
+    } catch (error) {
+      await updateStatus({ lastError: safeErrorMessage(error) });
     }
   }, FLUSH_INTERVAL_MS);
 }

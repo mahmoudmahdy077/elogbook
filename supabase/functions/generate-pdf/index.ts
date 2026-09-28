@@ -1,5 +1,5 @@
-import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requirePrincipal, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
 interface CaseData {
@@ -25,9 +25,12 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers });
   }
 
-  const authResult = await authenticate(req);
+  const authResult = await requirePrincipal(req, {
+    roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'],
+    aal: 'aal2',
+  });
   if (authResult instanceof Response) return authResult;
-  const { supabase, tenantId } = authResult;
+  const { supabase, tenantId, principal } = authResult;
 
   // Audit rows must be written with a client that can bypass the
   // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
@@ -85,7 +88,7 @@ Deno.serve(async (req: Request) => {
       p_key: `pdf:${userId}`,
       p_max: 10,
       p_window_seconds: 60,
-    });
+    }) as { data?: { allowed?: boolean; retry_after?: number } | null; error?: unknown };
     if (rl && rl.allowed === false) {
       return new Response(
         JSON.stringify({ error: 'Too many PDF requests', retry_after: rl.retry_after }),
@@ -100,7 +103,7 @@ Deno.serve(async (req: Request) => {
   // Resident callers can only export their own cases (enforced via
   // the inner query's resident_id IN filter below).
 
-  const { data: cases, error: casesError } = await supabase
+  let query = supabase
     .from('case_entries')
     .select(`
       case_date,
@@ -111,6 +114,12 @@ Deno.serve(async (req: Request) => {
     .in('id', case_ids)
     .eq('tenant_id', tenantId)
     .eq('status', 'approved');
+
+  if (principal.role === 'resident') {
+    query = query.eq('resident_id', principal.profileId);
+  }
+
+  const { data: cases, error: casesError } = await query;
 
   if (casesError) {
     console.error('Failed to fetch cases for PDF', { error: casesError.message });
@@ -221,7 +230,7 @@ Deno.serve(async (req: Request) => {
     },
   });
 
-  return new Response(pdfBytes, {
+  return new Response(pdfBytes as unknown as BodyInit, {
     headers: { ...headers, 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="case-report.pdf"' },
   });
 });

@@ -15,7 +15,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { encryptText, decryptText, CryptoError } from './crypto/aead';
 import { getOrCreateDbEncryptionKey } from './db/encryption-key';
-import { getAccountContext, scopedKey } from './account-context';
+import { getAccountContext, scopedKey, scopedKeyForContext, type AccountContext } from './account-context';
 import { logWarn } from './logger';
 import { t } from './copy';
 
@@ -33,6 +33,7 @@ export interface DurableQueueItem {
   opId: string;
   accountId: string;
   tenantId: string;
+  sessionId: string;
   table: string;
   action: QueueAction;
   schemaVersion: number;
@@ -175,6 +176,7 @@ export async function enqueueDurable(
     opId,
     accountId: ctx.userId,
     tenantId: ctx.tenantId,
+    sessionId: ctx.sessionId ?? '',
     table,
     action,
     schemaVersion: DURABLE_SCHEMA_VERSION,
@@ -204,6 +206,23 @@ export async function enqueueDurable(
 
 export async function readDurableQueue(): Promise<DurableQueueItem[]> {
   return readRaw();
+}
+
+export async function clearDurableQueueForContext(ctx: AccountContext): Promise<void> {
+  await serialized(async () => {
+    const key = scopedKeyForContext(ctx, DURABLE_QUEUE_KEY);
+    await AsyncStorage.removeItem(key);
+    lastCorruptKey = null;
+  });
+}
+
+export async function clearDurableQueue(): Promise<void> {
+  const ctx = getAccountContext();
+  if (ctx) {
+    await clearDurableQueueForContext(ctx);
+    return;
+  }
+  await AsyncStorage.removeItem(scopedKey(DURABLE_QUEUE_KEY));
 }
 
 export async function getDurableCounts(): Promise<{ queued: number; quarantined: number; total: number }> {
@@ -242,7 +261,7 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
 
     for (const item of items) {
       // Account isolation: never flush another account's work after switch.
-      if (!ctx || item.accountId !== ctx.userId || item.tenantId !== ctx.tenantId) {
+      if (!ctx || item.accountId !== ctx.userId || item.tenantId !== ctx.tenantId || item.sessionId !== (ctx.sessionId ?? '')) {
         result.skippedForeign += 1;
         remaining.push(item);
         continue;
@@ -271,6 +290,7 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
         const fields: Record<string, unknown> = { ...data };
         delete fields.id;
         delete fields.tenant_id;
+        delete fields.local_scope;
         delete fields.client_operation_id;
         const rowId = item.action === 'insert' ? null : typeof data.id === 'string' ? (data.id as string) : null;
         if (item.action !== 'insert' && !rowId) {

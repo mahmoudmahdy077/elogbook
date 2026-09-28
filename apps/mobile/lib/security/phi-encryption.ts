@@ -17,7 +17,15 @@ import { logWarn } from '../logger';
 // PHI field definitions per table
 // ---------------------------------------------------------------------------
 
-export type PHITable = 'case_entries' | 'evaluation_forms';
+export type PHITable =
+  | 'case_entries'
+  | 'evaluation_forms'
+  | 'comments'
+  | 'rotations'
+  | 'milestones'
+  | 'shifts'
+  | 'program_goals'
+  | 'approval_requests';
 
 export interface PHIColumn {
   name: string;
@@ -35,7 +43,29 @@ export const PHI_FIELDS: Record<PHITable, PHIColumn[]> = {
     { name: 'field_values', type: 'json' },
   ],
   evaluation_forms: [
+    { name: 'setting', type: 'text' },
     { name: 'patient_context', type: 'text' },
+    { name: 'ratings', type: 'json' },
+    { name: 'feedback', type: 'text' },
+    { name: 'action_plan', type: 'text' },
+  ],
+  comments: [
+    { name: 'body', type: 'text' },
+  ],
+  rotations: [
+    { name: 'notes', type: 'text' },
+  ],
+  milestones: [
+    { name: 'comments', type: 'text' },
+  ],
+  shifts: [
+    { name: 'notes', type: 'text' },
+  ],
+  program_goals: [
+    { name: 'description', type: 'text' },
+  ],
+  approval_requests: [
+    { name: 'comment', type: 'text' },
   ],
 };
 
@@ -72,11 +102,11 @@ export async function encryptPHIField(value: unknown): Promise<string | null | u
 export async function decryptPHIField(encryptedValue: unknown): Promise<string | null | undefined> {
   if (encryptedValue === null || encryptedValue === undefined) return encryptedValue as null | undefined;
   if (encryptedValue === '') return '';
-  if (typeof encryptedValue !== 'string') return encryptedValue as string;
+  if (typeof encryptedValue !== 'string') return null;
 
-  // Check if it looks like an AEAD envelope (hex string, starts with version byte 01)
-  if (encryptedValue.length < 4 || !/^[0-9a-f]+$/i.test(encryptedValue)) {
-    return encryptedValue; // not encrypted — pass through (migration/compat)
+  if (encryptedValue.length < 4 || !isEncrypted(encryptedValue)) {
+    logWarn('phi.plaintext-rejected');
+    return null;
   }
 
   try {

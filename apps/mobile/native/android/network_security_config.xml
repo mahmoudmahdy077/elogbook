@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">supabase.co</domain>
+    <pin-set>
+      <pin digest="SHA-256">REPLACE_WITH_PRIMARY_SPKI_PIN=</pin>
+      <pin digest="SHA-256">REPLACE_WITH_BACKUP_SPKI_PIN=</pin>
+    </pin-set>
+  </domain-config>
+</network-security-config>

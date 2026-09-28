@@ -36,8 +36,15 @@ vi.mock('../auth-guard', () => ({
   getRoleFromAuth: async () => ({ role: null, fullName: null, tenantId: null, profileId: null }),
 }));
 
+const { resetDatabaseMock } = vi.hoisted(() => ({
+  resetDatabaseMock: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../db/database', () => ({
+  resetDatabase: resetDatabaseMock,
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAccountContext, clearAccountContext, scopedKey } from '../account-context';
+import { setAccountContext, clearAccountContext, getAccountContext, scopedKey } from '../account-context';
 import { saveDraft, loadDraft } from '../draft-store';
 import { enqueueDurable, readDurableQueue } from '../durable-queue';
 import { disposeAccountContext } from '../session-disposal';
@@ -45,6 +52,7 @@ import { disposeAccountContext } from '../session-disposal';
 beforeEach(async () => {
   await AsyncStorage.clear();
   clearAccountContext();
+  resetDatabaseMock.mockClear();
 });
 
 describe('session disposal (M1.3)', () => {
@@ -58,16 +66,22 @@ describe('session disposal (M1.3)', () => {
     await expect(loadDraft()).resolves.toBeNull();
   });
 
-  it('quarantines (preserves under old scope) queued work instead of deleting it', async () => {
+  it('resets the database and removes old scoped queues before a new account starts', async () => {
     setAccountContext({ userId: 'u1', tenantId: 't1', profileId: 'p1' });
     await enqueueDurable('case_entries', 'insert', { a: 1 });
     const oldKey = scopedKey('durable_queue.v1');
     await disposeAccountContext({});
-    // Old scope data is untouched under its own key (quarantine, not loss).
-    expect(await AsyncStorage.getItem(oldKey)).toBeTruthy();
-    // New scope starts empty.
+    expect(resetDatabaseMock).toHaveBeenCalledTimes(1);
+    expect(await AsyncStorage.getItem(oldKey)).toBeNull();
     setAccountContext({ userId: 'u2', tenantId: 't1', profileId: 'p2' });
     expect(await readDurableQueue()).toHaveLength(0);
+  });
+
+  it('fails closed when the database singleton cannot be reset', async () => {
+    setAccountContext({ userId: 'u1', tenantId: 't1', profileId: 'p1' });
+    resetDatabaseMock.mockRejectedValueOnce(new Error('reset failed'));
+    await expect(disposeAccountContext({})).rejects.toThrow(/reset failed/);
+    expect(getAccountContext()).toBeNull();
   });
 
   it('clears telemetry identity and push context via callbacks', async () => {

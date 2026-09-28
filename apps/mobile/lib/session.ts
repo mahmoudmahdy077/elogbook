@@ -1,14 +1,4 @@
-/**
- * M1 — one authoritative session boundary.
- *
- * Boot resolves the server capability snapshot (never client metadata) and
- * populates the full account context BEFORE draft/queue/cache/sync init.
- * Refresh triggers: boot, foreground, 401/403 (noteAuthFailure), tenant
- * switch, sensitive actions (requireFreshCapability), sign-out.
- * Suspended/non-active accounts never receive a write scope.
- */
-
-import { fetchCapabilitySnapshot, isCapabilityFresh, type CapabilitySnapshot } from './capability';
+import { fetchCapabilitySnapshot, isCapabilityFresh, type CapabilitySnapshot, type SupabaseLike } from './capability';
 import { setAccountContext, clearAccountContext } from './account-context';
 
 export type SessionState = 'idle' | 'resolving' | 'ready' | 'signed-out' | 'suspended' | 'error';
@@ -18,8 +8,6 @@ export interface Session {
   capability: CapabilitySnapshot | null;
   error: string | null;
 }
-
-type SupabaseLike = Parameters<typeof fetchCapabilitySnapshot>[0];
 
 let current: Session = { state: 'idle', capability: null, error: null };
 let refreshRequested = false;
@@ -35,14 +23,12 @@ export function resetSessionForTests(): void {
   lastSupabase = null;
 }
 
-/** Test-only: age the cached snapshot to force a refetch. */
 export function __ageSessionForTests(ms: number): void {
   if (current.capability) {
     current = { ...current, capability: { ...current.capability, fetchedAt: Date.now() - ms } };
   }
 }
 
-/** Called by network layers on 401/403: next requireFreshCapability refetches. */
 export function noteAuthFailure(status: number): void {
   if (status === 401 || status === 403) refreshRequested = true;
 }
@@ -52,9 +38,23 @@ function populateContext(cap: CapabilitySnapshot): void {
     userId: cap.userId,
     tenantId: cap.tenantId,
     profileId: cap.profileId,
+    role: cap.role,
+    status: cap.status,
+    tenantStatus: cap.tenantStatus,
+    expiresAt: cap.expiresAt,
     policyVersion: cap.policyVersion,
     dataMode: cap.dataMode,
   });
+}
+
+function stateForDeniedCapability(cap: CapabilitySnapshot): Session {
+  const explicitlyDenied = cap.status !== 'active' || cap.tenantStatus !== 'active';
+  clearAccountContext();
+  return {
+    state: explicitlyDenied ? 'suspended' : 'error',
+    capability: cap,
+    error: explicitlyDenied ? null : 'account or tenant status unavailable',
+  };
 }
 
 export async function bootSession(supabase: SupabaseLike): Promise<Session> {
@@ -62,9 +62,8 @@ export async function bootSession(supabase: SupabaseLike): Promise<Session> {
   lastSupabase = supabase;
   try {
     const cap = await fetchCapabilitySnapshot(supabase);
-    if (cap.status !== 'active') {
-      clearAccountContext();
-      current = { state: 'suspended', capability: cap, error: null };
+    if (cap.status !== 'active' || cap.tenantStatus !== 'active') {
+      current = stateForDeniedCapability(cap);
       return current;
     }
     populateContext(cap);
@@ -83,31 +82,25 @@ export async function bootSession(supabase: SupabaseLike): Promise<Session> {
   }
 }
 
-/** Fresh capability for sensitive actions; refetches when stale or flagged by 401/403. */
 export async function requireFreshCapability(supabase: SupabaseLike): Promise<CapabilitySnapshot> {
   lastSupabase = supabase;
   const needsRefresh = refreshRequested || !current.capability || !isCapabilityFresh(current.capability);
   refreshRequested = false;
   if (!needsRefresh && current.capability) return current.capability;
   const cap = await fetchCapabilitySnapshot(supabase);
-  current = { ...current, capability: cap };
-  if (cap.status === 'active') populateContext(cap);
+  if (cap.status !== 'active' || cap.tenantStatus !== 'active') {
+    current = stateForDeniedCapability(cap);
+  } else {
+    populateContext(cap);
+    current = { state: 'ready', capability: cap, error: null };
+  }
   return cap;
 }
 
-/** Last supabase handle seen (for foreground refresh wiring). */
 export function lastSupabaseSeen(): SupabaseLike | null {
   return lastSupabase;
 }
 
-/**
- * N1 best-known capability for submit paths.
- *
- * Tries a fresh snapshot; on failure (offline) keeps the cached one so the
- * adapter can apply the explicit offline policy (queue on mode match, never
- * a blind server write). Returns null only when no session was ever
- * resolved — callers must fail closed in that case.
- */
 export async function bestKnownCapability(supabase: SupabaseLike): Promise<CapabilitySnapshot | null> {
   try {
     return await requireFreshCapability(supabase);

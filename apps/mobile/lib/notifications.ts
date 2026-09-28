@@ -18,6 +18,7 @@
 import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { getAccountContext, scopedKey } from './account-context';
 
 export function useCaseNotifications(
   residentId: string,
@@ -29,7 +30,10 @@ export function useCaseNotifications(
   useEffect(() => {
     async function check() {
       try {
-        const stored = await AsyncStorage.getItem('last_notification_check');
+        const context = getAccountContext();
+        if (!context) return;
+        const checkKey = scopedKey('last_notification_check');
+        const stored = await AsyncStorage.getItem(checkKey);
         const since = stored ? parseInt(stored, 10) : 0;
 
         const { data } = await supabase
@@ -53,7 +57,7 @@ export function useCaseNotifications(
         }
 
         badgeCount.current = newApprovals + newRejections.length;
-        await AsyncStorage.setItem('last_notification_check', Date.now().toString());
+        await AsyncStorage.setItem(checkKey, Date.now().toString());
         lastCheck.current = Date.now();
       } catch {
         // silently ignore polling errors

@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticate, corsHeaders } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { requirePrincipal, corsHeaders } from '../_shared/auth.ts';
 
 interface WebadsExportPayload {
   tenant_id: string;
@@ -91,9 +91,12 @@ serve(async (req) => {
     return new Response('ok', { headers });
   }
 
-  const authResult = await authenticate(req);
+  const authResult = await requirePrincipal(req, {
+    roles: ['director', 'institution_admin', 'admin'],
+    aal: 'aal2',
+  });
   if (authResult instanceof Response) return authResult;
-  const { supabase, tenantId, role } = authResult;
+  const { supabase, tenantId } = authResult;
 
   // Audit rows must be written with a client that can bypass the
   // authenticated INSERT block on audit_logs (RLS WITH CHECK false).
@@ -101,15 +104,6 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
-
-  // Require elevated role for WebADS export
-  const elevatedRoles = ['supervisor', 'director', 'institution_admin', 'admin'];
-  if (!elevatedRoles.includes(role)) {
-    return new Response(
-      JSON.stringify({ error: 'Insufficient permissions: requires supervisor, director, institution_admin, or admin role' }),
-      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
 
     let body: WebadsExportPayload;
     try {

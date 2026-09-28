@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
@@ -19,7 +18,7 @@ import type { UserRole } from '@elogbook/shared';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
 
 export default function AIInsightsScreen() {
-  const [query, setQuery] = useState('');
+  const [intent, setIntent] = useState<'overview' | 'trends' | 'development' | 'case-mix'>('overview');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,7 +91,7 @@ export default function AIInsightsScreen() {
   const quotaRemaining = quotaLimit === null ? null : quotaLimit - quotaUsed;
 
   const handleSubmit = useCallback(async () => {
-    if (!query.trim() || !canAccess) return;
+    if (!canAccess) return;
 
     setError(null);
     setSubmitting(true);
@@ -116,13 +115,13 @@ export default function AIInsightsScreen() {
       }
 
       const validation = aiQuerySchema.safeParse({
-        query: query.trim(),
+        intent,
         resident_id: profile.id,
         tenant_id: profile.tenant_id,
       });
 
       if (!validation.success) {
-        setError('Please enter a valid clinical question or reflection.');
+        setError('Please choose a supported analysis focus.');
         return;
       }
 
@@ -139,7 +138,7 @@ export default function AIInsightsScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [query, canAccess]);
+  }, [intent, canAccess]);
 
   if (loading) {
     return (
@@ -195,45 +194,46 @@ export default function AIInsightsScreen() {
 
         <Animated.View entering={FadeInDown.delay(250).springify()}>
           <GlassPanel style={{ marginBottom: 12 }}>
-            <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>
-              Ask a clinical question
+            <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.mono }}>
+              Choose an analysis focus
             </Text>
-            <TextInput
-              className="text-white text-sm min-h-[80px]"
-              style={{ fontFamily: clinicalTokens.fonts.mono }}
-              multiline
-              textAlignVertical="top"
-              placeholder="e.g., What are the key competencies for laparoscopic cholecystectomy?"
-              placeholderTextColor="#666"
-              value={query}
-              onChangeText={(text) => {
-                setQuery(text);
-                if (error) setError(null);
-              }}
-              maxLength={500}
-              editable={!submitting && (quotaRemaining === null || quotaRemaining > 0)}
-              accessibilityLabel="AI clinical reflection query"
-            />
-            <View className="flex-row justify-between items-center mt-2">
-              <Text className="text-gray-400 text-xs" style={{ fontFamily: clinicalTokens.fonts.mono }}>
-                {query.length}/500
-              </Text>
-              <TouchableOpacity
-                className={`rounded-lg px-4 py-2 ${(quotaRemaining === null || quotaRemaining > 0) && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
-                onPress={handleSubmit}
-                disabled={submitting || (quotaRemaining !== null && quotaRemaining <= 0)}
-                accessibilityLabel="Submit AI query"
-                accessibilityRole="button"
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text className={`text-sm ${(quotaRemaining === null || quotaRemaining > 0) ? 'text-white' : 'text-gray-400'}`} style={{ fontFamily: clinicalTokens.fonts.heading }}>
-                    Ask
-                  </Text>
-                )}
-              </TouchableOpacity>
+            <View className="gap-2">
+              {([
+                ['overview', 'Overall overview'],
+                ['trends', 'Case trends'],
+                ['development', 'Development opportunities'],
+                ['case-mix', 'Case mix'],
+              ] as const).map(([value, label]) => (
+                <TouchableOpacity
+                  key={value}
+                  className={`rounded-lg border px-3 py-2 ${intent === value ? 'border-primary bg-primary/20' : 'border-gray-700'}`}
+                  onPress={() => {
+                    setIntent(value);
+                    if (error) setError(null);
+                  }}
+                  disabled={submitting}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: intent === value }}
+                >
+                  <Text className="text-white text-sm">{label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
+            <TouchableOpacity
+              className={`mt-3 rounded-lg px-4 py-2 items-center ${(quotaRemaining === null || quotaRemaining > 0) && !submitting ? 'bg-primary' : 'bg-gray-400'}`}
+              onPress={handleSubmit}
+              disabled={submitting || (quotaRemaining !== null && quotaRemaining <= 0)}
+              accessibilityLabel="Submit AI analysis"
+              accessibilityRole="button"
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text className="text-white text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>
+                  Analyze
+                </Text>
+              )}
+            </TouchableOpacity>
           </GlassPanel>
         </Animated.View>
 

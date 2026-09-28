@@ -96,6 +96,7 @@ import {
   canAccessPHI,
   logPhiRead,
   logPhiWrite,
+  getAuditDeliveryStatus,
   type AuditEntry,
 } from '../audit-trail';
 import { setAccountContext, clearAccountContext } from '../../account-context';
@@ -151,6 +152,19 @@ describe('audit-trail', () => {
   // 1. Logging events
   // -----------------------------------------------------------------------
   describe('logAuditEvent', () => {
+    it('refuses to persist an audit event without an active account scope', async () => {
+      clearAccountContext();
+      await expect(
+        logAuditEvent({
+          userId: 'u1',
+          action: 'read',
+          table: 'case_entries',
+          rowId: 'r1',
+          data: 'x',
+        }),
+      ).rejects.toThrow(/account context|scope/i);
+    });
+
     it('stores an entry with all required fields', async () => {
       await logAuditEvent({
         userId: 'user-abc',
@@ -164,7 +178,7 @@ describe('audit-trail', () => {
       expect(entries).toHaveLength(1);
 
       const e = entries[0]!;
-      expect(e.user_id).toBe('user-abc');
+      expect(e.user_id).toBe('user-123');
       expect(e.action).toBe('read');
       expect(e.table).toBe('case_entries');
       expect(e.row_id).toBe('row-1');
@@ -251,7 +265,7 @@ describe('audit-trail', () => {
       expect(entries.length).toBeGreaterThanOrEqual(1);
       // The second entry should be present
       const lastEntry = entries[entries.length - 1]!;
-      expect(lastEntry.user_id).toBe('u2');
+      expect(lastEntry.user_id).toBe('user-123');
     });
 
     it('caps buffer at 500 entries (ring-buffer eviction)', async () => {
@@ -292,6 +306,7 @@ describe('audit-trail', () => {
       expect(entries[0]!.row_id).toBe('r-1');
       // Newest entries should be present
       expect(entries[499]!.row_id).toBe('r-501');
+      expect((await getAuditDeliveryStatus()).dropped).toBe(1);
     });
   });
 
@@ -299,6 +314,18 @@ describe('audit-trail', () => {
   // 3. getAuditLog
   // -----------------------------------------------------------------------
   describe('getAuditLog', () => {
+    it('does not expose the previous account in-memory buffer after a switch', async () => {
+      await logAuditEvent({
+        userId: 'user-123',
+        action: 'read',
+        table: 'case_entries',
+        rowId: 'r1',
+        data: 'x',
+      });
+      setAccountContext({ userId: 'user-456', tenantId: 'tenant-2', profileId: 'profile-2' });
+      await expect(getAuditLog()).resolves.toEqual([]);
+    });
+
     it('returns empty array when no entries exist', async () => {
       const entries = await getAuditLog();
       expect(entries).toEqual([]);
@@ -360,8 +387,8 @@ describe('audit-trail', () => {
 
       const parsed = JSON.parse(json) as AuditEntry[];
       expect(parsed).toHaveLength(2);
-      expect(parsed[0]!.user_id).toBe('u1');
-      expect(parsed[1]!.user_id).toBe('u2');
+      expect(parsed[0]!.user_id).toBe('user-123');
+      expect(parsed[1]!.user_id).toBe('user-123');
       // No raw PHI in the export
       expect(json).not.toContain('MRN-999');
       expect(json).not.toContain('1985-06-15');
@@ -425,9 +452,18 @@ describe('audit-trail', () => {
       expect(mockInsert).toHaveBeenCalledTimes(1);
       const insertedRows = mockInsert.mock.calls[0]![0] as Array<Record<string, unknown>>;
       expect(insertedRows).toHaveLength(2);
-      expect(insertedRows[0]!.table_name).toBe('case_entries');
-      expect(insertedRows[0]!.action).toBe('read');
-      expect(insertedRows[0]!.data_hash).toBeTruthy();
+      expect(insertedRows[0]).toEqual(expect.objectContaining({
+        tenant_id: 'tenant-1',
+        user_id: 'user-123',
+        action: 'read',
+        resource_type: 'case_entries',
+        resource_id: 'r1',
+        changes: expect.objectContaining({ data_hash: expect.any(String) }),
+      }));
+      expect(insertedRows[0]).not.toHaveProperty('timestamp');
+      expect(insertedRows[0]).not.toHaveProperty('table');
+      expect(insertedRows[0]).not.toHaveProperty('row_id');
+      expect(insertedRows[0]).not.toHaveProperty('data_hash');
       // No PHI in the payload
       expect(JSON.stringify(insertedRows)).not.toContain('MRN-100');
 
@@ -460,6 +496,9 @@ describe('audit-trail', () => {
       // Entries should still be in buffer
       const entries = await getAuditLog();
       expect(entries).toHaveLength(1);
+      const status = await getAuditDeliveryStatus();
+      expect(status.failed).toBe(1);
+      expect(status.lastError).toMatch(/network/i);
     });
 
     it('keeps entries on Supabase error for retry', async () => {

@@ -5,6 +5,7 @@ export class EvaluationForm extends Model {
   static table = 'evaluation_forms';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('resident_id') residentId!: string;
   @text('evaluator_id') evaluatorId!: string;
   @text('form_type') formType!: string;

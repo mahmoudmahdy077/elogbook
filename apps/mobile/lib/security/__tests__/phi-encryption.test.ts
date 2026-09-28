@@ -75,15 +75,42 @@ describe('PHI field encryption', () => {
     expect(decrypted.patient_dob).toBe('1990-01-01');
   });
 
+  it('rejects plaintext values instead of treating them as decrypted data', async () => {
+    await expect(decryptPHIField('MRN-PLAINTEXT')).resolves.toBeNull();
+  });
   it('fails closed (null) on tamper instead of returning the envelope', async () => {
     const encrypted = (await encryptPHIField('MRN-12345')) as string;
     const tampered = `${encrypted.slice(0, -4)}ffff`;
     await expect(decryptPHIField(tampered)).resolves.toBeNull();
   });
 
-  it('PHI_FIELDS defines correct columns', () => {
-    expect(PHI_FIELDS.case_entries).toHaveLength(3);
-    expect(PHI_FIELDS.case_entries.map((c) => c.name)).toContain('patient_mrn');
-    expect(PHI_FIELDS.evaluation_forms).toHaveLength(1);
+  it('PHI_FIELDS covers clinical free text in every local clinical table', () => {
+    expect(PHI_FIELDS.case_entries.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['patient_mrn', 'patient_dob', 'field_values']),
+    );
+    expect(PHI_FIELDS.evaluation_forms.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['setting', 'patient_context', 'ratings', 'feedback', 'action_plan']),
+    );
+    expect(PHI_FIELDS.comments.map((c) => c.name)).toEqual(expect.arrayContaining(['body']));
+    expect(PHI_FIELDS.rotations.map((c) => c.name)).toEqual(expect.arrayContaining(['notes']));
+    expect(PHI_FIELDS.milestones.map((c) => c.name)).toEqual(expect.arrayContaining(['comments']));
+    expect(PHI_FIELDS.shifts.map((c) => c.name)).toEqual(expect.arrayContaining(['notes']));
+  });
+
+  it('encrypts and fails closed for evaluation free text', async () => {
+    const row = {
+      setting: 'inpatient ward',
+      patient_context: 'patient with acute abdomen',
+      ratings: { clinical: 4 },
+      feedback: 'needs more detail',
+      action_plan: 'review tomorrow',
+      status: 'pending',
+    };
+    const encrypted = await encryptPHIRow('evaluation_forms', row);
+    expect(JSON.stringify(encrypted)).not.toContain('inpatient ward');
+    expect(JSON.stringify(encrypted)).not.toContain('acute abdomen');
+    expect(JSON.stringify(encrypted)).not.toContain('needs more detail');
+    expect(JSON.stringify(encrypted)).not.toContain('review tomorrow');
+    expect(encrypted.status).toBe('pending');
   });
 });

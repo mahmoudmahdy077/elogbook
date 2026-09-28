@@ -49,7 +49,10 @@ export async function submitApproval(deps: {
   entryId: string;
   action: 'approve' | 'reject';
   comment?: string;
-  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{
+    data?: { success?: unknown; error?: unknown } | null;
+    error: { message: string } | null;
+  }>;
 }): Promise<OpOutcome> {
   return runGuardedMutation({
     capability: deps.capability,
@@ -58,12 +61,13 @@ export async function submitApproval(deps: {
       // approve_case/reject_case require the caller's own id (verified server-side).
       const supervisorId = deps.capability?.userId;
       if (!supervisorId) throw new Error('policy: no verified session');
-      const { error } = await deps.rpc(deps.action === 'approve' ? 'approve_case' : 'reject_case', {
+      const result = await deps.rpc(deps.action === 'approve' ? 'approve_case' : 'reject_case', {
         p_entry_id: deps.entryId,
         p_supervisor_id: supervisorId,
         p_comment: deps.action === 'reject' ? (deps.comment ?? '') : null,
       });
-      if (error) throw new Error(error.message);
+      if (result.error) throw new Error(result.error.message);
+      if (result.data?.success !== true) throw new Error('approval conflict');
     },
   });
 }

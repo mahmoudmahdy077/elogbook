@@ -4,7 +4,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
 import { migrateLegacyQueueOnce } from './legacy-migration';
 import { RETRY_DELAYS_MS } from './sync-retry';
-import { clearAccountContext, setAccountContext } from './account-context';
+import { clearAccountContext, getAccountContext, setAccountContext } from './account-context';
+import { fetchCapabilitySnapshot } from './capability';
 import { noteAuthFailure } from './session';
 import { logInfo, logError } from './logger';
 
@@ -176,6 +177,17 @@ class SyncService {
     }
   }
 
+  resetIdentityState(): void {
+    this.stopPeriodicSync();
+    this.tenantId = null;
+    this.lastSyncedAt = null;
+    this.retryIndex = 0;
+    this.retryCount = 0;
+    this.partialFailureMessage = null;
+    this.conflictCallbacks.clear();
+    this.setStatus('idle');
+  }
+
   getStatus(): SyncStatus {
     return this.status;
   }
@@ -209,27 +221,41 @@ export function attachSyncAuthListener(
       if (event === 'SIGNED_OUT') {
         svc.setTenantId(null);
         svc.cleanup();
-        // M1: stop workers + drop account scope so old drafts/queue rows
-        // are not queryable after sign-out. Callers wipe/quarantine
-        // context-scoped AsyncStorage keys via scopedKey().
+        svc.resetIdentityState();
         clearAccountContext();
       }
       return;
     }
     try {
-      const { data: profile } = await sb
-        .from('profiles')
-        .select('id,tenant_id')
-        .eq('user_id', session.user.id)
-        .single();
-      const tenantId = profile?.tenant_id;
-      if (tenantId) {
-        svc.setTenantId(tenantId);
-        // M1: bind the full account scope (incl. profile id) before sync work.
-        setAccountContext({ userId: session.user.id, tenantId, profileId: profile?.id ?? '' });
-        svc.startPeriodicSync();
+      const cap = await fetchCapabilitySnapshot(sb as never);
+      if (cap.status !== 'active' || cap.tenantStatus !== 'active' || !cap.tenantId) {
+        svc.setTenantId(null);
+        svc.resetIdentityState();
+        clearAccountContext();
+        return;
       }
+      const previous = getAccountContext();
+      if (previous && (previous.userId !== cap.userId || previous.tenantId !== cap.tenantId || previous.profileId !== cap.profileId)) {
+        svc.resetIdentityState();
+        clearAccountContext();
+      }
+      svc.setTenantId(cap.tenantId);
+      setAccountContext({
+        userId: cap.userId,
+        tenantId: cap.tenantId,
+        profileId: cap.profileId,
+        role: cap.role,
+        status: cap.status,
+        tenantStatus: cap.tenantStatus,
+        expiresAt: cap.expiresAt,
+        policyVersion: cap.policyVersion,
+        dataMode: cap.dataMode,
+      });
+      svc.startPeriodicSync();
     } catch (err) {
+      svc.setTenantId(null);
+      svc.resetIdentityState();
+      clearAccountContext();
       logError('sync.tenant-resolve', err);
     }
   });

@@ -5,6 +5,7 @@ export class ProgramGoal extends Model {
   static table = 'program_goals';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('resident_id') residentId!: string;
   @text('title') title!: string;
   @field('target_count') targetCount!: number;

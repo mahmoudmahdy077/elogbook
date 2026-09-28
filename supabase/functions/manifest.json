@@ -25,11 +25,11 @@
       "required_secrets": ["STRIPE_SECRET_KEY"],
       "owner": "billing"
     },
-    "dispatch-webhook": {
+    "create-portal-session": {
       "public": false,
       "jwt_mode": "service_role",
-      "required_secrets": [],
-      "owner": "integrations"
+      "required_secrets": ["STRIPE_SECRET_KEY"],
+      "owner": "billing"
     },
     "generate-pdf": {
       "public": false,
@@ -48,6 +48,12 @@
       "jwt_mode": "none",
       "required_secrets": ["STRIPE_WEBHOOK_SECRET"],
       "owner": "billing"
+    },
+    "process-attachment": {
+      "public": false,
+      "jwt_mode": "service_role",
+      "required_secrets": [],
+      "owner": "security"
     },
     "scim": {
       "public": false,

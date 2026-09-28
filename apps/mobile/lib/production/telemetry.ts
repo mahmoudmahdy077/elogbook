@@ -257,6 +257,15 @@ export async function clearTelemetryQueue(): Promise<void> {
   }
 }
 
+export async function clearTelemetryState(): Promise<void> {
+  await clearTelemetryQueue();
+  try {
+    await AsyncStorage.removeItem(METRICS_KEY);
+  } catch {
+    // best-effort
+  }
+}
+
 /**
  * Get queue size without flushing.
  */
