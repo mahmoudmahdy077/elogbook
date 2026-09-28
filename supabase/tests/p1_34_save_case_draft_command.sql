@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(22);
 
 INSERT INTO public.tenants (id, name, slug, tenant_type, mrn_hash_salt, status)
 VALUES
@@ -154,7 +154,7 @@ SELECT is(
   (SELECT public.save_case_draft_command(
     'p1-34-missing-text',
     jsonb_build_object(
-      'template_id', '00000000-0000-0000-0000-000000003431',
+      'template_id', '00000000-0000-4000-8000-000000003431',
       'case_date', '2026-09-23',
       'field_values', jsonb_build_object('procedure_name', '   ', 'supervised', true),
       'accreditation_mappings', '[]'::jsonb,
@@ -165,6 +165,24 @@ SELECT is(
   'required_field_missing',
   'a blank required text field is rejected'
 );
+
+-- The command resolves the caller from auth.uid(), so a refusal other than a
+-- field complaint means the template was not visible to that principal. Pin
+-- the resolved tenant and the stored template tenant so a mismatch is visible.
+RESET ROLE;
+SELECT is(
+  (SELECT profile.tenant_id::text FROM public.profiles AS profile WHERE profile.user_id = '00000000-0000-0000-0000-000000003411'),
+  (SELECT template.tenant_id::text FROM public.case_templates AS template WHERE template.id = '00000000-0000-4000-8000-000000003431'),
+  'the resident and the template belong to the same tenant'
+);
+SELECT is(
+  (SELECT count(*) FROM public.profiles WHERE user_id = '00000000-0000-0000-0000-000000003411'),
+  1::bigint,
+  'the resident has exactly one profile'
+);
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
+
 
 SELECT ok(
   (SELECT public.save_case_draft_command(
