@@ -43,14 +43,15 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000e0"}}';
 
 -- 2. Residents cannot use the relabel RPC.
-SELECT is(
-  (SELECT public.relabel_case_mode('00000000-0000-0000-0000-0000000000e6', false, 'need identifiers for follow-up') ->> 'error'),
-  'policy: forbidden',
+SELECT throws_ok(
+  $$SELECT public.relabel_case_mode('00000000-0000-0000-0000-0000000000e6', false, 'need identifiers for follow-up')$$,
+  '42501',
+  NULL,
   'relabel requires supervisor+'
 );
 
 -- 3. Relabel to identifiable without tenant ceiling is denied.
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000e0"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e2","aal":"aal2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000e0"}}';
 SELECT is(
   (SELECT public.relabel_case_mode('00000000-0000-0000-0000-0000000000e6', false, 'need identifiers for follow-up') ->> 'error'),
   'policy: identifiable_not_permitted',
@@ -70,7 +71,7 @@ UPDATE tenants SET allow_identifiable = true, data_mode_requested = 'identifiabl
  WHERE id = '00000000-0000-0000-0000-0000000000e0';
 UPDATE installation_policy SET phi_ready = true, allow_identifiable = true WHERE id = 1;
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000e0"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e2","aal":"aal2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000e0"}}';
 SELECT ok(
   (SELECT (public.relabel_case_mode('00000000-0000-0000-0000-0000000000e6', false, 'consented identifiable capture') ->> 'success')::boolean),
   'audited relabel to identifiable succeeds under ceilings'
