@@ -139,6 +139,9 @@ const safePlaceholderPatterns = [
   /^(?:your|change|replace|example|placeholder|dummy|not-a-real-secret)(?:[-_][a-z0-9]+)*$/i,
   /^(?:sk|rk|whsec|gh[pousr]|glpat|npm|xox[baprs]|github_pat|ai)(?:[_-](?:test|example|dummy|placeholder|xxx))+$/i,
   /^(?:process\.env|Deno\.env|import\.meta\.env|os\.environ)(?:[.\[]|$)/i,
+  // Self-describing placeholders such as `token-secret-with-at-least-32-bytes`.
+  // These state their own length requirement rather than encoding a value.
+  /with-at-least-\d+[-_]?(?:byte|char|bit)s?$/i,
 ];
 
 // These are known code references in source/documentation examples, not embedded secret values.
@@ -146,9 +149,30 @@ const safePlaceholderPatterns = [
 // continue to inspect every value.
 const safeReferencePatterns = [
   /^config\.[A-Za-z_$][A-Za-z0-9_$]*$/,
-  /^(?:request\.headers|url\.searchParams)\.[A-Za-z_$][A-Za-z0-9_$]*$/,
+  /^(?:request\.headers|request\.cookies|url\.searchParams)\.[A-Za-z_$][A-Za-z0-9_$]*$/,
   /^preauthorizeApiKey\.bind$/,
 ];
+
+// Tests deliberately pass canary values through an identifier so the rotator can
+// assert it refuses them. An unquoted bare identifier in a test is indirection,
+// not an embedded secret. This is scoped to test files so it can never mask an
+// unquoted value in a .env or in source.
+const IDENTIFIER_REFERENCE_PATH = /(^|\/)(tests?|__tests__)\//;
+const BARE_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+function isTestPath(path) {
+  return IDENTIFIER_REFERENCE_PATH.test(normalizePath(path));
+}
+
+function isQuoted(value) {
+  const trimmed = String(value).trim();
+  return (trimmed.startsWith('"') && trimmed.endsWith('"')
+    && trimmed.length > 1)
+    || (trimmed.startsWith("'") && trimmed.endsWith("'")
+    && trimmed.length > 1)
+    || (trimmed.startsWith('`') && trimmed.endsWith('`')
+    && trimmed.length > 1);
+}
 
 function normalizePath(value) {
   return value.replaceAll('\\', '/').replace(/^\.\//, '');
@@ -173,10 +197,15 @@ export function isSafePlaceholder(value) {
   return safePlaceholderPatterns.some((pattern) => pattern.test(candidate));
 }
 
-function isSafeReference(rule, value) {
-  if (rule.id !== 'secret-assignment' && rule.id !== 'secret-bearing-markdown') return false;
+function isSafeReference(rule, value, path) {
+  if (rule.id !== 'secret-assignment'
+    && rule.id !== 'secret-bearing-markdown'
+    && rule.id !== 'supabase-service-role-assignment') {
+    return false;
+  }
   const candidate = unwrapPlaceholder(String(value));
-  return safeReferencePatterns.some((pattern) => pattern.test(candidate));
+  if (safeReferencePatterns.some((pattern) => pattern.test(candidate))) return true;
+  return isTestPath(path) && !isQuoted(value) && BARE_IDENTIFIER_RE.test(String(value).trim());
 }
 
 function isMarkdown(path) {
@@ -205,7 +234,9 @@ export function scanText(path, text) {
       let match;
       while ((match = expression.exec(line)) !== null) {
         const value = match[rule.secretGroup ?? 0] ?? match[0];
-        if (!value || isSafePlaceholder(value) || isSafeReference(rule, value)) {
+        if (!value
+          || isSafePlaceholder(value)
+          || isSafeReference(rule, value, normalizedPath)) {
           if (match.index === expression.lastIndex) expression.lastIndex += 1;
           continue;
         }
