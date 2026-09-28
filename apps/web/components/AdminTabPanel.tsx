@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import TemplateEditor from '@/components/TemplateEditor';
+import UserManager from '@/components/UserManager';
 import UserTable from '@/components/UserTable';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
