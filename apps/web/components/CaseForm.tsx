@@ -8,6 +8,8 @@ import { caseEntrySchema, GLOBAL_TENANT_ID, type AccreditationMapping } from '@e
 import { useToast } from '@/components/Toast';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { sortTemplates, type TemplateWithMeta } from '@elogbook/shared';
+import { buildDeidentifiedPatientColumns } from '@/lib/cases/deidentified';
+import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId } from '@/lib/cases/submit-flow';
 
 import StepIndicator from '@/components/case-form/StepIndicator';
 import TemplateStep from '@/components/case-form/TemplateStep';
@@ -41,7 +43,6 @@ export function hydrateDuplicateCase(sourceCase: Record<string, unknown>, setter
 interface CaseFormProps {
   tenantId: string;
   tenantSlug: string;
-  initialStatus: string;
   duplicateCaseId?: string;
   lastEntry?: boolean;
 }
@@ -54,7 +55,7 @@ const stepVariants = {
   exit: { opacity: 0, x: -24 },
 };
 
-export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicateCaseId, lastEntry }: CaseFormProps) {
+export default function CaseForm({ tenantId, tenantSlug, duplicateCaseId, lastEntry }: CaseFormProps) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -278,53 +279,63 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     if (step > 0) { setErrors([]); setStep(prev => prev - 1); }
   }
 
+  /**
+   * Drafts and submissions go through the resident create-then-submit flow.
+   * The UI never writes a clinical status: the draft is always 'draft' and the
+   * transition to 'pending' belongs to the submit_case command, which creates
+   * the approval requests in the same transaction.
+   */
+  function buildPatientColumns(): Record<string, unknown> {
+    return isDeidentified
+      ? { ...buildDeidentifiedPatientColumns(patientAgeYears) }
+      : {
+          patient_mrn: patientMrn || null,
+          patient_dob: patientDob || null,
+          patient_age_years: null,
+        };
+  }
+
+  async function insertCaseRow(row: Record<string, unknown>) {
+    const { data, error } = await supabase.from('case_entries').insert(row).select('id').single();
+    return { id: (data as { id: string } | null)?.id ?? null, error: error?.message ?? null };
+  }
+
+  function buildDraftRow(residentId: string, caseDateValue: string): Record<string, unknown> {
+    return {
+      tenant_id: tenantId,
+      resident_id: residentId,
+      template_id: selectedTemplateId,
+      case_date: caseDateValue,
+      field_values: fieldValues,
+      accreditation_mappings: accreditationMappings,
+      is_deidentified: isDeidentified,
+      ...buildPatientColumns(),
+      status: 'draft',
+    };
+  }
+
+  async function callSubmitCommand({ caseId, requestId }: { caseId: string; requestId: string; expectedStatus: string }) {
+    const res = await fetch(caseSubmitPath(tenantSlug, caseId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id: requestId, expected_status: 'draft' }),
+    });
+    return { status: res.status, body: (await res.json().catch(() => null)) as { success?: boolean; case_id?: string; code?: string } | null };
+  }
+
   async function handleSaveDraft() {
     setErrors([]);
     setSavingDraft(true);
-    // Get resident profile ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErrors(['Not authenticated.']); setSavingDraft(false); return; }
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
     if (!profile) { setErrors(['Profile not found.']); setSavingDraft(false); return; }
-    
-    const insertData: Record<string, unknown> = {
-      tenant_id: tenantId,
-      resident_id: profile.id,
-      template_id: selectedTemplateId,
-      case_date: caseDate || new Date().toISOString().split('T')[0],
-      field_values: fieldValues,
-      // SEC-002: honor the role-gated initialStatus — DB trigger enforces the
-      // same rule server-side (residents land 'pending', supervisors+ 'approved').
-      status: initialStatus,
-      accreditation_mappings: accreditationMappings,
-      is_deidentified: isDeidentified,
-    };
-    if (isDeidentified) {
-      const mrnForHash = patientMrn || `temp-${Date.now()}`;
-      const { data: hash, error: hashError } = await supabase.rpc('hash_patient_mrn', {
-        p_mrn: mrnForHash,
-        p_tenant_id: tenantId,
-      });
-      if (hashError) {
-        setErrors(['Failed to generate patient hash. Please try again.']);
-        setSavingDraft(false);
-        return;
-      }
-      insertData.patient_mrn = null;
-      insertData.patient_dob = null;
-      insertData.patient_age_years = Number(patientAgeYears) || null;
-      insertData.patient_hash = hash || '';
-    } else {
-      insertData.patient_mrn = patientMrn || null;
-      insertData.patient_dob = patientDob || null;
-      insertData.patient_age_years = null;
-      insertData.patient_hash = null;
-    }
-    const { error } = await supabase.from('case_entries').insert(insertData);
+
+    const { error } = await insertCaseRow(buildDraftRow(profile.id, caseDate || new Date().toISOString().split('T')[0]));
     if (error) {
       const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
-      setErrors([offline ? 'You appear to be offline — draft queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error);
+      setErrors([offline ? 'You appear to be offline — draft queued locally and will sync when you reconnect. Check your connection and try again.' : error]);
       setSavingDraft(false);
       return;
     }
@@ -336,49 +347,57 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     setErrors([]);
     const parsedAge = Number(patientAgeYears);
     const payload: Record<string, unknown> = isDeidentified
-      ? { template_id: selectedTemplateId, patient_age_years: parsedAge, patient_hash: '', case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: true as const }
+      ? { template_id: selectedTemplateId, patient_age_years: parsedAge, case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: true as const }
       : { template_id: selectedTemplateId, patient_mrn: patientMrn, patient_dob: patientDob, case_date: caseDate, field_values: fieldValues, accreditation_mappings: accreditationMappings, is_deidentified: false as const };
     const result = caseEntrySchema.safeParse(payload);
     if (!result.success) { setErrors(result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)); return; }
     setLoading(true);
-    // Get resident profile ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErrors(['Not authenticated.']); setLoading(false); return; }
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
     if (!profile) { setErrors(['Profile not found.']); setLoading(false); return; }
-    
-    const insertData: Record<string, unknown> = {
-      tenant_id: tenantId, resident_id: profile.id, template_id: selectedTemplateId, case_date: caseDate, field_values: fieldValues,
-      status: initialStatus, accreditation_mappings: accreditationMappings, is_deidentified: isDeidentified,
-    };
-    if (isDeidentified) {
-      const mrnForHash = patientMrn || `temp-${Date.now()}`;
-      const { data: hash, error: hashError } = await supabase.rpc('hash_patient_mrn', {
-        p_mrn: mrnForHash,
-        p_tenant_id: tenantId,
-      });
-      if (hashError) {
-        setErrors(['Failed to generate patient hash. Please try again.']);
-        setLoading(false);
-        return;
-      }
-      insertData.patient_mrn = null; insertData.patient_dob = null; insertData.patient_age_years = parsedAge; insertData.patient_hash = hash || '';
-    } else {
-      insertData.patient_mrn = patientMrn; insertData.patient_dob = patientDob; insertData.patient_age_years = null; insertData.patient_hash = null;
-    }
-    const { data: inserted, error } = await supabase.from('case_entries').insert(insertData).select('id').single();
-    if (error) {
+
+    // One request id for the whole attempt: a retry replays the command
+    // instead of creating a second case or a second approval request.
+    const requestId = newRequestId();
+    const outcome = await createCaseDraftAndSubmit(
+      {
+        insertDraft: (row) => insertCaseRow(row),
+        submitCommand: callSubmitCommand,
+      },
+      {
+        templateId: selectedTemplateId,
+        caseDate,
+        fieldValues,
+        accreditationMappings,
+        isDeidentified,
+        patientColumns: buildPatientColumns(),
+        tenantId,
+        residentId: profile.id,
+        requestId,
+      },
+    );
+
+    if (outcome.outcome === 'error') {
       const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
-      setErrors([offline ? 'You appear to be offline — case queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(outcome.message);
+      setErrors([offline ? 'You appear to be offline — case queued locally and will sync when you reconnect. Check your connection and try again.' : outcome.message]);
       setLoading(false);
       return;
     }
-    setSubmittedCaseId((inserted as { id: string })?.id || null);
+
+    setSubmittedCaseId(outcome.caseId);
     setSubmitted(true);
     setLoading(false);
     setConfirmSubmit(false);
-    toast.show('Case logged successfully', 'success');
+
+    if (outcome.outcome === 'draft_only' && outcome.code === 'no_eligible_reviewer') {
+      setErrors(['Saved as a draft: your institution has no active supervisor or director to review it. Ask an administrator to assign a reviewer.']);
+    } else if (outcome.outcome === 'draft_only') {
+      setErrors(['Saved as a draft, but it was not submitted for approval. You can retry from My Cases.']);
+    } else {
+      toast.show('Case submitted for approval', 'success');
+    }
   }
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import ErrorDisplay from './ErrorDisplay';
+import { newRequestId } from '@/lib/cases/submit-flow';
 
 interface TemplateField {
   key: string;
@@ -114,6 +115,7 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
         body: JSON.stringify({
           action,
           entry_id: caseData.id,
+          request_id: newRequestId(),
           comment: comment || null,
         }),
       });

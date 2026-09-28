@@ -10,6 +10,7 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import { SimpleCounter } from './SimpleCounter';
 import { useToast } from '@/components/Toast';
+import { newRequestId } from '@/lib/cases/submit-flow';
 
 interface Props {
   tenantId: string;
@@ -111,7 +112,12 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
         const res = await fetch(`/api/${tenantSlug}/approvals/action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, entry_id: id, comment: null }),
+          body: JSON.stringify({
+            action,
+            entry_id: id,
+            request_id: newRequestId(),
+            comment: null,
+          }),
         });
         if (res.ok) successCount++;
         else failCount++;
