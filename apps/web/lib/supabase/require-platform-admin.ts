@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { getServerVerifiedAal } from './security-context';
 
 /**
  * Platform operator guard (T17).
@@ -43,17 +44,22 @@ export async function requirePlatformAdmin(supabase: SupabaseClient) {
     return { ok: false as const, error: 'Platform access required', status: 403 as const };
   }
 
-  if (process.env.DISABLE_MFA !== 'true') {
+  const mfaDisabledForNonProduction =
+    process.env.NODE_ENV !== 'production' && process.env.DISABLE_MFA === 'true';
+
+  if (!mfaDisabledForNonProduction) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    const aal = (session as { aal?: string } | null)?.aal ?? null;
+    if (session?.user?.id && session.user.id !== user.id) {
+      return { ok: false as const, error: 'Session identity mismatch', status: 401 as const };
+    }
+    const aal = await getServerVerifiedAal(supabase, session);
     let verifiedFactors = false;
     try {
       const { data: mfaData } = await supabase.auth.mfa.listFactors();
       verifiedFactors = mfaData?.all?.some((f) => f.status === 'verified') ?? false;
     } catch {
-      // MFA service unavailable: fail closed below (no factors proven).
       verifiedFactors = false;
     }
     if (!verifiedFactors) {

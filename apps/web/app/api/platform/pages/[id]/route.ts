@@ -3,6 +3,11 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { validatePageContent } from '@/lib/site-content';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+
+const pageRevisionSchema = z.object({ content: z.unknown() }).strict();
 
 export const runtime = 'nodejs';
 
@@ -41,20 +46,19 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guarded = await guardRequest(request, pageRevisionSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { id } = await params;
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) {
     return NextResponse.json({ error: platform.error }, { status: platform.status });
   }
 
-  let body: { content?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const validation = validatePageContent(body.content);
+  const validation = validatePageContent(guarded.data.content);
   if (!validation.ok) {
     return NextResponse.json({ error: validation.errors.join('; ') }, { status: 400 });
   }
@@ -70,7 +74,7 @@ export async function PUT(
 
   const { data: revision, error } = await adminClient
     .from('site_page_revisions')
-    .insert({ page_id: id, content: body.content, status: 'draft', author_id: platform.user.id })
+    .insert({ page_id: id, content: guarded.data.content, status: 'draft', author_id: platform.user.id })
     .select('id')
     .single();
   if (error || !revision) {

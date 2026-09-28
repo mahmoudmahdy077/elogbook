@@ -19,9 +19,21 @@ export function validateOrigin(
 
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
-  const requestOrigin = origin ?? (referer ? new URL(referer).origin : null);
+  let requestOrigin: string | null = null;
+  if (origin) {
+    requestOrigin = origin;
+  } else if (referer) {
+    try {
+      requestOrigin = new URL(referer).origin;
+    } catch {
+      return NextResponse.json(
+        { error: 'Origin not allowed' },
+        { status: 403 },
+      );
+    }
+  }
 
-  if (!requestOrigin) {
+  if (!requestOrigin || requestOrigin === 'null') {
     return NextResponse.json(
       { error: 'Origin required for state-changing requests' },
       { status: 403 },
@@ -29,9 +41,12 @@ export function validateOrigin(
   }
 
   const allowed = trustedOrigins.some((o) => {
-    if (o === requestOrigin) return true;
-    if (o === '*') return true;
-    return false;
+    if (o === '*' && process.env.NODE_ENV !== 'production') return true;
+    try {
+      return new URL(o).origin === requestOrigin;
+    } catch {
+      return false;
+    }
   });
 
   if (!allowed) {
@@ -50,13 +65,19 @@ export function validateOrigin(
  */
 export function defaultTrustedOrigins(request: Request): string[] {
   const origins = new Set<string>();
-  try {
-    origins.add(new URL(request.url).origin);
-  } catch {
-    /* ignore */
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      origins.add(new URL(request.url).origin);
+    } catch {
+      return [];
+    }
   }
   if (process.env.NEXT_PUBLIC_SITE_URL) {
-    origins.add(process.env.NEXT_PUBLIC_SITE_URL);
+    try {
+      origins.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).origin);
+    } catch {
+      return [];
+    }
   }
   return Array.from(origins);
 }

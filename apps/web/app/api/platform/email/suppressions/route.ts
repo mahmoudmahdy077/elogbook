@@ -5,10 +5,13 @@ import { randomUUID } from 'crypto';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
-const deleteSchema = z.object({ email: z.string().email().max(320) });
+const deleteSchema = z.object({ email: z.string().email().max(320) }).strict();
 
 export async function GET() {
   const platform = await requirePlatformAdmin(await createServerSupabase());
@@ -18,35 +21,44 @@ export async function GET() {
     .select('email,reason,tenant_id,created_at')
     .order('created_at', { ascending: false })
     .limit(100);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to list email suppressions', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
   return NextResponse.json({ suppressions: data ?? [] });
 }
 
 export async function DELETE(request: Request) {
+  const queryEmail = new URL(request.url).searchParams.get('email') ?? '';
+  const guarded = queryEmail
+    ? await guardRequest(request, undefined, {
+        trustedOrigins: defaultTrustedOrigins(request),
+        requireBody: false,
+      })
+    : await guardRequest(request, deleteSchema, {
+        trustedOrigins: defaultTrustedOrigins(request),
+        maxBodyBytes: 4 * 1024,
+      });
+  if (!guarded.ok) return guarded.response;
+
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) return NextResponse.json({ error: platform.error }, { status: platform.status });
 
-  let rawEmail = new URL(request.url).searchParams.get('email') ?? '';
-  if (!rawEmail) {
-    try {
-      const body = (await request.json()) as { email?: unknown };
-      rawEmail = typeof body.email === 'string' ? body.email : '';
-    } catch {
-      rawEmail = '';
-    }
+  let email: string;
+  if (queryEmail) {
+    const parsed = deleteSchema.safeParse({ email: queryEmail });
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    email = parsed.data.email.trim().toLowerCase();
+  } else {
+    email = (guarded.data as { email: string }).email.trim().toLowerCase();
   }
-  const parsed = deleteSchema.safeParse({ email: rawEmail });
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') },
-      { status: 400 },
-    );
-  }
-  const email = parsed.data.email.trim().toLowerCase();
 
   const admin = createServiceRoleClient();
   const { error } = await admin.from('email_suppressions').delete().eq('email', email);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to delete email suppression', error, { email });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 
   try {
     await admin.from('audit_logs').insert({
@@ -57,8 +69,8 @@ export async function DELETE(request: Request) {
       resource_id: randomUUID(),
       changes: { email },
     });
-  } catch {
-    console.warn('[platform-email] audit insert failed for email.suppression.remove', email);
+  } catch (auditError) {
+    logger.warn('Failed to audit email suppression removal', { email, error: auditError });
   }
 
   return NextResponse.json({ success: true, email });

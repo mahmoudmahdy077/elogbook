@@ -5,6 +5,9 @@ import { randomUUID } from 'crypto';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +16,7 @@ const updateSchema = z.object({
   html: z.string().min(1).max(100000),
   text: z.string().max(100000).optional().nullable(),
   active: z.boolean().optional(),
-});
+}).strict();
 
 export async function GET(
   _request: Request,
@@ -27,7 +30,10 @@ export async function GET(
     .select('key,subject,html,text,version,active,updated_at')
     .eq('key', key)
     .maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to get email template', error, { key });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
   if (!data) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
   return NextResponse.json({ template: data });
 }
@@ -36,23 +42,17 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ key: string }> },
 ) {
+  const guarded = await guardRequest(request, updateSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 128 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) return NextResponse.json({ error: platform.error }, { status: platform.status });
   const { key } = await params;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const parsed = updateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') },
-      { status: 400 },
-    );
-  }
+  const parsed = { data: guarded.data, success: true as const };
 
   const admin = createServiceRoleClient();
   const { data: existing } = await admin
@@ -80,7 +80,8 @@ export async function PUT(
     .select('key,subject,html,text,version,active,updated_at')
     .single();
   if (error || !template) {
-    return NextResponse.json({ error: error?.message ?? 'Update failed' }, { status: 500 });
+    logger.error('Failed to update email template', error, { key });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   try {
@@ -92,8 +93,8 @@ export async function PUT(
       resource_id: randomUUID(),
       changes: { key, version },
     });
-  } catch {
-    console.warn('[platform-email] audit insert failed for email.template.update', key);
+  } catch (auditError) {
+    logger.warn('Failed to audit email template update', { key, error: auditError });
   }
 
   return NextResponse.json({ template });

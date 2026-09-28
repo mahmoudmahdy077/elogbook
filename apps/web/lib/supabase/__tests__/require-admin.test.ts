@@ -93,6 +93,15 @@ describe('requireTenantAdmin status enforcement (T04)', () => {
     }
   });
 
+  it('fails closed in production when the session API is unavailable', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const supabase = mockSupabase('user-1', { ...BASE_PROFILE });
+    const result = await requireTenantAdmin(supabase as never, 'tenant-a');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(500);
+    vi.unstubAllEnvs();
+  });
+
   it('allows tenants without a status field (pre-migration compatibility)', async () => {
     const supabase = mockSupabase('user-1', { ...BASE_PROFILE });
     expect((await requireTenantAdmin(supabase as never, 'tenant-a')).ok).toBe(true);

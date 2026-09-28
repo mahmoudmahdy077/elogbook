@@ -2,6 +2,11 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import {
+  buildListUnsubscribeHeaders,
+  createUnsubscribeToken,
+  validateEmailQueuePayload,
+} from '@elogbook/shared/email/safety';
 import { sendWithFailover } from '@elogbook/shared/email/send';
 import { resendSend } from '@elogbook/shared/email/resend';
 import { smtpSend } from '@elogbook/shared/email/smtp';
@@ -11,14 +16,17 @@ import type { OutboundMessage } from '@elogbook/shared/email/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const LOCK_KEY = 918273;
-const BULK_KEYS = new Set(['digest.weekly', 'newsletter.generic']);
+const CLAIM_BATCH_SIZE = 50;
+const CLAIM_LEASE_SECONDS = 3600;
+const UNSUBSCRIBE_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 type QueueRow = {
   id: string;
+  lease_token: string;
   template_key: string;
   to_email: string;
   to_name: string | null;
+  tenant_id: string | null;
   payload: Record<string, string>;
   attempts: number;
   priority?: number;
@@ -35,14 +43,40 @@ function getBaseUrl(request: Request): string {
   }
 }
 
-function unsubscribeHeader(toEmail: string, templateKey: string, baseUrl: string): Record<string, string> {
-  if (!BULK_KEYS.has(templateKey)) return {};
-  const key = process.env.APP_ENCRYPTION_KEY;
-  if (!key) return {};
-  const email = toEmail.trim().toLowerCase();
-  const token = createHmac('sha256', key).update(email).digest('hex');
-  const link = `${baseUrl}/api/email/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`;
-  return { 'List-Unsubscribe': `<${link}>` };
+type AdminClient = ReturnType<typeof createServiceRoleClient>;
+
+function emailErrorCode(error: unknown): string {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599) {
+    return `provider_http_${status}`;
+  }
+  return 'provider_error';
+}
+
+async function recordSendAudit(
+  admin: AdminClient,
+  row: {
+    attemptId: string;
+    queueId: string;
+    tenantId: string | null;
+    templateKey: string;
+    provider: 'resend' | 'smtp';
+    phase: 'started' | 'accepted' | 'rejected' | 'retryable' | 'configuration' | 'ambiguous' | 'suppressed';
+    providerId?: string;
+    errorCode?: string;
+  },
+): Promise<boolean> {
+  const { error } = await admin.from('email_send_audit').insert({
+    attempt_id: row.attemptId,
+    queue_id: row.queueId,
+    tenant_id: row.tenantId,
+    template_key: row.templateKey,
+    provider: row.provider,
+    phase: row.phase,
+    provider_id: row.providerId ?? null,
+    error_code: row.errorCode ?? null,
+  });
+  return !error;
 }
 
 function backoffIso(newAttempts: number): string {
@@ -58,39 +92,30 @@ export async function POST(request: Request) {
 
   const admin = createServiceRoleClient();
 
-  // Single-worker guard: pg advisory lock so concurrent cron ticks don't double-send.
-  // NOTE: supabase-js has no raw-SQL path; we try `rpc('pg_try_advisory_lock')`.
-  // If that rpc function is not deployed, supabase returns an error and we proceed
-  // without the lock (single-instance cron is then the only guard). Deploy a
-  // `pg_try_advisory_lock(bigint)` SECURITY DEFINER wrapper to enforce it in DB.
-  let lockAcquired = false;
+  let claimResult: { data: unknown; error: unknown };
   try {
-    const rpc = (admin as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> }).rpc.bind(admin);
-    const { data, error } = await rpc('pg_try_advisory_lock', { lock_id: LOCK_KEY });
-    if (!error) {
-      if (data === false) {
-        return NextResponse.json({ success: false, reason: 'locked' });
-      }
-      lockAcquired = data === true;
-    }
+    claimResult = await admin.rpc('claim_email_queue', {
+      p_limit: CLAIM_BATCH_SIZE,
+      p_lease_seconds: CLAIM_LEASE_SECONDS,
+    });
   } catch {
-    // rpc unavailable — proceed without lock (see NOTE above).
+    return NextResponse.json({ error: 'Email queue unavailable' }, { status: 503 });
+  }
+  const { data: claimedRows, error: claimError } = claimResult;
+  if (claimError) {
+    return NextResponse.json({ error: 'Email queue unavailable' }, { status: 503 });
+  }
+  if (!Array.isArray(claimedRows)) {
+    return NextResponse.json({ error: 'Email queue unavailable' }, { status: 503 });
   }
 
-  try {
-    const nowIso = new Date().toISOString();
-    const { data: rows } = await admin
-      .from('email_queue')
-      .select('id,template_key,to_email,to_name,payload,attempts,priority,created_at')
-      .in('status', ['pending', 'retry'])
-      .lte('next_retry_at', nowIso)
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(50);
+  const queue = claimedRows as unknown as QueueRow[];
+  if (queue.some((row) => !row.id || typeof row.lease_token !== 'string' || !row.lease_token)) {
+    return NextResponse.json({ error: 'Email queue unavailable' }, { status: 503 });
+  }
 
-    const queue = ((rows as unknown as QueueRow[] | null) ?? []);
-    let sent = 0;
-    let failed = 0;
+  let sent = 0;
+  let failed = 0;
 
     const from = process.env.EMAIL_FROM ?? '';
     const apiKey = process.env.RESEND_API_KEY ?? '';
@@ -103,36 +128,89 @@ export async function POST(request: Request) {
       from,
     };
     const baseUrl = getBaseUrl(request);
+    const tokenSecret = process.env.EMAIL_TOKEN_SIGNING_SECRET ?? '';
+    const lookupSecret = process.env.EMAIL_LOOKUP_HMAC_KEY ?? '';
 
     for (const row of queue) {
       const emailNorm = (row.to_email ?? '').trim().toLowerCase();
       const attempts = row.attempts ?? 0;
+      const tenantId = typeof row.tenant_id === 'string' ? row.tenant_id : null;
+      const recipientHmac = lookupSecret.length >= 32
+        ? createHmac('sha256', lookupSecret).update(emailNorm).digest('hex')
+        : '';
 
-      // 1. Suppression pre-check
-      try {
-        const { data: supp } = await admin
-          .from('email_suppressions')
-          .select('email')
-          .eq('email', emailNorm)
-          .maybeSingle();
-        if (supp) {
-          await admin.from('email_queue').update({ status: 'suppressed', last_error: 'suppressed' }).eq('id', row.id);
-          try {
-            await admin.from('email_logs').insert({
-              queue_id: row.id,
-              to_email: emailNorm,
-              template_key: row.template_key,
-              provider: 'suppressed',
-              status: 'suppressed',
-            });
-          } catch {
-            // best-effort logging
-          }
-          failed += 1;
-          continue;
-        }
-      } catch {
-        // If suppression lookup fails, fail open toward delivery attempt (logged below on send error).
+      const { data: supp, error: suppressionError } = await admin
+        .from('email_suppressions')
+        .select('email')
+        .eq('email', emailNorm)
+        .maybeSingle();
+      if (suppressionError) {
+        await admin.from('email_queue').update({
+          status: 'retry',
+          attempts: attempts + 1,
+          last_error: 'suppression_check_failed',
+          next_retry_at: backoffIso(attempts + 1),
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
+      if (supp) {
+        await admin.from('email_queue').update({ status: 'suppressed', last_error: 'suppressed' }).eq('id', row.id).eq('lease_token', row.lease_token);
+        await admin.from('email_logs').insert({
+          queue_id: row.id,
+          to_email: emailNorm,
+          template_key: row.template_key,
+          provider: 'suppressed',
+          status: 'suppressed',
+        });
+        failed += 1;
+        continue;
+      }
+
+      if (tokenSecret.length < 32 || lookupSecret.length < 32 || !recipientHmac) {
+        await admin.from('email_queue').update({
+          status: 'failed',
+          attempts: attempts + 1,
+          last_error: 'unsubscribe_configuration_missing',
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
+
+      let unsubscribeQuery = admin
+        .from('email_unsubscribe_preferences')
+        .select('scope_key')
+        .eq('recipient_hmac', recipientHmac)
+        .eq('template_key', row.template_key);
+      unsubscribeQuery = tenantId
+        ? unsubscribeQuery.eq('tenant_id', tenantId)
+        : unsubscribeQuery.is('tenant_id', null);
+      const { data: unsubscribed, error: unsubscribeError } = await unsubscribeQuery.maybeSingle();
+      if (unsubscribeError) {
+        await admin.from('email_queue').update({
+          status: 'retry',
+          attempts: attempts + 1,
+          last_error: 'unsubscribe_check_failed',
+          next_retry_at: backoffIso(attempts + 1),
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
+      if (unsubscribed) {
+        await admin.from('email_queue').update({ status: 'suppressed', last_error: 'unsubscribed' }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
+
+      const payloadValidation = validateEmailQueuePayload(row.payload ?? {});
+      if (!payloadValidation.ok) {
+        await admin.from('email_queue').update({
+          status: 'failed',
+          attempts: attempts + 1,
+          last_error: 'invalid_queue_payload',
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
       }
 
       // 2. Template fetch (active only)
@@ -144,20 +222,15 @@ export async function POST(request: Request) {
         .maybeSingle();
       const template = tpl as unknown as { subject: string; html: string; text: string | null } | null;
       if (!template) {
-        const errMsg = `template missing: ${row.template_key}`;
-        await admin.from('email_queue').update({ status: 'failed', attempts: attempts + 1, last_error: errMsg }).eq('id', row.id);
-        try {
-          await admin.from('email_logs').insert({
-            queue_id: row.id,
-            to_email: emailNorm,
-            template_key: row.template_key,
-            provider: 'resend',
-            status: 'failed',
-            error: errMsg.slice(0, 2000),
-          });
-        } catch {
-          // best-effort
-        }
+        await admin.from('email_queue').update({ status: 'failed', attempts: attempts + 1, last_error: 'template_missing' }).eq('id', row.id).eq('lease_token', row.lease_token);
+        await admin.from('email_logs').insert({
+          queue_id: row.id,
+          to_email: emailNorm,
+          template_key: row.template_key,
+          provider: 'resend',
+          status: 'failed',
+          error: 'template_missing',
+        });
         failed += 1;
         continue;
       }
@@ -172,26 +245,39 @@ export async function POST(request: Request) {
         subject = rendered.subject;
         html = rendered.html;
         text = rendered.text;
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        await admin.from('email_queue').update({ status: 'failed', attempts: attempts + 1, last_error: errMsg.slice(0, 2000) }).eq('id', row.id);
-        try {
-          await admin.from('email_logs').insert({
-            queue_id: row.id,
-            to_email: emailNorm,
-            template_key: row.template_key,
-            provider: 'resend',
-            status: 'failed',
-            error: errMsg.slice(0, 2000),
-          });
-        } catch {
-          // best-effort
-        }
+      } catch {
+        await admin.from('email_queue').update({ status: 'failed', attempts: attempts + 1, last_error: 'template_render_failed' }).eq('id', row.id).eq('lease_token', row.lease_token);
+        await admin.from('email_logs').insert({
+          queue_id: row.id,
+          to_email: emailNorm,
+          template_key: row.template_key,
+          provider: 'resend',
+          status: 'failed',
+          error: 'template_render_failed',
+        });
         failed += 1;
         continue;
       }
 
-      // 4. Send with failover
+      let headers: Record<string, string>;
+      try {
+        const token = createUnsubscribeToken({
+          recipientHmac,
+          templateKey: row.template_key,
+          tenantId,
+          expiresAt: Math.floor(Date.now() / 1000) + UNSUBSCRIBE_TOKEN_TTL_SECONDS,
+        }, tokenSecret);
+        headers = buildListUnsubscribeHeaders({ baseUrl, token });
+      } catch {
+        await admin.from('email_queue').update({
+          status: 'failed',
+          attempts: attempts + 1,
+          last_error: 'unsubscribe_configuration_invalid',
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
+
       const msg: OutboundMessage = {
         to: emailNorm,
         toName: row.to_name ?? undefined,
@@ -199,8 +285,29 @@ export async function POST(request: Request) {
         subject,
         html,
         text,
-        headers: unsubscribeHeader(emailNorm, row.template_key, baseUrl),
+        headers,
       };
+
+      const attemptId = crypto.randomUUID();
+      const selectedProvider = providerMode === 'smtp-only' ? 'smtp' : 'resend';
+      const auditedStart = await recordSendAudit(admin, {
+        attemptId,
+        queueId: row.id,
+        tenantId,
+        templateKey: row.template_key,
+        provider: selectedProvider,
+        phase: 'started',
+      });
+      if (!auditedStart) {
+        await admin.from('email_queue').update({
+          status: 'retry',
+          attempts: attempts + 1,
+          last_error: 'audit_unavailable',
+          next_retry_at: backoffIso(attempts + 1),
+        }).eq('id', row.id).eq('lease_token', row.lease_token);
+        failed += 1;
+        continue;
+      }
 
       try {
         const result = await sendWithFailover(msg, {
@@ -216,7 +323,16 @@ export async function POST(request: Request) {
           },
         });
 
-        await admin.from('email_queue').update({ status: 'sent', attempts: attempts + 1, resend_id: result.id, last_error: null }).eq('id', row.id);
+        await recordSendAudit(admin, {
+          attemptId,
+          queueId: row.id,
+          tenantId,
+          templateKey: row.template_key,
+          provider: result.via,
+          phase: 'accepted',
+          providerId: result.id,
+        });
+        await admin.from('email_queue').update({ status: 'sent', attempts: attempts + 1, resend_id: result.id, last_error: null }).eq('id', row.id).eq('lease_token', row.lease_token);
         try {
           await admin.from('email_logs').insert({
             queue_id: row.id,
@@ -232,69 +348,57 @@ export async function POST(request: Request) {
         sent += 1;
       } catch (err) {
         const status = (err as { status?: number }).status ?? 500;
-        const message = err instanceof Error ? err.message : String(err);
+        const code = emailErrorCode(err);
         const newAttempts = attempts + 1;
+        const phase = status === 401 || status === 403
+          ? 'configuration'
+          : status >= 400 && status < 500
+            ? 'rejected'
+            : 'retryable';
+        await recordSendAudit(admin, {
+          attemptId,
+          queueId: row.id,
+          tenantId,
+          templateKey: row.template_key,
+          provider: selectedProvider,
+          phase,
+          errorCode: code,
+        });
         if (status >= 400 && status < 500) {
-          // Permanent failure — no retry.
-          await admin.from('email_queue').update({ status: 'failed', attempts: newAttempts, last_error: message.slice(0, 2000) }).eq('id', row.id);
-          try {
-            await admin.from('email_logs').insert({
-              queue_id: row.id,
-              to_email: emailNorm,
-              template_key: row.template_key,
-              provider: 'resend',
-              status: 'failed',
-              error: message.slice(0, 2000),
-            });
-          } catch {
-            // best-effort
-          }
+          await admin.from('email_queue').update({ status: 'failed', attempts: newAttempts, last_error: code }).eq('id', row.id).eq('lease_token', row.lease_token);
+          await admin.from('email_logs').insert({
+            queue_id: row.id,
+            to_email: emailNorm,
+            template_key: row.template_key,
+            provider: selectedProvider,
+            status: 'failed',
+            error: code,
+          });
           failed += 1;
+        } else if (newAttempts < 3) {
+          await admin.from('email_queue').update({ status: 'retry', attempts: newAttempts, last_error: code, next_retry_at: backoffIso(newAttempts) }).eq('id', row.id).eq('lease_token', row.lease_token);
+          await admin.from('email_logs').insert({
+            queue_id: row.id,
+            to_email: emailNorm,
+            template_key: row.template_key,
+            provider: selectedProvider,
+            status: 'failed',
+            error: code,
+          });
         } else {
-          // Transient (5xx / network) — retry with backoff until 3 attempts, then dead-letter.
-          if (newAttempts < 3) {
-            await admin.from('email_queue').update({ status: 'retry', attempts: newAttempts, last_error: message.slice(0, 2000), next_retry_at: backoffIso(newAttempts) }).eq('id', row.id);
-            try {
-              await admin.from('email_logs').insert({
-                queue_id: row.id,
-                to_email: emailNorm,
-                template_key: row.template_key,
-                provider: 'resend',
-                status: 'failed',
-                error: `attempt ${newAttempts}: ${message}`.slice(0, 2000),
-              });
-            } catch {
-              // best-effort
-            }
-            // Retry is not terminal — do not count toward `failed`.
-          } else {
-            await admin.from('email_queue').update({ status: 'failed', attempts: newAttempts, last_error: message.slice(0, 2000) }).eq('id', row.id);
-            try {
-              await admin.from('email_logs').insert({
-                queue_id: row.id,
-                to_email: emailNorm,
-                template_key: row.template_key,
-                provider: 'resend',
-                status: 'failed',
-                error: message.slice(0, 2000),
-              });
-            } catch {
-              // best-effort
-            }
-            failed += 1;
-          }
+          await admin.from('email_queue').update({ status: 'failed', attempts: newAttempts, last_error: code }).eq('id', row.id).eq('lease_token', row.lease_token);
+          await admin.from('email_logs').insert({
+            queue_id: row.id,
+            to_email: emailNorm,
+            template_key: row.template_key,
+            provider: selectedProvider,
+            status: 'failed',
+            error: code,
+          });
+          failed += 1;
         }
       }
     }
 
-    return NextResponse.json({ success: true, processed: queue.length, sent, failed });
-  } finally {
-    if (lockAcquired) {
-      try {
-        await (admin as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc('pg_advisory_unlock', { lock_id: LOCK_KEY });
-      } catch {
-        // best-effort unlock
-      }
-    }
-  }
+  return NextResponse.json({ success: true, processed: queue.length, sent, failed });
 }

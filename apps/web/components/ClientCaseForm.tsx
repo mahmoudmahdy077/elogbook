@@ -19,17 +19,15 @@ const CaseForm = dynamic(() => import('@/components/CaseForm'), {
 interface ClientCaseFormProps {
   tenantId: string;
   tenantSlug: string;
-  initialStatus: string;
   duplicateCaseId?: string;
   lastEntry?: boolean;
 }
 
-export default function ClientCaseForm({ tenantId, tenantSlug, initialStatus, duplicateCaseId, lastEntry }: ClientCaseFormProps) {
+export default function ClientCaseForm({ tenantId, tenantSlug, duplicateCaseId, lastEntry }: ClientCaseFormProps) {
   return (
     <CaseForm
       tenantId={tenantId}
       tenantSlug={tenantSlug}
-      initialStatus={initialStatus}
       duplicateCaseId={duplicateCaseId}
       lastEntry={lastEntry}
     />

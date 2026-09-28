@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 const ADMIN_ROLES = ['institution_admin', 'admin'];
 
@@ -14,25 +16,14 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '20', 10);
 
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const auth = await requireTenantAdmin(supabase, tenantSlug, ADMIN_ROLES);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  const profile = auth.profile;
 
   const { allowed, retryAfter } = await checkRateLimit(`admin-users:${tenantSlug}`, 120);
   if (!allowed) return rateLimitResponse(retryAfter);
-
-  if (!ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
 
   let query = supabase
     .from('profiles')
@@ -56,7 +47,10 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    logger.error('Failed to list tenant users', error, { tenantSlug, page, limit });
+    return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
+  }
 
   return NextResponse.json({
     users: users ?? [],

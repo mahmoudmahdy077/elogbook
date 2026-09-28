@@ -125,14 +125,13 @@ describe('validateOrigin', () => {
     expect(body.error).toBe('Origin not allowed');
   });
 
-  it('handles referer with no valid URL gracefully (invalid URL string)', () => {
-    // If referer is a malformed URL, new URL() will throw
+  it('rejects an unparseable referer without throwing', () => {
     const req = new Request('https://app.elogbook.dev/some/path', {
       method: 'POST',
       headers: { referer: 'not-a-valid-url' },
     });
-    // Should throw because new URL('not-a-valid-url') fails
-    expect(() => validateOrigin(req, ['https://app.elogbook.dev'])).toThrow();
+    const res = validateOrigin(req, ['https://app.elogbook.dev']);
+    expect(res?.status).toBe(403);
   });
 
   it('handles case-insensitive method matching (lowercase)', () => {

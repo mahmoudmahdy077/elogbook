@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 
 interface NotificationPayload {
   title: string;
@@ -77,7 +78,7 @@ export async function sendPushNotification(
     }
   } catch (err) {
     // Log but don't throw — notification failures shouldn't block the app
-    console.error('Push notification send failed:', err);
+    logger.error('Push notification send failed', err, { userId });
   }
 }
 

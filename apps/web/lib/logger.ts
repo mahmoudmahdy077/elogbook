@@ -1,104 +1,212 @@
-/**
- * Structured logger with PHI redaction.
- *
- * Rules:
- *   - Emits one JSON line per call.
- *   - In Node, writes to stdout/stderr.
- *   - Recursively redacts known PHI keys in any object passed as `meta`.
- *
- * Never pass raw patient data as a log argument. The redactor is
- * defense-in-depth: callers should use the typed `logger.child({ tenantId })`
- * pattern and let the server do the joining.
- */
+import * as Sentry from '@sentry/nextjs';
+import { validateOutboundUrl } from '@elogbook/shared/security/outbound-url';
+import {
+  REDACTED,
+  createEventId,
+  redact,
+  redactPHI,
+  type RedactionOptions,
+} from './observability/redact';
 
-const PHI_KEYS = new Set([
-  'patient_mrn',
-  'patient_mrn_hash',
-  'patient_dob',
-  'patient_age_years',
-  'patient_hash',
-  'field_values',
-  'mrn',
-  'dob',
-  'password',
-  'token',
-  'access_token',
-  'refresh_token',
-  'authorization',
-  'api_key',
-  'secret',
-  'webhook_secret',
-  'encrypted_api_key',
-  'encrypted_secret_key',
-  'encrypted_webhook_secret',
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogContext = Record<string, unknown>;
+
+const SENTRY_TAGS = new Set([
+  'action', 'category', 'component', 'environment', 'eventid', 'level', 'method', 'operation', 'operationid', 'phase', 'provider', 'release', 'route', 'severity', 'source', 'status', 'statuscode', 'transaction', 'type',
 ]);
 
-function redact(value: unknown, depth = 0): unknown {
-  if (depth > 8) return '[redacted-depth]';
-  if (value == null) return value;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return value;
-  if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1));
-  if (typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (PHI_KEYS.has(k.toLowerCase())) {
-        out[k] = '[REDACTED]';
-      } else {
-        out[k] = redact(v, depth + 1);
-      }
-    }
-    return out;
-  }
-  return value;
+function isRecord(value: unknown): value is LogContext {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-type Level = 'debug' | 'info' | 'warn' | 'error';
+function isError(value: unknown): value is Error {
+  return value instanceof Error || Object.prototype.toString.call(value) === '[object Error]';
+}
 
-function emit(level: Level, msg: string, meta: Record<string, unknown> = {}) {
-  let requestId: string | undefined;
-  let tenantId: string | undefined;
-  let userId: string | undefined;
+function normalizedKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function hostEntries(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function allowedLogHosts(env: NodeJS.ProcessEnv = process.env): string[] {
+  return [
+    ...hostEntries(env.LOG_ALLOWED_HOSTS),
+    ...hostEntries(env.LOG_ENDPOINT_ALLOWED_HOSTS),
+    ...hostEntries(env.LOG_ENDPOINT_ALLOWLIST),
+    ...hostEntries(env.OUTBOUND_ALLOWED_HOSTS),
+  ];
+}
+
+function isAllowedLogHost(hostname: string, allowedHosts: readonly string[]): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  return allowedHosts.some((entry) => {
+    const wildcard = entry.startsWith('*.');
+    const candidate = entry.replace(/^\*\./, '').replace(/\.$/, '');
+    return wildcard ? normalized.endsWith(`.${candidate}`) : normalized === candidate;
+  });
+}
+
+function externalLoggingEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.LOG_EXTERNAL_ENABLED === 'true' || env.LOG_ENDPOINT_ENABLED === 'true' || env.LOG_EXTERNAL_LOGGING === 'true' || env.EXTERNAL_LOGGING_ENABLED === 'true' || env.LOG_ENDPOINT_OPT_IN === 'true';
+}
+
+function safeMessage(message: string, options: RedactionOptions = {}): string {
+  const result = redact({ message }, options);
+  return typeof result.message === 'string' ? result.message : '[REDACTED]';
+}
+
+function sanitizedError(error: unknown, options: RedactionOptions = {}): Record<string, unknown> {
+  const result = redact({ error }, options) as { error?: unknown };
+  return isRecord(result.error) ? result.error : { name: 'Error', message: '[REDACTED]' };
+}
+
+function safeTags(context: LogContext): Record<string, string | number | boolean> {
+  const tags: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (!SENTRY_TAGS.has(normalizedKey(key))) continue;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') tags[key] = value;
+  }
+  return tags;
+}
+
+function omitRedactedValues(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(omitRedactedValues).filter((entry) => entry !== REDACTED);
+  if (!isRecord(value)) return value;
+  const result: LogContext = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry === REDACTED) continue;
+    result[key] = omitRedactedValues(entry);
+  }
+  return result;
+}
+
+function validateLogEndpoint(endpoint: string, env: NodeJS.ProcessEnv = process.env): URL | null {
+  if (!externalLoggingEnabled(env)) return null;
+  const allowedHosts = allowedLogHosts(env);
+  if (allowedHosts.length === 0) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { requestContext } = require('./request-context') as typeof import('./request-context');
-    requestId = requestContext.getRequestId();
-    tenantId = requestContext.getTenantId();
-    userId = requestContext.getUserId();
+    const url = validateOutboundUrl(endpoint, { allowedHosts, allowedPorts: [443] });
+    if (!isAllowedLogHost(url.hostname, allowedHosts) || url.username || url.password || url.search || url.hash) return null;
+    return url;
   } catch {
-    /* request-context not available in some bundles */
-  }
-  const entry = {
-    ts: new Date().toISOString(),
-    level,
-    msg,
-    ...(requestId ? { requestId } : {}),
-    ...(tenantId ? { tenantId } : {}),
-    ...(userId ? { userId } : {}),
-    ...(typeof window === 'undefined' && process?.pid ? { pid: process.pid } : {}),
-    ...(redact(meta) as Record<string, unknown>),
-  };
-  const line = JSON.stringify(entry);
-
-  if (level === 'error' || level === 'warn') {
-    console.error(line);
-  } else if (typeof console !== 'undefined') {
-    console.log(line);
+    return null;
   }
 }
 
-export const logger = {
-  debug: (msg: string, meta?: Record<string, unknown>) => emit('debug', msg, meta),
-  info: (msg: string, meta?: Record<string, unknown>) => emit('info', msg, meta),
-  warn: (msg: string, meta?: Record<string, unknown>) => emit('warn', msg, meta),
-  error: (msg: string | Error, meta?: Record<string, unknown>) => {
-    const safeMeta = meta ?? {};
-    if (msg instanceof Error) {
-      emit('error', msg.message, { ...safeMeta, stack: msg.stack, name: msg.name });
-    } else {
-      emit('error', msg, safeMeta);
-    }
-  },
-};
+class Logger {
+  private sequence = 0;
 
-export { redact as redactPHI };
+  private shouldLog(level: LogLevel): boolean {
+    if (process.env.NODE_ENV === 'production') return level === 'warn' || level === 'error';
+    return true;
+  }
+
+  private nextEventId(level: LogLevel, message: string): string {
+    this.sequence += 1;
+    return createEventId('logger', `${level}:${message}:${Date.now()}:${this.sequence}`);
+  }
+
+  private emit(level: LogLevel, message: string, error?: unknown, context?: LogContext): void {
+    if (!this.shouldLog(level)) return;
+
+    const redactionOptions: RedactionOptions = { mode: process.env.NODE_ENV === 'production' ? 'allowlist' : 'compat' };
+    const safeMessageValue = safeMessage(message, redactionOptions);
+    const safeContext = redact(context ?? {}, redactionOptions);
+    const safeMeta = isRecord(safeContext) ? safeContext : { value: safeContext };
+    const errorFields = error === undefined ? {} : sanitizedError(error, redactionOptions);
+    const eventId = this.nextEventId(level, safeMessageValue);
+    const entry: Record<string, unknown> = {
+      ...safeMeta,
+      ts: new Date().toISOString(),
+      eventId,
+      level,
+      msg: safeMessageValue,
+      ...errorFields,
+    };
+
+    const line = JSON.stringify(entry);
+    const logFn = level === 'error'
+      ? console.error
+      : level === 'warn'
+        ? process.env.NODE_ENV === 'production' ? console.warn : console.error
+        : console.log;
+    logFn(line);
+
+    if (level === 'error' || level === 'warn') {
+      this.sendToSentry(level, eventId, safeMeta);
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      void this.sendToExternalLogger(entry);
+    }
+  }
+
+  private sendToSentry(level: LogLevel, eventId: string, context: LogContext): void {
+    const sentryContext = redact(context, { mode: 'allowlist' });
+    const safeContextValue = omitRedactedValues(sentryContext);
+    const safeContext = isRecord(safeContextValue) ? safeContextValue : {};
+    delete safeContext.eventId;
+    delete safeContext.event_id;
+    delete safeContext.level;
+    delete safeContext.msg;
+    delete safeContext.ts;
+    Sentry.captureMessage(eventId, {
+      level: level === 'error' ? 'error' : 'warning',
+      contexts: { custom: safeContext },
+      tags: { ...safeTags(safeContext), eventId },
+    });
+  }
+
+  private async sendToExternalLogger(entry: Record<string, unknown>): Promise<void> {
+    const endpoint = validateLogEndpoint(process.env.LOG_ENDPOINT ?? '');
+    if (!endpoint) return;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (process.env.LOG_API_KEY) headers.Authorization = `Bearer ${process.env.LOG_API_KEY}`;
+    try {
+      await fetch(endpoint.toString(), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(redact(entry, { mode: 'allowlist' })),
+        redirect: 'manual',
+        signal: AbortSignal.timeout(3_000),
+      });
+    } catch {
+      return;
+    }
+  }
+
+  debug(message: string, context?: LogContext): void {
+    this.emit('debug', message, undefined, context);
+  }
+
+  info(message: string, context?: LogContext): void {
+    this.emit('info', message, undefined, context);
+  }
+
+  warn(message: string, context?: LogContext): void {
+    this.emit('warn', message, undefined, context);
+  }
+
+  error(message: string | Error, errorOrContext?: unknown, context?: LogContext): void {
+    if (typeof message === 'string') {
+      if (isError(errorOrContext)) {
+        this.emit('error', message, errorOrContext, context);
+      } else if (isRecord(errorOrContext)) {
+        this.emit('error', message, undefined, errorOrContext);
+      } else {
+        this.emit('error', message, errorOrContext, context);
+      }
+      return;
+    }
+    this.emit('error', message.message, message, isRecord(errorOrContext) ? errorOrContext : context);
+  }
+}
+
+export const logger = new Logger();
+export { redactPHI };

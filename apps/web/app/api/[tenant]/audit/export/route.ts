@@ -1,10 +1,12 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import { escapeCsvCell } from '@/lib/csv';
 import type { UserRole } from '@/lib/supabase/auth';
+import { logger } from '@/lib/logger';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
 const MAX_EXPORT_ROWS = 10_000;
@@ -44,38 +46,19 @@ export async function GET(
   const { allowed, retryAfter } = await checkRateLimit(`audit-export:${ip}`, 10);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  // ---- Auth ----
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // ---- Get caller's profile + tenant ----
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 403 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
-  const { tenant: tenantSlug } = await params;
-
-  // ---- Tenant slug validation ----
-  if (tenant.slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-  }
-
-  // ---- Role check ----
-  if (!ALLOWED_ROLES.includes(profile.role as UserRole)) {
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
     return NextResponse.json(
-      { error: 'Only directors and admins can export audit logs' },
-      { status: 403 },
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status },
     );
+  }
+
+  const { user, profile, tenant } = security.context;
+  const { tenant: tenantSlug } = await params;
+  if (tenant.slug !== tenantSlug || !ALLOWED_ROLES.includes(profile.role as UserRole)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // ---- Parse query params ----
@@ -109,7 +92,7 @@ export async function GET(
   const { data: logs, error } = await query;
 
   if (error) {
-    console.error('Failed to query audit logs for export', { error: error.message });
+    logger.error('Failed to query audit logs for export', error);
     return NextResponse.json(
       { error: 'Failed to retrieve audit logs' },
       { status: 500 },

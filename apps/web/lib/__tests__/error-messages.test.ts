@@ -61,4 +61,11 @@ describe('toUserMessage', () => {
     toUserMessage('test-error');
     expect(Sentry.captureMessage).toHaveBeenCalledWith('test-error', 'info');
   });
+
+  it('does not send PHI values to Sentry', () => {
+    toUserMessage('request failed for jane.patient@example.test with MRN-7F3A9C');
+    const sentryValue = JSON.stringify(vi.mocked(Sentry.captureMessage).mock.calls[0]);
+    expect(sentryValue).not.toContain('jane.patient@example.test');
+    expect(sentryValue).not.toContain('MRN-7F3A9C');
+  });
 });

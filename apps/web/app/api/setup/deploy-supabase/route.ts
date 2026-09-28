@@ -2,18 +2,22 @@ import { NextResponse } from 'next/server';
 import { generateSupabaseSecrets, cloneSupabase, writeSupabaseEnv, getSupabaseVersion } from '@/lib/setup/supabase-installer';
 import { isDockerAvailable, pullImage, networkExists } from '@/lib/setup/docker-api';
 import { execFileSync } from 'child_process';
-import { writeFileSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import {
   checkSetupRequest, checkRateLimit, acquireDurableLock, releaseDurableLock,
-  consumeSetupToken, clientIpOfRequest, auditSetup,
+  consumeSetupToken, clientIpOfRequest, auditSetup, setupRuntimeEnabled,
+  writeSetupReceiptAtomically, removeSetupReceipt,
 } from '@/lib/setup/guard';
+import { guardRequest } from '@/lib/http/request-guard';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
 // M8.1: strict deploy-input shape (count-checked secrets stay server-side).
 const deployInputSchema = z.object({
+  installPath: z.literal('/opt/supabase').optional(),
   postgresPassword: z.string().min(8).max(256).optional(),
   postgresDb: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_$]{0,62}$/).optional(),
   siteUrl: z.string().url().max(256).optional(),
@@ -23,12 +27,12 @@ const deployInputSchema = z.object({
   smtpPass: z.string().max(1024).optional(),
   smtpAdminEmail: z.string().email().max(320).optional(),
   smtpSenderName: z.string().min(1).max(120).optional(),
-});
+}).strict();
 
 
 export async function POST(request: Request) {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
-  if (process.env.NODE_ENV === 'production') {
+  if (!setupRuntimeEnabled()) {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
@@ -41,6 +45,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'x-setup-token': request.headers.get('x-setup-token') ?? undefined,
+        'x-forwarded-proto': request.headers.get('x-forwarded-proto') ?? undefined,
         origin: request.headers.get('origin') ?? undefined,
         referer: request.headers.get('referer') ?? undefined,
       },
@@ -62,11 +67,11 @@ export async function POST(request: Request) {
   const rl = checkRateLimit(clientIp, 'deploy-supabase');
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: rl.status });
 
-  const body = await request.json();
-  const parsed = deployInputSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid deploy inputs' }, { status: 400 });
-  }
+  const guarded = await guardRequest(request, deployInputSchema, {
+    requireOrigin: false,
+    maxBodyBytes: 32 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
   if (!(await isDockerAvailable())) {
     return NextResponse.json({ error: 'Docker is not available' }, { status: 500 });
   }
@@ -74,11 +79,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Another setup operation is running' }, { status: 409 });
   }
 
-  const { postgresPassword, postgresDb, siteUrl, smtpHost, smtpPort, smtpUser, smtpPass, smtpAdminEmail, smtpSenderName } = parsed.data;
+  const { postgresPassword, postgresDb, siteUrl, smtpHost, smtpPort, smtpUser, smtpPass, smtpAdminEmail, smtpSenderName } = guarded.data;
+  const configPath = join('/app/data', 'supabase-config.json');
+  const hadConfig = existsSync(configPath);
+  let configWritten = false;
+  let deploymentStarted = false;
+  removeSetupReceipt('setup-deploy.json');
 
   try {
     const config = generateSupabaseSecrets();
-    if (postgresPassword) config.postgresPassword = postgresPassword;
+    if (postgresPassword) config['postgresPassword'] = postgresPassword;
     if (postgresDb) config.postgresDb = postgresDb;
     if (siteUrl) config.siteUrl = siteUrl;
 
@@ -113,6 +123,7 @@ export async function POST(request: Request) {
       await pullImage(image);
     }
 
+    deploymentStarted = true;
     execFileSync('docker', ['compose', 'up', '-d'], { cwd: '/opt/supabase', encoding: 'utf-8', timeout: 120000 });
 
     let retries = 30;
@@ -120,11 +131,20 @@ export async function POST(request: Request) {
       await new Promise(r => setTimeout(r, 1000));
       retries--;
     }
+    if (!(await networkExists('supabase_default'))) {
+      throw new Error('Supabase network was not created');
+    }
 
-    const configPath = join('/app/data', 'supabase-config.json');
+    configWritten = true;
     writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 }); // lgtm[js/missing-rate-limiting]
 
     const version = await getSupabaseVersion();
+    writeSetupReceiptAtomically('setup-deploy.json', {
+      success: true,
+      completed_at: new Date().toISOString(),
+      api_url: config.apiUrl,
+      version,
+    });
 
     // SECURITY: Never return infrastructure secrets (serviceRoleKey, jwtSecret,
     // postgresPassword) to the browser. They are written server-side with 0600
@@ -136,9 +156,28 @@ export async function POST(request: Request) {
       version,
     });
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
+    removeSetupReceipt('setup-deploy.json');
+    if (configWritten && !hadConfig) {
+      try {
+        unlinkSync(configPath);
+      } catch {
+        void 0;
+      }
+    }
+    if (deploymentStarted) {
+      try {
+        execFileSync('docker', ['compose', 'down', '--remove-orphans'], {
+          cwd: '/opt/supabase',
+          encoding: 'utf-8',
+          timeout: 120000,
+        });
+      } catch {
+        void 0;
+      }
+    }
+    logger.error('Supabase deployment failed', error);
     auditSetup('deploy-supabase', 'error');
-    return NextResponse.json({ error: errMsg }, { status: 500 });
+    return NextResponse.json({ error: 'Deployment failed' }, { status: 500 });
   } finally {
     releaseDurableLock('deploy-supabase');
   }

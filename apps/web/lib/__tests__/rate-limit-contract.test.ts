@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const { loggerWarn } = vi.hoisted(() => ({ loggerWarn: vi.fn() }));
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: loggerWarn,
+    error: vi.fn(),
+  },
+}));
+
 // Contract from PRODUCTION_UPGRADE_PLAN.md TICKET-001 §V — stated once here.
 // Every row is a behavioral assertion, never a count.
 
@@ -159,7 +170,8 @@ describe('rate-limit contract (TICKET-001)', () => {
       UPSTASH_REDIS_REST_TOKEN: 't',
     });
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = loggerWarn;
+    loggerWarn.mockClear();
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ result: [31, -1] }),
@@ -167,7 +179,10 @@ describe('rate-limit contract (TICKET-001)', () => {
     const r1 = await mod.checkRateLimit('api:ttl1', 30);
     expect(r1.allowed).toBe(false);
     expect(r1.retryAfter).toBe(60);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('TTL -1'));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('TTL -1'),
+      expect.objectContaining({ message: expect.stringContaining('no expiry') }),
+    );
 
     warnSpy.mockClear();
     fetchMock.mockResolvedValue({
@@ -180,7 +195,7 @@ describe('rate-limit contract (TICKET-001)', () => {
     // -2 does not log the same message (only -1 does)
     const ttlWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TTL -1'));
     expect(ttlWarns.length).toBe(0);
-    warnSpy.mockRestore();
+    loggerWarn.mockReset();
   });
 
   // Degradation ordering: set before returning denied request
@@ -273,7 +288,8 @@ describe('rate-limit contract (TICKET-001)', () => {
 
   // Row 7: single-instance with creds present -> ignore creds, local, warn once
   it('single-instance with Upstash creds ignores them and warns once', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = loggerWarn;
+    loggerWarn.mockClear();
     const mod = await loadModule({
       NODE_ENV: 'production',
       RATE_LIMIT_MODE: 'single-instance',
@@ -282,7 +298,10 @@ describe('rate-limit contract (TICKET-001)', () => {
     });
     // resolveMode called during load? We call explicitly to trigger warning
     mod.resolveMode();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('credentials are ignored'));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('single-instance'),
+      expect.objectContaining({ message: expect.stringContaining('credentials are ignored') }),
+    );
 
     warnSpy.mockClear();
     // second call should not warn again (memoised)
@@ -293,7 +312,7 @@ describe('rate-limit contract (TICKET-001)', () => {
     const r = await mod.checkRateLimit('api:creds', 30);
     expect(r.allowed).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+    loggerWarn.mockReset();
   });
 
   // Redis {error: ...} payload throws

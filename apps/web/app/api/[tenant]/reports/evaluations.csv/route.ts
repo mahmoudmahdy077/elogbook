@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { escapeCsvCell } from '@/lib/csv';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
@@ -16,22 +18,18 @@ export async function GET(request: NextRequest) {
   const tenantSlug = pathParts[2];
 
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || !profile.tenants || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
+    return NextResponse.json(
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status },
+    );
   }
 
+  const { profile, tenant } = security.context;
   const REPORT_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
-  if (!REPORT_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  if (tenant.slug !== tenantSlug || !REPORT_ROLES.includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   let query = supabase
@@ -43,7 +41,10 @@ export async function GET(request: NextRequest) {
   if (date_to) query = query.lte('evaluation_date', date_to);
 
   const { data: evals, error } = await query.limit(1000);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    logger.error('Failed to build evaluations CSV report', error, { tenantSlug });
+    return NextResponse.json({ error: 'Failed to generate report' }, { status: 500 });
+  }
 
   const lines = ['Resident ID,Evaluator ID,Date,Clinical Skills,Professionalism,Procedures,Comments'];
   for (const e of (evals ?? [])) {

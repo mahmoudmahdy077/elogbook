@@ -11,6 +11,8 @@ import { sendWithFailover } from '@elogbook/shared/email/send';
 import { resendSend } from '@elogbook/shared/email/resend';
 import { smtpSend } from '@elogbook/shared/email/smtp';
 import type { OutboundMessage } from '@elogbook/shared/email/types';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
 
 export const runtime = 'nodejs';
 
@@ -19,9 +21,22 @@ const testSchema = z.object({
   subject: z.string().min(1).max(200).default('Platform test email'),
   html: z.string().min(1).max(100000).default('<p>Platform test email.</p>'),
   text: z.string().max(100000).optional(),
-});
+}).strict();
+
+function emailErrorCode(error: unknown): string {
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599
+    ? `provider_http_${status}`
+    : 'provider_error';
+}
 
 export async function POST(request: Request) {
+  const guarded = await guardRequest(request, testSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 128 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) return NextResponse.json({ error: platform.error }, { status: platform.status });
 
@@ -29,19 +44,7 @@ export async function POST(request: Request) {
   const rl = await checkRateLimit(`email-test:${ip}`, 5);
   if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const parsed = testSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') },
-      { status: 400 },
-    );
-  }
+  const parsed = { data: guarded.data, success: true as const };
 
   const from = process.env.EMAIL_FROM;
   if (!from) return NextResponse.json({ error: 'EMAIL_FROM is not configured' }, { status: 500 });
@@ -64,6 +67,20 @@ export async function POST(request: Request) {
     text: parsed.data.text,
   };
 
+  const admin = createServiceRoleClient();
+  const attemptId = randomUUID();
+  const selectedProvider = provider === 'smtp-only' ? 'smtp' : 'resend';
+  const { error: auditStartError } = await admin.from('email_send_audit').insert({
+    attempt_id: attemptId,
+    tenant_id: (platform.profile as { tenant_id: string }).tenant_id,
+    template_key: 'newsletter.generic',
+    provider: selectedProvider,
+    phase: 'started',
+  });
+  if (auditStartError) {
+    return NextResponse.json({ error: 'Email audit is unavailable' }, { status: 503 });
+  }
+
   try {
     const result = await sendWithFailover(msg, {
       resend: (m) => {
@@ -78,45 +95,33 @@ export async function POST(request: Request) {
       },
     });
 
-    const admin = createServiceRoleClient();
-    try {
-      await admin.from('email_logs').insert({
-        to_email: msg.to,
-        template_key: 'newsletter.generic',
-        provider: result.via,
-        provider_id: result.id,
-        status: 'sent',
-      });
-    } catch {
-      console.warn('[platform-email] email_logs insert failed for test send', msg.to);
-    }
-    try {
-      await admin.from('audit_logs').insert({
-        tenant_id: (platform.profile as { tenant_id: string }).tenant_id,
-        user_id: platform.user.id,
-        action: 'email.test',
-        resource_type: 'email',
-        resource_id: randomUUID(),
-        changes: { to: msg.to, via: result.via, provider_id: result.id },
-      });
-    } catch {
-      console.warn('[platform-email] audit insert failed for email.test', msg.to);
-    }
-
+    await admin.from('email_send_audit').insert({
+      attempt_id: attemptId,
+      tenant_id: (platform.profile as { tenant_id: string }).tenant_id,
+      template_key: 'newsletter.generic',
+      provider: result.via,
+      phase: 'accepted',
+      provider_id: result.id,
+    });
     return NextResponse.json({ success: true, via: result.via, id: result.id });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    try {
-      await createServiceRoleClient().from('email_logs').insert({
-        to_email: msg.to,
-        template_key: 'newsletter.generic',
-        provider: 'resend',
-        status: 'failed',
-        error: message.slice(0, 2000),
-      });
-    } catch {
-      // best-effort logging only
-    }
-    return NextResponse.json({ error: message }, { status: 502 });
+    const code = emailErrorCode(err);
+    const status = (err as { status?: number }).status ?? 500;
+    await admin.from('email_send_audit').insert({
+      attempt_id: attemptId,
+      tenant_id: (platform.profile as { tenant_id: string }).tenant_id,
+      template_key: 'newsletter.generic',
+      provider: selectedProvider,
+      phase: status >= 400 && status < 500 ? 'rejected' : 'retryable',
+      error_code: code,
+    });
+    await admin.from('email_logs').insert({
+      to_email: msg.to,
+      template_key: 'newsletter.generic',
+      provider: selectedProvider,
+      status: 'failed',
+      error: code,
+    });
+    return NextResponse.json({ error: 'Email provider rejected or could not accept the message' }, { status: 502 });
   }
 }

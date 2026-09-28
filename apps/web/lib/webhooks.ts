@@ -15,6 +15,8 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
+import { configuredOutboundHosts, outboundRequest } from '@/lib/outbound-request';
 
 export interface WebhookEventPayload {
   tenant_id: string;
@@ -31,6 +33,12 @@ export type WebhookEventType =
   | 'case.rejected'
   | 'case.deleted';
 
+function usableWebhookSecret(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized !== '[ENCRYPTED]';
+}
+
 /**
  * Dispatch a webhook event to all active webhooks for the tenant that
  * subscribe to this event type. Includes retry: failed deliveries are
@@ -44,7 +52,7 @@ export async function dispatchWebhookEvent(
   const { tenant_id, event_type, event_id, data } = payload;
 
   if (!tenant_id || !event_type || !event_id) {
-    console.warn('[webhooks] dispatchWebhookEvent: missing required fields', {
+    logger.warn('Webhook dispatch missing required fields', {
       tenant_id,
       event_type,
       event_id,
@@ -57,12 +65,12 @@ export async function dispatchWebhookEvent(
   // Look up active webhooks matching this tenant and event
   const { data: webhooks, error: listError } = await supabase
     .from('tenant_webhooks')
-    .select('id, url, secret, events')
+    .select('id, url, events')
     .eq('tenant_id', tenant_id)
     .eq('is_active', true);
 
   if (listError) {
-    console.error('[webhooks] Failed to list webhooks:', listError.message);
+    logger.error('Failed to list webhooks', listError);
     return [];
   }
 
@@ -75,37 +83,46 @@ export async function dispatchWebhookEvent(
   }
 
   const body = JSON.stringify({ ...data, event_type, event_id, tenant_id });
+  const allowedHosts = configuredOutboundHosts();
   const results: Array<{ webhook_id: string; ok: boolean; status: number }> = [];
 
   for (const wh of matches) {
     const startedAt = new Date().toISOString();
     let status = 0;
-    let respBody = '';
+    let responseCategory = 'blocked';
     let ok = false;
 
     try {
-      // Compute HMAC-SHA256 signature
-      const signature = await computeHmacSha256(wh.secret, body);
-
-      const res = await fetch(wh.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-E-Logbook-Event': event_type,
-          'X-E-Logbook-Event-Id': event_id,
-          'X-E-Logbook-Signature': `sha256=${signature}`,
-          'User-Agent': 'E-Logbook-Webhook/1.0',
-        },
-        body,
-        // 5 second timeout per webhook
-        signal: AbortSignal.timeout(5000),
-      });
-
-      status = res.status;
-      respBody = await res.text().catch(() => '');
-      ok = res.ok;
-    } catch (err) {
-      respBody = err instanceof Error ? err.message : String(err);
+      const { data: webhookSecret, error: secretError } = await supabase.rpc(
+        'get_tenant_webhook_secret',
+        { p_webhook_id: wh.id },
+      );
+      if (secretError || !usableWebhookSecret(webhookSecret)) {
+        logger.error('Failed to resolve webhook secret', secretError, { webhookId: wh.id });
+      } else {
+        const signature = await computeHmacSha256(webhookSecret, body);
+        const result = await outboundRequest(wh.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-E-Logbook-Event': event_type,
+            'X-E-Logbook-Event-Id': event_id,
+            'X-E-Logbook-Signature': `sha256=${signature}`,
+            'User-Agent': 'E-Logbook-Webhook/1.0',
+          },
+          body,
+          allowedHosts,
+          requireAllowlist: true,
+          timeoutMs: 5_000,
+          maxResponseBytes: 64 * 1_024,
+          maxConcurrent: 8,
+        });
+        status = result.status;
+        responseCategory = result.category;
+        ok = result.ok;
+      }
+    } catch {
+      responseCategory = 'network';
     }
 
     // Record delivery attempt
@@ -116,7 +133,7 @@ export async function dispatchWebhookEvent(
       event_id,
       status_code: status,
       request_body: body.slice(0, 8000),
-      response_body: respBody.slice(0, 8000),
+      response_body: responseCategory,
       attempted_at: startedAt,
       completed_at: new Date().toISOString(),
       succeeded: ok,
@@ -148,6 +165,7 @@ export async function testWebhookEndpoint(
   secret: string,
   tenantId: string,
 ): Promise<{ status: number; body: string; ok: boolean }> {
+  if (!usableWebhookSecret(secret)) return { status: 0, body: '', ok: false };
   const testPayload = {
     event_type: 'test.ping',
     event_id: crypto.randomUUID(),
@@ -159,34 +177,25 @@ export async function testWebhookEndpoint(
   };
 
   const body = JSON.stringify(testPayload);
-  let status = 0;
-  let respBody = '';
-  let ok = false;
+  const signature = await computeHmacSha256(secret, body);
+  const result = await outboundRequest(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-E-Logbook-Event': 'test.ping',
+      'X-E-Logbook-Event-Id': testPayload.event_id,
+      'X-E-Logbook-Signature': `sha256=${signature}`,
+      'User-Agent': 'E-Logbook-Webhook/1.0',
+    },
+    body,
+    allowedHosts: configuredOutboundHosts(),
+    requireAllowlist: true,
+    timeoutMs: 5_000,
+    maxResponseBytes: 64 * 1_024,
+    maxConcurrent: 8,
+  }).catch(() => ({ ok: false, status: 0, category: 'network' as const }));
 
-  try {
-    const signature = await computeHmacSha256(secret, body);
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-E-Logbook-Event': 'test.ping',
-        'X-E-Logbook-Event-Id': testPayload.event_id,
-        'X-E-Logbook-Signature': `sha256=${signature}`,
-        'User-Agent': 'E-Logbook-Webhook/1.0',
-      },
-      body,
-      signal: AbortSignal.timeout(5000),
-    });
-
-    status = res.status;
-    respBody = await res.text().catch(() => '');
-    ok = res.ok;
-  } catch (err) {
-    respBody = err instanceof Error ? err.message : String(err);
-  }
-
-  return { status, body: respBody.slice(0, 2000), ok };
+  return { status: result.status, body: '', ok: result.ok };
 }
 
 async function computeHmacSha256(secret: string, data: string): Promise<string> {

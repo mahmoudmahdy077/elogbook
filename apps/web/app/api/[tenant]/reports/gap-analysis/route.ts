@@ -1,9 +1,14 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { outboundRequestJson } from '@/lib/outbound-request';
+import { z } from 'zod';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const gapAnalysisSchema = z.object({ resident_id: z.string().uuid() }).strict();
 
 /**
  * POST /api/[tenant]/reports/gap-analysis
@@ -17,46 +22,34 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const guarded = await guardRequest(request, gapAnalysisSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 4 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   // ---- CSRF (state-changing) + rate limit ----
   const ip = getClientIp(request);
 
   const { allowed, retryAfter } = await checkRateLimit(`gap-analysis:${ip}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  // ---- Auth ----
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
+    return NextResponse.json(
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status },
+    );
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
+  const { user, profile, tenant } = security.context;
   const { tenant: paramTenant } = await params;
-  if (tenant.slug !== paramTenant) {
-    return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+  if (tenant.slug !== paramTenant || !['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // ---- Input validation ----
-  let body: { resident_id?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const residentId = typeof body.resident_id === 'string' ? body.resident_id : '';
-  if (!UUID_RE.test(residentId)) {
-    return NextResponse.json({ error: 'resident_id (UUID) required' }, { status: 400 });
-  }
+  const residentId = guarded.data.resident_id;
 
   // The target resident must belong to the caller's tenant.
   const { data: targetResident } = await supabase
@@ -69,45 +62,38 @@ export async function POST(
     return NextResponse.json({ error: 'Resident not found in this tenant' }, { status: 404 });
   }
 
-  // ---- Proxy to the edge function with the user's JWT ----
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  if (!supabaseUrl) return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
   const { data: sess } = await supabase.auth.getSession();
   const accessToken = sess.session?.access_token;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20_000);
-
+  let supabaseHost: string;
   try {
-    const fnUrl = `${supabaseUrl}/functions/v1/ai-gap-analysis`;
-    const res = await fetch(fnUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: anonKey,
-        Authorization: `Bearer ${accessToken ?? anonKey}`,
-      },
-      body: JSON.stringify({ resident_id: residentId, is_deidentified: true }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    const payload = await res.text();
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: payload || `Edge function ${res.status}` },
-        { status: res.status >= 500 ? 502 : res.status },
-      );
-    }
-
-    return new NextResponse(payload, {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
-  } catch (err: unknown) {
-    clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === 'AbortError') {
-      return NextResponse.json({ error: 'Gap analysis timed out' }, { status: 504 });
-    }
-    return NextResponse.json({ error: 'Failed to run gap analysis' }, { status: 500 });
+    supabaseHost = new URL(supabaseUrl).hostname;
+  } catch {
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
   }
+
+  const result = await outboundRequestJson<unknown>(`${supabaseUrl}/functions/v1/ai-gap-analysis`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: anonKey,
+      Authorization: `Bearer ${accessToken ?? anonKey}`,
+    },
+    body: JSON.stringify({ resident_id: residentId }),
+    allowedHosts: [supabaseHost],
+    requireAllowlist: true,
+    timeoutMs: 20_000,
+    maxResponseBytes: 256 * 1024,
+    maxConcurrent: 4,
+  });
+
+  if (!result.ok || result.data === undefined) {
+    const status = result.category === 'timeout' ? 504 : 502;
+    return NextResponse.json({ error: 'Gap analysis unavailable' }, { status });
+  }
+  return new NextResponse(JSON.stringify(result.data), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 }

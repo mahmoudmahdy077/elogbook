@@ -16,11 +16,12 @@ interface User {
 
 interface UserManagerProps {
   tenantId: string;
+  tenantSlug: string;
   users: User[];
   currentUserRole: string;
 }
 
-export default function UserManager({ tenantId, users: initialUsers, currentUserRole: _currentUserRole }: UserManagerProps) {
+export default function UserManager({ tenantId, users: initialUsers, tenantSlug, currentUserRole: _currentUserRole }: UserManagerProps) {
   const [users, setUsers] = useState<User[]>(initialUsers || []);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -39,36 +40,56 @@ export default function UserManager({ tenantId, users: initialUsers, currentUser
     setLoading(false);
   }
 
-  async function handleRoleChange(userId: string, role: string) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role })
-      .eq('id', userId);
-
-    if (error) {
-      showToast('Failed to update role', 'error');
-    } else {
+  /**
+   * A role is an authorization column. It changes only through
+   * PUT /api/[tenant]/admin/users/[id], which requires an authenticated AAL2
+   * administrator and runs public.admin_update_profile. A direct
+   * `profiles.update({ role })` from the browser is a bypass of that RPC, and
+   * it also skipped the last-administrator protection entirely.
+   */
+  async function handleRoleChange(profileId: string, role: string) {
+    try {
+      const res = await fetch(`/api/${tenantSlug}/admin/users/${profileId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to update role', 'error');
+        return;
+      }
       showToast('Role updated successfully', 'success');
       setEditingUser(null);
       loadUsers();
+    } catch {
+      showToast('Failed to update role', 'error');
     }
   }
 
-  async function handleDeactivate(userId: string) {
+  /**
+   * Status is an authorization column for the same reason; it goes through
+   * POST /api/[tenant]/admin/users/[id]/action, which also revokes the target
+   * user's auth sessions.
+   */
+  async function handleDeactivate(profileId: string) {
     if (!confirm('Are you sure you want to deactivate this user?')) return;
 
-    // Soft-delete: profiles.status supports active/pending/suspended/deactivated
-    // (migration 20260818140000_admin_user_management.sql).
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status: 'deactivated' })
-      .eq('id', userId);
-
-    if (error) {
-      showToast('Failed to deactivate user', 'error');
-    } else {
+    try {
+      const res = await fetch(`/api/${tenantSlug}/admin/users/${profileId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deactivate' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to deactivate user', 'error');
+        return;
+      }
       showToast('User deactivated', 'success');
       loadUsers();
+    } catch {
+      showToast('Failed to deactivate user', 'error');
     }
   }
 
@@ -134,8 +155,7 @@ export default function UserManager({ tenantId, users: initialUsers, currentUser
                         <button
                           onClick={() => handleRoleChange(user.id, newRole)}
                           className="px-3 py-1 rounded text-xs font-medium bg-primary text-white hover:opacity-90"
-                        >
-                          Save
+                        >                          Save
                         </button>
                         <button
                           onClick={() => setEditingUser(null)}

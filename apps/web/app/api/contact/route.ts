@@ -38,23 +38,31 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createServiceRoleClient();
-  const { error } = await admin.from('contact_submissions').insert({ name, email, message });
-  if (error) {
+  const { data: submission, error } = await admin
+    .from('contact_submissions')
+    .insert({ name, email, message })
+    .select('id')
+    .single();
+  if (error || !submission) {
     return NextResponse.json({ error: 'Could not store message' }, { status: 500 });
   }
 
-  const contactAlertTo = (process.env.CONTACT_ALERT_TO || process.env.EMAIL_FROM)?.trim().toLowerCase() || '';
+  const contactAlertTo = process.env.CONTACT_ALERT_TO?.trim().toLowerCase() || '';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '') || '';
   let warning: string | undefined;
-  if (!contactAlertTo) {
-    warning =
-      'Contact alert email is not configured; message stored but alert not queued.';
+  if (!contactAlertTo || !EMAIL_RE.test(contactAlertTo) || !siteUrl) {
+    warning = 'Contact alert email is not configured; message stored but alert not queued.';
   } else {
-    await admin.from('email_queue').insert({
+    const contactUrl = `${siteUrl}/platform/contact-submissions/${submission.id}`;
+    const { error: queueError } = await admin.from('email_queue').insert({
       template_key: 'contact.admin-alert',
       to_email: contactAlertTo,
-      payload: { name, email, message: message.slice(0, 2000) },
+      payload: { contact_url: contactUrl },
       priority: 5,
     });
+    if (queueError) {
+      return NextResponse.json({ error: 'Message stored but operator alert could not be queued' }, { status: 503 });
+    }
   }
 
   return NextResponse.json({

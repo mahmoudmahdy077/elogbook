@@ -11,7 +11,7 @@ interface AIInsightsPanelProps {
 }
 
 export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPanelProps) {
-  const [query, setQuery] = useState('');
+  const [intent, setIntent] = useState<'overview' | 'trends' | 'development' | 'case-mix'>('overview');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,7 +27,7 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         body: {
           tenant_id: tenantId,
           resident_id: residentId,
-          query: query.trim() || null,
+          intent,
         },
       });
 
@@ -55,24 +55,27 @@ export default function AIInsightsPanel({ tenantId, residentId }: AIInsightsPane
         </div>
       )}
 
-      <label htmlFor="ai-query" className="block text-sm font-medium text-text-secondary mb-1.5">
-        Ask a question about your cases (optional)
+      <label htmlFor="ai-intent" className="block text-sm font-medium text-text-secondary mb-1.5">
+        Choose an analysis focus
       </label>
-      <textarea
-        id="ai-query"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        rows={2}
-        placeholder="e.g., What patterns do you see in my surgical cases?"
-        className="w-full px-3.5 py-2.5 rounded-xl bg-backdrop border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors resize-none mb-4"
-      />
+      <select
+        id="ai-intent"
+        value={intent}
+        onChange={(event) => setIntent(event.target.value as typeof intent)}
+        className="w-full px-3.5 py-2.5 rounded-xl bg-backdrop border border-border text-text-primary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors mb-4"
+      >
+        <option value="overview">Overall case overview</option>
+        <option value="trends">Case trends</option>
+        <option value="development">Development opportunities</option>
+        <option value="case-mix">Case mix</option>
+      </select>
 
       <button
         onClick={handleAnalyze}
         disabled={loading}
         className="inline-flex min-h-[44px] items-center gap-1.5 px-4 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        {query.trim() ? 'Ask AI' : 'Analyze My Cases'}
+        Analyze My Cases
       </button>
 
       {loading && (

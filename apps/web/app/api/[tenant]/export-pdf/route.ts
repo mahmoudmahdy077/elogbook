@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
@@ -13,27 +14,20 @@ export async function GET(
   const { tenant: paramTenant } = await params;
 
   const supabase = await createServerSupabase();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
+    return NextResponse.json(
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status },
+    );
   }
 
-  const { allowed, retryAfter } = await checkRateLimit(`export-pdf:${user.id}`);
+  const { allowed, retryAfter } = await checkRateLimit(`export-pdf:${security.context.user.id}`);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name, tenant_id, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
+  const { user, profile, tenant } = security.context;
   if (tenant.slug !== paramTenant) {
-    return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { data: cases } = await supabase

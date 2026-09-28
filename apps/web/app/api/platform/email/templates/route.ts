@@ -5,6 +5,9 @@ import { randomUUID } from 'crypto';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -14,7 +17,7 @@ const upsertSchema = z.object({
   html: z.string().min(1).max(100000),
   text: z.string().max(100000).optional().nullable(),
   active: z.boolean().optional(),
-});
+}).strict();
 
 export async function GET() {
   const platform = await requirePlatformAdmin(await createServerSupabase());
@@ -23,27 +26,24 @@ export async function GET() {
     .from('email_templates')
     .select('key,subject,html,text,version,active,updated_at')
     .order('key');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to list email templates', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
   return NextResponse.json({ templates: data ?? [] });
 }
 
 export async function POST(request: Request) {
+  const guarded = await guardRequest(request, upsertSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 128 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) return NextResponse.json({ error: platform.error }, { status: platform.status });
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const parsed = upsertSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') },
-      { status: 400 },
-    );
-  }
+  const parsed = { data: guarded.data, success: true as const };
 
   const admin = createServiceRoleClient();
   const { data: existing } = await admin
@@ -71,7 +71,8 @@ export async function POST(request: Request) {
     .select('key,subject,html,text,version,active,updated_at')
     .single();
   if (error || !template) {
-    return NextResponse.json({ error: error?.message ?? 'Upsert failed' }, { status: 500 });
+    logger.error('Failed to upsert email template', error, { key: parsed.data.key });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   try {
@@ -83,8 +84,8 @@ export async function POST(request: Request) {
       resource_id: randomUUID(),
       changes: { key: parsed.data.key, version },
     });
-  } catch {
-    console.warn('[platform-email] audit insert failed for email.template.update', parsed.data.key);
+  } catch (auditError) {
+    logger.warn('Failed to audit email template update', { key: parsed.data.key, error: auditError });
   }
 
   return NextResponse.json({ template });

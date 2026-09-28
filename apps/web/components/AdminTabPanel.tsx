@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import TemplateEditor from '@/components/TemplateEditor';
-import UserManager from '@/components/UserManager';
 import UserTable from '@/components/UserTable';
 import PaymentGatewayPanel from '@/components/PaymentGatewayPanel';
 import CompetencyManager from '@/components/CompetencyManager';
@@ -138,6 +137,7 @@ export default function AdminTabPanel({
             <h3 className="font-semibold text-sm text-text-muted mb-2">Quick Invite (Legacy)</h3>
             <UserManager
               tenantId={tenantId}
+              tenantSlug={tenantSlug}
               users={users as never[]}
               currentUserRole={profileRole}
             />

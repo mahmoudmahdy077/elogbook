@@ -25,7 +25,7 @@ const DENIED = { ok: false as const, error: 'Platform access required', status: 
 function req(body?: unknown) {
   return new Request('http://localhost/x', {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' },
     body: body === undefined ? undefined : JSON.stringify(body),
   }) as unknown as Parameters<typeof createPost>[0];
 }

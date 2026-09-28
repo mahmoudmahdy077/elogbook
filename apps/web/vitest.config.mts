@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: ['./test-setup.ts'],
     globals: true,
     pool: 'threads',
+    fileParallelism: false,
     singleThread: false,
     isolate: true,
     testTimeout: 10000,

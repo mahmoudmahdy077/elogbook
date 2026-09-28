@@ -1,17 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createHmac } from 'crypto';
 
 // Shared mock client that tests can configure
 const mockClient = {
   from: vi.fn(),
+  rpc: vi.fn(),
 };
 
 vi.mock('@/lib/supabase/admin', () => ({
   createServiceRoleClient: () => mockClient,
 }));
 
+vi.mock('node:dns/promises', () => {
+  const lookup = vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+  return { lookup, default: { lookup } };
+});
+
+const originalAllowedHosts = process.env.OUTBOUND_ALLOWED_HOSTS;
+const nativeCrypto = globalThis.crypto;
+
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.OUTBOUND_ALLOWED_HOSTS = 'example.com';
   mockClient.from = vi.fn();
+  mockClient.rpc = vi.fn().mockResolvedValue({ data: 'secret-1', error: null });
 
   // Provide minimal crypto.subtle mock using vi.stubGlobal (works even with readonly getters)
   vi.stubGlobal('crypto', {
@@ -24,6 +36,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (originalAllowedHosts === undefined) delete process.env.OUTBOUND_ALLOWED_HOSTS;
+  else process.env.OUTBOUND_ALLOWED_HOSTS = originalAllowedHosts;
   vi.unstubAllGlobals();
 });
 
@@ -113,6 +127,74 @@ describe('dispatchWebhookEvent', () => {
     expect(fetchUrl).toBe('https://example.com/hook1');
 
     vi.unstubAllGlobals();
+  });
+
+  it('signs with the service-decrypted secret, not a stored placeholder', async () => {
+    const secret = 'decrypted-service-secret';
+    mockClient.from = makeQueryMock({
+      data: [
+        {
+          id: 'wh-1',
+          url: 'https://example.com/hook1',
+          events: ['case.submitted'],
+        },
+      ],
+      error: null,
+    });
+    mockClient.rpc.mockResolvedValue({ data: secret, error: null });
+    vi.stubGlobal('crypto', nativeCrypto);
+    const mockFetch = vi.fn().mockResolvedValue(new Response('OK', { status: 200 }));
+    vi.stubGlobal('fetch', mockFetch);
+
+    await dispatchWebhookEvent({
+      tenant_id: 'tenant-1',
+      event_type: 'case.submitted',
+      event_id: 'evt-1',
+      data: { entry_id: 'entry-1' },
+    });
+
+    expect(mockClient.rpc).toHaveBeenCalledWith('get_tenant_webhook_secret', {
+      p_webhook_id: 'wh-1',
+    });
+    const body = JSON.stringify({
+      entry_id: 'entry-1',
+      event_type: 'case.submitted',
+      event_id: 'evt-1',
+      tenant_id: 'tenant-1',
+    });
+    const expected = createHmac('sha256', secret).update(body).digest('hex');
+    const init = mockFetch.mock.calls[0]?.[1] as RequestInit & { headers: Record<string, string> };
+    expect(init.headers['X-E-Logbook-Signature']).toBe(`sha256=${expected}`);
+  });
+
+  it.each([
+    ['[ENCRYPTED]', null],
+    [' [ENCRYPTED] ', null],
+    [null, new Error('webhook encryption key is not configured')],
+  ])('fails closed when the trusted secret RPC returns %s', async (secret, error) => {
+    mockClient.from = makeQueryMock({
+      data: [
+        {
+          id: 'wh-1',
+          url: 'https://example.com/hook1',
+          events: ['case.submitted'],
+        },
+      ],
+      error: null,
+    });
+    mockClient.rpc.mockResolvedValue({ data: secret, error });
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await dispatchWebhookEvent({
+      tenant_id: 'tenant-1',
+      event_type: 'case.submitted',
+      event_id: 'evt-1',
+      data: {},
+    });
+
+    expect(result).toEqual([{ webhook_id: 'wh-1', ok: false, status: 0 }]);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('handles fetch failure gracefully', async () => {
@@ -225,7 +307,7 @@ describe('testWebhookEndpoint', () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(result.body).toContain('Network error');
+    expect(result.body).toBe('');
 
     vi.unstubAllGlobals();
   });
@@ -267,7 +349,7 @@ describe('testWebhookEndpoint', () => {
     );
 
     expect(result.status).toBe(200);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.body).toBe('');
 
     vi.unstubAllGlobals();

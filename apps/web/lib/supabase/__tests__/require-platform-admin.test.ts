@@ -54,6 +54,7 @@ describe('requirePlatformAdmin (T17)', () => {
   afterEach(() => {
     if (OLD_DISABLE === undefined) delete process.env.DISABLE_MFA;
     else process.env.DISABLE_MFA = OLD_DISABLE;
+    vi.unstubAllEnvs();
   });
 
   const ACTIVE_PROFILE = { id: 'p1', status: 'active' };
@@ -125,5 +126,14 @@ describe('requirePlatformAdmin (T17)', () => {
     process.env.DISABLE_MFA = 'true';
     const supabase = mockSupabase({ userId: 'u1', profile: ACTIVE_PROFILE, registry: OPERATOR });
     expect((await requirePlatformAdmin(supabase as never)).ok).toBe(true);
+  });
+
+  it('does not honor DISABLE_MFA in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    process.env.DISABLE_MFA = 'true';
+    const supabase = mockSupabase({ userId: 'u1', profile: ACTIVE_PROFILE, registry: OPERATOR });
+    const result = await requirePlatformAdmin(supabase as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(403);
   });
 });

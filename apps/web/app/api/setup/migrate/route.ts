@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server';
 import { runMigrations } from '@/lib/setup/db-migrator';
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import {
   checkSetupRequest, checkRateLimit, acquireDurableLock, releaseDurableLock,
-  consumeSetupToken, clientIpOfRequest, migrateInputSchema, auditSetup,
+  consumeSetupToken, clientIpOfRequest, migrateInputSchema, auditSetup, setupRuntimeEnabled,
+  writeSetupReceiptAtomically, removeSetupReceipt,
 } from '@/lib/setup/guard';
+import { guardRequest } from '@/lib/http/request-guard';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
-  if (process.env.NODE_ENV === 'production') {
+  if (!setupRuntimeEnabled()) {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'x-setup-token': request.headers.get('x-setup-token') ?? undefined,
+        'x-forwarded-proto': request.headers.get('x-forwarded-proto') ?? undefined,
         origin: request.headers.get('origin') ?? undefined,
         referer: request.headers.get('referer') ?? undefined,
       },
@@ -45,23 +48,19 @@ export async function POST(request: Request) {
   const rl = checkRateLimit(clientIp, 'migrate');
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: rl.status });
 
-  const body = await request.json();
-  const rawCreds = body as { host?: unknown; port?: unknown; database?: unknown; user?: unknown; password?: unknown };
-  // Strict credential shape (no shell metachars via hostname/identifier patterns).
-  const creds = migrateInputSchema.safeParse({
-    host: rawCreds.host ?? 'db',
-    port: rawCreds.port ?? 5432,
-    database: rawCreds.database ?? 'supabase',
-    user: rawCreds.user ?? 'postgres',
-    password: rawCreds.password ?? '',
+  const guarded = await guardRequest(request, migrateInputSchema, {
+    requireOrigin: false,
+    maxBodyBytes: 16 * 1024,
   });
-  if (!creds.success || !creds.data.password) {
-    return NextResponse.json({ error: 'Invalid database credentials' }, { status: 400 });
-  }
+  if (!guarded.ok) return guarded.response;
+  const creds = { success: true as const, data: guarded.data };
   if (!acquireDurableLock('migrate')) {
     return NextResponse.json({ error: 'Another setup operation is running' }, { status: 409 });
   }
+  removeSetupReceipt('migrations-applied.json');
+
   try {
+
     const { host, port, database, user, password } = creds.data;
 
     const configPath = join('/app/data', 'supabase-config.json');
@@ -74,10 +73,10 @@ export async function POST(request: Request) {
         port: port || 5432,
         database: database || savedConfig.postgresDb || 'supabase',
         user: user || 'postgres',
-        password: password || savedConfig.postgresPassword,
+        password: password || savedConfig.postgresPassword || '',
       };
     } else {
-      dbConfig = { host, port, database, user, password };
+      dbConfig = { host, port, database, user, password: password ?? '' };
     }
 
     const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
@@ -85,20 +84,16 @@ export async function POST(request: Request) {
 
     const errors = results.filter(r => r.status === 'error');
     auditSetup('migrate', errors.length === 0 ? 'ok' : 'errors');
-    // N9: durable migration receipt for transactional completion checks.
-    try {
-      writeFileSync(
-        join('/app/data', 'migrations-applied.json'),
-        JSON.stringify({
-          at: new Date().toISOString(),
-          total: results.length,
-          applied: results.filter(r => r.status === 'success').length,
-          errors: errors.map(e => ({ file: e.file })),
-        }),
-        'utf-8',
-      );
-    } catch {
-      // receipt is best-effort; completion treats a missing receipt as unproven
+    if (errors.length === 0) {
+      writeSetupReceiptAtomically('migrations-applied.json', {
+        success: true,
+        completed_at: new Date().toISOString(),
+        total: results.length,
+        applied: results.filter(r => r.status === 'success').length,
+        errors: [],
+      });
+    } else {
+      removeSetupReceipt('migrations-applied.json');
     }
     return NextResponse.json({
       success: errors.length === 0,
@@ -107,6 +102,9 @@ export async function POST(request: Request) {
       skipped: results.filter(r => r.status === 'skipped').length,
       errors: errors.map(e => ({ file: e.file, error: e.error })),
     });
+  } catch (error) {
+    removeSetupReceipt('migrations-applied.json');
+    throw error;
   } finally {
     releaseDurableLock('migrate');
   }
