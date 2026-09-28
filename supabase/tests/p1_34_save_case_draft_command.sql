@@ -66,6 +66,7 @@ SELECT is(
   'an active resident creates a de-identified draft through the command'
 );
 
+RESET ROLE;
 SELECT is(
   (SELECT status FROM public.case_entries WHERE id = (
     SELECT (public.save_case_draft_command(
@@ -83,7 +84,10 @@ SELECT is(
   'draft',
   'the command stores the case as a draft'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
+RESET ROLE;
 SELECT is(
   (SELECT is_deidentified FROM public.case_entries WHERE id = (
     SELECT (public.save_case_draft_command(
@@ -101,7 +105,10 @@ SELECT is(
   true,
   'the stored case is classified as de-identified'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
+RESET ROLE;
 SELECT is(
   (SELECT public.save_case_draft_command(
     'p1-34-valid',
@@ -119,7 +126,10 @@ SELECT is(
      AND resident_id = '00000000-0000-0000-0000-000000003421'),
   'replaying the same request id returns the stored case id'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
+RESET ROLE;
 SELECT is(
   (SELECT count(*) FROM public.case_entries
    WHERE template_id = '00000000-0000-4000-8000-000000003431'
@@ -127,6 +137,8 @@ SELECT is(
   1::bigint,
   'a replay does not create a second case row'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
 SELECT is(
   (SELECT public.save_case_draft_command(

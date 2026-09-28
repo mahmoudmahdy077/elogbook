@@ -122,11 +122,14 @@ SELECT throws_ok(
   NULL,
   'a resident cannot move rejected -> pending by direct write'
 );
+RESET ROLE;
 SELECT is(
   (SELECT status FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000003244'),
   'rejected',
   'the rejected case is still rejected after the denied direct write'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 
 -- 7. An AAL1 privileged session receives a stable denial code from the command.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal1"}';
@@ -155,11 +158,14 @@ SELECT is(
   'approved',
   'replaying the same request id returns the stored decision'
 );
+RESET ROLE;
 SELECT is(
   (SELECT count(*) FROM public.audit_outbox WHERE resource_id = '00000000-0000-0000-0000-000000003241' AND action = 'case_decide'),
   1::bigint,
   'a replayed decision does not duplicate the outbox event'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
 
 -- 10. Cross-tenant decisions are refused.
 SELECT is(
@@ -219,6 +225,7 @@ SELECT is(
   'pending',
   'the submit command moves a rejected case to pending'
 );
+RESET ROLE;
 SELECT ok(
   EXISTS (
     SELECT 1 FROM public.approval_requests
@@ -227,6 +234,8 @@ SELECT ok(
   ),
   'reaching pending always creates the approval request'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 
 -- 12. Fail closed when the tenant has no eligible reviewer.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003214","role":"authenticated","aal":"aal1"}';
@@ -235,11 +244,14 @@ SELECT is(
   'no_eligible_reviewer',
   'submit fails closed when the tenant has no eligible reviewer'
 );
+RESET ROLE;
 SELECT is(
   (SELECT status FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000003246'),
   'draft',
   'the unsubmittable case remains a draft'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003214","role":"authenticated","aal":"aal1"}';
 
 -- 13. The submit command is idempotent on replay.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
@@ -248,11 +260,14 @@ SELECT is(
   'pending',
   'replaying a submit returns the stored result'
 );
+RESET ROLE;
 SELECT is(
   (SELECT count(*) FROM public.approval_requests WHERE entry_id = '00000000-0000-0000-0000-000000003244'),
   1::bigint,
   'a replayed submit does not duplicate the approval request'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 
 -- 14-15. Command grants are authenticated-only.
 RESET ROLE;
