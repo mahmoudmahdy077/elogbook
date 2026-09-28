@@ -217,7 +217,7 @@ BEGIN
   ALTER TABLE public.audit_logs DISABLE TRIGGER trg_reject_audit_update;
 
   UPDATE public.audit_logs a
-     SET changes = a.redacted_changes
+     SET changes = redacted.redacted_changes
     FROM (
       SELECT id,
         (COALESCE(changes, '{}'::JSONB)
