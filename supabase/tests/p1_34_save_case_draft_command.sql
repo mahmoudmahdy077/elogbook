@@ -50,19 +50,21 @@ ON CONFLICT (id) DO NOTHING;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
+-- Pin the whole result payload. On failure pgTAP prints the returned jsonb,
+-- so a refusal shows its code instead of just a false.
 SELECT is(
   (SELECT public.save_case_draft_command(
     'p1-34-valid',
     jsonb_build_object(
-      'template_id', '00000000-0000-0000-0000-000000003431',
+      'template_id', '00000000-0000-4000-8000-000000003431',
       'case_date', '2026-09-23',
       'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', true),
       'accreditation_mappings', '[]'::jsonb,
       'is_deidentified', true,
       'patient_age_years', 30
     )
-  ) ->> 'success')::boolean,
-  true,
+  )::text),
+  'success',
   'an active resident creates a de-identified draft through the command'
 );
 

@@ -79,12 +79,14 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET status = 'approved'
     WHERE id = '00000000-0000-0000-0000-000000003241'$$,
   '42501',
+  'permission denied for table',
   'an AAL1 supervisor cannot approve a case by direct write'
 );
 SELECT throws_ok(
   $$UPDATE public.case_entries SET status = 'rejected'
     WHERE id = '00000000-0000-0000-0000-000000003242'$$,
   '42501',
+  'permission denied for table',
   'an AAL1 supervisor cannot reject a case by direct write'
 );
 
@@ -93,6 +95,7 @@ SELECT throws_ok(
   $$UPDATE public.approval_requests SET status = 'approved', resolved_at = NOW()
     WHERE entry_id = '00000000-0000-0000-0000-000000003241'$$,
   '42501',
+  'permission denied for table',
   'an AAL1 supervisor cannot resolve an approval request by direct write'
 );
 
@@ -101,6 +104,7 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET deleted_at = NOW()
     WHERE id = '00000000-0000-0000-0000-000000003243'$$,
   '42501',
+  'permission denied for table',
   'an AAL1 supervisor cannot tombstone an approved clinical record'
 );
 
@@ -110,6 +114,7 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET deleted_at = NOW()
     WHERE id = '00000000-0000-0000-0000-000000003243'$$,
   '42501',
+  'permission denied for table',
   'a resident cannot tombstone an approved clinical record'
 );
 
@@ -142,9 +147,11 @@ SELECT is(
 
 -- 8-9. The AAL2 decide command approves, and replays without re-applying.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
+RESET ROLE;
 INSERT INTO public.approval_requests (entry_id, supervisor_id, tenant_id, status)
 VALUES ('00000000-0000-0000-0000-000000003241', '00000000-0000-0000-0000-000000003221', '00000000-0000-0000-0000-000000003201', 'pending')
 ON CONFLICT (entry_id, supervisor_id) DO NOTHING;
+SET LOCAL ROLE authenticated;
 
 SELECT is(
   (SELECT public.decide_case_command(
