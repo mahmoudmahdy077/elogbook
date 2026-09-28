@@ -79,14 +79,14 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET status = 'approved'
     WHERE id = '00000000-0000-0000-0000-000000003241'$$,
   '42501',
-  'permission denied for table',
+  'permission denied for table case_entries',
   'an AAL1 supervisor cannot approve a case by direct write'
 );
 SELECT throws_ok(
   $$UPDATE public.case_entries SET status = 'rejected'
     WHERE id = '00000000-0000-0000-0000-000000003242'$$,
   '42501',
-  'permission denied for table',
+  'permission denied for table case_entries',
   'an AAL1 supervisor cannot reject a case by direct write'
 );
 
@@ -95,7 +95,7 @@ SELECT throws_ok(
   $$UPDATE public.approval_requests SET status = 'approved', resolved_at = NOW()
     WHERE entry_id = '00000000-0000-0000-0000-000000003241'$$,
   '42501',
-  'permission denied for table',
+  'permission denied for table approval_requests',
   'an AAL1 supervisor cannot resolve an approval request by direct write'
 );
 
@@ -104,7 +104,7 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET deleted_at = NOW()
     WHERE id = '00000000-0000-0000-0000-000000003243'$$,
   '42501',
-  'permission denied for table',
+  'permission denied for table case_entries',
   'an AAL1 supervisor cannot tombstone an approved clinical record'
 );
 
@@ -114,7 +114,7 @@ SELECT throws_ok(
   $$UPDATE public.case_entries SET deleted_at = NOW()
     WHERE id = '00000000-0000-0000-0000-000000003243'$$,
   '42501',
-  'permission denied for table',
+  'permission denied for table case_entries',
   'a resident cannot tombstone an approved clinical record'
 );
 
@@ -133,6 +133,8 @@ SELECT is(
   'rejected',
   'the rejected case is still rejected after the denied direct write'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 
@@ -171,6 +173,8 @@ SELECT is(
   1::bigint,
   'a replayed decision does not duplicate the outbox event'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
 
@@ -243,6 +247,8 @@ SELECT ok(
 );
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 
 -- 12. Fail closed when the tenant has no eligible reviewer.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003214","role":"authenticated","aal":"aal1"}';
@@ -259,6 +265,8 @@ SELECT is(
 );
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003214","role":"authenticated","aal":"aal1"}';
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003214","role":"authenticated","aal":"aal1"}';
 
 -- 13. The submit command is idempotent on replay.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
@@ -273,6 +281,8 @@ SELECT is(
   1::bigint,
   'a replayed submit does not duplicate the approval request'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 

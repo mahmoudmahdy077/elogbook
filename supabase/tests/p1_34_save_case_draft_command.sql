@@ -50,8 +50,6 @@ ON CONFLICT (id) DO NOTHING;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
--- Pin the whole result payload. On failure pgTAP prints the returned jsonb,
--- so a refusal shows its code instead of just a false.
 SELECT is(
   (SELECT public.save_case_draft_command(
     'p1-34-valid',
@@ -63,26 +61,39 @@ SELECT is(
       'is_deidentified', true,
       'patient_age_years', 30
     )
-  )::text),
-  'success',
+  ) ->> 'success')::boolean,
+  true,
   'an active resident creates a de-identified draft through the command'
 );
 
+-- The command must run as the resident so auth.uid() resolves a principal,
+-- while reading clinical state needs the owner. The replay result is captured
+-- once here, as the resident, so the assertions that follow are plain reads.
+CREATE TEMP TABLE _p1_34_case (id UUID) ON COMMIT DROP;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
+DO $capture$
+BEGIN
+  INSERT INTO _p1_34_case
+  SELECT (public.save_case_draft_command(
+    'p1-34-valid',
+    jsonb_build_object(
+      'template_id', '00000000-0000-4000-8000-000000003431',
+      'case_date', '2026-09-23',
+      'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', true),
+      'accreditation_mappings', '[]'::jsonb,
+      'is_deidentified', true,
+      'patient_age_years', 30
+    )
+  ) ->> 'case_id')::uuid;
+END;
+$capture$;
+RESET ROLE;
+
 RESET ROLE;
 SELECT is(
-  (SELECT status FROM public.case_entries WHERE id = (
-    SELECT (public.save_case_draft_command(
-      'p1-34-valid',
-      jsonb_build_object(
-        'template_id', '00000000-0000-4000-8000-000000003431',
-        'case_date', '2026-09-23',
-        'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', true),
-        'accreditation_mappings', '[]'::jsonb,
-        'is_deidentified', true,
-        'patient_age_years', 30
-      )
-    ) ->> 'case_id')::uuid
-  )),
+  (SELECT status FROM public.case_entries WHERE id = (SELECT id FROM _p1_34_case)),
+
   'draft',
   'the command stores the case as a draft'
 );
@@ -91,19 +102,8 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","
 
 RESET ROLE;
 SELECT is(
-  (SELECT is_deidentified FROM public.case_entries WHERE id = (
-    SELECT (public.save_case_draft_command(
-      'p1-34-valid',
-      jsonb_build_object(
-        'template_id', '00000000-0000-4000-8000-000000003431',
-        'case_date', '2026-09-23',
-        'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', true),
-        'accreditation_mappings', '[]'::jsonb,
-        'is_deidentified', true,
-        'patient_age_years', 30
-      )
-    ) ->> 'case_id')::uuid
-  )),
+  (SELECT is_deidentified FROM public.case_entries WHERE id = (SELECT id FROM _p1_34_case)),
+
   true,
   'the stored case is classified as de-identified'
 );
@@ -112,17 +112,7 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","
 
 RESET ROLE;
 SELECT is(
-  (SELECT public.save_case_draft_command(
-    'p1-34-valid',
-    jsonb_build_object(
-      'template_id', '00000000-0000-0000-0000-000000003431',
-      'case_date', '2026-09-23',
-      'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', true),
-      'accreditation_mappings', '[]'::jsonb,
-      'is_deidentified', true,
-      'patient_age_years', 30
-    )
-  ) ->> 'case_id'),
+  (SELECT id::text FROM _p1_34_case),
   (SELECT id::text FROM public.case_entries
    WHERE template_id = '00000000-0000-4000-8000-000000003431'
      AND resident_id = '00000000-0000-0000-0000-000000003421'),
@@ -139,6 +129,8 @@ SELECT is(
   1::bigint,
   'a replay does not create a second case row'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
@@ -345,6 +337,8 @@ SELECT ok(
   ),
   'draft audit and outbox rows contain no clinical values'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
