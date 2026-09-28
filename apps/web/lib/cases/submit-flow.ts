@@ -48,6 +48,10 @@ export type SubmitOutcome =
   | { outcome: 'draft_only'; caseId: string; code: string }
   | { outcome: 'error'; message: string };
 
+export function caseDraftPath(tenantSlug: string): string {
+  return `/api/${tenantSlug}/cases`;
+}
+
 export function caseSubmitPath(tenantSlug: string, caseId: string): string {
   return `/api/${tenantSlug}/cases/${caseId}/submit`;
 }
@@ -58,11 +62,68 @@ export function newRequestId(): string {
     : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+export async function saveCaseDraft(
+  tenantSlug: string,
+  row: Record<string, unknown>,
+  fetcher: typeof fetch = fetch,
+): Promise<InsertDraftResult & { code?: string }> {
+  if (row.is_deidentified !== true) {
+    return {
+      id: null,
+      error: 'Identifiable case entry is not available in this release.',
+      code: 'policy_denied',
+    };
+  }
+
+  const payload = {
+    request_id: String(row.request_id ?? newRequestId()),
+    template_id: String(row.template_id ?? ''),
+    case_date: String(row.case_date ?? ''),
+    field_values: row.field_values && typeof row.field_values === 'object'
+      ? row.field_values
+      : {},
+    accreditation_mappings: Array.isArray(row.accreditation_mappings)
+      ? row.accreditation_mappings
+      : [],
+    is_deidentified: true as const,
+    patient_age_years: typeof row.patient_age_years === 'number'
+      ? row.patient_age_years
+      : null,
+  };
+
+  try {
+    const response = await fetcher(caseDraftPath(tenantSlug), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json().catch(() => null) as {
+      success?: boolean;
+      case_id?: string;
+      error?: string;
+      code?: string;
+    } | null;
+
+    if (!response.ok || body?.success !== true || !body.case_id) {
+      return {
+        id: null,
+        error: body?.error ?? `Draft creation failed (${response.status}).`,
+        code: body?.code ?? 'draft_failed',
+      };
+    }
+
+    return { id: body.case_id, error: null };
+  } catch {
+    return { id: null, error: 'The case draft could not be saved.', code: 'network_error' };
+  }
+}
+
 export async function createCaseDraftAndSubmit(
   deps: SubmitFlowDeps,
   input: CaseDraftInput,
 ): Promise<SubmitOutcome> {
   const inserted = await deps.insertDraft({
+    request_id: input.requestId,
     tenant_id: input.tenantId,
     resident_id: input.residentId,
     template_id: input.templateId,

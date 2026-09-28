@@ -4,12 +4,13 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { newRequestId, saveCaseDraft } from '@/lib/cases/submit-flow';
 
 interface CaseImportProps {
   isOpen: boolean;
   onClose: () => void;
   tenantId: string;
-  residentId: string;
+  tenantSlug: string;
 }
 
 interface CsvRow {
@@ -20,7 +21,7 @@ export default function CaseImport({
   isOpen,
   onClose,
   tenantId,
-  residentId,
+  tenantSlug,
 }: CaseImportProps) {
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,25 +160,30 @@ export default function CaseImport({
 
       for (let i = 0; i < rows.length; i += BATCH_SIZE) {
         const batch = rows.slice(i, i + BATCH_SIZE);
-        const inserts = batch.map((row) => ({
-          tenant_id: tenantId,
-          resident_id: residentId,
-          template_id: templateId,
-          case_date: row.case_date || row.date || new Date().toISOString().split('T')[0],
-          field_values: row,
-          status: 'draft',
-        }));
 
-        const { error: insertError } = await supabase
-          .from('case_entries')
-          .insert(inserts);
+        for (const row of batch) {
+          const fieldValues = Object.fromEntries(
+            Object.entries(row).filter(
+              ([key]) => !/(^|_)(mrn|dob|date_of_birth|patient_hash)($|_)/i.test(key),
+            ),
+          );
+          const result = await saveCaseDraft(tenantSlug, {
+            request_id: newRequestId(),
+            template_id: templateId,
+            case_date: row.case_date || row.date || new Date().toISOString().split('T')[0],
+            field_values: fieldValues,
+            accreditation_mappings: [],
+            is_deidentified: true,
+            patient_age_years: null,
+          });
 
-        if (insertError) {
-          setError(insertError.message);
-          setImporting(false);
-          return;
+          if (result.error) {
+            setError(result.error);
+            setImporting(false);
+            return;
+          }
+          totalInserted += 1;
         }
-        totalInserted += batch.length;
       }
 
       setImportCount(totalInserted);

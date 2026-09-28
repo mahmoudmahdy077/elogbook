@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { buildDeidentifiedPatientColumns } from '@/lib/cases/deidentified';
-import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId } from '@/lib/cases/submit-flow';
+import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId, saveCaseDraft } from '@/lib/cases/submit-flow';
 
 interface TemplateField {
   key?: string;
@@ -128,8 +128,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: Q
     if (!profile) { setErrors(['Profile not found.']); setSaving(false); return; }
 
     const insertCaseRow = async (row: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('case_entries').insert(row).select('id').single();
-      return { id: (data as { id: string } | null)?.id ?? null, error: error?.message ?? null };
+      return saveCaseDraft(tenantSlug, row);
     };
 
     // The UI never writes a clinical status. It always creates a draft, then

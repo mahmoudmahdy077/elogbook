@@ -9,7 +9,7 @@ import { useToast } from '@/components/Toast';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { sortTemplates, type TemplateWithMeta } from '@elogbook/shared';
 import { buildDeidentifiedPatientColumns } from '@/lib/cases/deidentified';
-import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId } from '@/lib/cases/submit-flow';
+import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId, saveCaseDraft } from '@/lib/cases/submit-flow';
 
 import StepIndicator from '@/components/case-form/StepIndicator';
 import TemplateStep from '@/components/case-form/TemplateStep';
@@ -296,8 +296,7 @@ export default function CaseForm({ tenantId, tenantSlug, duplicateCaseId, lastEn
   }
 
   async function insertCaseRow(row: Record<string, unknown>) {
-    const { data, error } = await supabase.from('case_entries').insert(row).select('id').single();
-    return { id: (data as { id: string } | null)?.id ?? null, error: error?.message ?? null };
+    return saveCaseDraft(tenantSlug, row);
   }
 
   function buildDraftRow(residentId: string, caseDateValue: string): Record<string, unknown> {

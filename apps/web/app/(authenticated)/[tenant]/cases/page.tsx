@@ -93,7 +93,7 @@ export default async function CasesPage({
         </div>
         <div className="flex items-center gap-3">
           {isResident && (
-            <CaseImportButton tenantId={auth.profile.tenant_id} residentId={auth.profile.id} />
+            <CaseImportButton tenantId={auth.profile.tenant_id} tenantSlug={tenantSlug} />
           )}
           {entries && entries.length > 0 && (
             <ExportCsvButton entries={entries} />
