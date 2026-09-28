@@ -62,6 +62,11 @@ export async function GET(
   }
 
   // ---- Proxy to the edge function with the user's JWT ----
+  // The edge function is the authority: it re-authorizes the principal, refuses
+  // the export outright when no external vendor is configured or no approved
+  // `metadata_only` vendor policy exists, and emits a de-identified projection.
+  // `deidentified_confirmed` is set here because the server has just verified
+  // AAL2, a director+ role and the tenant — the client never chooses the mode.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const { data: sess } = await supabase.auth.getSession();
@@ -82,6 +87,7 @@ export async function GET(
       body: JSON.stringify({
         tenant_id: profile.tenant_id,
         resident_ids: residentIds,
+        deidentified_confirmed: true,
         ...(dateFrom ? { date_from: dateFrom } : {}),
         ...(dateTo ? { date_to: dateTo } : {}),
       }),
@@ -90,10 +96,11 @@ export async function GET(
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
+      // The edge function's body can carry database detail, so the status is
+      // propagated but the text is not.
       return NextResponse.json(
-        { error: `Edge function ${res.status}: ${text}`.slice(0, 300) },
-        { status: res.status >= 500 ? 502 : res.status },
+        { error: 'The WebADS export was refused' },
+        { status: res.status >= 500 && res.status !== 501 ? 502 : res.status },
       );
     }
 
@@ -103,6 +110,7 @@ export async function GET(
         'Content-Type': 'application/xml',
         'Content-Disposition': `attachment; filename="webads-export-${paramTenant}.xml"`,
         'Cache-Control': 'no-store',
+        Pragma: 'no-cache',
       },
     });
   } catch (err: unknown) {
