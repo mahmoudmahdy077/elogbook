@@ -97,6 +97,18 @@ vi.mock('@/lib/supabase/security-context', () => ({
   getSecurityContext: mockGetSecurityContext,
 }));
 
+const mockLoggerInfo = vi.hoisted(() => vi.fn());
+const mockLoggerError = vi.hoisted(() => vi.fn());
+const mockLoggerWarn = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    info: mockLoggerInfo,
+    error: mockLoggerError,
+    warn: mockLoggerWarn,
+  },
+}));
+
 import { POST } from '../route';
 
 function makePostRequest(url: string, headers: Record<string, string> = {}, body?: unknown): Request {
@@ -628,5 +640,69 @@ describe('POST /api/[tenant]/approvals/action', () => {
       body: 'Your case was rejected. Open the case to review the decision.',
     }));
     expect(JSON.stringify(mockNotificationInsert.mock.calls)).not.toContain('Sensitive reviewer feedback');
+  });
+
+  describe('correlation logging', () => {
+    it('returns a server-generated correlation id that is not the client request_id', async () => {
+      const res = await POST(
+        makePostRequest('https://app.elogbook.dev/demo/approvals/action', {}, {
+          action: 'approve',
+          entry_id: 'entry-1',
+          request_id: 'client-request-id-12345',
+        }),
+        { params },
+      );
+
+      expect(res.status).toBe(200);
+      const correlationId = res.headers.get('x-correlation-id');
+      expect(correlationId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(correlationId).not.toBe('client-request-id-12345');
+    });
+
+    it('honours a validated caller-supplied correlation id', async () => {
+      const res = await POST(
+        makePostRequest(
+          'https://app.elogbook.dev/demo/approvals/action',
+          { 'x-correlation-id': 'corr-9f2b7c1d4e5a' },
+          { action: 'approve', entry_id: 'entry-1', request_id: 'req-2' },
+        ),
+        { params },
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get('x-correlation-id')).toBe('corr-9f2b7c1d4e5a');
+    });
+
+    it('logs a bounded clinical record without the reviewer comment or request_id', async () => {
+      const res = await POST(
+        makePostRequest('https://app.elogbook.dev/demo/approvals/action', {}, {
+          action: 'reject',
+          entry_id: 'entry-1',
+          request_id: 'req-correlation-3',
+          comment: 'Sensitive reviewer feedback',
+        }),
+        { params },
+      );
+
+      expect(res.status).toBe(200);
+      const infoCalls = mockLoggerInfo.mock.calls.filter(([message]) => message === 'clinical command');
+      expect(infoCalls.length).toBeGreaterThan(0);
+
+      const payload = infoCalls[infoCalls.length - 1][1] as Record<string, unknown>;
+      expect(Object.keys(payload).sort()).toEqual([
+        'caseId',
+        'command',
+        'correlationId',
+        'durationMs',
+        'resultCode',
+        'tenantId',
+      ]);
+      expect(payload.command).toBe('decide_case');
+      expect(payload.resultCode).toBe('rejected');
+
+      const serialized = JSON.stringify(mockLoggerInfo.mock.calls);
+      expect(serialized).not.toContain('Sensitive reviewer feedback');
+      expect(serialized).not.toContain('req-correlation-3');
+    });
   });
 });

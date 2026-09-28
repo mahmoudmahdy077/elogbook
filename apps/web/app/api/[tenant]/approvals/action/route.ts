@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { notifyCaseApproval } from '@/lib/notifications';
 import { logger } from '@/lib/logger';
+import { clinicalCommandLog, correlationHeaders, resolveCorrelationId } from '@/lib/observability/correlation-id';
 
 const ALLOWED_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
 const approvalActionSchema = z.object({
@@ -119,6 +120,21 @@ export async function POST(
   // ---- Call the AAL2-gated clinical command ----
   // The database owns the transition, the approval-request resolution, the
   // audit row and the outbox row. This route never writes case status.
+  //
+  // The correlation id is server-derived. The client-supplied `request_id` is
+  // an idempotency key only and is never used as the correlation id.
+  const correlationId = resolveCorrelationId(request.headers);
+  const startedAt = Date.now();
+  const logClinical = (resultCode: string) =>
+    logger.info('clinical command', clinicalCommandLog({
+      command: 'decide_case',
+      caseId: entryId,
+      tenantId: profile.tenant_id,
+      durationMs: Date.now() - startedAt,
+      resultCode,
+      correlationId,
+    }));
+
   const { data: rpcData, error: rpcError } = await supabase.rpc('decide_case_command', {
     p_case_id: entryId,
     p_request_id: requestId,
@@ -127,10 +143,11 @@ export async function POST(
   });
 
   if (rpcError) {
-    logger.error('decide_case command failed', rpcError, { entryId, requestId });
+    logger.error('decide_case command failed', rpcError, { entryId, correlationId });
+    logClinical('internal_error');
     return NextResponse.json(
       { error: CODE_MESSAGE.internal_error, success: false, code: 'internal_error' },
-      { status: 500 },
+      { status: 500, headers: correlationHeaders(correlationId) },
     );
   }
 
@@ -139,11 +156,14 @@ export async function POST(
     const code = typeof rpcResult.code === 'string' && rpcResult.code in CODE_STATUS
       ? rpcResult.code
       : 'internal_error';
+    logClinical(code);
     return NextResponse.json(
       { error: CODE_MESSAGE[code], success: false, code },
-      { status: CODE_STATUS[code] },
+      { status: CODE_STATUS[code], headers: correlationHeaders(correlationId) },
     );
   }
+
+  logClinical(action === 'approve' ? 'approved' : 'rejected');
 
   const approved = action === 'approve';
   const { data: residentAuth, error: residentAuthError } = await supabase
@@ -214,5 +234,8 @@ export async function POST(
     }
   } catch { /* email fallback is best-effort */ }
 
-  return NextResponse.json({ success: true, action });
+  return NextResponse.json(
+    { success: true, action },
+    { headers: correlationHeaders(correlationId) },
+  );
 }
