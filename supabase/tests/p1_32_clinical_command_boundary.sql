@@ -72,94 +72,46 @@ ON CONFLICT (entry_id, supervisor_id) DO NOTHING;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal1"}';
 
--- Silent RLS/trigger denial is observed through the affected row count. A
--- data-modifying CTE may only appear at the top level of a statement, so the
--- probe runs in a DO block and parks the count in a temp table.
-CREATE TEMP TABLE _row_count_probe (n BIGINT) ON COMMIT DROP;
-
-DO $$
-DECLARE v_n BIGINT;
-BEGIN
-  UPDATE public.case_entries SET status = 'approved'
-  WHERE id = '00000000-0000-0000-0000-000000003241';
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  INSERT INTO _row_count_probe VALUES (v_n);
-END;
-$$;
-SELECT is(
-  (SELECT n FROM _row_count_probe),
-  0::bigint,
+-- A direct write to a clinical table is refused outright: the role holds no
+-- UPDATE grant, so PostgreSQL raises insufficient_privilege rather than
+-- filtering the row. Assert the refusal itself.
+SELECT throws_ok(
+  $$UPDATE public.case_entries SET status = 'approved'
+    WHERE id = '00000000-0000-0000-0000-000000003241'$$,
+  '42501',
   'an AAL1 supervisor cannot approve a case by direct write'
 );
-TRUNCATE _row_count_probe;
-
-DO $$
-DECLARE v_n BIGINT;
-BEGIN
-  UPDATE public.case_entries SET status = 'rejected'
-  WHERE id = '00000000-0000-0000-0000-000000003242';
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  INSERT INTO _row_count_probe VALUES (v_n);
-END;
-$$;
-SELECT is(
-  (SELECT n FROM _row_count_probe),
-  0::bigint,
+SELECT throws_ok(
+  $$UPDATE public.case_entries SET status = 'rejected'
+    WHERE id = '00000000-0000-0000-0000-000000003242'$$,
+  '42501',
   'an AAL1 supervisor cannot reject a case by direct write'
 );
-TRUNCATE _row_count_probe;
 
 -- 3. The approval ledger is not writable by a privileged direct write.
-DO $$
-DECLARE v_n BIGINT;
-BEGIN
-  UPDATE public.approval_requests SET status = 'approved', resolved_at = NOW()
-  WHERE entry_id = '00000000-0000-0000-0000-000000003241';
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  INSERT INTO _row_count_probe VALUES (v_n);
-END;
-$$;
-SELECT is(
-  (SELECT n FROM _row_count_probe),
-  0::bigint,
+SELECT throws_ok(
+  $$UPDATE public.approval_requests SET status = 'approved', resolved_at = NOW()
+    WHERE entry_id = '00000000-0000-0000-0000-000000003241'$$,
+  '42501',
   'an AAL1 supervisor cannot resolve an approval request by direct write'
 );
-TRUNCATE _row_count_probe;
 
 -- 4. Approved clinical records are not directly tombstoneable.
-DO $$
-DECLARE v_n BIGINT;
-BEGIN
-  UPDATE public.case_entries SET deleted_at = NOW()
-  WHERE id = '00000000-0000-0000-0000-000000003243';
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  INSERT INTO _row_count_probe VALUES (v_n);
-END;
-$$;
-SELECT is(
-  (SELECT n FROM _row_count_probe),
-  0::bigint,
+SELECT throws_ok(
+  $$UPDATE public.case_entries SET deleted_at = NOW()
+    WHERE id = '00000000-0000-0000-0000-000000003243'$$,
+  '42501',
   'an AAL1 supervisor cannot tombstone an approved clinical record'
 );
-TRUNCATE _row_count_probe;
 
 -- 5-6. Nor by the owning resident.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
-DO $$
-DECLARE v_n BIGINT;
-BEGIN
-  UPDATE public.case_entries SET deleted_at = NOW()
-  WHERE id = '00000000-0000-0000-0000-000000003243';
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  INSERT INTO _row_count_probe VALUES (v_n);
-END;
-$$;
-SELECT is(
-  (SELECT n FROM _row_count_probe),
-  0::bigint,
+SELECT throws_ok(
+  $$UPDATE public.case_entries SET deleted_at = NOW()
+    WHERE id = '00000000-0000-0000-0000-000000003243'$$,
+  '42501',
   'a resident cannot tombstone an approved clinical record'
 );
-TRUNCATE _row_count_probe;
 
 -- 10. A resident cannot self-escalate a rejected case into the approval queue.
 --     The BEFORE trigger raises before the RLS WITH CHECK is evaluated.

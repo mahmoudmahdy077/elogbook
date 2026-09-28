@@ -67,7 +67,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'invalid template', 'code', 'invalid_request');
   END IF;
 
-  v_template_id := p_payload->>'template_id'::uuid;
+  v_template_id := (p_payload->>'template_id')::uuid;
   v_fingerprint := encode(
     extensions.digest(convert_to(p_payload::text, 'UTF8'), 'sha256'),
     'hex'
@@ -163,7 +163,7 @@ BEGIN
     END IF;
 
     IF p_payload->>'patient_age_years' IS NOT NULL THEN
-      v_patient_age_years := p_payload->>'patient_age_years'::integer;
+      v_patient_age_years := (p_payload->>'patient_age_years')::integer;
       IF v_patient_age_years < 0 OR v_patient_age_years > 150 THEN
         v_result := jsonb_build_object('success', false, 'error', 'invalid patient_age_years', 'code', 'invalid_request');
         EXIT work;
