@@ -11,31 +11,37 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint:all
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - name: Unit tests (raw log captured as artifact)
         run: |
@@ -45,26 +51,30 @@ jobs:
         run: node scripts/check-test-log.mjs test-output.log
       - name: Upload raw test log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: unit-test-log
           path: test-output.log
   build-web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web
   docker-boot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Build production image (authoritative Dockerfile)
-        run: docker build --tag elogbook-web:boot --file apps/web/Dockerfile .
+        run: docker build --build-arg "APP_RELEASE_COMMIT=${GITHUB_SHA}" --tag elogbook-web:boot --file apps/web/Dockerfile .
       - name: Assert non-root runtime user
         run: |
           set -euo pipefail
@@ -111,8 +121,10 @@ jobs:
   db-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@afb1b15109756ea5cf9d8985a359d9095235ca2b # v2
         with: { version: 2.109.1 }
         env:
           SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
@@ -133,7 +145,48 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase db test supabase/tests/p1_1b_cross_tenant_write_isolation.sql supabase/tests/p1_3_phi_deidentified_enforcement.sql supabase/tests/p2_01_secret_views_role_gate.sql supabase/tests/p2_02_rpc_tenant_checks.sql supabase/tests/p2_03_duty_faculty_rls.sql supabase/tests/p2_04_audit_and_notifications.sql supabase/tests/p2_05_retention_v4.sql supabase/tests/p2_06_analytics_rpc.sql supabase/tests/p2_07_push_tokens_rls.sql supabase/tests/p2_08_ai_quota_release.sql supabase/tests/p2_09_role_destination_guard.sql supabase/tests/p2_10_no_debug_artifacts.sql supabase/tests/p2_11_platform_authority.sql supabase/tests/p2_12_tenant_lifecycle.sql supabase/tests/p2_13_data_mode_policy.sql supabase/tests/p2_14_theme_revisions.sql supabase/tests/p2_15_site_pages.sql supabase/tests/p3_01_mobile_qualification_boundaries.sql supabase/tests/p3_02_publish_contract.sql supabase/tests/p3_03_case_operation_rpc.sql supabase/tests/p3_04_mode_immutable.sql supabase/tests/p3_05_definer_audit.sql
+          supabase db test \
+            supabase/tests/p1_1b_cross_tenant_write_isolation.sql \
+            supabase/tests/p1_3_phi_deidentified_enforcement.sql \
+            supabase/tests/p1_16_catalog_invariants.sql \
+            supabase/tests/p1_17_legacy_rpc_containment.sql \
+            supabase/tests/p1_18_principal_status_rls.sql \
+            supabase/tests/p1_19_audit_secret_idempotency.sql \
+            supabase/tests/p1_20_attachment_authorization.sql \
+            supabase/tests/p1_21_policy_convergence.sql \
+            supabase/tests/p1_22_email_safety_controls.sql \
+            supabase/tests/p1_23_database_authorization_final.sql \
+            supabase/tests/p1_24_ai_quota_reservations.sql \
+            supabase/tests/p1_25_email_queue_claim.sql \
+            supabase/tests/p1_26_privileged_aal2.sql \
+            supabase/tests/p1_27_pending_profile_mfa.sql \
+            supabase/tests/p1_28_sso_secret_containment.sql \
+            supabase/tests/p1_29_stripe_event_claim.sql \
+            supabase/tests/p1_30_attachment_scanner_gate.sql \
+            supabase/tests/p1_31_email_operational_safety.sql \
+            supabase/tests/p1_32_clinical_command_boundary.sql \
+            supabase/tests/p1_33_billing_entitlement_authority.sql \
+            supabase/tests/p1_34_save_case_draft_command.sql \
+            supabase/tests/p2_01_secret_views_role_gate.sql \
+            supabase/tests/p2_02_rpc_tenant_checks.sql \
+            supabase/tests/p2_03_duty_faculty_rls.sql \
+            supabase/tests/p2_04_audit_and_notifications.sql \
+            supabase/tests/p2_05_retention_v4.sql \
+            supabase/tests/p2_06_analytics_rpc.sql \
+            supabase/tests/p2_07_push_tokens_rls.sql \
+            supabase/tests/p2_08_ai_quota_release.sql \
+            supabase/tests/p2_09_role_destination_guard.sql \
+            supabase/tests/p2_10_no_debug_artifacts.sql \
+            supabase/tests/p2_11_platform_authority.sql \
+            supabase/tests/p2_12_tenant_lifecycle.sql \
+            supabase/tests/p2_13_data_mode_policy.sql \
+            supabase/tests/p2_14_theme_revisions.sql \
+            supabase/tests/p2_15_site_pages.sql \
+            supabase/tests/p3_01_mobile_qualification_boundaries.sql \
+            supabase/tests/p3_02_publish_contract.sql \
+            supabase/tests/p3_03_case_operation_rpc.sql \
+            supabase/tests/p3_04_mode_immutable.sql \
+            supabase/tests/p3_05_definer_audit.sql
   e2e:
     runs-on: ubuntu-latest
     # Full-stack harness (T02). Runs only when the owner enables it and
@@ -152,11 +205,13 @@ jobs:
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
       BASE_URL: http://localhost:3000
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with: { version: 9.15.0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: '22.14.0', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @elogbook/web exec playwright install --with-deps chromium
       - run: pnpm build:web
@@ -176,11 +231,16 @@ jobs:
   deno-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v2
-        with: { deno-version: v2.x }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with: { deno-version: v2.9.5 }
+      - name: Check locked Deno source
+        shell: bash
+        run: deno check --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock supabase/functions/payment-webhook/index.ts
       - name: Run Deno unit tests (isolated; lifecycle suite needs live Supabase and runs after `supabase start`)
         shell: bash
         run: |
           set -o pipefail
-          deno test --no-lock --no-check --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20
+          deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20

@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "schema": "elogbook.test-inventory/v1",
+  "as_of": "2026-09-25",
+  "scope": "Gate D maintained security suites and non-legacy database tests",
+  "policy": "Test entries require plan, specification, and check identifiers. ADR identifiers are required when applicable and otherwise remain explicitly empty. Helper entries require helper_reason.",
+  "references": {
+    "plans": {
+      "PLAN-ENTERPRISE-SECURITY": {
+        "path": "docs/superpowers/plans/2026-09-23-enterprise-security-hardening.md",
+        "locators": ["Task 3", "Task 5", "Task 6", "Task 7", "Task 8", "Task 10", "Task 12", "Task 17"]
+      },
+      "PLAN-PRODUCTION-READINESS": {
+        "path": "PRODUCTION_UPGRADE_PLAN.md",
+        "locators": ["Gate B", "Gate C", "Gate D", "Gate G"]
+      },
+      "PLAN-ULTIMATE-UPGRADE": {
+        "path": "docs/ULTIMATE_UPGRADE_PLAN.md",
+        "locators": ["TEST2-002", "TEST2-003"]
+      },
+      "PLAN-LAUNCH-HARDENING": {
+        "path": "docs/LAUNCH_UPGRADE_PLAN.md",
+        "locators": ["Task 2.1", "Task 8.3"]
+      },
+      "PLAN-ENTERPRISE-EMAIL": {
+        "path": "docs/superpowers/plans/2026-09-24-enterprise-email-platform.md",
+        "locators": ["Phase 1", "Phase 2"]
+      }
+    },
+    "specs": {
+      "SPEC-ENTERPRISE-SECURITY": {
+        "path": "docs/superpowers/specs/2026-09-23-enterprise-security-hardening-design.md",
+        "locators": ["1", "4.1", "4.2", "4.7", "4.8", "6"]
+      },
+      "SPEC-CLINICAL-CORE": {
+        "path": "docs/superpowers/specs/2026-09-23-clinical-core-remediation-design.md",
+        "locators": ["4", "5.2", "5.3", "8"]
+      },
+      "SPEC-ENTERPRISE-EMAIL": {
+        "path": "docs/superpowers/specs/2026-09-24-enterprise-email-platform-design.md",
+        "locators": ["6", "7", "8"]
+      }
+    },
+    "adrs": {
+      "ADR-001": {
+        "path": "docs/upgrade/evidence/mobile/adr-001-local-first.md"
+      },
+      "ADR-002": {
+        "path": "docs/upgrade/evidence/mobile/adr-002-storage-key.md"
+      }
+    },
+    "checks": {
+      "CHECK-CI-DB-TESTS": {
+        "path": ".github/workflows/ci.yml",
+        "locator": "db-tests"
+      },
+      "CHECK-GATE-D": {
+        "path": "scripts/verify-security-tests.mjs",
+        "command": "node scripts/verify-security-tests.mjs"
+      },
+      "CHECK-PNPM-TEST-UNIT": {
+        "path": "package.json",
+        "command": "pnpm test:unit"
+      }
+    }
+  },
+  "entries": [
+    {"path":"apps/web/lib/__tests__/control-plane-authorization.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/lib/setup/__tests__/restore-target.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/backup/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/backup/restore/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/uninstall/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/lib/supabase/__tests__/platform-guard-fixture.ts","kind":"helper","helper_reason":"Shared Supabase client stubs for control-plane route tests; contains no test declarations of its own.","gate_d":null},
+    {"path":"apps/web/app/api/[tenant]/admin/users/__tests__/cross-tenant.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-ULTIMATE-UPGRADE"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/lib/__tests__/rate-limit-contract.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-PRODUCTION-READINESS","PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/lib/__tests__/client-ip.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-PRODUCTION-READINESS"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/health/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-PRODUCTION-READINESS"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/ready/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-PRODUCTION-READINESS","PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/app/api/[tenant]/cases/[id]/submit/__tests__/route.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"apps/web/lib/__tests__/clinical-command-boundary.test.ts","kind":"test","framework":"vitest","gate_d":"suite","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-GATE-D","CHECK-PNPM-TEST-UNIT"]},
+    {"path":"supabase/tests/p1_1b_cross_tenant_write_isolation.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ULTIMATE-UPGRADE"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_3_phi_deidentified_enforcement.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ULTIMATE-UPGRADE"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_16_catalog_invariants.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_17_legacy_rpc_containment.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_18_principal_status_rls.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_19_audit_secret_idempotency.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_20_attachment_authorization.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_21_policy_convergence.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_22_email_safety_controls.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-ENTERPRISE-EMAIL"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-ENTERPRISE-EMAIL"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_23_database_authorization_final.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_24_ai_quota_reservations.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_25_email_queue_claim.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-ENTERPRISE-EMAIL"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-ENTERPRISE-EMAIL"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_26_privileged_aal2.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_27_pending_profile_mfa.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_28_sso_secret_containment.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_29_stripe_event_claim.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-LAUNCH-HARDENING"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_30_attachment_scanner_gate.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_31_email_operational_safety.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY","PLAN-ENTERPRISE-EMAIL"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-ENTERPRISE-EMAIL"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_32_clinical_command_boundary.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_33_billing_entitlement_authority.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p1_34_save_case_draft_command.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_01_secret_views_role_gate.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-LAUNCH-HARDENING","PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_02_rpc_tenant_checks.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_03_duty_faculty_rls.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_04_audit_and_notifications.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_05_retention_v4.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_06_analytics_rpc.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_07_push_tokens_rls.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_08_ai_quota_release.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_09_role_destination_guard.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_10_no_debug_artifacts.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_11_platform_authority.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_12_tenant_lifecycle.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_13_data_mode_policy.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_14_theme_revisions.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p2_15_site_pages.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_01_mobile_qualification_boundaries.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":["ADR-001","ADR-002"],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_02_publish_contract.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_03_case_operation_rpc.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":["ADR-002"],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_04_mode_immutable.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY","SPEC-CLINICAL-CORE"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]},
+    {"path":"supabase/tests/p3_05_definer_audit.sql","kind":"test","framework":"pgTAP","gate_d":"database","plan_ids":["PLAN-ENTERPRISE-SECURITY"],"spec_ids":["SPEC-ENTERPRISE-SECURITY"],"adr_ids":[],"check_ids":["CHECK-CI-DB-TESTS","CHECK-GATE-D"]}
+  ]
+}

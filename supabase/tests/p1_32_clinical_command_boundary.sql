@@ -14,7 +14,7 @@
 --   13   the submit command is idempotent on replay
 --   14-15 the command RPCs are authenticated-only
 BEGIN;
-SELECT plan(19);
+SELECT plan(23);
 
 INSERT INTO public.tenants (id, name, slug, tenant_type, mrn_hash_salt, status)
 VALUES
@@ -62,6 +62,10 @@ VALUES
   ('00000000-0000-0000-0000-000000003245', '00000000-0000-0000-0000-000000003202', '00000000-0000-0000-0000-000000003223', '00000000-0000-0000-0000-000000003232', CURRENT_DATE, 'pending', true, '{}'::jsonb),
   ('00000000-0000-0000-0000-000000003246', '00000000-0000-0000-0000-000000003203', '00000000-0000-0000-0000-000000003224', '00000000-0000-0000-0000-000000003233', CURRENT_DATE, 'draft', true, '{}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.approval_requests (entry_id, supervisor_id, tenant_id, status, resolved_at)
+VALUES ('00000000-0000-0000-0000-000000003242', '00000000-0000-0000-0000-000000003221', '00000000-0000-0000-0000-000000003201', 'approved', NOW())
+ON CONFLICT (entry_id, supervisor_id) DO NOTHING;
 
 -- 1-2. AAL1 direct approve/reject is denied by the state machine even if a
 --      policy were ever to let the row through.
@@ -136,7 +140,16 @@ SELECT is(
   'the rejected case is still rejected after the denied direct write'
 );
 
--- 7-8. The AAL2 decide command approves, and replays without re-applying.
+-- 7. An AAL1 privileged session receives a stable denial code from the command.
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal1"}';
+SELECT is(
+  (SELECT public.decide_case_command(
+    '00000000-0000-0000-0000-000000003242', 'p1-32-decide-aal1', 'approve', NULL) ->> 'code'),
+  'forbidden',
+  'an AAL1 supervisor receives forbidden instead of an exception'
+);
+
+-- 8-9. The AAL2 decide command approves, and replays without re-applying.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
 INSERT INTO public.approval_requests (entry_id, supervisor_id, tenant_id, status)
 VALUES ('00000000-0000-0000-0000-000000003241', '00000000-0000-0000-0000-000000003221', '00000000-0000-0000-0000-000000003201', 'pending')
@@ -160,7 +173,7 @@ SELECT is(
   'a replayed decision does not duplicate the outbox event'
 );
 
--- 9. Cross-tenant decisions are refused.
+-- 10. Cross-tenant decisions are refused.
 SELECT is(
   (SELECT public.decide_case_command(
     '00000000-0000-0000-0000-000000003245', 'p1-32-decide-x', 'approve', NULL) ->> 'error'),
@@ -168,7 +181,50 @@ SELECT is(
   'a command cannot decide a case in another tenant'
 );
 
--- 11. The submit command takes a rejected case to pending and creates the request.
+SELECT is(
+  (SELECT public.decide_case_command(
+     '00000000-0000-0000-0000-000000003242', 'p1-32-decide-resolved', 'approve', NULL) ->> 'code'),
+  'state_conflict',
+  'a case whose approval request is already resolved returns state_conflict'
+);
+
+-- 11. Authoritative lifecycle failures are returned as stable codes.
+RESET ROLE;
+UPDATE public.profiles
+SET status = 'suspended'
+WHERE id = '00000000-0000-0000-0000-000000003221';
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
+SELECT is(
+  (SELECT public.decide_case_command(
+    '00000000-0000-0000-0000-000000003242', 'p1-32-decide-suspended-profile', 'approve', NULL) ->> 'code'),
+  'account_inactive',
+  'a suspended reviewer receives account_inactive'
+);
+
+RESET ROLE;
+UPDATE public.profiles
+SET status = 'active'
+WHERE id = '00000000-0000-0000-0000-000000003221';
+UPDATE public.tenants
+SET status = 'suspended'
+WHERE id = '00000000-0000-0000-0000-000000003201';
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003211","role":"authenticated","aal":"aal2"}';
+SELECT is(
+  (SELECT public.decide_case_command(
+    '00000000-0000-0000-0000-000000003242', 'p1-32-decide-suspended-tenant', 'approve', NULL) ->> 'code'),
+  'tenant_suspended',
+  'a suspended tenant returns tenant_suspended'
+);
+
+RESET ROLE;
+UPDATE public.tenants
+SET status = 'active'
+WHERE id = '00000000-0000-0000-0000-000000003201';
+SET LOCAL ROLE authenticated;
+
+-- 13. The submit command takes a rejected case to pending and creates the request.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003212","role":"authenticated","aal":"aal1"}';
 SELECT is(
   (SELECT public.submit_case_command('00000000-0000-0000-0000-000000003244', 'p1-32-submit-1', 'rejected') ->> 'status'),

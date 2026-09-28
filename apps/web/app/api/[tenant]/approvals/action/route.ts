@@ -1,13 +1,49 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse, after } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
 import { dispatchWebhookEvent } from '@/lib/webhooks';
 import { notifyCaseApproval } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 const ALLOWED_ROLES = ['supervisor', 'director', 'institution_admin', 'admin'];
+const approvalActionSchema = z.object({
+  action: z.enum(['approve', 'reject']),
+  entry_id: z.string().min(1).max(128),
+  // Mandatory so a retried decision replays the stored result instead of
+  // re-applying an approval.
+  request_id: z.string().trim().min(1).max(128),
+  comment: z.string().max(2000).optional(),
+}).strict();
+
+const CODE_STATUS: Record<string, number> = {
+  invalid_request: 400,
+  forbidden: 403,
+  account_inactive: 403,
+  tenant_suspended: 403,
+  no_approval_request: 403,
+  not_found: 404,
+  state_conflict: 409,
+  idempotency_conflict: 409,
+  internal_error: 500,
+};
+
+const CODE_MESSAGE: Record<string, string> = {
+  invalid_request: 'Invalid request body',
+  forbidden: 'You are not allowed to decide this case',
+  account_inactive: 'Your account is not active',
+  tenant_suspended: 'This program is not active',
+  no_approval_request: 'No open approval request exists for this case.',
+  not_found: 'Case not found',
+  state_conflict: 'This case has already been decided. Reload to see its current state.',
+  idempotency_conflict: 'This request key was already used with different input.',
+  internal_error: 'Could not record this decision. Please try again.',
+};
 
 /**
  * P1.4 + P1.5: API route for approval actions (approve/reject) with
@@ -21,9 +57,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  // ---- CSRF check ----
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, approvalActionSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   // ---- Rate limit by IP (20 req/min) ----
   const ip = getClientIp(request);
@@ -31,35 +69,29 @@ export async function POST(
   const { allowed, retryAfter } = await checkRateLimit(`approve-action:${ip}`, 20);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  // ---- Auth ----
+  // ---- Auth and server-side AAL2 ----
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
+    const error = security.reason === 'aal2_required'
+      ? 'Re-authentication with MFA required'
+      : security.reason === 'unauthenticated' || security.reason === 'session_required' || security.reason === 'session_unavailable'
+        ? 'Unauthorized'
+        : security.reason === 'profile_not_found'
+          ? 'Profile not found'
+          : security.reason === 'tenant_not_found'
+            ? 'Tenant not found'
+            : 'Security context unavailable';
+    return NextResponse.json({ error }, { status: security.status });
   }
 
-  // ---- Get caller's profile + tenant ----
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, full_name, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 403 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
+  const { user, profile, tenant } = security.context;
   const { tenant: tenantSlug } = await params;
 
-  // ---- P1.6: Tenant-slug URL validation ----
   if (tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
 
-  // ---- Role check ----
   if (!ALLOWED_ROLES.includes(profile.role)) {
     return NextResponse.json(
       { error: 'Only supervisors and directors can perform approval actions' },
@@ -67,35 +99,13 @@ export async function POST(
     );
   }
 
-  // ---- Parse body ----
-  let body: { action?: string; entry_id?: string; comment?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { action, entry_id, comment } = body;
-
-  if (!action || !entry_id) {
-    return NextResponse.json(
-      { error: 'action and entry_id are required' },
-      { status: 400 },
-    );
-  }
-
-  if (action !== 'approve' && action !== 'reject') {
-    return NextResponse.json(
-      { error: 'action must be "approve" or "reject"' },
-      { status: 400 },
-    );
-  }
+  const { action, entry_id: entryId, request_id: requestId, comment } = guarded.data;
 
   // ---- Ensure the entry belongs to the same tenant ----
   const { data: entry } = await supabase
     .from('case_entries')
     .select('id, tenant_id, resident_id, status')
-    .eq('id', entry_id)
+    .eq('id', entryId)
     .single();
 
   if (!entry) {
@@ -106,31 +116,57 @@ export async function POST(
     return NextResponse.json({ error: 'Entry does not belong to your tenant' }, { status: 403 });
   }
 
-  // ---- Call the Supabase RPC ----
-  const rpcName = action === 'approve' ? 'approve_case' : 'reject_case';
-  const { error: rpcError } = await supabase.rpc(rpcName, {
-    p_entry_id: entry_id,
-    p_supervisor_id: user.id,
-    p_comment: comment || null,
+  // ---- Call the AAL2-gated clinical command ----
+  // The database owns the transition, the approval-request resolution, the
+  // audit row and the outbox row. This route never writes case status.
+  const { data: rpcData, error: rpcError } = await supabase.rpc('decide_case_command', {
+    p_case_id: entryId,
+    p_request_id: requestId,
+    p_decision: action,
+    p_reason: comment || null,
   });
 
   if (rpcError) {
+    logger.error('decide_case command failed', rpcError, { entryId, requestId });
     return NextResponse.json(
-      { error: rpcError.message || 'Failed to process approval action' },
+      { error: CODE_MESSAGE.internal_error, success: false, code: 'internal_error' },
       { status: 500 },
     );
   }
 
-  // Insert notification for resident
+  const rpcResult = (rpcData ?? {}) as Record<string, unknown>;
+  if (rpcResult.success !== true) {
+    const code = typeof rpcResult.code === 'string' && rpcResult.code in CODE_STATUS
+      ? rpcResult.code
+      : 'internal_error';
+    return NextResponse.json(
+      { error: CODE_MESSAGE[code], success: false, code },
+      { status: CODE_STATUS[code] },
+    );
+  }
+
   const approved = action === 'approve';
-  await supabase.from('notifications').insert({
-    tenant_id: profile.tenant_id,
-    user_id: entry.resident_id,
-    type: 'approval',
-    title: `Case ${approved ? 'approved' : 'rejected'}`,
-    body: comment || null,
-    link: `/${tenantSlug}/cases/${entry_id}`,
-  }).maybeSingle();
+  const { data: residentAuth, error: residentAuthError } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('id', entry.resident_id)
+    .single();
+
+  if (residentAuthError) {
+    logger.error('Failed to resolve approval notification recipient', residentAuthError, { entryId });
+  } else if (residentAuth?.user_id) {
+    const { error: notificationError } = await supabase.from('notifications').insert({
+      tenant_id: profile.tenant_id,
+      user_id: residentAuth.user_id,
+      type: 'approval',
+      title: `Case ${approved ? 'approved' : 'rejected'}`,
+      body: `Your case was ${approved ? 'approved' : 'rejected'}. Open the case to review the decision.`,
+      link: `/${tenantSlug}/cases/${entryId}`,
+    });
+    if (notificationError) {
+      logger.error('Failed to persist approval notification', notificationError, { entryId });
+    }
+  }
 
   // Fire webhook event after successful approval/rejection.
   // `after()` guarantees post-response execution on serverless — a bare
@@ -141,18 +177,18 @@ export async function POST(
       await dispatchWebhookEvent({
         tenant_id: profile.tenant_id,
         event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
-        event_id: entry_id,
-        data: { entry_id, comment: comment || null, acted_by: user.id },
+        event_id: entryId,
+        data: { entry_id: entryId, acted_by: user.id },
       });
     } catch (err) {
-      console.error('[webhooks] Approval dispatch error:', err);
+      logger.error('Failed to dispatch approval webhook', err, { entryId: entryId });
     }
   });
 
   // Push notification to the resident (fire-and-forget; failures are logged).
   after(() =>
-    notifyCaseApproval(entry_id, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name)
-      .catch((err) => console.error('[push] approval push failed:', err))
+    notifyCaseApproval(entryId, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name ?? '')
+      .catch((err) => logger.error('Failed to send approval push notification', err, { entryId: entryId }))
   );
 
   // Email fallback when no push token (best-effort; never fails the approval).
@@ -165,8 +201,15 @@ export async function POST(
       const serviceRole = createServiceRoleClient();
       const { data: authUser } = await serviceRole.auth.admin.getUserById(profUserId);
       const residentEmail = authUser?.user?.email?.toLowerCase();
-      if (residentEmail) {
-        await serviceRole.from('email_queue').insert({ template_key: approved ? 'case.approved' : 'case.rejected', to_email: residentEmail, tenant_id: profile.tenant_id, payload: { to_name: '', reviewer_name: profile.full_name, case_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/${tenantSlug}/cases/${entry_id}` }, priority: 5 });
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '') || '';
+      if (residentEmail && siteUrl) {
+        await serviceRole.from('email_queue').insert({
+          template_key: approved ? 'case.approved' : 'case.rejected',
+          to_email: residentEmail,
+          tenant_id: profile.tenant_id,
+          payload: { case_url: `${siteUrl}/${tenantSlug}/cases/${entryId}` },
+          priority: 5,
+        });
       }
     }
   } catch { /* email fallback is best-effort */ }
