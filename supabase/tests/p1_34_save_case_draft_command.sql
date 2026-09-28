@@ -61,7 +61,7 @@ SELECT is(
       'is_deidentified', true,
       'patient_age_years', 30
     )
-  ) ->> 'success'),
+  ) ->> 'success')::boolean,
   true,
   'an active resident creates a de-identified draft through the command'
 );
