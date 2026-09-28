@@ -130,14 +130,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
                 This case has been logged and is part of your permanent record.
               </div>
               {(!approvals || approvals.length === 0) && (
-                <form action={`/${tenantSlug}/cases/${id}/request-verification`} method="POST">
-                  <button
-                    type="submit"
-                    className="rounded-full border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors"
-                  >
-                    Request Verification
-                  </button>
-                </form>
+                <span className="text-sm text-text-muted">
+                  Verification requests are handled by your program administrator.
+                </span>
               )}
             </div>
           )}
