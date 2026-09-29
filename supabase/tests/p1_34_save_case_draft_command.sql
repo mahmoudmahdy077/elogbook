@@ -196,7 +196,7 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","
           'patient_age_years', 30
         )
       )::text),
-      '{"code": "required_field_missing", "error": "required template fields are missing", "missing_fields": ["procedure_name"], "success": false}',
+      '{"code": "required_field_missing", "error": "required template fields are missing", "success": false, "missing_fields": ["procedure_name"]}',
       'the replay returns the stored refusal naming the missing field'
     );
 
@@ -212,7 +212,7 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","
           'patient_age_years', 30
         )
       )::text),
-      '{"code": "required_field_missing", "error": "required template fields are missing", "missing_fields": ["supervised"], "success": false}',
+      '{"code": "required_field_missing", "error": "required template fields are missing", "success": false, "missing_fields": ["supervised"]}',
       'a required checkbox is satisfied only when true'
     );
 
