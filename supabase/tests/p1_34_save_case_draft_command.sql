@@ -184,36 +184,37 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000003411","role":"authenticated","aal":"aal1"}';
 
 
-SELECT ok(
-  (SELECT public.save_case_draft_command(
-    'p1-34-missing-text',
-    jsonb_build_object(
-      'template_id', '00000000-0000-0000-0000-000000003431',
-      'case_date', '2026-09-23',
-      'field_values', jsonb_build_object('procedure_name', '   ', 'supervised', true),
-      'accreditation_mappings', '[]'::jsonb,
-      'is_deidentified', true,
-      'patient_age_years', 30
-    )
-  ) -> 'missing_fields') ? 'procedure_name',
-  'the missing required field key is returned'
-);
+    SELECT is(
+      (SELECT public.save_case_draft_command(
+        'p1-34-missing-text',
+        jsonb_build_object(
+          'template_id', '00000000-0000-4000-8000-000000003431',
+          'case_date', '2026-09-23',
+          'field_values', jsonb_build_object('procedure_name', '   ', 'supervised', true),
+          'accreditation_mappings', '[]'::jsonb,
+          'is_deidentified', true,
+          'patient_age_years', 30
+        )
+      )::text),
+      '{"code": "required_field_missing", "error": "required template fields are missing", "missing_fields": ["procedure_name"], "success": false}',
+      'the replay returns the stored refusal naming the missing field'
+    );
 
-SELECT is(
-  (SELECT public.save_case_draft_command(
-    'p1-34-missing-checkbox',
-    jsonb_build_object(
-      'template_id', '00000000-0000-0000-0000-000000003431',
-      'case_date', '2026-09-23',
-      'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', false),
-      'accreditation_mappings', '[]'::jsonb,
-      'is_deidentified', true,
-      'patient_age_years', 30
-    )
-  ) ->> 'code'),
-  'required_field_missing',
-  'a required checkbox is satisfied only when true'
-);
+    SELECT is(
+      (SELECT public.save_case_draft_command(
+        'p1-34-missing-checkbox',
+        jsonb_build_object(
+          'template_id', '00000000-0000-4000-8000-000000003431',
+          'case_date', '2026-09-23',
+          'field_values', jsonb_build_object('procedure_name', 'Appendectomy', 'supervised', false),
+          'accreditation_mappings', '[]'::jsonb,
+          'is_deidentified', true,
+          'patient_age_years', 30
+        )
+      )::text),
+      '{"code": "required_field_missing", "error": "required template fields are missing", "missing_fields": ["supervised"], "success": false}',
+      'a required checkbox is satisfied only when true'
+    );
 
 SELECT is(
   (SELECT public.save_case_draft_command(
