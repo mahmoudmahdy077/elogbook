@@ -52,8 +52,11 @@ ON CONFLICT (id) DO NOTHING;
 SET LOCAL ROLE anon;
 SET LOCAL request.jwt.claims TO '{}';
 
-SELECT is_empty(
+-- anon holds no SELECT grant on the clinical tables, so the read is refused by
+-- privilege rather than filtered to zero rows by RLS.
+SELECT throws_ok(
   $$SELECT id FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000001841'$$,
+  '42501',
   'anonymous principals cannot read clinical rows'
 );
 

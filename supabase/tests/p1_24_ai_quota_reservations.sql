@@ -48,11 +48,16 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000002411","
 INSERT INTO quota_reservation_ids (name, id)
 SELECT 'first', (public.consume_ai_quota('00000000-0000-0000-0000-000000002412', 1) ->> 'reservation_id')::UUID;
 
+-- The consume above ran as the resident; this assertion reads the toggle
+-- directly, and authenticated holds no grant on it, so it runs as the owner.
+RESET ROLE;
 SELECT is(
   (SELECT quota_used FROM public.resident_ai_toggle WHERE tenant_id = '00000000-0000-0000-0000-000000002410' AND resident_id = '00000000-0000-0000-0000-000000002412'),
   1,
   'consume records a quota reservation increment'
 );
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000002411","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000002410","user_role":"resident"}}';
 SELECT ok(
   (SELECT count(*) FROM quota_reservation_ids WHERE name = 'first') = 1,
   'consume returns a single reservation id'
