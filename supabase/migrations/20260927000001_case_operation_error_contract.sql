@@ -85,31 +85,32 @@ BEGIN
     RETURN 'phi_detected';
   END IF;
 
-  -- Returned as a single CASE expression: a bare CASE is not a valid
-  -- PL/pgSQL statement, and THEN takes a value rather than a statement.
-  RETURN CASE COALESCE(p_sqlstate, '') WHEN
-    -- insufficient_privilege
-    '42501' THEN 'forbidden'
-    -- unique_violation
-    '23505' THEN 'conflict'
-    -- foreign_key_violation
-    '23503' THEN 'invalid_reference'
-    -- not_null_violation
-    '23502' THEN 'validation: missing_value'
-    -- check_violation
-    '23514' THEN 'validation: constraint_failed'
-    -- invalid_text_representation / invalid_parameter_value
-    '22P02', '22007', '22008', '22003' THEN 'validation: invalid_value'
-    -- invalid_json_text / invalid_datetime_format
-    '22032', '22007' THEN 'validation: invalid_value'
-    -- raise_exception from a state machine or a write-once guard
-    'P0001' THEN 'state_conflict'
-    -- raise_exception for a bad argument
-    'P0004' THEN 'invalid_request'
-    -- serialization_failure / deadlock_detected: the work is retryable
-    '40001', '40P01' THEN 'transient: retryable'
-    ELSE 'internal_error'
-  END;
+  -- An explicit chain rather than a CASE expression: each branch returns a
+  -- literal code, and no SQLSTATE can fall through to a guess.
+  IF COALESCE(p_sqlstate, '') = '42501' THEN          -- insufficient_privilege
+    RETURN 'forbidden';
+  ELSIF COALESCE(p_sqlstate, '') = '23505' THEN        -- unique_violation
+    RETURN 'conflict';
+  ELSIF COALESCE(p_sqlstate, '') = '23503' THEN        -- foreign_key_violation
+    RETURN 'invalid_reference';
+  ELSIF COALESCE(p_sqlstate, '') = '23502' THEN        -- not_null_violation
+    RETURN 'validation: missing_value';
+  ELSIF COALESCE(p_sqlstate, '') = '23514' THEN        -- check_violation
+    RETURN 'validation: constraint_failed';
+  ELSIF COALESCE(p_sqlstate, '') IN (
+         '22P02', '22007', '22008', '22003',           -- invalid_text_representation,
+         '22032'                                        -- invalid_parameter_value,
+       ) THEN                                            -- invalid_json_text, invalid_datetime_format
+    RETURN 'validation: invalid_value';
+  ELSIF COALESCE(p_sqlstate, '') = 'P0001' THEN        -- state machine or write-once guard
+    RETURN 'state_conflict';
+  ELSIF COALESCE(p_sqlstate, '') = 'P0004' THEN        -- raise_exception for a bad argument
+    RETURN 'invalid_request';
+  ELSIF COALESCE(p_sqlstate, '') IN ('40001', '40P01') THEN
+    RETURN 'transient: retryable';                      -- serialization_failure, deadlock
+  ELSE
+    RETURN 'internal_error';
+  END IF;
 END;
 $$;
 
