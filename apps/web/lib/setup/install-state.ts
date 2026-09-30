@@ -35,10 +35,16 @@ export function controlPlaneStateDir(env: RestoreEnv = process.env): string {
 
 export function isSetupComplete(env: RestoreEnv = process.env): boolean {
   const marker = setupMarkerPath(env);
+  // The marker is only meaningful if it is a real file, so open it with
+  // O_NOFOLLOW and inspect the descriptor rather than the path.
+  let fd: number | null = null;
   try {
-    return existsSync(marker) && lstatSync(marker).isFile();
+    fd = openSync(marker, constants.O_RDONLY | constants.O_NOFOLLOW);
+    return fstatSync(fd).isFile();
   } catch {
     return false;
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
 }
 
