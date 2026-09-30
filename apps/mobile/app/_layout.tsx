@@ -33,6 +33,7 @@ import { supabase } from '../lib/supabase';
 import { Sentry } from '../lib/sentry';
 import { syncService } from '../lib/sync';
 import { bootSession, requireFreshCapability, resetSessionForTests, getSession } from '../lib/session';
+import { getAccountContext, getPreviousAccountContext } from '../lib/account-context';
 import { disposeAccountContext } from '../lib/session-disposal';
 import { clearTelemetryIdentity } from '../lib/production/telemetry';
 import { logInfo, logWarn } from '../lib/logger';
@@ -141,7 +142,7 @@ export default function RootLayout() {
       try {
         const s = await bootSession(supabase as never);
         logInfo('session.boot', { state: s.state });
-        if (!cancelled) setSessionReady(s.state === 'ready' || s.state === 'suspended');
+        if (!cancelled) setSessionReady(s.state === 'ready');
       } catch {
         if (!cancelled) setSessionReady(false);
       }
@@ -151,22 +152,39 @@ export default function RootLayout() {
     };
   }, [authLoading, isAuthenticated]);
 
-  // M1.3: sign-out disposal with real hooks (stop sync, wipe draft,
-  // quarantine queue under old scope, clear telemetry + push identity).
+  // M1.3: sign-out disposal with real hooks (stop sync, reset local DB,
+  // clear old-scope stores, telemetry, and push identity).
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event !== 'SIGNED_OUT') return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event !== 'SIGNED_OUT' && event !== 'SIGNED_IN') return;
+      const activeContext = getAccountContext();
+      if (event === 'SIGNED_IN' && !activeContext) return;
+      const sessionMetadata = session?.user?.app_metadata as Record<string, unknown> | undefined;
+      const sameScope = event === 'SIGNED_IN'
+        && activeContext
+        && session?.user?.id === activeContext.userId
+        && (typeof sessionMetadata?.tenant_id !== 'string' || sessionMetadata.tenant_id === activeContext.tenantId)
+        && (typeof sessionMetadata?.profile_id !== 'string' || sessionMetadata.profile_id === activeContext.profileId);
+      if (sameScope) return;
+      const isSignOut = event === 'SIGNED_OUT';
       try {
         await disposeAccountContext({
-          stopWorkers: [() => syncService.stopPeriodicSync()],
+          stopWorkers: [() => syncService.resetIdentityState()],
           clearTelemetryIdentity: () => clearTelemetryIdentity(),
+          clearIdentityCaches: () => clearBiometricAuthCache(),
           rotatePushContext: () => {
             clearBadge().catch(() => undefined);
           },
-        });
+        }, event === 'SIGNED_IN' ? getPreviousAccountContext() : undefined);
       } catch {
         // best-effort
       }
+      if (!isSignOut) {
+        const next = await bootSession(supabase as never).catch(() => null);
+        setSessionReady(next?.state === 'ready');
+        return;
+      }
+      resetSessionForTests();
       setSessionReady(false);
       router.replace('/login');
     });

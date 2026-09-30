@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
@@ -21,32 +22,19 @@ export async function GET(
   const { allowed, retryAfter } = await checkRateLimit(`list-invoices:${ip}`, 15);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  // ---- Auth ----
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
+    return NextResponse.json(
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status },
+    );
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
+  const { profile, tenant } = security.context;
   const { tenant: paramTenant } = await params;
-  if (tenant.slug !== paramTenant) {
-    return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-  }
-
-  // Billing is admin-only, mirroring the billing page gate.
-  if (!['institution_admin', 'admin'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  if (tenant.slug !== paramTenant || !['institution_admin', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // ---- Resolve the tenant's Stripe customer id ----

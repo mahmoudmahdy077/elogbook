@@ -50,6 +50,15 @@ export default [
     },
   },
   {
+    files: ['plugins/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     ignores: ['node_modules/', 'dist/', 'build/', '.expo/', '*.min.js'],
   },
 ];

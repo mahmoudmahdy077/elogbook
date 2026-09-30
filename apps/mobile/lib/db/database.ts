@@ -1,15 +1,3 @@
-/**
- * WatermelonDB database initialization.
- *
- * Storage claim (precise, see ADR-002): this adapter is a NORMAL
- * SQLiteAdapter with NO native key / SQLCipher option wired. Database
- * encryption at rest is NOT provided by this module. PHI confidentiality
- * at rest comes ONLY from field-level AEAD envelopes (lib/crypto/aead.ts
- * via data-access.ts sealPhi and lib/security/phi-encryption.ts) keyed by
- * the SecureStore device key. Do not claim otherwise without a signed
- * artifact inspection (ledger P1-sqlcipher-boundary).
- */
-
 import { Database } from '@nozbe/watermelondb';
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import { logError } from '../logger';
@@ -25,13 +13,26 @@ import { Comment } from './models/Comment';
 import { Shift } from './models/Shift';
 
 let _database: Database | null = null;
+let _resetFailure: Error | null = null;
 
-/**
- * Initialize the WatermelonDB database. Safe to call multiple times (returns
- * existing instance). The adapter is configured with JSI for synchronous
- * reads (fast path for offline queries).
- */
+export const PLAINTEXT_DATABASE_PRODUCTION_ERROR =
+  '[database] plaintext SQLite is disabled in production until a verified encrypted adapter is configured';
+
+export function isProductionRuntime(): boolean {
+  return typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
+}
+
+export function isPlaintextDatabasePathEnabled(): boolean {
+  return !isProductionRuntime();
+}
+
+export function assertLocalClinicalStorageAllowed(): void {
+  if (isProductionRuntime()) throw new Error(PLAINTEXT_DATABASE_PRODUCTION_ERROR);
+}
+
 export async function initDatabase(): Promise<Database> {
+  assertLocalClinicalStorageAllowed();
+  if (_resetFailure) throw _resetFailure;
   if (_database) return _database;
 
   const adapter = new SQLiteAdapter({
@@ -60,14 +61,32 @@ export async function initDatabase(): Promise<Database> {
   return _database;
 }
 
-/**
- * Get the already-initialized database instance. Throws if not yet initialized.
- */
+export async function resetDatabase(): Promise<void> {
+  let database = _database;
+  if (!database) {
+    if (isProductionRuntime()) return;
+    await initDatabase();
+    database = _database;
+  }
+  if (!database) return;
+  try {
+    await database.write(() => database.unsafeResetDatabase());
+    _database = null;
+    _resetFailure = null;
+  } catch (error) {
+    const failure = error instanceof Error ? error : new Error(String(error));
+    _database = null;
+    _resetFailure = failure;
+    logError('database.reset', failure);
+    throw failure;
+  }
+}
+
 export function getDatabase(): Database {
+  assertLocalClinicalStorageAllowed();
+  if (_resetFailure) throw _resetFailure;
   if (!_database) {
-    throw new Error(
-      'Database not initialized. Call initDatabase() first.',
-    );
+    throw new Error('Database not initialized. Call initDatabase() first.');
   }
   return _database;
 }

@@ -47,6 +47,7 @@ vi.mock('@/lib/rate-limit-redis', () => ({
 // ---------------------------------------------------------------------------
 const mockRpc = vi.fn();
 const mockFrom = vi.fn();
+const auditLogsInsert = vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }));
 const mockSupabase = {
   from: mockFrom,
   rpc: mockRpc,
@@ -57,18 +58,47 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerSupabase: () => Promise.resolve(mockSupabase),
 }));
 
+vi.mock('@/lib/supabase/security-context', () => ({
+  getSecurityContext: vi.fn(),
+}));
+
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { GET } from '../route';
 
 // Shared mock profile
 const profileData = {
   data: {
     id: 'p-1',
-    tenant_id: 't-1',
+    tenant_id: '11111111-1111-4111-8111-111111111111',
     role: 'director',
     tenants: { slug: 'demo' },
   },
   error: null,
 };
+
+function securityContext(overrides: { profile?: Record<string, unknown>; tenant?: Record<string, unknown> } = {}) {
+  return {
+    ok: true as const,
+    context: {
+      user: { id: 'u-1' },
+      profile: {
+        id: 'p-1',
+        tenant_id: '11111111-1111-4111-8111-111111111111',
+        role: 'director',
+        status: 'active',
+        full_name: 'Director',
+        ...overrides.profile,
+      },
+      tenant: {
+        id: '11111111-1111-4111-8111-111111111111',
+        slug: 'demo',
+        status: 'active',
+        ...overrides.tenant,
+      },
+      aal: 'aal2',
+    },
+  };
+}
 
 // Sample audit log rows
 const sampleLogs = [
@@ -117,6 +147,12 @@ describe('GET /api/[tenant]/audit/export', () => {
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: { access_token: 'user-jwt-token' } },
     });
+    vi.mocked(getSecurityContext).mockResolvedValue(securityContext() as never);
+
+    // Every export writes a required audit event through the trusted RPC, so
+    // the success path is the default for the whole suite.
+    mockRpc.mockReset().mockResolvedValue({ data: 'audit-row-1', error: null });
+    auditLogsInsert.mockClear();
 
     // Default mocks: profile lookup succeeds, audit logs return sample data
     mockFrom.mockImplementation((table: string) => {
@@ -139,7 +175,7 @@ describe('GET /api/[tenant]/audit/export', () => {
           limit: () => chain,
           gte: () => chain,
           lte: () => chain,
-          insert: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+          insert: auditLogsInsert,
           then: (resolve: (v: unknown) => void) => resolve(queryFn()),
         };
         return chain;
@@ -169,10 +205,11 @@ describe('GET /api/[tenant]/audit/export', () => {
   });
 
   it('rejects unauthenticated request', async () => {
-    mockSupabase.auth.getUser.mockResolvedValueOnce({
-      data: { user: null },
-      error: new Error('Auth error'),
-    });
+    vi.mocked(getSecurityContext).mockResolvedValueOnce({
+      ok: false,
+      reason: 'unauthenticated',
+      status: 401,
+    } as never);
 
     const req = makeGetRequest('https://app.elogbook.dev/demo/audit/export');
     const res = await GET(req, { params });
@@ -183,85 +220,44 @@ describe('GET /api/[tenant]/audit/export', () => {
   });
 
   it('rejects request when caller profile not found', async () => {
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'profiles') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: null, error: null }),
-            }),
-          }),
-        };
-      }
-      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) };
-    });
+    vi.mocked(getSecurityContext).mockResolvedValueOnce({
+      ok: false,
+      reason: 'profile_not_found',
+      status: 403,
+    } as never);
 
     const req = makeGetRequest('https://app.elogbook.dev/demo/audit/export');
     const res = await GET(req, { params });
 
     expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toBe('Profile not found');
+    expect(body.error).toBe('Forbidden');
   });
 
   it('rejects request when tenant slug mismatches', async () => {
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'profiles') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  id: 'p-1',
-                  tenant_id: 't-1',
-                  role: 'director',
-                  tenants: { slug: 'other-tenant' },
-                },
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) };
-    });
+    vi.mocked(getSecurityContext).mockResolvedValueOnce(securityContext({
+      tenant: { slug: 'other-tenant' },
+    }) as never);
 
     const req = makeGetRequest('https://app.elogbook.dev/demo/audit/export');
     const res = await GET(req, { params });
 
     expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toBe('Tenant mismatch');
+    expect(body.error).toBe('Forbidden');
   });
 
   it('rejects request from user with insufficient role', async () => {
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'profiles') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  id: 'p-1',
-                  tenant_id: 't-1',
-                  role: 'supervisor',
-                  tenants: { slug: 'demo' },
-                },
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) };
-    });
+    vi.mocked(getSecurityContext).mockResolvedValueOnce(securityContext({
+      profile: { role: 'supervisor' },
+    }) as never);
 
     const req = makeGetRequest('https://app.elogbook.dev/demo/audit/export');
     const res = await GET(req, { params });
 
     expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toContain('Only directors and admins');
+    expect(body.error).toBe('Forbidden');
   });
 
   it('rejects request with invalid format param', async () => {
@@ -398,7 +394,6 @@ describe('GET /api/[tenant]/audit/export', () => {
           eq: () => chain,
           order: () => chain,
           limit: () => chain,
-          insert: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }),
           then: (resolve: (v: unknown) => void) => resolve(Promise.resolve({ data: [], error: null })),
         };
         return chain;
@@ -415,5 +410,60 @@ describe('GET /api/[tenant]/audit/export', () => {
     const lines = text.trim().split('\n');
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('id,created_at');
+  });
+
+  // -------------------------------------------------------------------------
+  // Required audit write for the export itself
+  // -------------------------------------------------------------------------
+  describe('required audit write', () => {
+    it('writes the export through the trusted write_audit_event RPC', async () => {
+      const res = await GET(makeGetRequest('https://app.elogbook.dev/demo/audit/export'), { params });
+
+      expect(res.status).toBe(200);
+      expect(mockRpc).toHaveBeenCalledWith('write_audit_event', {
+        p_action: 'audit_export',
+        p_resource_type: 'tenant',
+        p_resource_id: null,
+        p_changes: { row_count: 2, format: 'csv', date_from: null, date_to: null },
+        p_tenant_id: '11111111-1111-4111-8111-111111111111',
+      });
+    });
+
+    it('never inserts into the audit_logs table directly', async () => {
+      await GET(makeGetRequest('https://app.elogbook.dev/demo/audit/export'), { params });
+
+      expect(auditLogsInsert).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when the required audit write fails', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'permission denied for table audit_logs' } });
+
+      const res = await GET(makeGetRequest('https://app.elogbook.dev/demo/audit/export'), { params });
+
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toBe('Could not record the export. Please try again.');
+      expect(JSON.stringify(body)).not.toContain('permission denied');
+    });
+
+    it('fails closed when the tenant id is not a usable uuid', async () => {
+      vi.mocked(getSecurityContext).mockResolvedValue(securityContext({
+        profile: { tenant_id: 'not-a-uuid' },
+        tenant: { id: 'not-a-uuid' },
+      }) as never);
+
+      const res = await GET(makeGetRequest('https://app.elogbook.dev/demo/audit/export'), { params });
+
+      expect(res.status).toBe(500);
+      expect(mockRpc).not.toHaveBeenCalled();
+    });
+  });
+
+  it('marks every export response no-store', async () => {
+    mockRpc.mockResolvedValue({ data: 'audit-row-1', error: null });
+
+    const res = await GET(makeGetRequest('https://app.elogbook.dev/demo/audit/export'), { params });
+
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 });

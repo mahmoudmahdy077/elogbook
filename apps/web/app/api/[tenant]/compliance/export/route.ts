@@ -1,13 +1,28 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { getSecurityContext } from '@/lib/supabase/security-context';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
+import { escapeCsvCell } from '@/lib/csv';
+import { NO_STORE_HEADERS } from '@/lib/audit/report-export';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import type { UserRole } from '@/lib/supabase/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
+
+/**
+ * A compliance export is a disclosure: audit metadata with user ids and IP
+ * addresses, consent records, PHI inventory counts, soft-deletion tombstones.
+ *
+ * Every response is no-store, including the denials -- a cached 403 is still a
+ * tenant's export surface being fingerprinted by an intermediary.
+ *
+ * No ETag is emitted. A validator is a promise that a matching representation
+ * exists somewhere reusable, and answering `If-None-Match` with 304 is exactly
+ * that promise for a dataset that must not outlive the request.
+ */
+const NO_STORE = NO_STORE_HEADERS;
 
 type Section = 'data-access' | 'phi-inventory' | 'consent' | 'retention';
 
@@ -31,35 +46,19 @@ export async function GET(
   const { allowed, retryAfter } = await checkRateLimit(`compliance-export:${ip}`, 10);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  // ---- Auth ----
   const supabase: SupabaseClient = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 403 });
-  }
-
-  const tenant = profile.tenants as unknown as { slug: string };
-  const { tenant: tenantSlug } = await params;
-
-  if (tenant.slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-  }
-
-  if (!ALLOWED_ROLES.includes(profile.role as UserRole)) {
+  const security = await getSecurityContext(supabase, { requiredAal: 'aal2' });
+  if (!security.ok) {
     return NextResponse.json(
-      { error: 'Only directors and admins can export compliance reports' },
-      { status: 403 },
+      { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
+      { status: security.status, headers: NO_STORE },
     );
+  }
+
+  const { profile, tenant } = security.context;
+  const { tenant: tenantSlug } = await params;
+  if (tenant.slug !== tenantSlug || !ALLOWED_ROLES.includes(profile.role as UserRole)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: NO_STORE });
   }
 
   // ---- Parse params ----
@@ -70,14 +69,14 @@ export async function GET(
   if (!section || !VALID_SECTIONS.includes(section)) {
     return NextResponse.json(
       { error: 'Invalid section. Must be one of: data-access, phi-inventory, consent, retention' },
-      { status: 400 },
+      { status: 400, headers: NO_STORE },
     );
   }
 
   if (format !== 'csv' && format !== 'pdf') {
     return NextResponse.json(
       { error: 'format must be "csv" or "pdf"' },
-      { status: 400 },
+      { status: 400, headers: NO_STORE },
     );
   }
 
@@ -98,40 +97,25 @@ export async function GET(
   // ---- Format response ----
   if (format === 'csv') {
     const csv = toCsv(rows);
-    const etag = crypto.createHash('sha256').update(csv).digest('hex') + '-csv';
-
-    // Check If-None-Match
-    const ifNoneMatch = request.headers.get('if-none-match');
-    if (ifNoneMatch && ifNoneMatch === etag) {
-      return new Response(null, { status: 304 });
-    }
-
     return new Response(csv, {
       headers: {
+        ...NO_STORE,
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}.csv"`,
-        'ETag': etag,
       },
     });
   }
 
   // PDF → HTML fallback (same pattern as audit export)
   const html = toHtml(title, rows, tenant.slug);
-  const htmlEtag = crypto.createHash('sha256').update(html).digest('hex') + '-html';
-
-  // Check If-None-Match
-  const ifNoneMatchHtml = request.headers.get('if-none-match');
-  if (ifNoneMatchHtml && ifNoneMatchHtml === htmlEtag) {
-    return new Response(null, { status: 304 });
-  }
 
   return new Response(html, {
     headers: {
+      ...NO_STORE,
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}.html"`,
       'X-Export-Format': 'html',
       'X-Export-Note': 'PDF generation unavailable; downloaded as HTML for browser print-to-PDF',
-      'ETag': htmlEtag,
     },
   });
 }
@@ -272,16 +256,9 @@ async function getRetentionData(
 function toCsv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return 'No data';
   const headers = Object.keys(rows[0]!);
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  };
   const lines = [headers.join(',')];
   for (const r of rows) {
-    lines.push(headers.map((h) => escape(r[h])).join(','));
+    lines.push(headers.map((h) => escapeCsvCell(r[h])).join(','));
   }
   return lines.join('\n');
 }

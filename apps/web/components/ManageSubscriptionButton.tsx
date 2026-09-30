@@ -10,7 +10,7 @@ export default function ManageSubscriptionButton() {
   const handleManage = async () => {
     setLoading(true);
     const { data } = await supabase.functions.invoke('create-portal-session', {
-      body: { return_url: window.location.href },
+      body: { return_url: `${window.location.pathname}${window.location.search}` },
     });
     if (data?.url) {
       window.location.href = data.url;

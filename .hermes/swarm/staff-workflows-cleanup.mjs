@@ -1,21 +1,30 @@
 // Follow-up: diagnose resident tombstone 403, clean up cases via supervisor, re-verify
-const URL = 'https://nuyedxkzaimlzaetbpaw.supabase.co';
-const KEY = 'sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3';
-const SERVICE =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51eWVkeGt6YWltbHphZXRicGF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQ3OTI1OSwiZXhwIjoyMDk2MDU1MjU5fQ.wfTneCBjYGfSvmo-GGTSEBv3JwkbSl8QByWR__WVpJg';
+// Authorized disposable-test environment variables: SUPABASE_URL, SUPABASE_ANON_KEY,
+// SUPABASE_SERVICE_ROLE_KEY, HERMES_TEST_PASSWORD, and HERMES_TEST_SUPERVISOR_EMAIL.
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+const URL = requiredEnv('SUPABASE_URL');
+const KEY = requiredEnv('SUPABASE_ANON_KEY');
+const SERVICE = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+const PW = requiredEnv('HERMES_TEST_PASSWORD');
+const SUP_EMAIL = requiredEnv('HERMES_TEST_SUPERVISOR_EMAIL');
 const TENANT = '9cd50d60-febe-4adf-be0f-a36bf82762f6';
 const CASE1 = 'df2496a4-207a-4991-ac03-55676c9e4219';
 const CASE2 = 'c5230a8b-ea0c-464e-87da-e53eec66d7bf';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function login(email, pw = 'password123!') {
+async function login(email, pw = PW) {
   const r = await fetch(`${URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: KEY },
     body: JSON.stringify({ email, password: pw }),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(`login ${email}: ${r.status}`);
+  if (!r.ok) throw new Error('Login failed');
   return j;
 }
 async function svc(method, path, body) {
@@ -54,7 +63,7 @@ console.log('DIAG(predicates):', JSON.stringify(diagAll));
 
 // 2. supervisor tombstone fallback
 await sleep(2500);
-const supAuth = await login('supervisor@demo.com');
+const supAuth = await login(SUP_EMAIL);
 const S = rest(supAuth.access_token);
 const now = new Date().toISOString();
 const tb1 = await S('PATCH', `/case_entries?id=eq.${CASE1}`, { deleted_at: now }, { Prefer: 'return=representation' });

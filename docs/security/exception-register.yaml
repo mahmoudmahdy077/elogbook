@@ -1,0 +1,198 @@
+version: 1
+schema: elogbook.exception-register/v1
+as_of: 2026-09-24
+status: open-exceptions-require-owner-review
+notes: Exceptions are time-bounded risk acceptances or blocked controls. They do not assert legal approval or production readiness.
+exceptions:
+  - id: EXC-CREDENTIAL-ROTATION
+    title: Provider-side service-role credential rotation and revocation
+    type: security_blocker
+    owner: Security and Release Operations
+    status: open
+    risk: A previously exposed service-role credential may retain production access until the provider confirms revocation.
+    review_date: 2026-09-24
+    expires_on: 2026-10-15
+    evidence_artifacts:
+      - docs/security/incidents/2026-09-23-service-role-exposure.md
+      - scripts/verify-release-containment.mjs
+      - tests/security/verify-release-containment.test.mjs
+    compensating_controls:
+      - Block production deployment and real ePHI processing.
+      - Require protected workflow dispatch and explicit approval.
+      - Record provider rotation and old-credential rejection evidence without retaining values.
+    closure_requirements:
+      - Rotate or revoke the suspected credential with the provider.
+      - Verify the old credential is rejected.
+      - Record disposition of dependent credentials and affected systems.
+  - id: EXC-VENDOR-REVIEW
+    title: Vendor, BAA, and ePHI-transfer review
+    type: legal_vendor_blocker
+    owner: Privacy and Compliance
+    status: open
+    risk: A vendor may receive ePHI before the applicable agreement, subprocessor, region, and security review is recorded.
+    review_date: 2026-09-24
+    expires_on: 2027-03-31
+    evidence_artifacts:
+      - docs/compliance/vendor-register.yaml
+      - docs/compliance/hipaa.md
+      - scripts/verify-compliance-evidence.mjs
+    compensating_controls:
+      - Keep affected integration disabled or limited to non-ePHI data.
+      - Do not mark a vendor BAA status complete without an executed or approved record.
+      - Require Privacy and Compliance review before production activation.
+    closure_requirements:
+      - Record vendor legal entity, service scope, data categories, region, subprocessors, retention, and incident terms.
+      - Attach the approved agreement or a documented legal determination.
+      - Obtain a named reviewer approval and next review date.
+  - id: EXC-BACKUP-REVIEW
+    title: Backup provider, KMS, retention, and restore-drill decision
+    type: contingency_blocker
+    owner: Operations and Incident Response
+    status: open
+    risk: Production recovery objectives and durable backup retention cannot be independently demonstrated until storage, KMS custody, object-lock verification, and a measured drill are approved; no provider or live restore is evidenced here.
+    review_date: 2026-09-24
+    expires_on: 2026-12-31
+    evidence_artifacts:
+      - docs/backup-strategy.md
+      - docs/operations/backup-drill.md
+      - apps/web/lib/setup/backup-manager.ts
+      - scripts/backup-config.sh
+      - scripts/backup-db.sh
+      - scripts/restore-db.sh
+      - .github/workflows/backup.yml
+      - tests/security/backup-flow.test.mjs
+    compensating_controls:
+      - Keep local fixture results labeled non-durable and reject local placeholder key references in production.
+      - Require KMS verification before dump, encrypted upload, matching remote checksums, and object-lock verification before durable status.
+      - Restore only into an explicitly disposable target; no live restore is claimed.
+    closure_requirements:
+      - Select and review the storage, KMS, object-lock, retention, and region providers.
+      - Implement the approved KMS and object-lock verification hooks and record redacted verification evidence.
+      - Run a real isolated restore drill and record RPO, RTO, integrity, and rollback evidence.
+  - id: EXC-SCANNER-REVIEW
+    title: Malware and document scanning decision
+    type: upload_blocker
+    owner: Application and Platform Engineering
+    status: open
+    risk: Attachment uploads are rejected with HTTP 503 before storage until a scanner connector, bounded timeout, approval reference, and reviewed failure behavior are configured; no scanner vendor is selected.
+    review_date: 2026-09-24
+    expires_on: 2026-12-31
+    evidence_artifacts:
+      - apps/web/lib/attachments/scanner-config.ts
+      - supabase/functions/process-attachment/index.ts
+      - supabase/migrations/20260923000006_attachment_quarantine_storage.sql
+      - supabase/migrations/20260925000006_attachment_scanner_release_gate.sql
+      - supabase/tests/p1_30_attachment_scanner_gate.sql
+      - tests/security/attachment-broker-boundary.test.mjs
+    compensating_controls:
+      - Reject uploads before storage whenever the approved connector registry is empty or configuration is pending.
+      - Revoke direct service-role updates of attachment scan state and expose only a durable pending-state request RPC.
+      - Deny download unless the object is authorized and marked clean by a future reviewed release transition.
+    closure_requirements:
+      - Select a scanner and document isolation, retention, subprocessors, and BAA posture.
+      - Implement and review a real connector with bounded input and timeout behavior; do not enable the empty placeholder registry.
+      - Verify magic-byte, malware, status-transition, and failure-path tests before any clean transition exists.
+  - id: EXC-MOBILE-QUALIFICATION
+    title: Native mobile storage and trust qualification
+    type: mobile_blocker
+    owner: Mobile Engineering
+    status: open
+    risk: The production plaintext SQLite path is disabled and SQLCipher, EAS-injected Android pin values, and iOS trust behavior are not evidenced by a qualified artifact.
+    review_date: 2026-09-24
+    expires_on: 2027-03-31
+    evidence_artifacts:
+      - apps/mobile/PRODUCTION_CHECKLIST.md
+      - apps/mobile/plugins/withNetworkSecurityConfig.js
+      - apps/mobile/lib/db/database.ts
+      - docs/security/mobile-native-security.md
+      - scripts/verify-mobile-security.mjs
+      - apps/mobile/lib/security/__tests__/mobile-security.test.ts
+    compensating_controls:
+      - Fail closed for production local clinical storage.
+      - Require distinct build-time `ANDROID_PRIMARY_SPKI_PIN` and `ANDROID_BACKUP_SPKI_PIN` values; keep the tracked template unresolved and expose no public fallback.
+      - Block promotion until native artifacts and pin rotation evidence are reviewed.
+    closure_requirements:
+      - Provide a reviewed SQLCipher-capable adapter and managed key flow, or keep offline clinical storage disabled.
+      - Produce Android and iOS artifact evidence and approve trust behavior.
+  - id: EXC-RELEASE-ATTESTATION
+    title: External release attestation and protected environment approval
+    type: release_blocker
+    owner: Release Engineering
+    status: open
+    risk: Deterministic inventory is unsigned and is not promotion evidence; external artifact signatures, commit-bound attestation, verified production environment controls, and GitHub reviewer evidence are not recorded.
+    review_date: 2026-09-24
+    expires_on: 2026-12-31
+    evidence_artifacts:
+      - .github/workflows/release.yml
+      - scripts/generate-release-evidence.mjs
+      - scripts/verify-release-evidence.mjs
+      - scripts/verify-single-release-path.mjs
+      - tests/security/release-evidence.test.mjs
+      - tests/security/single-release-path.test.mjs
+    compensating_controls:
+      - Keep provenance and every artifact unsigned, attestation pending, and production controls pending in generated evidence.
+      - Permit deterministic-only inventory for reproducibility checks but require promotion mode for every production path.
+      - Require protected release-graph checks, external signature/attestation verification, production environment control verification, and explicit staging approval.
+      - Do not bypass a failing gate with an environment variable.
+    closure_requirements:
+      - Enable and evidence required GitHub production reviewers.
+      - Sign every release artifact and provenance record, then verify them through the configured release verifier.
+      - Configure `RELEASE_ATTESTATION_VERIFIER` and use it to verify the approved commit-bound attestation, or record the accepted limitation.
+      - Independently verify production environment controls through `PRODUCTION_ENVIRONMENT_VERIFIER`.
+      - Bind the final evidence manifest to the promoted commit.
+  - id: EXC-TRAINING-REVIEW
+    title: Security and privacy training completion evidence
+    type: administrative_blocker
+    owner: People Operations
+    status: open
+    risk: The repository cannot prove that all authorized workforce members completed role-specific security and privacy training.
+    review_date: 2026-09-24
+    expires_on: 2027-03-31
+    evidence_artifacts:
+      - docs/security/operating-cadence.md
+      - docs/security/access-review.md
+      - tests/security/compliance-evidence.test.mjs
+    compensating_controls:
+      - Require training before granting production access.
+      - Track completion in the approved HR or learning system.
+      - Escalate overdue assignments to the security owner.
+    closure_requirements:
+      - Record the training content, audience, completion period, owner, and approved evidence location.
+  - id: EXC-PRIVACY-REVIEW
+    title: Retention, deletion, and legal schedule approval
+    type: legal_blocker
+    owner: Privacy and Compliance
+    status: open
+    risk: The proposed retention periods and deletion exceptions are operational baselines until counsel and the accountable privacy owner approve them.
+    review_date: 2026-09-24
+    expires_on: 2027-03-31
+    evidence_artifacts:
+      - docs/security/retention-policy.md
+      - docs/compliance/hipaa.md
+      - docs/compliance/gdpr.md
+    compensating_controls:
+      - Preserve records when a legal hold or security investigation is active.
+      - Do not use the policy as a certification or legal conclusion.
+      - Require Privacy and Compliance approval before changing production deletion behavior.
+    closure_requirements:
+      - Record the applicable legal schedule, jurisdictions, holds, and approval authority.
+      - Reconcile database, backup, vendor, and audit retention schedules.
+  - id: EXC-CONTACT-ACTIVATION
+    title: Monitored security contact and encryption-key publication
+    type: operational_blocker
+    owner: Security and Release Operations
+    status: open
+    risk: The repository contact details are not a production incident channel and no reviewed PGP key is published.
+    review_date: 2026-09-24
+    expires_on: 2026-10-31
+    evidence_artifacts:
+      - SECURITY.md
+      - docs/compliance/security-overview.md
+    compensating_controls:
+      - Do not publish the repository as a production security contact until the mailbox is monitored.
+      - Use the approved incident process for active reports and preserve redacted evidence.
+      - Block public launch when the contact and escalation path are not staffed.
+    closure_requirements:
+      - Activate and staff the security mailbox and incident escalation path.
+      - Publish a reviewed PGP key or document the approved alternative.
+      - Record the owner, response target, and test evidence.

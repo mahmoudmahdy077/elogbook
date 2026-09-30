@@ -25,6 +25,18 @@ interface CaseAttachmentsProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'text/csv',
+]);
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.csv']);
 
 function formatSize(bytes: number | null): string {
   if (!bytes && bytes !== 0) return '';
@@ -33,7 +45,7 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function CaseAttachments({ caseId, tenantSlug, tenantId, viewerProfileId, viewerRole }: CaseAttachmentsProps) {
+export default function CaseAttachments({ caseId, tenantSlug, viewerProfileId, viewerRole }: CaseAttachmentsProps) {
   const [supabase] = useState(() => createClient());
   const { show: showToast } = useToast();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -69,66 +81,71 @@ export default function CaseAttachments({ caseId, tenantSlug, tenantId, viewerPr
       setError('File exceeds the 10MB limit.');
       return;
     }
-    
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      setError('Invalid file type. Allowed: JPG, PNG, GIF, WebP, PDF, DOC, DOCX, TXT, CSV.');
+      return;
+    }
+    const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+    if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
+      setError('Invalid file extension.');
+      return;
+    }
+
     setUploading(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user?.id ?? '')
-      .single();
-
-    const id = crypto.randomUUID();
-    const path = `${tenantSlug}/${caseId}/${id}-${file.name.replace(/[^\w.-]+/g, '_')}`;
-
-    const { error: upErr } = await supabase.storage
-      .from('case-attachments')
-      .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
-    if (upErr) {
-      setError(upErr.message);
+    try {
+      const response = await fetch(`/api/${encodeURIComponent(tenantSlug)}/attachments/upload`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/octet-stream',
+          'x-attachment-case-id': caseId,
+          'x-attachment-file-name': encodeURIComponent(file.name),
+        },
+        body: file,
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; status?: string };
+      if (!response.ok) {
+        setError(result.error ?? 'Attachment upload failed.');
+        return;
+      }
+      showToast(
+        result.status === 'quarantined' ? 'Attachment uploaded; security scan pending' : 'Attachment uploaded',
+        'success',
+      );
+      await load();
+    } catch {
+      setError('Attachment upload failed.');
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const { error: insErr } = await supabase.from('case_attachments').insert({
-      id,
-      entry_id: caseId,
-      tenant_id: tenantId,
-      file_path: path,
-      file_type: file.type || 'application/octet-stream',
-      file_name: file.name,
-      file_size: file.size,
-      uploaded_by: profile?.id,
-    });
-    if (insErr) {
-      // roll back the orphaned object so storage doesn't accumulate dead files
-      await supabase.storage.from('case-attachments').remove([path]);
-      setError(insErr.message);
-      setUploading(false);
-      return;
-    }
-
-    showToast('Attachment uploaded', 'success');
-    setUploading(false);
-    await load();
   }
 
   async function handleDelete(a: Attachment) {
-    
-    await supabase.storage.from('case-attachments').remove([a.file_path]);
-    const { error: err } = await supabase.from('case_attachments').delete().eq('id', a.id);
-    if (err) {
-      setError(err.message);
-      return;
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/${encodeURIComponent(tenantSlug)}/attachments/${encodeURIComponent(a.id)}`,
+        { method: 'DELETE' },
+      );
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? 'Attachment delete failed.');
+        return;
+      }
+      setAttachments((prev) => prev.filter((x) => x.id !== a.id));
+    } catch {
+      setError('Attachment delete failed.');
     }
-    setAttachments((prev) => prev.filter((x) => x.id !== a.id));
   }
 
   async function handleDownload(a: Attachment) {
-    
-    const { data } = await supabase.storage.from('case-attachments').createSignedUrl(a.file_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+    setError(null);
+    try {
+      const downloadUrl = `/api/${encodeURIComponent(tenantSlug)}/attachments/${encodeURIComponent(a.id)}/download`;
+      const opened = window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) setError('Attachment download popup was blocked.');
+    } catch {
+      setError('Attachment download failed.');
+    }
   }
 
   return (

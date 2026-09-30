@@ -34,10 +34,9 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
     .maybeSingle();
 
   const isReadOnly = subscription?.status === 'past_due' || subscription?.status === 'unpaid';
-  // SEC-002: residents' cases enter the approval queue ('pending'); supervisors+
-  // may log pre-approved cases directly. The DB trigger enforces the same rule —
-  // this keeps the UI consistent with what actually lands.
-  const initialStatus = profile.role === 'resident' ? 'pending' : 'approved';
+  // The client never chooses a clinical status. Every case is written as a
+  // draft and the submit_case command owns the transition, the approval
+  // requests, the audit row and the outbox row.
 
   // Check case quota
   const { data: quota } = await supabase
@@ -90,7 +89,6 @@ export default async function NewCasePage({ params, searchParams }: { params: Pr
       <ClientCaseForm
         tenantId={profile.tenant_id}
         tenantSlug={tenant.slug}
-        initialStatus={initialStatus}
         duplicateCaseId={duplicateFrom}
         lastEntry={repeatLast === 'true'}
       />

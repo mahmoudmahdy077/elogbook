@@ -3,17 +3,30 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { isSafeOutboundUrl } from '@elogbook/shared/security/outbound-url';
+import { configuredOutboundHosts } from '@/lib/outbound-request';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const aiConfigSchema = z.object({
+  provider: z.string().min(1).max(64),
+  model: z.string().min(1).max(200),
+  is_active: z.boolean().optional(),
+  endpoint_url: z.string().url().max(2048).nullable().optional(),
+  api_key: z.string().max(4096).optional(),
+}).strict();
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, aiConfigSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 16 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -39,11 +52,13 @@ export async function POST(
     return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
   }
 
-  const body = await request.json();
-  const { provider, model, is_active, endpoint_url, api_key } = body;
+  const { provider, model, is_active, endpoint_url, api_key } = guarded.data;
 
-  if (!model) {
-    return NextResponse.json({ error: 'Model is required.' }, { status: 400 });
+  if (endpoint_url && !isSafeOutboundUrl(endpoint_url, {
+    allowedHosts: configuredOutboundHosts(),
+    allowHttp: process.env.NODE_ENV !== 'production',
+  })) {
+    return NextResponse.json({ error: 'AI endpoint is not approved' }, { status: 400 });
   }
 
   const { data: result, error } = await supabase.rpc('store_ai_config', {
@@ -55,7 +70,7 @@ export async function POST(
   });
 
   if (error) {
-    console.error('ai-config rpc error:', error.message);
+    logger.error('Failed to store AI config', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
@@ -73,8 +88,5 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
   return POST(request, { params });
 }

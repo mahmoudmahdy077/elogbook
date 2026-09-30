@@ -8,14 +8,17 @@
  * window with upgrade evidence.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { scopedKey } from '../account-context';
+
+const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
 
 export async function getLastSyncTimestamp(): Promise<number | null> {
-  const val = await AsyncStorage.getItem('last_sync_timestamp');
+  const val = await AsyncStorage.getItem(scopedKey(SYNC_TIMESTAMP_KEY));
   return val ? parseInt(val, 10) : null;
 }
 
 export async function setLastSyncTimestamp(ts: number): Promise<void> {
-  await AsyncStorage.setItem('last_sync_timestamp', ts.toString());
+  await AsyncStorage.setItem(scopedKey(SYNC_TIMESTAMP_KEY), ts.toString());
 }
 
 export async function getPreference(key: string): Promise<string | null> {

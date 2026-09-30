@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { GLOBAL_TENANT_ID } from '@elogbook/shared';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const duplicateSchema = z.object({ name: z.string().trim().min(1).max(200).optional() }).strict();
 
 const DIRECTOR_ROLES = ['director', 'institution_admin', 'admin'];
 
@@ -16,28 +23,23 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
+  const guarded = await guardRequest(request, duplicateSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 4 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await safeCreateSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const auth = await requireTenantAdmin(supabase, tenantSlug, DIRECTOR_ROLES);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
-  if (!DIRECTOR_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = auth.profile;
 
   const { data: source } = await supabase
     .from('case_templates')
@@ -51,13 +53,7 @@ export async function POST(
     return NextResponse.json({ error: 'Source template not found' }, { status: 404 });
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-  const newName = (body.name as string) || `${source.name} (Copy)`;
+  const newName = guarded.data.name || `${source.name} (Copy)`;
 
   const { data: existing } = await supabase
     .from('case_templates')
@@ -84,7 +80,10 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to duplicate template', error, { tenantSlug, sourceId: id, newName });
+    return NextResponse.json({ error: 'Failed to duplicate template' }, { status: 500 });
+  }
 
   return NextResponse.json({ template }, { status: 201 });
 }

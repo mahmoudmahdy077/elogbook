@@ -4,14 +4,23 @@ import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { testWebhookEndpoint } from '@/lib/webhooks';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+
+const webhookTestSchema = z.object({
+  webhook_id: z.string().min(1).max(128),
+}).strict();
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, webhookTestSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -29,22 +38,12 @@ export async function POST(
   }
   const profile = _auth.profile;
 
-  let body: { webhook_id?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { webhook_id } = body;
-  if (!webhook_id) {
-    return NextResponse.json({ error: 'webhook_id is required' }, { status: 400 });
-  }
+  const { webhook_id } = guarded.data;
 
   const adminClient = createServiceRoleClient();
   const { data: wh, error: whError } = await adminClient
     .from('tenant_webhooks')
-    .select('url, secret')
+    .select('url')
     .eq('id', webhook_id)
     .eq('tenant_id', profile.tenant_id)
     .single();
@@ -53,7 +52,15 @@ export async function POST(
     return NextResponse.json({ error: 'Webhook not found' }, { status: 404 });
   }
 
-  const result = await testWebhookEndpoint(wh.url, wh.secret, profile.tenant_id);
+  const { data: webhookSecret, error: secretError } = await adminClient.rpc(
+    'get_tenant_webhook_secret',
+    { p_webhook_id: webhook_id },
+  );
+  if (secretError || !webhookSecret) {
+    return NextResponse.json({ error: 'Webhook secret is unavailable' }, { status: 503 });
+  }
+
+  const result = await testWebhookEndpoint(wh.url, webhookSecret, profile.tenant_id);
 
   return NextResponse.json(result);
 }

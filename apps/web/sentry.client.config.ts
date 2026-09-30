@@ -1,53 +1,31 @@
 import * as Sentry from '@sentry/nextjs';
-
-const PHI_FIELDS = ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values'];
-
-function scrubPhi<T>(event: T, fields: string[] = PHI_FIELDS): T {
-  if (!event || typeof event !== 'object') return event;
-  for (const key of Object.keys(event as Record<string, unknown>)) {
-    if (fields.includes(key)) {
-      delete (event as Record<string, unknown>)[key];
-    } else {
-      const val = (event as Record<string, unknown>)[key];
-      if (typeof val === 'object' && val !== null) {
-        scrubPhi(val, fields);
-      }
-    }
-  }
-  return event;
-}
+import { redactSentryEvent } from './lib/observability/redact';
 
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const SENTRY_ENV = process.env.NEXT_PUBLIC_SENTRY_ENV ?? process.env.NODE_ENV ?? 'development';
 
-// Only initialize Sentry when a DSN is configured. The env-driven
-// activation pattern lets us run without Sentry in local dev (zero
-// network egress) and switch on for staging/production.
 if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENV,
-    // Session replay disabled until PHI masking review is complete
     tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.2'),
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    // M4: Deny sensitive routes from Sentry error reporting
     denyUrls: [
       /\/api\/auth\//i,
       /\/admin\//i,
       /\/login/i,
       /\/auth\/callback/i,
     ],
-    // P5.4: Auto-instrument page loads, navigation, and client-side interactions
     integrations: [Sentry.browserTracingIntegration()],
-    // PHI: never send patient_mrn, patient_dob, patient_hash, field_values
     beforeSendTransaction(event) {
-      if (event.request?.cookies) delete event.request.cookies;
-      return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);
+      return redactSentryEvent(event);
+    },
+    beforeBreadcrumb(breadcrumb) {
+      return redactSentryEvent(breadcrumb);
     },
     beforeSend(event) {
-      if (event.request?.cookies) delete event.request.cookies;
-      return scrubPhi(event, ['patient_mrn', 'patient_dob', 'patient_hash', 'field_values']);
+      return redactSentryEvent(event);
     },
   });
 }

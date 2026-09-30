@@ -249,9 +249,11 @@ export class SyncEngine {
         deleted_at: new Date().toISOString(),
       };
     }
+    const serverData = { ...row.data };
+    delete serverData.local_scope;
     return {
       id: serverId,
-      ...row.data,
+      ...serverData,
       tenant_id: row.tenant_id,
       updated_at: new Date().toISOString(),
     };

@@ -59,20 +59,45 @@ for (const file of allFiles) {
   if (!src.includes('createServiceRoleClient')) continue;
   checked++;
 
-  // Find all from('table') occurrences
-  const fromRe = /\.from\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  // Bind the service-role client to its variable names. A file may hold both a
+  // service-role client and an RLS-scoped one; only queries that actually start
+  // from the service-role client can bypass RLS, so only those are in scope.
+  const serviceRoleNames = new Set();
+  const assignRe = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?createServiceRoleClient\s*\(/g;
+  let a;
+  while ((a = assignRe.exec(src))) serviceRoleNames.add(a[1]);
+  if (/\bcreateServiceRoleClient\s*\(\s*\)\s*\.\s*from\s*\(/.test(src)) serviceRoleNames.add('');
+
+  // Find all from('table') occurrences, capturing the receiver so that an
+  // RLS-scoped query is not confused with a service-role one. `at` is the index
+  // of `.from(` itself, which is what the exemption comment and the scan window
+  // must be anchored to.
+  const fromRe = /([A-Za-z_$][\w$]*)?\s*(\.from\(\s*['"`]([^'"`]+)['"`]\s*\))/g;
   let m;
   while ((m = fromRe.exec(src))) {
-    const table = m[1];
+    const receiver = m[1];
+    const table = m[3];
+    const at = m.index + m[0].length - m[2].length;
     if (!TENANT_SCOPED.has(table)) continue;
+
+    // Only a query that actually starts from the service-role client can bypass
+    // RLS. An unnamed `.from(` is a chained call; it is in scope only when the
+    // chain is rooted directly in `createServiceRoleClient()`.
+    const before = src.slice(Math.max(0, at - 40), at);
+    if (receiver === undefined) {
+      if (!/createServiceRoleClient\s*\(\s*\)\s*$/.test(before)) continue;
+    } else if (!serviceRoleNames.has(receiver)) {
+      continue;
+    }
+
     // Exempt comment: // tenant-scope-exempt: <reason>
-    const lineStart = src.lastIndexOf('\n', m.index) + 1;
-    const lineEnd = src.indexOf('\n', m.index);
+    const lineStart = src.lastIndexOf('\n', at) + 1;
+    const lineEnd = src.indexOf('\n', at);
     const line = src.slice(lineStart, lineEnd === -1 ? undefined : lineEnd);
     if (line.includes('tenant-scope-exempt:')) continue;
 
     // Skip inserts — tenant scoping there is via payload tenant_id, not eq filter
-    const window = src.slice(m.index, m.index + 800);
+    const window = src.slice(at, at + 800);
     if (window.includes('.insert(')) continue;
     // Skip tenants table which is often intentionally global (list)
     if (table === 'tenants' && window.includes('.select(')) continue;

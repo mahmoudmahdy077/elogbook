@@ -32,4 +32,20 @@ describe('safeRelativePath', () => {
   it('rejects a path that looks like a windows UNC path', () => {
     expect(safeRelativePath('\\\\evil.com')).toBe('/');
   });
+  it.each([
+    '/%2f%2fevil.com/x',
+    '/%2F%2Fevil.com/x',
+    '/%5c%5cevil.com/x',
+    '/%64ashboard',
+    '/%2e%2e/evil',
+  ])('rejects an encoded or traversal destination: %s', (value) => {
+    expect(safeRelativePath(value)).toBe('/');
+  });
+  it('rejects javascript destinations, including encoded schemes', () => {
+    expect(safeRelativePath('javascript:alert(1)')).toBe('/');
+    expect(safeRelativePath('/%6a%61vascript:alert(1)')).toBe('/');
+  });
+  it('rejects a non-allowlisted internal destination', () => {
+    expect(safeRelativePath('/not-an-allowed-route')).toBe('/');
+  });
 });

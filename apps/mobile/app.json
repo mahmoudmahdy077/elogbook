@@ -22,7 +22,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Camera is used to attach photos to case entries",
         "NSPhotoLibraryUsageDescription": "Photo library access is used to attach images to case entries",
-        "NSFaceIDUsageDescription": "FaceID is used to keep your patient data private on this device."
+        "NSFaceIDUsageDescription": "FaceID is used to keep your patient data private on this device.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        }
       }
     },
     "android": {
@@ -76,11 +79,16 @@
       "expo-font",
       "expo-notifications",
       [
+        "./plugins/withNetworkSecurityConfig",
+        {
+          "requirePins": true
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
             "usesCleartextTraffic": false,
-            "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml",
             "extraGradleProperties": [
               "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m",
               "hermes.bytecode.limit=65536",

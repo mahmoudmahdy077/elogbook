@@ -26,7 +26,7 @@ describe('isMfaRequiredForRole', () => {
 describe('canAccessTenant', () => {
   const makeAuth = (slug: string): AuthResult => ({
     user: { id: 'u-1' },
-    profile: { id: 'p-1', tenant_id: 't-1', role: 'resident', full_name: 'Test', specialty: null, onboarding_completed: true },
+    profile: { id: 'p-1', tenant_id: 't-1', role: 'resident', status: 'active', pending_role: null, full_name: 'Test', specialty: null, onboarding_completed: true },
     tenant: { id: 't-1', slug, tenant_type: 'institution', custom_branding: null },
     subscription: null,
     aal: 'aal1',

@@ -1,10 +1,20 @@
 # E-Logbook Mobile — Production Deployment Readiness Checklist
 # Cycle 10: Security + Performance + Production audit
 
+## Current release blockers
+
+- [ ] Reviewed primary and backup SPKI pins are supplied as non-public EAS environment variables `ANDROID_PRIMARY_SPKI_PIN` and `ANDROID_BACKUP_SPKI_PIN`; neither value is committed to `eas.json`, tracked source, or an `EXPO_PUBLIC_` variable.
+- [ ] Expo prebuild renders the reviewed pins into the generated Android resource and the security gate inspects that generated artifact.
+- [ ] iOS trust pinning has a reviewed native implementation and signed artifact evidence.
+- [ ] A reviewed SQLCipher-capable adapter, key flow, backup behavior, and physical-device artifact evidence qualify production offline clinical storage.
+
+Android generation fails closed when either build-time pin variable is missing, malformed, or duplicated. A tracked placeholder or generated unresolved placeholder is a release blocker, not evidence of certificate pinning.
+
 ## 🔐 Security Checklist
 
 ### PHI Protection (HIPAA)
-- [x] Field-level encryption at rest (AES-256-CBC + HMAC-SHA-256 EtM) for patient_mrn, patient_dob, field_values
+- [x] Field-level encryption at rest (AES-256-CBC + HMAC-SHA-256 EtM) for explicitly covered fields; whole-database encryption is not claimed
+- [x] Production plaintext SQLite path disabled until verified SQLCipher evidence exists
 - [x] Encryption key stored in device keystore (expo-secure-store / SecureStore)
 - [x] Constant-time MAC verification (prevents timing attacks)
 - [x] Envelope versioning (supports future key rotation)
@@ -108,12 +118,12 @@
 
 ## 📱 Functionality Checklist
 
-### Offline CRUD
-- [x] Case entries: create/update/delete (via WatermelonDB + outbox)
-- [x] Evaluations: create (offline, sync on reconnect)
-- [x] Shifts/duty hours: create (offline, sync on reconnect)
-- [x] Comments: create (offline, sync on reconnect)
-- [x] Read from local DB for all data types (useLiveQuery)
+### Offline CRUD (development/test only; production blocked)
+- [ ] Case entries: create/update/delete (via WatermelonDB + outbox)
+- [ ] Evaluations: create (offline, sync on reconnect)
+- [ ] Shifts/duty hours: create (offline, sync on reconnect)
+- [ ] Comments: create (offline, sync on reconnect)
+- [ ] Read from local DB for all data types (useLiveQuery)
 - [x] Sync status indicator (synced/syncing/offline)
 
 ### Sync

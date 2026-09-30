@@ -23,6 +23,10 @@
       "types": "./src/components/native.ts",
       "default": "./src/components/native.ts"
     },
+    "./security/outbound-url": {
+      "types": "./src/security/outbound-url.ts",
+      "default": "./src/security/outbound-url.ts"
+    },
     "./types/database.server": {
       "react-native": "./src/types/database.server.ts",
       "browser": "./src/types/database.server.ts",
@@ -38,6 +42,29 @@
       "browser": "./src/test/fixtures.ts",
       "default": "./src/test/fixtures.ts"
     },
+    "./email/safety": {
+      "types": "./src/email/safety.ts",
+      "default": "./src/email/safety.ts"
+    },
+    "./email/webhook": {
+      "types": "./src/email/webhook.ts",
+      "default": "./src/email/webhook.ts"
+    },
+    "./email/send": {
+      "default": "./src/email/send.ts"
+    },
+    "./email/resend": {
+      "default": "./src/email/resend.ts"
+    },
+    "./email/smtp": {
+      "default": "./src/email/smtp.ts"
+    },
+    "./email/types": {
+      "default": "./src/email/types.ts"
+    },
+    "./email/templates": {
+      "default": "./src/email/templates.ts"
+    },
     "./*": {
       "react-native": "./src/*",
       "browser": "./src/*",
@@ -50,10 +77,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "nodemailer": "^10.0.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
+    "@types/node": "^25.9.1",
     "@types/react": "^19.0.0",
     "vitest": "^4.1.9"
   },

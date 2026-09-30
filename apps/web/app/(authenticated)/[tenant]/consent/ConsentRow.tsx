@@ -12,14 +12,12 @@ export default function ConsentRow({
   description,
   granted: initialGranted,
   tenantId,
-  userId,
 }: {
   consentType: string;
   label: string;
   description: string;
   granted: boolean;
   tenantId: string;
-  userId: string;
 }) {
   const router = useRouter();
   const [granted, setGranted] = useState<boolean>(initialGranted);
@@ -39,23 +37,13 @@ export default function ConsentRow({
         (r: { data: unknown; error: { message: string } | null }) => ({ data: r.data, error: r.error }),
         (e: Error) => ({ data: null, error: e })
       );
-      const rpcError = rpcResult.error;
-
-      if (rpcError) {
-        // Fallback: write directly (RPC may be missing on older deploys).
-        const { error: insertError } = await supabase
-          .from('consent_records')
-          .insert({
-            tenant_id: tenantId,
-            user_id: userId,
-            consent_type: consentType,
-            revoked_at: newValue ? null : new Date().toISOString(),
-            version: '1.0',
-          });
-        if (insertError) {
-          setError(insertError.message);
-          return;
-        }
+      // Fail closed. set_user_consent is the only write path: it is SECURITY
+      // DEFINER, verifies the caller belongs to the tenant, and takes
+      // tenant_id from the caller's own profile. A direct insert would let the
+      // request supply tenant_id, which is cross-tenant consent forgery.
+      if (rpcResult.error) {
+        setError('Could not record your consent choice. Please try again.');
+        return;
       }
 
       // Side effects specific to certain consent types:

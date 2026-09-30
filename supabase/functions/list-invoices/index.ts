@@ -1,90 +1,69 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno';
+import { requirePrincipal, corsHeaders } from '../_shared/auth.ts';
+import {
+  assertDatabaseResult,
+  resolvePaymentConfig,
+  type PaymentConfigClient,
+} from '../_shared/payment-config.ts';
 
-// Stripe client is created lazily inside the handler: constructing it at module
-// top level with an empty key hung the isolate on cold start (the function
-// timed out even for requests that should fail validation before any Stripe
-// call). A missing key now fails fast with 503 instead.
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-);
-
-async function handler(req: Request) {
-  if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-  }
-
-  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-  if (!stripeKey) {
-    return new Response(
-      JSON.stringify({ error: 'Billing is not configured for this deployment' }),
-      { status: 503 },
-    );
-  }
-  const stripe = new Stripe(stripeKey, {
-    apiVersion: '2023-10-16',
+function jsonResponse(body: unknown, status: number, headers: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, 'Content-Type': 'application/json' },
   });
+}
+
+async function handler(req: Request): Promise<Response> {
+  const headers = corsHeaders(req.headers.get('Origin'));
+  if (req.method === 'OPTIONS') return new Response('ok', { headers });
+  if (req.method !== 'GET') return jsonResponse({ error: 'Method not allowed' }, 405, headers);
+
+  const authResult = await requirePrincipal(req, {
+    roles: ['institution_admin', 'admin'],
+    aal: 'aal2',
+  });
+  if (authResult instanceof Response) return authResult;
+  const { supabase, tenantId } = authResult;
 
   const url = new URL(req.url);
   const customerId = url.searchParams.get('customer_id');
-  if (!customerId) {
-    return new Response(JSON.stringify({ error: 'customer_id required' }), { status: 400 });
-  }
+  if (!customerId || customerId.length > 256) return jsonResponse({ error: 'customer_id required' }, 400, headers);
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile) {
-    return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
-  }
-
-  const { data: subscription } = await supabase
+  const subscriptionResult = await supabase
     .from('subscriptions')
     .select('gateway_subscription_id, stripe_customer_id')
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', tenantId)
     .eq('status', 'active')
-    .single();
+    .maybeSingle();
+  assertDatabaseResult(subscriptionResult, 'find active subscription');
+  const subscription = subscriptionResult.data as {
+    gateway_subscription_id?: string | null;
+    stripe_customer_id?: string | null;
+  } | null;
+  if (!subscription?.gateway_subscription_id) return jsonResponse({ invoices: [] }, 200, headers);
+  if (subscription.stripe_customer_id !== customerId) return jsonResponse({ error: 'Forbidden' }, 403, headers);
 
-  if (!subscription?.gateway_subscription_id) {
-    return new Response(JSON.stringify({ invoices: [] }), { status: 200 });
-  }
-
-  // Ownership: the requested customer must be the caller's own Stripe customer.
-  if (subscription.stripe_customer_id !== customerId) {
-    return new Response(
-      JSON.stringify({ error: 'customer_id does not belong to your subscription' }),
-      { status: 403 },
-    );
-  }
-
+  const serviceUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!serviceUrl || !serviceKey) return jsonResponse({ error: 'Billing is not configured for this deployment' }, 503, headers);
+  const serviceSupabase = createClient(serviceUrl, serviceKey);
+  let gwConfig;
   try {
-    const invoices = await stripe.invoices.list({
-      customer: customerId,
-      limit: 20,
-    });
+    gwConfig = await resolvePaymentConfig(serviceSupabase as unknown as PaymentConfigClient, tenantId);
+  } catch {
+    return jsonResponse({ error: 'Billing is not configured for this deployment' }, 503, headers);
+  }
+  if (!gwConfig) return jsonResponse({ error: 'Billing is not configured for this deployment' }, 503, headers);
 
-    return new Response(JSON.stringify({ invoices: invoices.data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500 });
+  const stripe = new Stripe(gwConfig.secret, { apiVersion: '2024-06-20' });
+  try {
+    const invoices = await stripe.invoices.list({ customer: customerId, limit: 20 });
+    return jsonResponse({ invoices: invoices.data }, 200, headers);
+  } catch {
+    return jsonResponse({ error: 'Unable to load invoices' }, 500, headers);
   }
 }
+
 serve(handler);

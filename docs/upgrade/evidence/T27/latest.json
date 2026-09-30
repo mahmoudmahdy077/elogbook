@@ -1,68 +1,77 @@
 {
-  "generated_at": "2026-09-07T19:39:30.906Z",
-  "commit": "379d2e1",
+  "generated_at": "2026-09-28T18:28:32.381Z",
+  "commit": "b5b6dbc",
   "node": "v22.23.1",
   "mode": "fast",
   "results": [
     {
       "name": "gate:verify-tenant-scope.mjs",
-      "status": "pass",
-      "ms": 313
+      "status": "fail",
+      "ms": 1862,
+      "detail": "Command failed: C:\\Program Files\\nodejs\\node.exe G:\\elogbook\\scripts\\verify-tenant-scope.mjs\nGate A FAILED: 1 service-role query(ies) on tenant-scoped table without .eq('tenant_id'\n  G:\\elogbook\\apps\\web\\app\\api\\[tenant]\\approvals\\action\\route.ts — from('case_entries') — .from('case_entries')\n\nChecked 71 files importing createServiceRoleClient.\nIf intentional global, add: // tenant-scope-exempt: <reason> + code-owner approval + expiry\n"
     },
     {
       "name": "gate:verify-phi-claim.mjs",
       "status": "pass",
-      "ms": 328
+      "ms": 1596
     },
     {
       "name": "gate:verify-single-ip.mjs",
       "status": "pass",
-      "ms": 420
+      "ms": 2333
     },
     {
       "name": "gate:verify-exports.mjs",
       "status": "pass",
-      "ms": 683
+      "ms": 2196
     },
     {
       "name": "gate:verify-security-tests.mjs",
       "status": "pass",
-      "ms": 251
+      "ms": 1192
     },
     {
       "name": "gate:verify-credential-fail-closed.mjs",
       "status": "pass",
-      "ms": 209
+      "ms": 1401
     },
     {
       "name": "gate:verify-boot.mjs",
       "status": "pass",
-      "ms": 263
+      "ms": 789
     },
     {
       "name": "gate:verify-e2e-auth.mjs",
       "status": "pass",
-      "ms": 282
+      "ms": 626
     },
     {
       "name": "gate:verify-tokens.mjs",
       "status": "pass",
-      "ms": 207
+      "ms": 633
+    },
+    {
+      "name": "gate:verify-compliance-evidence.mjs",
+      "status": "pass",
+      "ms": 889
     },
     {
       "name": "unit:security-core",
-      "status": "pass",
-      "ms": 49853
+      "status": "fail",
+      "ms": 280,
+      "detail": "Command failed: pnpm --filter @elogbook/web exec vitest run lib/__tests__/rate-limit-contract.test.ts lib/__tests__/client-ip.test.ts lib/__tests__/csp.test.ts lib/__tests__/e2e-cookie.test.ts lib/__tests__/theme-policy.test.ts lib/__tests__/site-content.test.ts lib/__tests__/dashboard-data.test.ts lib/__tests__/tenant-branding.test.ts lib/setup/__tests__/backup-manager.test.ts lib/setup/__tests__/db-migrator.test.ts lib/setup/__tests__/version-tracker.test.ts lib/supabase/__tests__/require-admi"
     },
     {
       "name": "unit:ops",
-      "status": "pass",
-      "ms": 9388
+      "status": "fail",
+      "ms": 347,
+      "detail": "Command failed: pnpm --filter @elogbook/ops test\n'pnpm' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
     },
     {
       "name": "unit:shared",
-      "status": "pass",
-      "ms": 9245
+      "status": "fail",
+      "ms": 517,
+      "detail": "Command failed: pnpm --filter @elogbook/shared test\n'pnpm' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
     },
     {
       "name": "typecheck/lint/full-unit",
@@ -111,8 +120,8 @@
     }
   ],
   "summary": {
-    "pass": 12,
-    "fail": 0,
+    "pass": 9,
+    "fail": 4,
     "blocked": 9
   }
 }

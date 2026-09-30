@@ -1,16 +1,23 @@
 // STAFF+ADMIN WORKFLOWS MISSION (task_2694bb5a2c7d)
-// Tests supervisor / director / admin workflows against live Supabase project.
-const URL = 'https://nuyedxkzaimlzaetbpaw.supabase.co';
-const KEY = 'sb_publishable_yVAsnpYhEv5GSIeMfMnlyg_r4EXeBo3';
-const SERVICE =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51eWVkeGt6YWltbHphZXRicGF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQ3OTI1OSwiZXhwIjoyMDk2MDU1MjU5fQ.wfTneCBjYGfSvmo-GGTSEBv3JwkbSl8QByWR__WVpJg';
-const TENANT = '9cd50d60-febe-4adf-be0f-a36bf82762f6';
-const PW = 'password123!';
+// Tests supervisor / director / admin workflows against an authorized disposable Supabase project.
+// Required environment variables: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
+// HERMES_TEST_PASSWORD, HERMES_TEST_RESIDENT_EMAIL, HERMES_TEST_SUPERVISOR_EMAIL,
+// HERMES_TEST_DIRECTOR_EMAIL, and HERMES_TEST_ADMIN_EMAIL.
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
 
-const RES_EMAIL = 'resident@demo.com';
-const SUP_EMAIL = 'supervisor@demo.com';
-const DIR_EMAIL = 'director@demo.com';
-const ADM_EMAIL = 'admin@demo.com';
+const URL = requiredEnv('SUPABASE_URL');
+const KEY = requiredEnv('SUPABASE_ANON_KEY');
+const SERVICE = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+const PW = requiredEnv('HERMES_TEST_PASSWORD');
+const TENANT = '9cd50d60-febe-4adf-be0f-a36bf82762f6';
+const RES_EMAIL = requiredEnv('HERMES_TEST_RESIDENT_EMAIL');
+const SUP_EMAIL = requiredEnv('HERMES_TEST_SUPERVISOR_EMAIL');
+const DIR_EMAIL = requiredEnv('HERMES_TEST_DIRECTOR_EMAIL');
+const ADM_EMAIL = requiredEnv('HERMES_TEST_ADMIN_EMAIL');
 
 const results = [];
 const rec = (id, desc, pass, detail) => {
@@ -46,7 +53,7 @@ async function login(email) {
     body: JSON.stringify({ email, password: PW }),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(`login ${email}: ${r.status} ${JSON.stringify(j)}`);
+  if (!r.ok) throw new Error('Login failed');
   return j;
 }
 

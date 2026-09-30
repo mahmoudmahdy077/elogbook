@@ -5,10 +5,10 @@
  * Fails when a mobile screen/component performs a raw Supabase write
  * (insert/update/upsert/delete, or a non-read RPC) on a sensitive table
  * without routing through an approved adapter (lib/case-submit.ts,
- * lib/operations.ts). Read-only RPCs (hash_patient_mrn) and non-sensitive
- * tables (template_favorites) are allowed. Review exceptions explicitly by
- * extending ADAPTER_IMPORTS with a ledger reference — never by weakening
- * the table list.
+ * lib/clinical-commands.ts, lib/operations.ts). Read-only RPCs
+ * (hash_patient_mrn) and non-sensitive tables (template_favorites) are allowed.
+ * Review exceptions explicitly by extending ADAPTER_IMPORTS with a ledger
+ * reference — never by weakening the table list.
  *
  * Usage: node scripts/check-mobile-adapters.mjs [--root <repo>]
  */
@@ -25,7 +25,13 @@ const SENSITIVE_TABLES = new Set([
   'case_attachments', 'profiles', 'audit_logs', 'notifications', 'push_tokens',
   'case_templates', 'tenants',
 ]);
-const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/operations'];
+// Approved adapters. Each one owns the capability gate, the error taxonomy and
+// the command boundary for the writes it is allowed to make:
+//   lib/case-submit       durable case submit (online write + offline queue)
+//   lib/clinical-commands the clinical command adapter: submit_case_operation
+//                         for content, submit_case_command for the transition
+//   lib/operations        guarded non-queue mutations (decide, duty, eval)
+const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/clinical-commands', 'lib/operations'];
 const READ_RPCS = new Set(['hash_patient_mrn']);
 
 function walk(dir, out = []) {

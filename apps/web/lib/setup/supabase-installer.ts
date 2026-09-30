@@ -19,6 +19,40 @@ export interface SupabaseConfig {
   siteUrl: string;
 }
 
+export interface SupabaseSmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  adminEmail: string;
+  senderName: string;
+}
+
+function resolveSmtpConfig(smtp?: SupabaseSmtpConfig): SupabaseSmtpConfig {
+  const resolved: SupabaseSmtpConfig = smtp ?? {
+    host: process.env.SMTP_HOST ?? '',
+    port: Number(process.env.SMTP_PORT ?? 587) || 587,
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    adminEmail: process.env.SMTP_ADMIN_EMAIL ?? process.env.EMAIL_FROM ?? '',
+    senderName: process.env.SMTP_SENDER_NAME ?? 'E-Logbook',
+  };
+  if (!resolved.host || !resolved.host.trim()) {
+    throw new Error(
+      'writeSupabaseEnv: SMTP host is empty — refusing to write silently-broken Supabase env. ' +
+        'Set SMTP_HOST (with SMTP_USER/SMTP_PASS/SMTP_ADMIN_EMAIL) before deploying Supabase.',
+    );
+  }
+  return {
+    host: resolved.host.trim(),
+    port: resolved.port,
+    user: resolved.user,
+    pass: resolved.pass,
+    adminEmail: resolved.adminEmail,
+    senderName: resolved.senderName,
+  };
+}
+
 function generateHex(bytes: number): string {
   return crypto.randomBytes(bytes).toString('hex');
 }
@@ -71,8 +105,9 @@ export async function cloneSupabase(): Promise<void> {
   }
 }
 
-export function writeSupabaseEnv(config: SupabaseConfig): void {
+export function writeSupabaseEnv(config: SupabaseConfig, smtp?: SupabaseSmtpConfig): void {
   const p = SUPABASE_PATH;
+  const mail = resolveSmtpConfig(smtp);
   const envContent = [
     `POSTGRES_PASSWORD=${config.postgresPassword}`,
     `POSTGRES_DB=${config.postgresDb}`,
@@ -97,16 +132,25 @@ export function writeSupabaseEnv(config: SupabaseConfig): void {
     'STUDIO_DEFAULT_PROJECT=My Project',
     '',
     'ENABLE_EMAIL_SIGNUP=true',
-    'ENABLE_EMAIL_AUTOCONFIRM=true',
+    // Secure default: require email confirmation. Local dev without SMTP
+    // must either configure SMTP_* below or manually confirm users in
+    // Studio (Authentication > Users). Do NOT set true in production.
+    'ENABLE_EMAIL_AUTOCONFIRM=false',
     'ENABLE_ANONYMOUS_USERS=false',
     'DISABLE_SIGNUP=false',
     '',
-    'SMTP_ADMIN_EMAIL=admin@example.com',
-    'SMTP_HOST=',
-    'SMTP_PORT=587',
-    'SMTP_USER=',
-    'SMTP_PASS=',
-    'SMTP_SENDER_NAME=E-Logbook',
+    `SMTP_ADMIN_EMAIL=${mail.adminEmail}`,
+    `SMTP_HOST=${mail.host}`,
+    `SMTP_PORT=${mail.port}`,
+    `SMTP_USER=${mail.user}`,
+    `SMTP_PASS=${mail.pass}`,
+    `SMTP_SENDER_NAME=${mail.senderName}`,
+    '',
+    `GOTRUE_MAILER_SMTP_HOST=${mail.host}`,
+    `GOTRUE_MAILER_SMTP_PORT=${mail.port}`,
+    `GOTRUE_MAILER_SMTP_USER=${mail.user}`,
+    `GOTRUE_MAILER_SMTP_PASS=${mail.pass}`,
+    `GOTRUE_MAILER_SMTP_ADMIN_EMAIL=${mail.adminEmail}`,
     '',
     'ENABLE_PHONE_SIGNUP=false',
     'ENABLE_PHONE_AUTOCONFIRM=true',

@@ -13,7 +13,8 @@ import {
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
-import { bestKnownCapability } from '../../lib/session';
+import { bestKnownCapability, requireFreshCapability } from '../../lib/session';
+import { canPerform } from '../../lib/authorization';
 import { submitApproval } from '../../lib/operations';
 import { useHaptics } from '../../lib/haptics';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
@@ -114,6 +115,18 @@ export default function ApprovalsScreen() {
       return;
     }
 
+    let capability;
+    try {
+      capability = await requireFreshCapability(supabase as never);
+    } catch {
+      setLoading(false);
+      return;
+    }
+    if (!canPerform(capability, 'case:approve').ok) {
+      setLoading(false);
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, role, tenant_id')
@@ -188,12 +201,13 @@ export default function ApprovalsScreen() {
         capability,
         entryId,
         action,
-        comment,
-        rpc: async (fn, args) => {
-          const { error } = await supabase.rpc(fn as 'approve_case' | 'reject_case', args as never);
-          return { error: error ? { message: error.message } : null };
-        },
-      });
+         comment,
+         rpc: async (fn, args) => {
+           const { data, error } = await supabase.rpc(fn as 'decide_case_command', args as never);
+           return { data: data as { success?: unknown } | null, error: error ? { message: error.message } : null };
+         },
+       });
+
 
       if (outcome.kind === 'confirmed') {
         haptics.submitSuccess();

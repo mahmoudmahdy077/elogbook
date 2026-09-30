@@ -1,40 +1,30 @@
 #!/usr/bin/env bash
-# ============================================================================
-# backup-config.sh
-#
-# Configuration for the E-Logbook database backup script.
-# Source this file from backup-db.sh or use as environment defaults.
-#
-# Usage:
-#   source "$(dirname "$0")/backup-config.sh"
-# ============================================================================
 
-# --- Backup destination ---
-# Directory where compressed SQL dump files are stored.
+umask 077
+
 BACKUP_DIR="${BACKUP_DIR:-/var/elogbook/backups}"
-
-# --- Retention ---
-# Number of days to keep daily backups. Older files are purged.
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
-
-# --- Database connection ---
-# PostgreSQL / Supabase connection URL. Falls back to SUPABASE_DB_URL
-# or DATABASE_URL for compatibility with common deployment environments.
-DB_URL="${DB_URL:-${SUPABASE_DB_URL:-${DATABASE_URL:-}}}"
-
-# --- Logging ---
-LOG_FILE="${LOG_FILE:-/var/log/elogbook/backup.log}"
-
-# --- File naming ---
-# Prefix used for backup filenames.
+LOG_FILE="${LOG_FILE:-${BACKUP_DIR}/backup.log}"
 BACKUP_PREFIX="${BACKUP_PREFIX:-elogbook}"
+BACKUP_OBJECT_PREFIX="${BACKUP_OBJECT_PREFIX:-elogbook/backups}"
+BACKUP_STORAGE_PROVIDER="${BACKUP_STORAGE_PROVIDER:-}"
+BACKUP_ENCRYPTION_PROVIDER="${BACKUP_ENCRYPTION_PROVIDER:-}"
+BACKUP_ENCRYPTION_HOOK="${BACKUP_ENCRYPTION_HOOK:-}"
+BACKUP_KMS_PROVIDER="${BACKUP_KMS_PROVIDER:-}"
+BACKUP_KMS_KEY_REFERENCE="${BACKUP_KMS_KEY_REFERENCE:-}"
+BACKUP_KMS_VERIFY_HOOK="${BACKUP_KMS_VERIFY_HOOK:-}"
+BACKUP_OBJECT_LOCK_MODE="${BACKUP_OBJECT_LOCK_MODE:-}"
+BACKUP_OBJECT_LOCK_RETENTION_DAYS="${BACKUP_OBJECT_LOCK_RETENTION_DAYS:-}"
+BACKUP_OBJECT_LOCK_VERIFY_HOOK="${BACKUP_OBJECT_LOCK_VERIFY_HOOK:-}"
+BACKUP_DECRYPTION_HOOK="${BACKUP_DECRYPTION_HOOK:-}"
+BACKUP_UPLOAD_HOOK="${BACKUP_UPLOAD_HOOK:-}"
+BACKUP_REMOTE_VERIFY_HOOK="${BACKUP_REMOTE_VERIFY_HOOK:-}"
+BACKUP_CONFIG_SOURCE="${BACKUP_CONFIG_SOURCE:-}"
+BACKUP_TEST_MODE="${BACKUP_TEST_MODE:-0}"
+POST_RESTORE_CHECK_HOOK="${POST_RESTORE_CHECK_HOOK:-}"
 
-# --- Compression ---
-# Compression tool command (must accept stdin -> stdout).
-COMPRESS_CMD="${COMPRESS_CMD:-gzip}"
-# File extension added by the compression tool.
-COMPRESS_EXT="${COMPRESS_EXT:-.gz}"
-
-# --- pg_dump options ---
-# Additional flags passed to pg_dump (e.g. --no-owner --no-acl).
-PGDUMP_OPTS="${PGDUMP_OPTS:---no-owner --no-acl}"
+PGHOST="${PGHOST:-}"
+PGPORT="${PGPORT:-5432}"
+PGUSER="${PGUSER:-}"
+PGDATABASE="${PGDATABASE:-}"
+PGPASSFILE="${PGPASSFILE:-}"

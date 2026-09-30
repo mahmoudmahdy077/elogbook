@@ -15,7 +15,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { encryptText, decryptText, CryptoError } from './crypto/aead';
 import { getOrCreateDbEncryptionKey } from './db/encryption-key';
-import { getAccountContext, scopedKey } from './account-context';
+import { getAccountContext, scopedKey, scopedKeyForContext, type AccountContext } from './account-context';
 import { logWarn } from './logger';
 import { t } from './copy';
 
@@ -33,6 +33,7 @@ export interface DurableQueueItem {
   opId: string;
   accountId: string;
   tenantId: string;
+  sessionId: string;
   table: string;
   action: QueueAction;
   schemaVersion: number;
@@ -57,6 +58,8 @@ export interface OpRpcResult {
   id?: string;
   already_deleted?: boolean;
   error?: string;
+  /** Stable machine code from the RPC's closed vocabulary. */
+  code?: string;
 }
 
 type SupabaseLike = {
@@ -140,13 +143,59 @@ async function writeRaw(items: DurableQueueItem[]): Promise<void> {
   await AsyncStorage.setItem(scopedKey(DURABLE_QUEUE_KEY), JSON.stringify(items));
 }
 
-export function classifyQueueError(message: string): QueueErrorClass {
+/**
+ * Retry decisions keyed on the server's stable code, not on message text.
+ *
+ * The RPC returns `code` from a closed vocabulary (see migration
+ * 20260927000001). Classifying on that code is what makes the queue's
+ * retry/quarantine behaviour a contract rather than a bet on English: the old
+ * regexes matched phrases the server happened to use, so rewording a trigger
+ * silently changed whether a resident's queued case was retried or quarantined.
+ *
+ * `message` remains the fallback for transport-level failures (network, auth
+ * refresh), where there is no code at all.
+ */
+const CODE_CLASS: Record<string, QueueErrorClass> = {
+  // Retryable: the work is valid, the server could not complete it.
+  'transient: retryable': 'transient',
+  'transient: in_progress': 'transient',
+  'transient: op_in_progress': 'transient',
+  internal_error: 'transient',
+  // Terminal for this attempt and for the operator: retrying cannot help.
+  not_found: 'policy',
+  forbidden: 'policy',
+  account_inactive: 'auth',
+  tenant_inactive: 'auth',
+  policy_denied: 'policy',
+  state_conflict: 'policy',
+  invalid_request: 'validation',
+  invalid_column: 'validation',
+  immutable_column: 'validation',
+  'validation: invalid_value': 'validation',
+  'validation: missing_value': 'validation',
+  'validation: constraint_failed': 'validation',
+  invalid_reference: 'validation',
+  conflict: 'conflict',
+  quota_exceeded: 'policy',
+  phi_detected: 'policy',
+};
+
+export function classifyQueueError(message: string, code?: string | null): QueueErrorClass {
+  if (typeof code === 'string') {
+    const byCode = CODE_CLASS[code];
+    if (byCode) return byCode;
+    // A code outside the table is treated as terminal-unknown rather than
+    // retried forever: retrying an unrecognised terminal failure in a local
+    // first outbox just drains the battery.
+    return 'unknown';
+  }
+
   const m = message.toLowerCase();
-  if (/network|fetch|timeout|abort|connect|5\d\d|econn|etimedout|offline|op_in_progress|free plan limit|quota/.test(m)) {
+  if (/network|fetch|timeout|abort|connect|5\d\d|econn|etimedout|offline/.test(m)) {
     return 'transient';
   }
   if (/jwt|token|expired|refresh|unauthorized|401|403.*auth|mfa|step-up/.test(m)) return 'auth';
-  if (/policy|rls|revok|permission|privilege|insufficient|denied|not allowed|disallowed|forbidden|approved_locked|identifier_locked|identifiable_not|mode_immutable/.test(m)) {
+  if (/policy|rls|revok|permission|privilege|insufficient|denied|not allowed|disallowed|forbidden/.test(m)) {
     return 'policy';
   }
   if (/validation|invalid|immutable|check constraint|not-null|22p02/.test(m)) return 'validation';
@@ -175,6 +224,7 @@ export async function enqueueDurable(
     opId,
     accountId: ctx.userId,
     tenantId: ctx.tenantId,
+    sessionId: ctx.sessionId ?? '',
     table,
     action,
     schemaVersion: DURABLE_SCHEMA_VERSION,
@@ -204,6 +254,23 @@ export async function enqueueDurable(
 
 export async function readDurableQueue(): Promise<DurableQueueItem[]> {
   return readRaw();
+}
+
+export async function clearDurableQueueForContext(ctx: AccountContext): Promise<void> {
+  await serialized(async () => {
+    const key = scopedKeyForContext(ctx, DURABLE_QUEUE_KEY);
+    await AsyncStorage.removeItem(key);
+    lastCorruptKey = null;
+  });
+}
+
+export async function clearDurableQueue(): Promise<void> {
+  const ctx = getAccountContext();
+  if (ctx) {
+    await clearDurableQueueForContext(ctx);
+    return;
+  }
+  await AsyncStorage.removeItem(scopedKey(DURABLE_QUEUE_KEY));
 }
 
 export async function getDurableCounts(): Promise<{ queued: number; quarantined: number; total: number }> {
@@ -242,7 +309,7 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
 
     for (const item of items) {
       // Account isolation: never flush another account's work after switch.
-      if (!ctx || item.accountId !== ctx.userId || item.tenantId !== ctx.tenantId) {
+      if (!ctx || item.accountId !== ctx.userId || item.tenantId !== ctx.tenantId || item.sessionId !== (ctx.sessionId ?? '')) {
         result.skippedForeign += 1;
         remaining.push(item);
         continue;
@@ -271,6 +338,7 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
         const fields: Record<string, unknown> = { ...data };
         delete fields.id;
         delete fields.tenant_id;
+        delete fields.local_scope;
         delete fields.client_operation_id;
         const rowId = item.action === 'insert' ? null : typeof data.id === 'string' ? (data.id as string) : null;
         if (item.action !== 'insert' && !rowId) {
@@ -301,7 +369,7 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
           continue;
         }
         const msg = (body && body.error) || 'empty operation result';
-        const cls = classifyQueueError(msg);
+        const cls = classifyQueueError(msg, body?.code ?? null);
         if (cls === 'transient') keepTransient(msg);
         else keepQuarantined(cls, msg);
       } catch (err) {

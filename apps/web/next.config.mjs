@@ -23,6 +23,7 @@ const nextConfig = {
   output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   poweredByHeader: false,
   compress: true,
+  reactStrictMode: true,
   transpilePackages: ['@elogbook/shared'],
   turbopack: {
     root: process.env.TURBOPACK_ROOT ?? monorepoRoot,

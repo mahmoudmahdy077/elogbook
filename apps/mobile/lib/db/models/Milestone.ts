@@ -5,6 +5,7 @@ export class Milestone extends Model {
   static table = 'milestones';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('resident_id') residentId!: string;
   @text('competency_area') competencyArea!: string;
   @text('sub_competency') subCompetency!: string;

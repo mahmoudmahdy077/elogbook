@@ -1,11 +1,220 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticate, corsHeaders, escapeHtml } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { authorizePrincipal, requirePrincipal, corsHeaders } from '../_shared/auth.ts';
+import { containsPhi, hasUnsafeAiContent, validateAiRequest, validateAndSanitizeModelOutput, validateDeidentifiedFieldValues } from '../_shared/ai-guard.ts';
+import { AI_INPUT_TOKENS, AI_INTENTS } from '../../../packages/shared/src/schemas/ai-contract.ts';
+import { configuredOutboundHosts, outboundRequestText } from '../_shared/outbound-request.ts';
+import { logError, logWarn } from '../_shared/logging.ts';
+
+const AI_BUDGET = {
+  maxInputBytes: 16_384,
+  maxOutputBytes: 32_768,
+  maxInputTokens: 8_192,
+  maxOutputTokens: 2_048,
+  maxCostCents: 100,
+  maxFanOut: 1,
+} as const;
+
+export const AI_CACHE_POLICY_VERSION = 'ai-cache-v3';
+
+export type CacheKeyInput = {
+  query: string;
+  structuredInput?: Record<string, unknown>;
+  model: string;
+  tenantId: string;
+  residentId?: string;
+  profileId?: string;
+  provider: string;
+  policyVersion?: string;
+  policy_version?: string;
+};
+
+export type ProviderConfig = {
+  provider: string;
+  model: string;
+  apiKey: string;
+  endpointUrl?: string | null;
+};
+
+export type ProviderFetch = (url: string, init: RequestInit) => Promise<Response>;
+export type EndpointValidator = (url: string, provider: string) => Promise<boolean>;
+
+export type ProviderResult = {
+  provider: string;
+  content?: string;
+  tokensUsed: number | null;
+  response?: Response;
+};
+
+export class ProviderRequestError extends Error {
+  readonly provider: string;
+  readonly status?: number;
+
+  constructor(provider: string, status?: number) {
+    super('AI provider request failed');
+    this.name = 'ProviderRequestError';
+    this.provider = provider;
+    this.status = status;
+  }
+}
+
+export class UnsupportedProviderError extends Error {
+  readonly provider: string;
+
+  constructor(provider: string) {
+    super('Unsupported AI provider');
+    this.name = 'UnsupportedProviderError';
+    this.provider = provider;
+  }
+}
+
+export class MissingStreamReaderError extends Error {
+  constructor() {
+    super('AI provider response has no stream reader');
+    this.name = 'MissingStreamReaderError';
+  }
+}
+
+export class StreamSafetyAbortError extends Error {
+  readonly flags: string[];
+
+  constructor(flags: string[]) {
+    super('AI stream blocked by safety policy');
+    this.name = 'StreamSafetyAbortError';
+    this.flags = flags;
+  }
+}
+
+export type ResidentTarget = {
+  id: string;
+  tenant_id: string;
+  role: string;
+  status: string;
+  deleted_at?: string | null;
+};
+
+export function isActiveResidentTarget(
+  target: ResidentTarget | null | undefined,
+  tenantId: string,
+  residentId: string,
+): boolean {
+  return Boolean(
+    target
+      && target.id === residentId
+      && target.tenant_id === tenantId
+      && target.role === 'resident'
+      && target.status === 'active'
+      && !target.deleted_at,
+  );
+}
+
+export function createIdempotentRelease(release: () => Promise<void>): () => Promise<void> {
+  let attempt: Promise<void> | undefined;
+  return () => {
+    if (!attempt) {
+      attempt = Promise.resolve()
+        .then(release)
+        .catch(() => undefined);
+    }
+    return attempt;
+  };
+}
+
+export async function runWithQuotaRelease<T>(
+  release: () => Promise<void>,
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    await release();
+    throw error;
+  }
+}
+
+type EdgeSupabaseClient = ReturnType<typeof createClient>;
+type RpcResponse = { data?: unknown; error?: { message?: string } | null };
+type RpcClient = { rpc: (name: string, args: Record<string, unknown>) => Promise<RpcResponse> };
+type LogClient = { from: (table: string) => { insert: (row: Record<string, unknown>) => PromiseLike<unknown> } };
+type CacheClient = { from: (table: string) => { upsert: (row: Record<string, unknown>, options: Record<string, unknown>) => PromiseLike<unknown> } };
+type CachedResponseRow = { response_text: string; tokens_used: number };
+type SubscriptionRow = { subscription_plans?: { features?: Record<string, unknown> } | null } | null;
+type InsightCase = {
+  case_templates?: { specialty?: string | null } | null;
+};
+
+function callRpc(client: unknown, name: string, args: Record<string, unknown>): Promise<RpcResponse> {
+  return (client as RpcClient).rpc(name, args);
+}
+
+type ProfileQueryBuilder = {
+  select: (columns: string) => ProfileQueryBuilder;
+  eq: (column: string, value: unknown) => ProfileQueryBuilder;
+  maybeSingle: () => PromiseLike<{ data?: unknown; error?: unknown }>;
+};
+
+type ProfileClient = { from: (table: string) => ProfileQueryBuilder };
+
+export async function findActiveResidentTarget(
+  client: unknown,
+  tenantId: string,
+  residentId: string,
+): Promise<ResidentTarget | null> {
+  try {
+    const result = await (client as ProfileClient)
+      .from('profiles')
+      .select('id, tenant_id, role, status, deleted_at')
+      .eq('id', residentId)
+      .eq('tenant_id', tenantId)
+      .eq('role', 'resident')
+      .eq('status', 'active')
+      .maybeSingle();
+    if (result.error || !result.data || typeof result.data !== 'object') return null;
+    const target = result.data as ResidentTarget;
+    return isActiveResidentTarget(target, tenantId, residentId) ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function releaseAiQuota(client: unknown, reservationId: string): Promise<void> {
+  const response = await callRpc(client, 'release_ai_quota', { p_reservation_id: reservationId });
+  if (response.error) throw new Error('AI quota release failed');
+}
+
+function insertAiLog(client: unknown, row: Record<string, unknown>): PromiseLike<unknown> {
+  return (client as LogClient).from('ai_query_logs').insert(row);
+}
+
+function stripControlCharacters(value: string): string {
+  return [...value].filter((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  }).join('');
+}
 
 export function sanitizeQuery(input: string): string {
   const trimmed = input.slice(0, 1000);
   const sanitized = trimmed.replace(/[^a-zA-Z0-9\s.,!?;:'()\-_@\/]/g, '');
-  return sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+  return stripControlCharacters(sanitized).trim();
+}
+
+const PHI_PATTERNS = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+  /\b(?:\d[ -]*?){13,16}\b/,
+  /\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/,
+  /\b(?:mrn|medical record(?: number)?|ssn|social security(?: number)?)\s*[:#=-]?\s*[A-Z0-9-]{4,}\b/i,
+  /\b(?:patient|resident)\s+(?:name|date of birth|dob|phone|address|email)\b/i,
+];
+
+export function containsPotentialPhi(value: string): boolean {
+  return PHI_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+export function deidentifyAiText(value: string): string | null {
+  const cleaned = stripControlCharacters(value).trim();
+  if (!cleaned || containsPotentialPhi(cleaned) || containsPhi(cleaned)) return null;
+  return cleaned;
 }
 
 const MANDATORY_DISCLAIMER = 'This is an educational reflection tool and does not constitute medical advice.';
@@ -43,8 +252,8 @@ async function checkRateLimitDb(
     .gte('created_at', since);
 
   if (error) {
-    console.error('Rate limit check error:', error);
-    return true;
+    logError('ai.rate_limit_check_failed', error, { operation: 'rate_limit_check' });
+    return false;
   }
 
   return (count ?? 0) < RATE_LIMIT_MAX;
@@ -89,7 +298,12 @@ async function isValidEndpoint(urlStr: string, provider: string): Promise<boolea
   return true;
 }
 
-async function getCachedResponse(supabase: any, tenantId: string, residentId: string, queryHash: string) {
+export function sanitizeCachedResponse(value: unknown): string | null {
+  const sanitized = validateAndSanitizeModelOutput(value, AI_BUDGET);
+  return sanitized.ok ? sanitized.value.content : null;
+}
+
+async function getCachedResponse(supabase: EdgeSupabaseClient, tenantId: string, residentId: string, queryHash: string) {
   evictStaleCache();
   const mem = memoryCache.get(queryHash);
   if (mem && mem.expires > Date.now()) {
@@ -106,9 +320,13 @@ async function getCachedResponse(supabase: any, tenantId: string, residentId: st
     .maybeSingle();
 
   if (data) {
+    const cached = data as unknown as CachedResponseRow;
+    if (typeof cached.response_text !== 'string' || typeof cached.tokens_used !== 'number') return null;
+    const safeResponse = sanitizeCachedResponse(cached.response_text);
+    if (safeResponse === null) return null;
     memoryCache.set(queryHash, {
-      response: data.response_text,
-      tokens: data.tokens_used,
+      response: safeResponse,
+      tokens: cached.tokens_used,
       expires: Date.now() + CACHE_TTL_MS,
     });
     return memoryCache.get(queryHash);
@@ -117,26 +335,27 @@ async function getCachedResponse(supabase: any, tenantId: string, residentId: st
 }
 
 async function setCachedResponse(
-  supabase: any,
+  supabase: EdgeSupabaseClient,
   tenantId: string,
   residentId: string,
   queryHash: string,
-  query: string,
   response: string,
   tokens: number,
   model: string,
   provider: string
 ) {
+  const safeResponse = sanitizeCachedResponse(response);
+  if (safeResponse === null) throw new Error('AI response failed the cache safety boundary');
   evictStaleCache();
-  memoryCache.set(queryHash, { response, tokens, expires: Date.now() + CACHE_TTL_MS });
+  memoryCache.set(queryHash, { response: safeResponse, tokens, expires: Date.now() + CACHE_TTL_MS });
 
   const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
-  await supabase.from('ai_response_cache').upsert({
+  await (supabase as unknown as CacheClient).from('ai_response_cache').upsert({
     tenant_id: tenantId,
     resident_id: residentId,
     query_hash: queryHash,
-    query_text: query,
-    response_text: response,
+    query_text: '[HASHED]',
+    response_text: safeResponse,
     tokens_used: tokens,
     model,
     provider,
@@ -144,10 +363,26 @@ async function setCachedResponse(
   }, { onConflict: 'tenant_id,resident_id,query_hash' });
 }
 
-async function computeQueryHash(query: string, model: string, tenantId: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(query + model + tenantId);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+export async function computeQueryHash(input: CacheKeyInput): Promise<string> {
+  const residentId = input.residentId ?? input.profileId;
+  const profileId = input.profileId ?? residentId;
+  if (!residentId || !profileId) throw new Error('cache identity is required');
+  if (![input.tenantId, input.provider, input.model].every((value) => typeof value === 'string' && value.length > 0)) throw new Error('cache scope is required');
+  if (!new Set<string>(AI_INPUT_TOKENS).has(input.query)) throw new Error('cache query token is invalid');
+  const structured = input.structuredInput ?? { status: 'approved' };
+  const structuredResult = validateDeidentifiedFieldValues(structured);
+  if (!structuredResult.ok) throw new Error('cache structured input is invalid');
+  const material = JSON.stringify({
+    policy_version: input.policyVersion ?? input.policy_version ?? AI_CACHE_POLICY_VERSION,
+    tenant_id: input.tenantId,
+    resident_id: residentId,
+    profile_id: profileId,
+    provider: input.provider,
+    model: input.model,
+    query_token: input.query,
+    structured_input: structuredResult.value,
+  });
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -178,14 +413,252 @@ function ensureDisclaimer(text: string): string {
 const AI_TIMEOUT_MS = 30000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    return response;
-  } finally {
-    clearTimeout(id);
+  const parsed = new URL(url);
+  const builtInHosts = ['api.openai.com', 'openrouter.ai', 'api.anthropic.com'];
+  const isBuiltIn = builtInHosts.includes(parsed.hostname) || parsed.hostname.endsWith('.openai.azure.com');
+  const result = await outboundRequestText(url, {
+    method: init.method,
+    headers: init.headers,
+    body: init.body,
+    timeoutMs: AI_TIMEOUT_MS,
+    maxResponseBytes: 1_048_576,
+    maxConcurrent: 8,
+    allowedHosts: isBuiltIn ? [parsed.hostname] : configuredOutboundHosts(),
+    requireAllowlist: !isBuiltIn,
+  });
+  if (result.data === undefined) {
+    if (result.category === 'timeout') throw new DOMException('AI provider request timed out', 'AbortError');
+    throw new Error('OUTBOUND_REQUEST_BLOCKED');
   }
+  return new Response(result.data, {
+    status: result.status,
+    headers: { 'Content-Type': result.category === 'success' ? 'application/json' : 'text/plain' },
+  });
+}
+
+
+type ProviderCallOptions = {
+  stream?: boolean;
+  fetchImpl?: ProviderFetch;
+  validateEndpoint?: EndpointValidator;
+};
+
+function providerMessages(systemPrompt: string, userPrompt: string) {
+  return [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+}
+
+function providerText(data: unknown): string | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const record = data as Record<string, unknown>;
+  const choices = record.choices;
+  if (Array.isArray(choices) && choices.length > 0) {
+    const choice = choices[0];
+    if (typeof choice === 'object' && choice !== null) {
+      const message = (choice as Record<string, unknown>).message;
+      if (typeof message === 'object' && message !== null) {
+        const content = (message as Record<string, unknown>).content;
+        if (typeof content === 'string') return content;
+      }
+    }
+  }
+  const content = record.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content) && content.length > 0) {
+    const first = content[0];
+    if (typeof first === 'object' && first !== null && typeof (first as Record<string, unknown>).text === 'string') {
+      return (first as Record<string, string>).text;
+    }
+  }
+  return null;
+}
+
+function providerTokens(data: unknown): number | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const usage = (data as Record<string, unknown>).usage;
+  if (typeof usage !== 'object' || usage === null) return null;
+  const record = usage as Record<string, unknown>;
+  const total = record.total_tokens;
+  if (typeof total === 'number' && Number.isFinite(total)) return total;
+  const input = record.input_tokens;
+  const output = record.output_tokens;
+  if (typeof input === 'number' && typeof output === 'number') return input + output;
+  return null;
+}
+
+export async function callAiProvider(
+  config: ProviderConfig,
+  systemPrompt: string,
+  userPrompt: string,
+  options: ProviderCallOptions = {},
+): Promise<ProviderResult> {
+  const provider = config.provider;
+  const validateEndpoint = options.validateEndpoint ?? isValidEndpoint;
+  const fetchImpl = options.fetchImpl ?? fetchWithTimeout;
+  let url: string;
+  let init: RequestInit;
+
+  if (provider === 'openai') {
+    url = 'https://api.openai.com/v1/chat/completions';
+    init = {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: config.model,
+        messages: providerMessages(systemPrompt, userPrompt),
+        max_tokens: 2048,
+        temperature: 0.7,
+        ...(options.stream ? { stream: true } : {}),
+      }),
+    };
+  } else if (provider === 'openrouter') {
+    url = 'https://openrouter.ai/api/v1/chat/completions';
+    init = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://elogbook.dev',
+        'X-Title': 'E-Logbook',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: providerMessages(systemPrompt, userPrompt),
+        max_tokens: 2048,
+        temperature: 0.7,
+      }),
+    };
+  } else if (provider === 'anthropic') {
+    url = 'https://api.anthropic.com/v1/messages';
+    init = {
+      method: 'POST',
+      headers: {
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    };
+  } else if (provider === 'azure') {
+    const allowedAzureModels = ['gpt-4', 'gpt-4-32k', 'gpt-35-turbo', 'gpt-35-turbo-16k'];
+    const normalizedModel = config.model.toLowerCase().replace(/_/g, '-');
+    if (!allowedAzureModels.some((model) => normalizedModel.startsWith(model.toLowerCase()))) {
+      throw new ProviderRequestError(provider);
+    }
+    const baseUrl = config.endpointUrl?.replace(/\/$/, '') ?? `https://${config.model.split('.')[0]}.openai.azure.com`;
+    if (!await validateEndpoint(baseUrl, 'azure')) throw new ProviderRequestError(provider);
+    url = `${baseUrl}/openai/deployments/${config.model}/chat/completions?api-version=2024-02-15-preview`;
+    init = {
+      method: 'POST',
+      headers: { 'api-key': config.apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: providerMessages(systemPrompt, userPrompt),
+        max_tokens: 2048,
+        temperature: 0.7,
+      }),
+    };
+  } else if (provider === 'custom') {
+    if (!config.endpointUrl || !await validateEndpoint(config.endpointUrl, 'custom')) {
+      throw new ProviderRequestError(provider);
+    }
+    url = config.endpointUrl;
+    init = {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: config.model,
+        messages: providerMessages(systemPrompt, userPrompt),
+        max_tokens: 2048,
+        temperature: 0.7,
+      }),
+    };
+  } else {
+    throw new UnsupportedProviderError(provider);
+  }
+
+  const response = await fetchImpl(url, init);
+  if (!response.ok) throw new ProviderRequestError(provider, response.status);
+  if (options.stream && provider === 'openai') {
+    return { provider, response, tokensUsed: null };
+  }
+
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ProviderRequestError(provider, response.status);
+  }
+  const content = providerText(data);
+  if (content === null) throw new ProviderRequestError(provider, response.status);
+  return { provider, content, tokensUsed: providerTokens(data) };
+}
+
+export async function consumeOpenAiStream(
+  response: Response,
+  onToken: (token: string) => void,
+  onSafety?: (flags: string[]) => void,
+): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new MissingStreamReaderError();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullResponse = '';
+  let fullResponseBytes = 0;
+
+  const processLine = (line: string) => {
+    if (!line.startsWith('data:')) return;
+    const data = line.slice(5).trim();
+    if (!data || data === '[DONE]') return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      return;
+    }
+    if (typeof parsed !== 'object' || parsed === null) return;
+    const choices = (parsed as Record<string, unknown>).choices;
+    if (!Array.isArray(choices) || choices.length === 0) return;
+    const choice = choices[0];
+    if (typeof choice !== 'object' || choice === null) return;
+    const delta = (choice as Record<string, unknown>).delta;
+    if (typeof delta !== 'object' || delta === null) return;
+    const token = (delta as Record<string, unknown>).content;
+    if (typeof token === 'string' && token.length > 0) {
+      fullResponseBytes += new TextEncoder().encode(token).byteLength;
+      if (fullResponseBytes > 1_048_576) throw new StreamSafetyAbortError(['output_budget']);
+      fullResponse += token;
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? '';
+    for (const line of lines) processLine(line);
+  }
+  buffer += decoder.decode();
+  if (buffer) processLine(buffer);
+
+  const flags = hasUnsafeAiContent(fullResponse)
+    ? ['unsafe_content']
+    : deidentifyAiText(fullResponse) === null
+      ? ['phi_content']
+      : checkSafety(fullResponse);
+  if (flags.length > 0) {
+    onSafety?.(flags);
+    throw new StreamSafetyAbortError(flags);
+  }
+  onToken(fullResponse);
+  return fullResponse;
 }
 
 if (import.meta.main) {
@@ -197,58 +670,101 @@ if (import.meta.main) {
     return new Response('ok', { headers });
   }
 
-  const authResult = await authenticate(req);
+  const authResult = await requirePrincipal(req, {
+    roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'],
+    aal: 'aal1',
+  });
   if (authResult instanceof Response) return authResult;
-  const { supabase, user, tenantId, role } = authResult;
-
-  // Config reads use the service client: the secret views are role-gated to
-  // tenant admins (Task 1.1), so resident/supervisor callers can no longer
-  // read them with their own token.
+  const { supabase, tenantId, role, principal } = authResult;
   const serviceSupabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   );
 
-    let body: { resident_id?: string; query?: string; stream?: boolean; is_deidentified?: boolean };
-    try {
-      body = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (!body || typeof body !== 'object') {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
+  let body: { tenant_id?: unknown; resident_id?: unknown; intent?: unknown; query?: unknown; stream?: unknown; is_deidentified?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  if (!body || typeof body !== 'object') {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  const allowedBodyFields = new Set(['tenant_id', 'resident_id', 'intent', 'query', 'stream', 'is_deidentified']);
+  if (Object.keys(body).some((key) => !allowedBodyFields.has(key))) {
+    return new Response(
+      JSON.stringify({ error: 'AI request contains unsupported fields' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    const { resident_id, query: rawQuery, stream = false, is_deidentified } = body;
-  const query = rawQuery ? sanitizeQuery(rawQuery) : undefined;
-
-  if (!resident_id) {
+  const { resident_id: rawResidentId, intent: rawIntent, query: rawQuery, stream: rawStream, is_deidentified: rawIsDeidentified } = body;
+  if (typeof rawResidentId !== 'string' || rawResidentId.length === 0) {
     return new Response(
       JSON.stringify({ error: 'resident_id is required' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
-
-  // Security: Verify resident_id matches caller OR caller has elevated role
-  // This prevents cross-resident PHI access
-  const callerId = user.id;
-  const elevatedRoles = ['supervisor', 'director', 'institution_admin', 'admin'];
-  if (resident_id !== callerId && !elevatedRoles.includes(role)) {
+  if (rawQuery !== undefined) {
     return new Response(
-      JSON.stringify({ error: 'Forbidden - resident_id mismatch' }),
-      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Free-text queries are not accepted; choose a structured intent.' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
-
-  if (is_deidentified !== true) {
+  if (rawStream === true) {
     return new Response(
-      JSON.stringify({ error: 'Cannot send identifiable patient data to external AI. Set is_deidentified=true or remove PHI.' }),
+      JSON.stringify({ error: 'Streaming is temporarily disabled until complete response validation is available.' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  if (rawStream !== undefined && typeof rawStream !== 'boolean') {
+    return new Response(
+      JSON.stringify({ error: 'stream must be boolean' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  if (rawIsDeidentified !== undefined) {
+    return new Response(
+      JSON.stringify({ error: 'De-identification is derived from the server record; client flags are not accepted.' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  if (rawIntent !== undefined && (typeof rawIntent !== 'string' || !new Set<string>(AI_INTENTS).has(rawIntent))) {
+    return new Response(
+      JSON.stringify({ error: 'intent must be a supported structured value' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  const resident_id = rawResidentId;
+  if (principal.role === 'resident' && resident_id !== principal.profileId) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+  const privilegedResident = principal.role !== 'resident';
+  if (principal.role !== 'resident') {
+    const privileged = authorizePrincipal(principal, { aal: 'aal2' });
+    if (!privileged.ok) return privileged.response;
+  }
+  const intent = typeof rawIntent === 'string' ? rawIntent : 'overview';
+  const inputToken = intent === 'trends'
+    ? 'insights-trends'
+    : intent === 'development'
+      ? 'insights-development'
+      : intent === 'case-mix'
+        ? 'auto-analysis'
+        : 'insights-overview';
+
+  const target = await findActiveResidentTarget(serviceSupabase, tenantId, resident_id);
+  if (!target) {
+    return new Response(
+      JSON.stringify({ error: 'Resident is not active in the authenticated tenant' }),
       { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
@@ -267,7 +783,8 @@ if (import.meta.main) {
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .maybeSingle();
-  const planFeatures = (sub as any)?.subscription_plans?.features as Record<string, unknown> | null;
+  const planFeatures = (sub as SubscriptionRow)?.subscription_plans?.features ?? null;
+
   if (!planFeatures || planFeatures.ai !== true) {
     return new Response(
       JSON.stringify({ error: 'AI features not available on your plan' }),
@@ -330,9 +847,7 @@ if (import.meta.main) {
   const { data: cases, error: casesError } = await supabase
     .from('case_entries')
     .select(`
-      case_date,
-      field_values,
-      case_templates!inner(name, specialty)
+      case_templates!inner(specialty)
     `)
     .eq('resident_id', resident_id)
     .eq('tenant_id', tenantId)
@@ -342,20 +857,50 @@ if (import.meta.main) {
     .limit(50);
 
   if (casesError) {
-    console.error('Failed to fetch case data', { error: casesError.message });
+    logError('ai.case_fetch_failed', casesError, { operation: 'case_fetch' });
     return new Response(
       JSON.stringify({ error: 'Failed to fetch case data' }),
       { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 
-  const caseSummary = (cases ?? []).map((c: any) => {
-    const template = c.case_templates as any;
-    const fieldCount = c.field_values ? Object.keys(c.field_values).length : 0;
-    return `Date: ${c.case_date}, Specialty: ${template?.specialty ?? 'N/A'}, Template: ${template?.name ?? 'N/A'}, Field Count: ${fieldCount}`;
-  }).join('\n');
+  const specialtyValues = [...new Set((cases ?? [])
+    .map((rawCase) => (rawCase as InsightCase).case_templates?.specialty)
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map((value) => value.trim()))].slice(0, 8);
+  const structuredFieldResult = validateDeidentifiedFieldValues({
+    case_type: specialtyValues.length > 0 ? specialtyValues : ['none'],
+    status: 'approved',
+  }, AI_BUDGET);
+  if (!structuredFieldResult.ok) {
+    return new Response(
+      JSON.stringify({ error: 'Case context contains disallowed data' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
+  }
+  const structuredFieldValues = structuredFieldResult.value;
 
-  const systemPrompt = `You are an educational clinical reflection assistant for medical residents using E-Logbook. You analyze de-identified surgical and clinical case entries to provide educational insights.
+  const aiRequest = validateAiRequest(
+    {
+      tenant_id: tenantId,
+      actor_id: principal.profileId,
+      action: 'ai:insights',
+      input: inputToken,
+      resident_id,
+      field_values: structuredFieldValues,
+      fan_out: 1,
+    },
+    { actorId: principal.profileId, tenantId, role, status: 'active', aal: principal.aal },
+    { requireAal2: privilegedResident, requireDeidentified: true, budget: AI_BUDGET },
+  );
+  if (!aiRequest.ok) {
+    return new Response(
+      JSON.stringify({ error: aiRequest.reason === 'budget_exceeded' ? 'AI request exceeds the allowed budget' : 'AI request is not authorized' }),
+      { status: aiRequest.reason === 'budget_exceeded' ? 400 : 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const systemPrompt = `You are an educational clinical reflection assistant for medical residents using E-Logbook. Analyze only the bounded structured fields supplied below.
 
 You MAY:
 - Identify clinical patterns and trends across cases
@@ -375,21 +920,41 @@ Every response MUST end with: "This is an educational reflection tool and does n
 
 Be concise, supportive, and evidence-based.`;
 
-  const userPrompt = query
-    ? `The resident has asked: "${query}"\n\nHere are their recent approved de-identified cases for context:\n${caseSummary}\n\nPlease respond to their query using the case data above as context.`
-    : `Please analyze the following approved de-identified case entries for this medical resident. Provide insights on:\n1. Case volume and distribution by specialty\n2. Patterns in case complexity or types\n3. Suggested areas for development or additional exposure\n4. Any notable trends\n\nHere are the cases:\n${caseSummary}`;
+  const userPrompt = `Structured intent: ${inputToken}
+Structured case fields: ${JSON.stringify(structuredFieldValues)}
+
+Provide educational insights about the supplied case distribution and development opportunities.`;
 
   const provider = aiConfig.provider as string;
   const model = aiConfig.model as string;
   const apiKey = aiConfig.api_key as string;
 
-  const queryForCache = query || 'Auto-analysis';
-  const queryHash = await computeQueryHash(queryForCache, model, tenantId);
+  const queryHash = await computeQueryHash({
+    query: inputToken,
+    structuredInput: structuredFieldValues,
+    model,
+    tenantId,
+    residentId: resident_id,
+    profileId: principal.profileId,
+    provider,
+    policyVersion: AI_CACHE_POLICY_VERSION,
+  });
   const cached = await getCachedResponse(supabase, tenantId, resident_id, queryHash);
   if (cached) {
+    const cachedOutput = validateAndSanitizeModelOutput(cached.response, AI_BUDGET, {
+      outputTokens: cached.tokens,
+      totalTokens: cached.tokens,
+      costCents: Math.ceil(cached.tokens / 1_000),
+    });
+    if (!cachedOutput.ok || checkSafety(cachedOutput.value.content).length > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Cached AI response failed the output safety boundary' }),
+        { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
     return new Response(
       JSON.stringify({
-        response: cached.response,
+        response: cachedOutput.value.content,
         tokens_used: cached.tokens,
         disclaimer_rendered: true,
         safety_flags: [],
@@ -400,339 +965,93 @@ Be concise, supportive, and evidence-based.`;
     );
   }
 
-  // Atomic quota consumption: reserves one unit before the provider call.
-  // If the provider call fails, the reservation is released (below).
-  const { data: quota, error: quotaError } = await supabase.rpc('consume_ai_quota', {
+  const { data: quota, error: quotaError } = await callRpc(supabase, 'consume_ai_quota', {
     p_resident_id: resident_id,
     p_count: 1,
   });
-  if (quotaError || !quota || (quota as { code?: string }).code !== 'ok') {
+  const quotaRecord = quota as { code?: unknown; reservation_id?: unknown } | null;
+  const reservationId = quotaRecord?.reservation_id;
+  if (
+    quotaError
+    || quotaRecord?.code !== 'ok'
+    || typeof reservationId !== 'string'
+    || reservationId.length === 0
+  ) {
     return new Response(
       JSON.stringify({ error: 'AI query quota exceeded or AI is disabled' }),
       { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
+  const releaseReservation = createIdempotentRelease(() => releaseAiQuota(serviceSupabase, reservationId));
 
-  let aiResponse: string;
+  let aiResponse = '';
   let tokensUsed: number | null = null;
-
   try {
-    if (provider === 'openai') {
-      const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!openaiRes.ok) {
-        console.error('OpenAI API error', { status: openaiRes.status, body: await openaiRes.text() });
-        return new Response(
-          JSON.stringify({ error: 'AI provider error' }),
-          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const openaiData = await openaiRes.json();
-      aiResponse = openaiData.choices?.[0]?.message?.content ?? 'No response generated.';
-      tokensUsed = openaiData.usage?.total_tokens ?? null;
-    } else if (provider === 'openrouter') {
-      const openrouterRes = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://elogbook.dev',
-          'X-Title': 'E-Logbook',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!openrouterRes.ok) {
-        console.error('OpenRouter API error', { status: openrouterRes.status, body: await openrouterRes.text() });
-        return new Response(
-          JSON.stringify({ error: 'AI provider error' }),
-          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const openrouterData = await openrouterRes.json();
-      aiResponse = openrouterData.choices?.[0]?.message?.content ?? 'No response generated.';
-      tokensUsed = openrouterData.usage?.total_tokens ?? null;
-    } else if (provider === 'anthropic') {
-      const anthropicRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
-        }),
-      });
-
-      if (!anthropicRes.ok) {
-        console.error('Anthropic API error', { status: anthropicRes.status, body: await anthropicRes.text() });
-        return new Response(
-          JSON.stringify({ error: 'AI provider error' }),
-          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const anthropicData = await anthropicRes.json();
-      aiResponse = anthropicData.content?.[0]?.text ?? 'No response generated.';
-      tokensUsed = (anthropicData.usage?.input_tokens ?? 0) + (anthropicData.usage?.output_tokens ?? 0);
-    } else if (provider === 'azure') {
-      const allowedAzureModels = ['gpt-4', 'gpt-4-32k', 'gpt-35-turbo', 'gpt-35-turbo-16k'];
-      const normalizedModel = model.toLowerCase().replace(/_/g, '-');
-      if (!allowedAzureModels.some(m => normalizedModel.startsWith(m.toLowerCase()))) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid Azure model specified' }),
-          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-      const baseUrl = aiConfig.endpoint_url?.replace(/\/$/, '') ?? `https://${aiConfig.model.split('.')[0]}.openai.azure.com`;
-      if (!await isValidEndpoint(baseUrl, 'azure')) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid Azure endpoint URL' }),
-          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-      const azureRes = await fetchWithTimeout(`${baseUrl}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`, {
-        method: 'POST',
-        headers: {
-          'api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!azureRes.ok) {
-        console.error('Azure API error', { status: azureRes.status, body: await azureRes.text() });
-        return new Response(
-          JSON.stringify({ error: 'AI provider error' }),
-          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const azureData = await azureRes.json();
-      aiResponse = azureData.choices?.[0]?.message?.content ?? 'No response generated.';
-      tokensUsed = azureData.usage?.total_tokens ?? null;
-    } else if (provider === 'custom') {
-      const endpointUrl = aiConfig.endpoint_url;
-      if (!endpointUrl) {
-        return new Response(
-          JSON.stringify({ error: 'Custom provider requires an endpoint_url' }),
-          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (!await isValidEndpoint(endpointUrl, 'custom')) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid or blocked custom endpoint URL' }),
-          { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const customRes = await fetchWithTimeout(endpointUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!customRes.ok) {
-        console.error('Custom provider API error', { status: customRes.status, body: await customRes.text() });
-        return new Response(
-          JSON.stringify({ error: 'AI provider error' }),
-          { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const customData = await customRes.json();
-      aiResponse = customData.choices?.[0]?.message?.content ?? customData.content ?? 'No response generated.';
-      tokensUsed = customData.usage?.total_tokens ?? null;
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Unsupported provider: ${escapeHtml(provider)}` }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
+    const providerResult = await callAiProvider(
+      { provider, model, apiKey, endpointUrl: aiConfig.endpoint_url },
+      systemPrompt,
+      userPrompt,
+      { stream: false },
+    );
+    aiResponse = providerResult.content ?? '';
+    tokensUsed = providerResult.tokensUsed;
   } catch (err) {
-    // Provider call failed — release the reserved quota unit.
-    await supabase.rpc('release_ai_quota', { p_resident_id: resident_id, p_count: 1 }).catch(() => undefined);
+    await releaseReservation();
     if (err instanceof DOMException && err.name === 'AbortError') {
-      console.error('AI provider request timed out', { provider, model });
+      logWarn('ai.provider_timeout', { provider, model });
       return new Response(
         JSON.stringify({ error: 'AI provider request timed out' }),
         { status: 504, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
-    console.error('AI provider unexpected error', { error: err instanceof Error ? err.message : String(err) });
+    logError('ai.provider_error', err, { provider, model });
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: err instanceof UnsupportedProviderError ? 'AI provider is not supported' : 'AI provider error' }),
+      { status: err instanceof UnsupportedProviderError ? 400 : 502, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 
-  if (!stream) {
-    const safetyFlags = checkSafety(aiResponse);
-    aiResponse = ensureDisclaimer(aiResponse);
+  try {
+    const estimatedInputTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+    const estimatedOutputTokens = tokensUsed === null
+      ? Math.ceil(aiResponse.length / 4)
+      : Math.max(0, tokensUsed - estimatedInputTokens);
+    const totalTokens = tokensUsed ?? estimatedInputTokens + estimatedOutputTokens;
+    const guardedOutput = validateAndSanitizeModelOutput(aiResponse, AI_BUDGET, {
+      inputTokens: estimatedInputTokens,
+      outputTokens: estimatedOutputTokens,
+      totalTokens,
+      costCents: Math.ceil(totalTokens / 1_000),
+    });
 
-    await setCachedResponse(supabase, tenantId, resident_id, queryHash, queryForCache, aiResponse, tokensUsed ?? 0, model, provider);
+    if (!guardedOutput.ok) throw new Error('AI response failed the output safety boundary');
+    const safetyFlags = checkSafety(guardedOutput.value.content);
+    if (safetyFlags.length > 0) throw new Error('AI response was blocked by safety policy');
+    const finalResponse = ensureDisclaimer(guardedOutput.value.content);
 
-    await supabase.from('ai_query_logs').insert({
+    await setCachedResponse(supabase, tenantId, resident_id, queryHash, finalResponse, tokensUsed ?? 0, model, provider);
+    await insertAiLog(supabase, {
       tenant_id: tenantId,
       resident_id,
-      query: query || 'Auto-analysis',
-      response: aiResponse,
+      query: '[HASHED]',
+      response: '[REDACTED]',
       tokens_used: tokensUsed,
-      disclaimer_rendered: aiResponse.includes('does not constitute medical advice'),
+      disclaimer_rendered: finalResponse.includes('does not constitute medical advice'),
       response_format: 'text',
       safety_flags: safetyFlags,
     });
 
     return new Response(
-      JSON.stringify({ response: aiResponse, tokens_used: tokensUsed, disclaimer_rendered: true, safety_flags: safetyFlags, model }),
+      JSON.stringify({ response: finalResponse, tokens_used: tokensUsed, disclaimer_rendered: true, safety_flags: safetyFlags, model }),
       { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
+  } catch (error) {
+    await releaseReservation();
+    logError('ai.response_processing_failed', error, { provider, model });
+    return new Response(
+      JSON.stringify({ error: 'AI response failed the output safety boundary' }),
+      { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
   }
-
-  const sseStream = new ReadableStream({
-    start(controller) {
-      const encoder = new TextEncoder();
-      let fullResponse = '';
-      const safetyFlags: string[] = [];
-      let abortedForSafety = false;
-
-      // ALWAYS send the disclaimer first — before any AI content.
-      // The client renders this as a banner and only then streams content.
-      controller.enqueue(encoder.encode(`event: disclaimer\ndata: ${JSON.stringify({ text: 'This response is generated by an AI and does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional.' })}\n\n`));
-
-      async function streamResponse() {
-        try {
-          if (provider === 'openai') {
-            const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], temperature: 0.7, stream: true }),
-            });
-            const reader = openaiRes.body?.getReader();
-            if (!reader) { controller.close(); return; }
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value);
-              const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
-              for (const line of lines) {
-                const data = line.slice(6);
-                if (data === '[DONE]') continue;
-                try {
-                  const parsed = JSON.parse(data);
-                  const token = parsed.choices?.[0]?.delta?.content ?? '';
-                  if (token) {
-                    fullResponse += token;
-                    // Safety check on EVERY chunk — abort if a flag trips.
-                    const chunkFlags = checkSafety(fullResponse);
-                    if (chunkFlags.length > 0) {
-                      safetyFlags.push(...chunkFlags);
-                      abortedForSafety = true;
-                      controller.enqueue(encoder.encode(`event: safety\ndata: ${JSON.stringify({ flags: chunkFlags, message: 'Response blocked by safety policy' })}\n\n`));
-                      controller.close();
-                      return;
-                    }
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token })}\n\n`));
-                  }
-                } catch { /* skip parse errors */ }
-              }
-            }
-          } else {
-            // Non-streaming providers: chunk once.
-            const chunkFlags = checkSafety(aiResponse);
-            if (chunkFlags.length > 0) {
-              safetyFlags.push(...chunkFlags);
-              abortedForSafety = true;
-              controller.enqueue(encoder.encode(`event: safety\ndata: ${JSON.stringify({ flags: chunkFlags })}\n\n`));
-              controller.close();
-              return;
-            }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: aiResponse })}\n\n`));
-            fullResponse = aiResponse;
-          }
-        } catch (err) {
-          // Stream failed — release the reserved quota unit.
-          await supabase.rpc('release_ai_quota', { p_resident_id: resident_id, p_count: 1 }).catch(() => undefined);
-          if (err instanceof DOMException && err.name === 'AbortError') {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'AI provider request timed out' })}\n\n`));
-          } else {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : 'Stream error' })}\n\n`));
-          }
-        }
-
-        if (abortedForSafety) return;
-
-        const flags = checkSafety(fullResponse);
-        const finalResponse = ensureDisclaimer(fullResponse);
-        const disclaimerRendered = finalResponse.includes('does not constitute medical advice');
-
-        await setCachedResponse(supabase, tenantId, resident_id, queryHash, queryForCache, finalResponse, tokensUsed ?? 0, model, provider);
-
-        await supabase.from('ai_query_logs').insert({
-          tenant_id: tenantId,
-          resident_id,
-          query: query || 'Auto-analysis',
-          response: finalResponse,
-          tokens_used: tokensUsed,
-          disclaimer_rendered: disclaimerRendered,
-          response_format: 'stream',
-          safety_flags: flags,
-        });
-
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, tokens_used: tokensUsed, disclaimer_rendered: disclaimerRendered, safety_flags: flags })}\n\n`));
-        controller.close();
-      }
-
-      streamResponse();
-    },
-  });
-
-  return new Response(sseStream, {
-    headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-  });
 });
 }

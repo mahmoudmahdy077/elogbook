@@ -17,7 +17,9 @@ interface SubscriptionPlan {
 
 interface Props {
   plans: SubscriptionPlan[];
+  /** Accepted for call-site compatibility; the tenant is resolved server-side. */
   tenantId: string;
+  /** Accepted for call-site compatibility; the gateway is resolved server-side. */
   gatewayProvider: string | null;
   publishableKey: string | null;
   currentPlanId: string | null;
@@ -51,8 +53,6 @@ const staggerDelay = 0.05;
 
 export default function SubscriptionPlans({
   plans,
-  tenantId,
-  gatewayProvider,
   publishableKey,
   currentPlanId,
 }: Props) {
@@ -72,9 +72,11 @@ export default function SubscriptionPlans({
     setLoadingPlanId(planId);
     const supabase = createClient();
     try {
-      const gateway = gatewayProvider ?? 'stripe';
+      // Only the plan is sent. The tenant, the mode and the price are resolved
+      // server-side from the verified principal and the server catalog, so the
+      // client never asserts who is paying or what they are paying.
       const { data, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
-        body: { tenant_id: tenantId, plan_id: planId, gateway },
+        body: { plan_id: planId },
       });
       if (checkoutError) throw checkoutError;
       if (data?.sessionId && publishableKey) {

@@ -1,0 +1,52 @@
+title = "E-Logbook secret containment"
+
+[extend]
+useDefault = false
+
+[[rules]]
+id = "supabase-jwt"
+description = "Supabase JWT-shaped credential"
+regex = '''eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'''
+keywords = ["eyJ"]
+
+[[rules]]
+id = "private-key-header"
+description = "Private key material header"
+regex = '''(?i)^[[:space:]]*-----BEGIN ([[:alnum:]]+[[:space:]]+)?PRIVATE KEY-----[[:space:]]*$'''
+keywords = ["PRIVATE KEY"]
+
+[[rules]]
+id = "supabase-service-role-assignment"
+description = "Supabase service-role key assignment"
+regex = '''(?i)\b(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SERVICE_ROLE_JWT|SUPABASE_SERVICE_ROLE|SERVICE_ROLE_KEY)\b[[:space:]]*[:=][[:space:]]*["'`]?([A-Za-z0-9._~+/=-]{16,})'''
+keywords = ["SUPABASE_SERVICE_ROLE", "SERVICE_ROLE_KEY"]
+
+[[rules]]
+id = "provider-key-prefix"
+description = "Common provider credential prefix"
+regex = '''(?i)(^|[^[:alnum:]])((sk-(proj-)?[A-Za-z0-9_-]{16,}|sk_(live|test)_[A-Za-z0-9]{16,}|rk_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9_]{16,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|npm_[A-Za-z0-9]{30,}|SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}|re_[A-Za-z0-9_-]{20,}))'''
+keywords = ["sk-", "sk_", "rk_", "whsec_", "ghp_", "github_pat_", "glpat-", "AKIA", "AIza", "xox", "npm_", "SG.", "re_"]
+
+[[rules]]
+id = "secret-assignment"
+description = "Credential-like environment assignment"
+regex = '''(?i)\b[A-Z][A-Z0-9_]*(API[_ -]?KEY|SECRET[_ -]?KEY|ACCESS[_ -]?TOKEN|AUTH[_ -]?TOKEN|WEBHOOK[_ -]?SECRET|PROVIDER[_ -]?KEY|PROVIDER[_ -]?TOKEN|PASSWORD|CREDENTIALS?)\b[[:space:]]*[:=][[:space:]]*["'`]?([A-Za-z0-9._~+/=-]{16,})'''
+keywords = ["API_KEY", "SECRET_KEY", "ACCESS_TOKEN", "AUTH_TOKEN", "WEBHOOK_SECRET", "PROVIDER_KEY", "PROVIDER_TOKEN", "PASSWORD", "CREDENTIAL"]
+
+[[rules]]
+id = "secret-bearing-markdown"
+description = "Credential-like value in Markdown prose or nested lists"
+regex = '''(?i)([A-Z0-9_ -]*(API[_ -]?KEY|SECRET|TOKEN|PASSWORD|CREDENTIALS?|PRIVATE[_ -]?KEY)|SERVICE[_ -]?ROLE([_ -]?KEY)?)[[:space:]]*(:=|\bis\b)[[:space:]]*["'`]?([A-Za-z0-9._~+/=-]{16,})'''
+keywords = ["API_KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL", "SERVICE_ROLE"]
+
+[allowlist]
+description = "Explicit safe placeholders only"
+regexes = [
+  '''^\$\{[^{}\r\n]+\}$''',
+  '''^\$\{\{[^{}\r\n]+\}\}$''',
+  '''^\$[A-Z_][A-Z0-9_]*$''',
+  '''^\[REDACTED\]$''',
+  '''(?i)^(your|change|replace|example|placeholder|dummy|not-a-real-secret)([-_][a-z0-9]+)*$''',
+  '''(?i)^(sk|rk|whsec|gh[pousr]|glpat|npm|xox[baprs]|github_pat|ai)([_-](test|example|dummy|placeholder|xxx))+$''',
+  '''(?i)^(process\.env|Deno\.env|import\.meta\.env|os\.environ)([.\[]|$)''',
+]

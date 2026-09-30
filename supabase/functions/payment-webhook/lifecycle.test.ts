@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from 'jsr:@std/assert';
+import { assertEquals } from 'jsr:@std/assert@1.0.19';
 
 Deno.test('checkout.session.completed creates active subscription', async () => {
   const res = await fetch('http://localhost:54321/functions/v1/payment-webhook', {

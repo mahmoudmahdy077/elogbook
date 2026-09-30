@@ -11,7 +11,7 @@ interface Props {
   tenant: string;
 }
 
-export default function ApprovalActions({ requestId: _requestId, entryId, tenant }: Props) {
+export default function ApprovalActions({ requestId, entryId, tenant }: Props) {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +30,7 @@ export default function ApprovalActions({ requestId: _requestId, entryId, tenant
         body: JSON.stringify({
           action,
           entry_id: entryId,
+          request_id: requestId,
           comment: comment || null,
         }),
       });

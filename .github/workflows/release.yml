@@ -1,0 +1,387 @@
+name: Protected Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_approved:
+        description: Explicit operator approval after staging verification
+        required: true
+        type: boolean
+        default: false
+      staging_url:
+        description: HTTPS URL for the staging smoke test
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      staging_approved:
+        description: Explicit operator approval after staging verification
+        required: true
+        type: boolean
+      staging_url:
+        description: HTTPS URL for the staging smoke test
+        required: true
+        type: string
+    # Declared one by one rather than forwarded wholesale, so a caller cannot
+    # pass this workflow the entire repository secret set. These are the only
+    # secrets the jobs below reference.
+    secrets:
+      EXPO_TOKEN:
+        required: true
+      EXPO_PUBLIC_SENTRY_DSN:
+        required: false
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+      SUPABASE_ACCESS_TOKEN:
+        required: true
+      SUPABASE_PROJECT_REF:
+        required: true
+      NEXT_PUBLIC_SUPABASE_URL:
+        required: false
+      NEXT_PUBLIC_SUPABASE_ANON_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    name: Validate release candidate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Require main branch candidate
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+
+  typecheck:
+    name: Typecheck
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  tests:
+    name: Unit and integration tests
+    needs: [candidate, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run tests and warning gate
+        run: |
+          set -o pipefail
+          pnpm test 2>&1 | tee release-test-output.log
+          node scripts/check-test-log.mjs release-test-output.log
+
+  migration-replay:
+    name: Migration replay
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@afb1b15109756ea5cf9d8985a359d9095235ca2b
+        with:
+          version: 2.109.1
+        env:
+          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
+      - name: Replay migrations and database tests
+        run: |
+          supabase start
+          supabase db reset
+          supabase db test
+
+  sast:
+    name: Static application security testing
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run pinned Semgrep image
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -w /src returntocorp/semgrep@sha256:acaac22ffc7b7cc5926de0751b223bce0b2491c33d18422fa72f632c78d81198 semgrep --config .semgrep.yml --error --metrics off .
+
+  secret-scan:
+    name: Secret containment scan
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+      - run: node --test tests/security/secret-containment.test.mjs
+      - run: node scripts/verify-secret-containment.mjs
+
+  dependency-audit:
+    name: Dependency audit
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=high
+
+  container-scan:
+    name: Container vulnerability scan
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: docker build --build-arg "APP_RELEASE_COMMIT=${GITHUB_SHA}" --tag elogbook-web:release-scan --file apps/web/Dockerfile .
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: elogbook-web:release-scan
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+  function-scan:
+    name: Edge function scan
+    needs: [candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.5
+      - name: Check every manifest Edge Function
+        run: |
+          set -euo pipefail
+          function_count="$(jq -er '.functions | keys | length' supabase/functions/manifest.json)"
+          scanned_count=0
+          while IFS= read -r function_name; do
+            deno check --frozen --no-config --import-map=supabase/import_map.json --lock=supabase/deno.lock "supabase/functions/${function_name}/index.ts"
+            scanned_count=$((scanned_count + 1))
+          done < <(jq -er '.functions | keys[]' supabase/functions/manifest.json)
+          test "${scanned_count}" -eq "${function_count}"
+      - name: Test payment webhook function
+        run: |
+          deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts
+
+  sbom:
+    name: Generate SBOM and release evidence
+    needs: [container-scan, function-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate CycloneDX dependency inventory
+        run: npm exec --package=@cyclonedx/cyclonedx-npm@6.0.1 --call 'cyclonedx-npm --output-file sbom.json --spec-version 1.5 --ignore-npm-errors'
+      - name: Generate deterministic release evidence
+        run: node scripts/generate-release-evidence.mjs --all --output release-evidence
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-evidence
+          path: release-evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  evidence:
+    name: Verify release evidence
+    needs: [typecheck, tests, migration-replay, sast, secret-scan, dependency-audit, container-scan, function-scan, sbom]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+      - name: Regenerate deterministic evidence inventory
+        run: |
+          node scripts/generate-release-evidence.mjs --all --output release-evidence
+          node scripts/verify-release-evidence.mjs --verify --deterministic-only --output release-evidence
+      - name: Verify release containment and single path
+        run: |
+          node scripts/verify-release-containment.mjs
+          node scripts/verify-single-release-path.mjs
+
+  staging-smoke:
+    name: Staging smoke test
+    needs: [evidence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check staging health and readiness
+        env:
+          STAGING_URL: ${{ inputs.staging_url }}
+        run: |
+          test -n "${STAGING_URL}"
+          curl --fail --silent --show-error --max-time 20 "${STAGING_URL%/}/api/health"
+          curl --fail --silent --show-error --max-time 20 "${STAGING_URL%/}/api/ready"
+
+  dast:
+    name: Staging DAST
+    needs: [staging-smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Run pinned ZAP baseline
+        env:
+          STAGING_URL: ${{ inputs.staging_url }}
+        run: |
+          mkdir -p zap-reports
+          TARGET_URL=$(printf '%s' "$STAGING_URL" | sed 's:/*$::')
+          docker run --rm -v "$PWD/zap-reports:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef zap-baseline.py -t "$TARGET_URL" -m 10 -r zap-baseline.html -J zap-baseline.json -l WARN
+      - name: Fail on high alerts
+        run: |
+          test -s zap-reports/zap-baseline.json
+          if jq -e '[.site[]?.alerts[]? | select((.riskdesc // "") | startswith("High"))] | length > 0' zap-reports/zap-baseline.json >/dev/null; then
+            echo "ZAP reported high alerts"
+            exit 1
+          fi
+
+  staging-approval:
+    name: Staging approval
+    needs: [evidence, staging-smoke, dast]
+    if: inputs.staging_approved == true
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Record explicit staging approval
+        run: test "${STAGING_APPROVED}" = "true"
+        env:
+          STAGING_APPROVED: ${{ inputs.staging_approved }}
+
+  production:
+    name: Production promotion
+    needs: [typecheck, tests, migration-replay, sast, secret-scan, dependency-audit, container-scan, function-scan, sbom, evidence, staging-smoke, dast, staging-approval]
+    if: github.event_name == 'workflow_dispatch' && inputs.staging_approved == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    env:
+      RELEASE_ATTESTATION_VERIFIER: ${{ vars.RELEASE_ATTESTATION_VERIFIER }}
+      PRODUCTION_ENVIRONMENT_VERIFIER: ${{ vars.PRODUCTION_ENVIRONMENT_VERIFIER }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Re-verify signed evidence at promotion boundary
+        run: |
+          node scripts/generate-release-evidence.mjs --all --output release-evidence
+          node scripts/verify-release-evidence.mjs --verify --require-promotion --output release-evidence
+      - name: Build web application
+        run: pnpm build:web
+      - name: Deploy web
+        uses: amondnet/vercel-action@de09aeac2ace6599ec9b11ef87558759a496bac4
+        id: vercel-deploy
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ github.token }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --yes'
+      - uses: supabase/setup-cli@afb1b15109756ea5cf9d8985a359d9095235ca2b
+        with:
+          version: 2.109.1
+        env:
+          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
+      - name: Deploy database migrations and Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          supabase link --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase db push --linked --include-all
+          supabase functions deploy ai-insights --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy ai-quality --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy ai-gap-analysis --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy generate-pdf --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy create-checkout --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy payment-webhook --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy create-portal-session --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy list-invoices --project-ref "${SUPABASE_PROJECT_REF}"
+          supabase functions deploy webads-export --project-ref "${SUPABASE_PROJECT_REF}"
+      - uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385
+        with:
+          eas-version: 14.0.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build mobile candidates
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+        run: |
+          eas build --platform android --profile production --non-interactive --wait --json > "$GITHUB_WORKSPACE/android-build.json"
+          eas build --platform ios --profile production --non-interactive --wait --json > "$GITHUB_WORKSPACE/ios-build.json"
+      - name: Verify mobile candidate provenance
+        run: node scripts/verify-eas-provenance.mjs android-build.json ios-build.json

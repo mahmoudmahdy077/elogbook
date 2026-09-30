@@ -1,6 +1,18 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { authenticate, corsHeaders } from '../_shared/auth.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { requirePrincipal, corsHeaders } from '../_shared/auth.ts';
+import { transformDeidentifiedFieldValues, validateAiRequest, validateDeidentifiedFieldValues, validateStructuredFieldNames, validateStructuredOutput } from '../_shared/ai-guard.ts';
+import { configuredOutboundHosts, outboundRequestText } from '../_shared/outbound-request.ts';
+import { logError } from '../_shared/logging.ts';
+
+const AI_BUDGET = {
+  maxInputBytes: 16_384,
+  maxOutputBytes: 16_384,
+  maxInputTokens: 8_192,
+  maxOutputTokens: 2_048,
+  maxCostCents: 100,
+  maxFanOut: 1,
+} as const;
 
 interface AiQualityPayload {
   case_entry_id: string;
@@ -21,17 +33,47 @@ interface QualityResult {
   missing_fields: string[];
 }
 
+interface QualityCaseEntry {
+  is_deidentified: boolean;
+  resident_id: string;
+  status: string;
+  field_values: Record<string, unknown>;
+  case_templates: {
+     specialty?: string | null;
+
+    fields?: unknown;
+    required_fields?: unknown;
+  };
+}
+
+type LogResult = { error?: { message?: string } | null };
+type LogClient = { from: (table: string) => { insert: (row: Record<string, unknown>) => PromiseLike<LogResult> } };
+
+function insertQualityLog(client: unknown, row: Record<string, unknown>): PromiseLike<LogResult> {
+  return (client as LogClient).from('ai_query_logs').insert(row);
+}
+
 const AI_TIMEOUT_MS = 30000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    return response;
-  } finally {
-    clearTimeout(id);
-  }
+  const parsed = new URL(url);
+  const builtInHosts = ['api.openai.com', 'openrouter.ai', 'api.anthropic.com'];
+  const isBuiltIn = builtInHosts.includes(parsed.hostname) || parsed.hostname.endsWith('.openai.azure.com');
+  const result = await outboundRequestText(url, {
+    method: init.method,
+    headers: init.headers,
+    body: init.body,
+    timeoutMs: AI_TIMEOUT_MS,
+    maxResponseBytes: 1_048_576,
+    maxConcurrent: 8,
+    allowedHosts: isBuiltIn ? [parsed.hostname] : configuredOutboundHosts(),
+    requireAllowlist: !isBuiltIn,
+  });
+  if (result.data === undefined) throw new Error('OUTBOUND_REQUEST_BLOCKED');
+  return new Response(result.data, {
+    status: result.status,
+    headers: { 'Content-Type': result.category === 'success' ? 'application/json' : 'text/plain' },
+  });
 }
 
 function isValidEndpoint(url: string): boolean {
@@ -75,11 +117,12 @@ async function callAiProvider(
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
+        max_tokens: 2048,
         temperature: 0.2,
         response_format: { type: 'json_object' },
       }),
     });
-    if (!res.ok) throw new Error(`OpenAI API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
     const data = await res.json();
     return data.choices?.[0]?.message?.content ?? '{}';
   }
@@ -99,11 +142,12 @@ async function callAiProvider(
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
+        max_tokens: 2048,
         temperature: 0.2,
         response_format: { type: 'json_object' },
       }),
     });
-    if (!res.ok) throw new Error(`OpenRouter API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`OpenRouter API error: ${res.status}`);
     const data = await res.json();
     return data.choices?.[0]?.message?.content ?? '{}';
   }
@@ -123,7 +167,7 @@ async function callAiProvider(
         messages: [{ role: 'user', content: userPrompt }],
       }),
     });
-    if (!res.ok) throw new Error(`Anthropic API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
     const data = await res.json();
     return data.content?.[0]?.text ?? '{}';
   }
@@ -144,12 +188,13 @@ async function callAiProvider(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          temperature: 0.2,
-          response_format: { type: 'json_object' },
+           max_tokens: 2048,
+           temperature: 0.2,
+           response_format: { type: 'json_object' },
         }),
       },
     );
-    if (!res.ok) throw new Error(`Azure API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Azure API error: ${res.status}`);
     const data = await res.json();
     return data.choices?.[0]?.message?.content ?? '{}';
   }
@@ -168,10 +213,11 @@ async function callAiProvider(
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
+        max_tokens: 2048,
         temperature: 0.2,
       }),
     });
-    if (!res.ok) throw new Error(`Custom AI API error: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Custom AI API error: ${res.status}`);
     const data = await res.json();
     return data.choices?.[0]?.message?.content ?? data.content?.[0]?.text ?? '{}';
   }
@@ -179,16 +225,17 @@ async function callAiProvider(
   throw new Error(`Unsupported provider: ${provider}`);
 }
 
-function scanForPhi(text: string): boolean {
-  return /\b\d{6,}\b/.test(text) || /\d{4}-\d{2}-\d{2}/.test(text) || /\d{2}\/\d{2}\/\d{4}/.test(text);
-}
-
-function validateScores(parsed: any): QualityScores {
-  const completeness = Math.max(0, Math.min(100, Math.round(Number(parsed.completeness ?? 0))));
-  const specificity = Math.max(0, Math.min(100, Math.round(Number(parsed.specificity ?? 0))));
-  const classification = Math.max(0, Math.min(100, Math.round(Number(parsed.classification ?? 0))));
-  const overall = Math.max(0, Math.min(100, Math.round(Number(parsed.overall ?? 0))));
-  return { completeness, specificity, classification, overall };
+function validateScores(parsed: Record<string, unknown>): QualityScores {
+  const score = (key: string): number => {
+    const value = parsed[key];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
+  };
+  return {
+    completeness: score('completeness'),
+    specificity: score('specificity'),
+    classification: score('classification'),
+    overall: score('overall'),
+  };
 }
 
 serve(async (req) => {
@@ -199,18 +246,12 @@ serve(async (req) => {
     return new Response('ok', { headers });
   }
 
-  const authResult = await authenticate(req);
+  const authResult = await requirePrincipal(req, {
+    roles: ['supervisor', 'director', 'institution_admin', 'admin'],
+    aal: 'aal2',
+  });
   if (authResult instanceof Response) return authResult;
-  const { supabase, tenantId, role } = authResult;
-
-  // Only supervisors, directors, institution_admins, and admins can use quality scoring
-  const authorizedRoles = ['supervisor', 'director', 'institution_admin', 'admin'];
-  if (!authorizedRoles.includes(role)) {
-    return new Response(
-      JSON.stringify({ error: 'Insufficient permissions: requires supervisor or higher role' }),
-      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
-    );
-  }
+  const { supabase, tenantId, role, principal } = authResult;
 
     let body: AiQualityPayload;
     try {
@@ -221,14 +262,21 @@ serve(async (req) => {
         { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
-    if (!body || typeof body !== 'object') {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
-      );
-    }
+     if (!body || typeof body !== 'object') {
+       return new Response(
+         JSON.stringify({ error: 'Invalid JSON body' }),
+         { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+       );
+     }
+     if (Object.keys(body).some((key) => !['case_entry_id', 'tenant_id'].includes(key))) {
+       return new Response(
+         JSON.stringify({ error: 'AI request contains unsupported fields' }),
+         { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
+       );
+     }
 
-    const { case_entry_id, tenant_id } = body;
+     const { case_entry_id, tenant_id } = body;
+
 
   if (!case_entry_id) {
     return new Response(
@@ -252,21 +300,18 @@ serve(async (req) => {
   }
 
   // Fetch the full case entry with template
-  const { data: caseEntry, error: caseError } = await supabase
+  const { data: rawCaseEntry, error: caseError } = await supabase
     .from('case_entries')
     .select(`
       id,
       tenant_id,
       resident_id,
-      patient_mrn,
-      patient_dob,
-      case_date,
       field_values,
-      status,
-      created_at,
-      updated_at,
-      is_deidentified,
-      case_templates!inner(id, name, specialty, fields, required_fields)
+       status,
+       is_deidentified,
+
+       case_templates!inner(id, specialty, fields, required_fields)
+
     `)
     .eq('id', case_entry_id)
     .eq('tenant_id', tenantId)
@@ -274,48 +319,84 @@ serve(async (req) => {
     .is('deleted_at', null)
     .single();
 
+  const caseEntry = rawCaseEntry as QualityCaseEntry | null;
   if (caseError || !caseEntry) {
-    console.error('Failed to fetch case entry', { error: caseError?.message });
+    logError('ai.case_fetch_failed', caseError, { operation: 'case_fetch' });
     return new Response(
       JSON.stringify({ error: 'Case entry not found' }),
       { status: 404, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
-  if (!caseEntry.is_deidentified) {
+  if (caseEntry.is_deidentified !== true) {
     return new Response(
       JSON.stringify({ error: 'Case must be deidentified' }),
       { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
-  const template = caseEntry.case_templates as any;
-  const fieldValues = (caseEntry.field_values as Record<string, any>) ?? {};
-  const requiredFields: string[] = (template.required_fields ?? []) as string[];
+  const template = caseEntry.case_templates ?? {};
+  const requiredFields = Array.isArray(template.required_fields)
+    ? template.required_fields.filter((field): field is string => typeof field === 'string')
+    : [];
   const templateFields: string[] = Array.isArray(template.fields)
-    ? template.fields as string[]
+    ? template.fields.filter((field): field is string => typeof field === 'string')
     : typeof template.fields === 'object' && template.fields !== null
-      ? Object.keys(template.fields as Record<string, any>)
+      ? Object.keys(template.fields)
       : [];
-
-  // Determine missing fields
-  const missingFields = requiredFields.filter((f) => {
-    const val = fieldValues[f];
-    return val === undefined || val === null || val === '' || val === '[]' || val === '{}';
-  });
-
-  const analyzedFieldCount = Object.keys(fieldValues).length;
-
-  const combinedText = JSON.stringify(fieldValues);
-  if (scanForPhi(combinedText)) {
+  const templateKeyResult = validateStructuredFieldNames([...new Set([...templateFields, ...requiredFields])]);
+  if (!templateKeyResult.ok) {
     return new Response(
-      JSON.stringify({ error: 'Case contains potential PHI data' }),
+      JSON.stringify({ error: 'Case template contains disallowed data' }),
       { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
+  const structuredFieldResult = transformDeidentifiedFieldValues(caseEntry.field_values ?? {}, AI_BUDGET);
+  if (!structuredFieldResult.ok) {
+    return new Response(
+      JSON.stringify({ error: 'Case contains disallowed or potentially identifying data' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+  const fieldValues = { ...structuredFieldResult.value } as Record<string, unknown>;
+  if (typeof template.specialty === 'string') fieldValues.specialty = template.specialty;
+  if (typeof caseEntry.status === 'string') fieldValues.status = caseEntry.status;
+  const fieldValuesResult = validateDeidentifiedFieldValues(fieldValues, AI_BUDGET);
+  if (!fieldValuesResult.ok) {
+    return new Response(
+      JSON.stringify({ error: 'Case contains disallowed or potentially identifying data' }),
+      { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+  const structuredFieldValues = fieldValuesResult.value;
+  const canonicalFieldNames = Object.keys(templateKeyResult.value);
+  const canonicalRequiredFields = canonicalFieldNames.filter((field) => requiredFields.some((name) => name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === field.replace(/_/g, '')));
+  const missingFields = canonicalRequiredFields.filter((field) => {
+    const value = structuredFieldValues[field];
+    return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+  });
 
-  // Build prompt for AI
-  const systemPrompt = `You are a clinical case entry quality assessment assistant. Analyze surgery/case log entries and provide structured quality scores.
+  const analyzedFieldCount = Object.keys(structuredFieldValues).length;
+
+  const aiRequest = validateAiRequest(
+    {
+      tenant_id: tenantId,
+      actor_id: principal.profileId,
+      action: 'ai:quality',
+      input: 'quality-assessment',
+      field_values: structuredFieldValues,
+    },
+    { actorId: principal.profileId, tenantId, role, status: 'active', aal: principal.aal },
+    { requireAal2: true, requireDeidentified: true, budget: AI_BUDGET },
+  );
+  if (!aiRequest.ok) {
+    return new Response(
+      JSON.stringify({ error: aiRequest.reason === 'budget_exceeded' ? 'AI request exceeds the allowed budget' : 'AI request is not authorized' }),
+      { status: aiRequest.reason === 'budget_exceeded' ? 400 : 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const systemPrompt = `You are a clinical case entry quality assessment assistant. Analyze only the bounded structured case fields supplied below and provide structured quality scores.
 
 Return a JSON object with these fields:
 - "completeness": number 0-100 — how completely the entry fills in fields
@@ -326,18 +407,11 @@ Return a JSON object with these fields:
 
 Be objective and consistent in scoring. Return valid JSON only.`;
 
-  const userPrompt = `Analyze the quality of this case entry:
+  const userPrompt = `Analyze the quality of this structured case entry.
 
-Template Name: ${template.name ?? 'N/A'}
-Template Specialty: ${template.specialty ?? 'N/A'}
-Case Date: ${caseEntry.case_date ?? 'N/A'}
-Status: ${caseEntry.status}
-Template Fields: ${templateFields.join(', ')}
-Required Fields: ${requiredFields.join(', ')}
+Structured Fields: ${JSON.stringify(structuredFieldValues)}
+Required Fields: ${canonicalRequiredFields.join(', ') || 'None'}
 Missing Required Fields: ${missingFields.join(', ') || 'None'}
-
-Field Values (JSON):
-${JSON.stringify(fieldValues, null, 2)}
 
 Provide completeness, specificity, classification, and overall scores (0-100), and specific suggestions for improvement.`;
 
@@ -396,7 +470,7 @@ Provide completeness, specificity, classification, and overall scores (0-100), a
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const status = msg === 'INVALID_ENDPOINT' ? 400 : 502;
-    if (status === 502) console.error('AI provider call failed', { error: msg });
+    if (status === 502) logError('ai.provider_call_failed', err, { provider: aiConfig.provider, model: aiConfig.model });
     return new Response(
       JSON.stringify({ error: status === 400 ? 'Invalid endpoint URL' : 'AI provider error' }),
       { status, headers: { ...headers, 'Content-Type': 'application/json' } },
@@ -404,7 +478,7 @@ Provide completeness, specificity, classification, and overall scores (0-100), a
   }
 
   // Parse AI response
-  let parsed: any;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(aiResponseText);
   } catch {
@@ -427,8 +501,16 @@ Provide completeness, specificity, classification, and overall scores (0-100), a
     }
   }
 
-  const scores = validateScores(parsed);
-  const suggestions: string[] = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+  const guardedOutput = validateStructuredOutput(parsed, 'quality', AI_BUDGET);
+  if (!guardedOutput.ok) {
+    return new Response(
+      JSON.stringify({ error: 'AI response failed the output safety boundary' }),
+      { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
+  const validatedParsed = guardedOutput.value;
+  const scores = validateScores(validatedParsed);
+  const suggestions: string[] = validatedParsed.suggestions as string[];
 
   const result: QualityResult = {
     scores,
@@ -437,14 +519,22 @@ Provide completeness, specificity, classification, and overall scores (0-100), a
     missing_fields: missingFields,
   };
 
-  // Log the quality assessment
-  await supabase.from('ai_query_logs').insert({
+  const logResult = await insertQualityLog(supabase, {
     tenant_id: tenantId,
     resident_id: caseEntry.resident_id,
-    query: `Quality scoring for case ${case_entry_id}`,
-    response: JSON.stringify(result),
+    query: '[HASHED]',
+    response: '[REDACTED]',
     model: aiConfig.model as string,
+    response_format: 'text',
+    safety_flags: [],
   });
+  if (logResult?.error) {
+    logError('ai.quality_log_failed', logResult.error, { operation: 'quality_log' });
+    return new Response(
+      JSON.stringify({ error: 'AI quality result could not be recorded' }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
+    );
+  }
 
   return new Response(JSON.stringify(result), {
     status: 200,

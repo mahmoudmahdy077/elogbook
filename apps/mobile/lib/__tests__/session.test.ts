@@ -40,6 +40,9 @@ function mockSupabase(profile: unknown, policy: unknown, userId: string | null =
       if (table === 'profiles') {
         return { select: () => ({ eq: () => ({ single: async () => ({ data: profile, error: profile ? null : 'nf' }) }) }) };
       }
+      if (table === 'tenants') {
+        return { select: () => ({ eq: () => ({ single: async () => ({ data: { id: 't1', status: 'active' }, error: null }) }) }) };
+      }
       return { select: () => ({ eq: () => ({ single: async () => ({ data: policy, error: null }) }) }) };
     },
   };
@@ -74,7 +77,7 @@ describe('session boot machine (M1)', () => {
 
   it('reports suspended without populating write scope', async () => {
     const sb = mockSupabase(
-      { id: 'p9', user_id: 'u9', tenant_id: 't9', role: 'resident', status: 'suspended' },
+      { id: 'p9', user_id: 'u1', tenant_id: 't9', role: 'resident', status: 'suspended' },
       { tenant_id: 't9', mode: 'identifiable', version: 1 },
     );
     const s = await bootSession(sb as never);
@@ -117,6 +120,9 @@ describe('session boot machine (M1)', () => {
       from: (table: string) => {
         if (table === 'profiles') {
           return { select: () => ({ eq: () => ({ single: async () => ({ data: { id: 'p1', user_id: 'u1', tenant_id: 't1', role: 'resident', status: 'active' }, error: null }) }) }) };
+        }
+        if (table === 'tenants') {
+          return { select: () => ({ eq: () => ({ single: async () => ({ data: { id: 't1', status: 'active' }, error: null }) }) }) };
         }
         return { select: () => ({ eq: () => ({ single: async () => ({ data: { tenant_id: 't1', mode: 'deidentified', version }, error: null }) }) }) };
       },

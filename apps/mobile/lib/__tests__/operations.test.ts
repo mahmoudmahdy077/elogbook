@@ -31,10 +31,20 @@ import type { CapabilitySnapshot } from '../capability';
 
 function cap(over: Partial<CapabilitySnapshot> = {}): CapabilitySnapshot {
   return {
-    userId: 'u1', tenantId: 't1', profileId: 'p1', role: 'supervisor', status: 'active',
-    policyVersion: 3, dataMode: 'deidentified', mfaVerifiedAt: Date.now(),
+    userId: 'u1', tenantId: 't1', profileId: 'p1', role: 'supervisor', status: 'active', tenantStatus: 'active',
+    policyVersion: 3, dataMode: 'deidentified', aal: 'aal2',
     expiresAt: Date.now() + 3600_000, fetchedAt: Date.now(), ...over,
   };
+}
+
+/** A typed stand-in for the Supabase rpc adapter, so the call is inspectable. */
+function mockRpc() {
+  return vi.fn(
+    async (_fn: string, _args: Record<string, unknown>) => ({
+      data: { success: true } as { success?: unknown; error?: unknown } | null,
+      error: null as { message: string } | null,
+    }),
+  );
 }
 
 describe('guarded operations (N2 typed adapters)', () => {
@@ -71,15 +81,53 @@ describe('guarded operations (N2 typed adapters)', () => {
     if (out.kind === 'terminal') expect(out.copy).not.toContain('xyz');
   });
 
-  it('submitApproval routes approve/reject RPCs with the approver gate', async () => {
-    const rpc = vi.fn(async () => ({ error: null }));
+  it('submitApproval routes the decision through the AAL2 command with the approver gate', async () => {
+    const rpc = mockRpc();
     const ok = await submitApproval({ capability: cap(), entryId: 'e1', action: 'approve', rpc });
     expect(ok).toEqual({ kind: 'confirmed' });
-    expect(rpc).toHaveBeenCalledWith('approve_case', expect.objectContaining({ p_entry_id: 'e1' }));
+    // decide_case_command, not the retired approve_case: the command resolves
+    // one locked approval request with the status change and carries the
+    // idempotency key a retried tap needs.
+    expect(rpc).toHaveBeenCalledWith(
+      'decide_case_command',
+      expect.objectContaining({ p_case_id: 'e1', p_decision: 'approve' }),
+    );
+    const args = rpc.mock.calls[0]?.[1] ?? {};
+    expect(args.p_request_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     const denied = await submitApproval({
       capability: cap({ role: 'resident' }), entryId: 'e1', action: 'approve', rpc,
     });
     expect(denied.kind).toBe('denied');
+  });
+
+  it('submitApproval rejects a case through the same command', async () => {
+    const rpc = mockRpc();
+    await submitApproval({
+      capability: cap(), entryId: 'e1', action: 'reject', comment: 'needs rework', rpc,
+    });
+    expect(rpc).toHaveBeenCalledWith(
+      'decide_case_command',
+      expect.objectContaining({ p_case_id: 'e1', p_decision: 'reject', p_reason: 'needs rework' }),
+    );
+  });
+
+  it('never calls a retired approval RPC', async () => {
+    const rpc = mockRpc();
+    await submitApproval({ capability: cap(), entryId: 'e1', action: 'approve', rpc });
+    expect(rpc.mock.calls.length).toBeGreaterThan(0);
+    for (const call of rpc.mock.calls) {
+      expect(call[0]).not.toBe('approve_case');
+      expect(call[0]).not.toBe('reject_case');
+    }
+  });
+
+  it('rejects stale approval results returned inside a successful RPC envelope', async () => {
+    const rpc = vi.fn(async () => ({
+      data: { success: false, error: 'Case already reviewed' },
+      error: null,
+    }));
+    const outcome = await submitApproval({ capability: cap(), entryId: 'e1', action: 'approve', rpc });
+    expect(outcome.kind).toBe('terminal');
   });
 
   it('submitEvaluation/submitDutyHours confirm through their writers', async () => {

@@ -34,5 +34,13 @@ export const migrations = schemaMigrations({
         ]),
       ],
     },
+    {
+      toVersion: 6,
+      steps: [
+        ...['case_entries', 'case_templates', 'program_goals', 'rotations', 'milestones', 'evaluation_forms', 'comments', 'shifts'].map((table) =>
+          addColumns({ table, columns: [{ name: 'local_scope', type: 'string', isOptional: true }] }),
+        ),
+      ],
+    },
   ],
 });

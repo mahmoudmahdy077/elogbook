@@ -4,9 +4,21 @@ import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateThemePublish, PLATFORM_THEME_CEILINGS } from '@/lib/theme-policy';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
-const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const brandingSchema = z.object({
+  logo_url: z.string().max(500).nullable().optional(),
+  primary_color: z.string().max(20).nullable().optional(),
+  footer_text: z.string().max(120).nullable().optional(),
+  institution_name: z.string().max(80).nullable().optional(),
+  density: z.string().max(32).nullable().optional(),
+  revert_revision_id: z.string().max(128).nullable().optional(),
+}).strict();
+
+const HEX_RE =/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 function isValidHttpUrl(s: string): boolean {
   try {
@@ -33,7 +45,10 @@ export async function GET(
     .eq('id', auth.profile.tenant_id)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to load tenant branding', error, { tenantSlug });
+    return NextResponse.json({ error: 'Failed to load branding' }, { status: 500 });
+  }
   return NextResponse.json({ branding: (data as { custom_branding?: Record<string, unknown> })?.custom_branding ?? {} });
 }
 
@@ -41,11 +56,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 8 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, brandingSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
@@ -61,39 +76,7 @@ export async function POST(
   const profile = auth.profile;
   const user = auth.user;
 
-  let body: {
-    logo_url?: string | null;
-    primary_color?: string | null;
-    footer_text?: string | null;
-    institution_name?: string | null;
-    density?: string | null;
-    revert_revision_id?: string | null;
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { logo_url, primary_color, footer_text, institution_name, density, revert_revision_id } = body ?? {};
-
-  // T22: unknown keys fail closed here (the merge below only copies known
-  // keys, which would otherwise drop typos silently).
-  const knownKeys = new Set([
-    'logo_url',
-    'primary_color',
-    'footer_text',
-    'institution_name',
-    'density',
-    'revert_revision_id',
-  ]);
-  const unknownKeys = Object.keys(body ?? {}).filter((k) => !knownKeys.has(k));
-  if (unknownKeys.length > 0) {
-    return NextResponse.json(
-      { error: `disallowed theme key(s): ${unknownKeys.join(', ')}` },
-      { status: 400 },
-    );
-  }
+  const { logo_url, primary_color, footer_text, institution_name, density, revert_revision_id } = guarded.data;
 
   if (logo_url !== null && logo_url !== undefined && String(logo_url).trim() !== '') {
     const v = String(logo_url).trim();
@@ -153,7 +136,10 @@ export async function POST(
   }
 
   const { error } = await adminClient.from('tenants').update({ custom_branding: next }).eq('id', profile.tenant_id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to update tenant branding', error, { tenantSlug });
+    return NextResponse.json({ error: 'Failed to update branding' }, { status: 500 });
+  }
 
   // Archive the published version for revert (best-effort sequence).
   const { data: latest } = await adminClient

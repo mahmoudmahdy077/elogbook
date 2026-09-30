@@ -39,22 +39,46 @@ function mustNotContain(path, re, label) {
 mustContain('apps/mobile/lib/sentry.ts', /process\.env\.EXPO_PUBLIC_SENTRY_DSN/, 'mobile runtime EXPO_PUBLIC_SENTRY_DSN');
 mustContain('apps/web/sentry.client.config.ts', /process\.env\.NEXT_PUBLIC_SENTRY_DSN/, 'web client NEXT_PUBLIC_SENTRY_DSN');
 
-// 2. Mobile workflow must use dedicated mobile secret for runtime DSN.
-const workflow = readFileSync(resolve(ROOT, '.github/workflows/deploy-mobile.yml'), 'utf-8');
-const runtimeMappings = [...workflow.matchAll(/EXPO_PUBLIC_SENTRY_DSN:\s*\$\{\{\s*secrets\.([A-Za-z0-9_]+)\s*\}\}/g)].map((m) => m[1]);
-if (runtimeMappings.length === 0) {
-  failures.push('.github/workflows/deploy-mobile.yml: no EXPO_PUBLIC_SENTRY_DSN mapping found');
-} else {
-  for (const secret of runtimeMappings) {
-    if (secret !== 'EXPO_PUBLIC_SENTRY_DSN') {
-      failures.push(`.github/workflows/deploy-mobile.yml: EXPO_PUBLIC_SENTRY_DSN mapped from secrets.${secret}, expected secrets.EXPO_PUBLIC_SENTRY_DSN`);
+// 2. The workflow that owns the mobile build must use the dedicated mobile
+// secret for the runtime DSN. deploy-mobile.yml delegates the build to the
+// protected release gate, so either workflow may own this, but only one may and
+// it must still be the mobile-specific secret, never the server one.
+const MOBILE_BUILD_WORKFLOWS = [
+  '.github/workflows/deploy-mobile.yml',
+  '.github/workflows/release.yml',
+];
+
+let workflow = '';
+let workflowPath = '';
+for (const path of MOBILE_BUILD_WORKFLOWS) {
+  const text = readFileSync(resolve(ROOT, path), 'utf-8');
+  if (/eas build\b/.test(text)) {
+    if (workflow) {
+      failures.push(`${workflowPath}: also runs eas build; only one workflow may own the mobile build`);
     }
+    workflow = text;
+    workflowPath = path;
   }
 }
 
-// 3. Server DSN must never feed mobile runtime (explicit divergence guard).
-if (/EXPO_PUBLIC_SENTRY_DSN:\s*\$\{\{\s*secrets\.SENTRY_DSN\s*\}\}/.test(workflow)) {
-  failures.push('.github/workflows/deploy-mobile.yml: mobile runtime fed by server secrets.SENTRY_DSN (use secrets.EXPO_PUBLIC_SENTRY_DSN)');
+if (!workflow) {
+  failures.push(`no workflow among ${MOBILE_BUILD_WORKFLOWS.join(', ')} runs eas build`);
+} else {
+  const runtimeMappings = [...workflow.matchAll(/EXPO_PUBLIC_SENTRY_DSN:\s*\$\{\{\s*secrets\.([A-Za-z0-9_]+)\s*\}\}/g)].map((m) => m[1]);
+  if (runtimeMappings.length === 0) {
+    failures.push(`${workflowPath}: no EXPO_PUBLIC_SENTRY_DSN mapping found`);
+  } else {
+    for (const secret of runtimeMappings) {
+      if (secret !== 'EXPO_PUBLIC_SENTRY_DSN') {
+        failures.push(`${workflowPath}: EXPO_PUBLIC_SENTRY_DSN mapped from secrets.${secret}, expected secrets.EXPO_PUBLIC_SENTRY_DSN`);
+      }
+    }
+  }
+
+  // 3. Server DSN must never feed mobile runtime (explicit divergence guard).
+  if (/EXPO_PUBLIC_SENTRY_DSN:\s*\$\{\{\s*secrets\.SENTRY_DSN\s*\}\}/.test(workflow)) {
+    failures.push(`${workflowPath}: mobile runtime fed by server secrets.SENTRY_DSN (use secrets.EXPO_PUBLIC_SENTRY_DSN)`);
+  }
 }
 
 if (failures.length > 0) {

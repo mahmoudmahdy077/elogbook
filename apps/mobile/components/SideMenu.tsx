@@ -12,6 +12,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSideMenu } from '../lib/side-menu-context';
 import { getFilteredMenuItems } from '../lib/role-menu-config';
+import { getSession } from '../lib/session';
+import { guardPathname } from '../lib/route-guard';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
@@ -45,8 +47,11 @@ export default function SideMenu({ role, userName }: SideMenuProps) {
   const items = getFilteredMenuItems(role);
 
   const handleNavigate = (route: string) => {
+    if (!guardPathname(route, getSession().capability).ok) {
+      close();
+      return;
+    }
     close();
-    // Short delay to let menu close animation play
     setTimeout(() => router.push(route as Parameters<typeof router.push>[0]), 280);
   };
 

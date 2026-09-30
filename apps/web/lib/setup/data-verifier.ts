@@ -9,8 +9,13 @@ export interface IntegrityReport {
 }
 
 async function countRows(pool: Pool, table: string): Promise<number> {
+  // Allowlist: table names are never request input, but validate as
+  // Postgres identifiers to prevent any SQL injection via string interpolation.
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(table)) {
+    return -1;
+  }
   try {
-    const result = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+    const result = await pool.query(`SELECT COUNT(*) FROM "${table}"`);
     return parseInt(result.rows[0].count, 10);
   } catch {
     return -1;
