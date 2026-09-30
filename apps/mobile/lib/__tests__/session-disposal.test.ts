@@ -7,6 +7,9 @@ vi.mock('@react-native-async-storage/async-storage', () => {
       getItem: async (k: string) => store.get(k) ?? null,
       setItem: async (k: string, v: string) => { store.set(k, v); },
       removeItem: async (k: string) => { store.delete(k); },
+      // Scoped wiping enumerates keys; without this the disposal wipe is a
+      // silent no-op in tests and a stale-key leak on device.
+      getAllKeys: async () => [...store.keys()],
       clear: async () => { store.clear(); },
     },
   };
@@ -44,7 +47,7 @@ vi.mock('../db/database', () => ({
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAccountContext, clearAccountContext, getAccountContext, scopedKey } from '../account-context';
+import { setAccountContext, clearAccountContext, getAccountContext, scopedKey, whenSessionEpochSettled } from '../account-context';
 import { saveDraft, loadDraft } from '../draft-store';
 import { enqueueDurable, readDurableQueue } from '../durable-queue';
 import { disposeAccountContext } from '../session-disposal';
@@ -82,6 +85,16 @@ describe('session disposal (M1.3)', () => {
     resetDatabaseMock.mockRejectedValueOnce(new Error('reset failed'));
     await expect(disposeAccountContext({})).rejects.toThrow(/reset failed/);
     expect(getAccountContext()).toBeNull();
+  });
+
+  it('wipes the persisted session epoch so a new session cannot inherit it', async () => {
+    setAccountContext({ userId: 'u1', tenantId: 't1', profileId: 'p1' });
+    const epochKey = 'u1:t1:account_context.session_epoch.v1';
+    // The durable discriminator is written, so disposal has something to wipe.
+    await whenSessionEpochSettled();
+    expect(await AsyncStorage.getItem(epochKey)).not.toBeNull();
+    await disposeAccountContext({});
+    expect(await AsyncStorage.getItem(epochKey)).toBeNull();
   });
 
   it('clears telemetry identity and push context via callbacks', async () => {

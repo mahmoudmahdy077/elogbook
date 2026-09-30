@@ -9,39 +9,21 @@ import { getSecurityContext } from '@/lib/supabase/security-context';
 import { defaultTrustedOrigins } from '@/lib/csrf';
 import { guardRequest } from '@/lib/http/request-guard';
 import { getAttachmentScannerReadiness } from '@/lib/attachments/scanner-config';
+import { readBoundedBody } from '@/lib/attachments/bounded-body';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 
 const PRIVILEGED_ROLES = new Set(['supervisor', 'director', 'institution_admin', 'admin']);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type BodyReadResult =
-  | { ok: true; bytes: Uint8Array }
-  | { ok: false; reason: 'missing' | 'too_large' };
-
-async function readBoundedBody(request: Request): Promise<BodyReadResult> {
-  if (!request.body) return { ok: true, bytes: new Uint8Array() };
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_ATTACHMENT_BYTES) {
-      await reader.cancel();
-      return { ok: false, reason: 'too_large' };
-    }
-    chunks.push(value);
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return { ok: true, bytes };
-}
+/**
+ * Upload budget per caller per minute.
+ *
+ * Small on purpose: a case carries at most 20 attachments, so 30/minute is
+ * roughly one full case per 40 seconds. It exists to bound the cost of the
+ * route (stream, magic-byte check, storage PUT, metadata insert), not to
+ * accommodate bulk behaviour that does not exist.
+ */
+const UPLOAD_RATE_LIMIT = 30;
 
 function validationStatus(result: Extract<AttachmentValidationResult, { ok: false }>): number {
   if (result.code === 'too_large') return 413;
@@ -50,7 +32,35 @@ function validationStatus(result: Extract<AttachmentValidationResult, { ok: fals
   return 400;
 }
 
+/**
+ * Every upload response is no-store.
+ *
+ * A 202 carries the new attachment id, and the scanner verdict is a security
+ * control rather than a cacheable fact. A shared cache that retained either
+ * would replay a stale verdict against a later request, so the policy is
+ * applied once at the boundary below instead of per response branch -- which is
+ * also what makes it impossible to add a branch that forgets it.
+ */
+const NO_STORE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+  Pragma: 'no-cache',
+} as const;
+
+function withNoStore(response: NextResponse): NextResponse {
+  for (const [name, value] of Object.entries(NO_STORE_HEADERS)) {
+    response.headers.set(name, value);
+  }
+  return response;
+}
+
 export async function POST(
+  request: Request,
+  context: { params: Promise<{ tenant: string }> },
+) {
+  return withNoStore(await handleUpload(request, context));
+}
+
+async function handleUpload(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
@@ -68,6 +78,14 @@ export async function POST(
   if (security.context.tenant.slug !== tenantSlug) {
     return NextResponse.json({ error: 'Tenant access denied' }, { status: 403 });
   }
+
+  // Throttle before anything expensive happens. The body has not been touched
+  // yet at this point, so a denied caller costs one session lookup.
+  const { allowed, retryAfter } = await checkRateLimit(
+    `attachment-upload:${security.context.tenant.id}:${security.context.profile.id}`,
+    UPLOAD_RATE_LIMIT,
+  );
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   const caseId = request.headers.get('x-attachment-case-id') ?? '';
   const encodedFileName = request.headers.get('x-attachment-file-name') ?? '';
@@ -133,7 +151,7 @@ export async function POST(
     }, { status: 503 });
   }
 
-  const body = await readBoundedBody(request);
+  const body = await readBoundedBody(request, MAX_ATTACHMENT_BYTES);
   if (!body.ok) {
     const status = body.reason === 'too_large' ? 413 : 400;
     return NextResponse.json({ error: 'Invalid attachment body' }, { status });

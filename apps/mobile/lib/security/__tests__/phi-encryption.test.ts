@@ -75,6 +75,58 @@ describe('PHI field encryption', () => {
     expect(decrypted.patient_dob).toBe('1990-01-01');
   });
 
+  it('covers every quasi-identifier case_entries column, not just the obvious two', async () => {
+    // patient_age_years / patient_hash / case_date are re-identifying in a
+    // small cohort: an age plus a date plus a stable hash is often enough to
+    // single a patient out. Leaving them in plaintext at rest is the same
+    // disclosure as leaving an MRN there.
+    expect(PHI_FIELDS.case_entries.map((c) => c.name)).toEqual(
+      expect.arrayContaining([
+        'patient_mrn',
+        'patient_dob',
+        'patient_age_years',
+        'patient_hash',
+        'case_date',
+        'field_values',
+      ]),
+    );
+  });
+
+  it('encrypts every case_entries PHI column in a row', async () => {
+    const row = {
+      id: '1',
+      patient_mrn: 'MRN-SECRET',
+      patient_dob: '1990-01-01',
+      patient_age_years: 34,
+      patient_hash: 'a1b2c3d4',
+      case_date: '2026-09-01',
+      field_values: { diagnosis: 'x' },
+      status: 'draft',
+    };
+    const encrypted = await encryptPHIRow('case_entries', row);
+    for (const column of PHI_FIELDS.case_entries) {
+      // Envelope, not the value: a short value like "34" can appear by chance
+      // inside hex ciphertext, so the check is that the value is no longer the
+      // stored representation rather than a substring test.
+      const stored = (encrypted as Record<string, unknown>)[column.name];
+      expect(isEncrypted(stored)).toBe(true);
+    }
+    expect(encrypted.status).toBe('draft');
+
+    const decrypted = await decryptPHIRow('case_entries', encrypted);
+    expect(decrypted.patient_mrn).toBe('MRN-SECRET');
+    expect(decrypted.patient_dob).toBe('1990-01-01');
+    expect(decrypted.patient_age_years).toBe(34);
+    expect(decrypted.patient_hash).toBe('a1b2c3d4');
+    expect(decrypted.case_date).toBe('2026-09-01');
+  });
+
+  it('fails closed for a case_date left in plaintext rather than passing it through', async () => {
+    // No production plaintext fallback: a value that is not an envelope and is
+    // not null/empty is refused, so a partially-encrypted row cannot render.
+    await expect(decryptPHIField('2026-09-01')).resolves.toBeNull();
+  });
+
   it('rejects plaintext values instead of treating them as decrypted data', async () => {
     await expect(decryptPHIField('MRN-PLAINTEXT')).resolves.toBeNull();
   });

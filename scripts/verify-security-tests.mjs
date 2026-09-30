@@ -21,7 +21,12 @@ for(const rel of requiredSuites){
     if(src.includes('.skip(') || src.includes('describe.skip') || src.includes('it.skip')){
       fail(`suite ${rel} contains skipped tests`);
     }
-    if(!src.includes('expect(')){
+    // Vitest suites assert with expect(); Deno suites use the assert* helpers.
+    // Checking for one spelling would let a Deno suite be registered as
+    // protected while its assertions were never verified.
+    const hasAssertions = src.includes('expect(')
+      || /\bassert(?:Equals|StrictEquals|NotEquals|Throws|Rejects|Exists|Match)\s*\(/.test(src);
+    if(!hasAssertions){
       fail(`suite ${rel} has no assertions`);
     }
     console.log(`Gate D: ${rel} present (${st.size} bytes)`);

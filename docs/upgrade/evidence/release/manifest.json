@@ -1,6 +1,6 @@
 {
   "schema": "elogbook.release-evidence/v1",
-  "commit": "b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c",
+  "commit": "29894cb51d480ca12e5f3980d7790de231ec5116",
   "deterministic": true,
   "provenance": {
     "status": "unsigned",
@@ -11,28 +11,28 @@
   "artifacts": {
     "pnpm": {
       "path": "pnpm.cdx.json",
-      "sha256": "3f9b9818615ab8ed01d6a89f3cb74113295663beb609ea9917203cbd733ee597",
+      "sha256": "eb993f0a9c0d64de04e5152a9fcd282fda5436c8958cbf03f820ff23a2bf8dcc",
       "signature": {
         "status": "unsigned"
       }
     },
     "container": {
       "path": "container.cdx.json",
-      "sha256": "d38aa1b9d937dfb4aeb115317ebba8b859d5ba91da1d99f2aedd40401b4882cf",
+      "sha256": "e3a70a0989c14ff8a768e0d9e92b1792c2e17ec98a0d0f3ec770d2d8d368f890",
       "signature": {
         "status": "unsigned"
       }
     },
     "deno": {
       "path": "deno.cdx.json",
-      "sha256": "8e05631126db86cdf8045aeffbd31277e95844807ddd43be81c1d5bac23145e0",
+      "sha256": "4f012c1073c3014bec6f95cef334f2636c72feb37ba358ce8e4c8ca7f7d21765",
       "signature": {
         "status": "unsigned"
       }
     },
     "mobile": {
       "path": "mobile.cdx.json",
-      "sha256": "92b4e384cbe6c9fcc2985bb7b55efea807f5883a444ef6b750eb12638742bd59",
+      "sha256": "219a481fd9a0f8e6f09238400f27a9a0e46fed1252be3c236d2454c61115a278",
       "signature": {
         "status": "unsigned"
       }
@@ -47,18 +47,18 @@
     {
       "kind": "pnpm-lock",
       "path": "pnpm-lock.yaml",
-      "sha256": "6470486dfc22640f5c86b327a8255bcb175e3a57f2383738f01843076b0df104",
-      "bytes": 547827,
+      "sha256": "615f3f5efb3e9a378eb71cb88545624f68c6cf3d1cf36880b68f8c0b883acb90",
+      "bytes": 535348,
       "metadata": {
         "lockfileVersion": "9.0",
-        "componentCount": 1278
+        "componentCount": 1248
       }
     },
     {
       "kind": "dockerfile",
       "path": "apps/web/Dockerfile",
-      "sha256": "1976664b46aea14d0ac4c955740613c54228f69d630a9ec1fe468991a4bcee88",
-      "bytes": 3310,
+      "sha256": "a28f6bba281ed8e73b567c50f9669529e29db94203035147ca9456142b2fbd1a",
+      "bytes": 3466,
       "metadata": {
         "labels": {},
         "baseImages": [
@@ -108,19 +108,19 @@
   "manifests": {
     "pnpm": {
       "path": "pnpm.cdx.json",
-      "sha256": "3f9b9818615ab8ed01d6a89f3cb74113295663beb609ea9917203cbd733ee597"
+      "sha256": "eb993f0a9c0d64de04e5152a9fcd282fda5436c8958cbf03f820ff23a2bf8dcc"
     },
     "container": {
       "path": "container.cdx.json",
-      "sha256": "d38aa1b9d937dfb4aeb115317ebba8b859d5ba91da1d99f2aedd40401b4882cf"
+      "sha256": "e3a70a0989c14ff8a768e0d9e92b1792c2e17ec98a0d0f3ec770d2d8d368f890"
     },
     "deno": {
       "path": "deno.cdx.json",
-      "sha256": "8e05631126db86cdf8045aeffbd31277e95844807ddd43be81c1d5bac23145e0"
+      "sha256": "4f012c1073c3014bec6f95cef334f2636c72feb37ba358ce8e4c8ca7f7d21765"
     },
     "mobile": {
       "path": "mobile.cdx.json",
-      "sha256": "92b4e384cbe6c9fcc2985bb7b55efea807f5883a444ef6b750eb12638742bd59"
+      "sha256": "219a481fd9a0f8e6f09238400f27a9a0e46fed1252be3c236d2454c61115a278"
     }
   },
   "checksums": {

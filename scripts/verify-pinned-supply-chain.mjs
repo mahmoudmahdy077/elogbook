@@ -337,6 +337,229 @@ function isImportMap(filePath) {
   return basename(filePath).toLowerCase() === 'import_map.json';
 }
 
+// ---------------------------------------------------------------------------
+// npm transitive pins (.pnpmfile.cjs against pnpm-lock.yaml)
+// ---------------------------------------------------------------------------
+//
+// The pnpmfile is the repo's declared supply-chain control for transitive npm
+// dependencies: `pnpm audit` findings are answered by pinning a package to its
+// patched version inside readPackage. A pin that the lockfile does not
+// actually resolve is a control that reads as present and is not, so the two
+// files are compared mechanically rather than by review.
+//
+// Two scopes, because the two kinds of rule mean different things:
+//
+//   range   the rule rewrites a range of the dependency's own versions
+//           (fast-uri 3.x -> 3.1.8). Nothing else in the tree may resolve that
+//           package at any other version, so every version in the lockfile has
+//           to be one of the declared targets.
+//   parent  the rule only rewrites what one named parent asks for
+//           (postcss, for next and @sentry/*). Another parent may legitimately
+//           resolve a different version, so the check is only that at least one
+//           declared target was reached.
+//
+// The scope is read from the enclosing guard rather than assumed: a rule is
+// parent-scoped if and only if some block it sits inside tests `pkg.name`.
+const PNPMFILE = '.pnpmfile.cjs';
+const LOCKFILE = 'pnpm-lock.yaml';
+const PIN_ASSIGNMENT = /^\s*pkg\.(?:dependencies|optionalDependencies)\s*(?:\[\s*'([^']+)'\s*\]|\.(\w+))\s*=\s*'([^']+)'\s*;?\s*$/;
+const PIN_LOOP_ASSIGNMENT = /^\s*pkg\.(?:dependencies|optionalDependencies)\s*\[\s*(\w+)\s*\]\s*=\s*'([^']+)'\s*;?\s*$/;
+
+/** Indentation of a line, counting a tab as one column. */
+function indentOf(line) {
+  const match = /^[ \t]*/.exec(line);
+  return match ? match[0].length : 0;
+}
+
+/**
+ * The block openers enclosing the line at `index`, outermost last.
+ *
+ * Walks outward by indentation rather than taking the nearest opener, so a rule
+ * nested inside both `if (pkg.dependencies) {` and `if (pkg.name === 'next') {`
+ * is attributed to the parent check rather than to the dependency check.
+ */
+function enclosingOpeners(lines, index) {
+  const openers = [];
+  let ceiling = indentOf(lines[index]);
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const line = lines[cursor];
+    if (!line.trimEnd().endsWith('{')) continue;
+    const indent = indentOf(line);
+    if (indent >= ceiling) continue;
+    openers.push(line);
+    ceiling = indent;
+    if (ceiling === 0) break;
+  }
+  return openers;
+}
+
+function addPin(pins, key, pin) {
+  const existing = pins.get(key);
+  if (!existing) {
+    pins.set(key, { ...pin, versions: [...pin.versions] });
+    return;
+  }
+  if (existing.scope !== pin.scope) {
+    // A rule guarded on the parent is the narrower statement, so the pin is
+    // only claimed for the parents it names.
+    existing.scope = 'parent';
+  }
+  for (const version of pin.versions) {
+    if (!existing.versions.includes(version)) existing.versions.push(version);
+  }
+}
+
+/**
+ * Every pin the pnpmfile declares.
+ *
+ * Both spellings are read: the quoted index form, the dotted form, and the loop
+ * form where the package name comes from a guard's regular expression.
+ */
+export function parsePnpmfilePinAssignments(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const pins = new Map();
+  const unattributed = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const literal = PIN_ASSIGNMENT.exec(lines[index]);
+    const loop = literal ? null : PIN_LOOP_ASSIGNMENT.exec(lines[index]);
+    if (!literal && !loop) continue;
+
+    const openers = enclosingOpeners(lines, index);
+    const scope = openers.some((line) => /pkg\.name\b/.test(line)) ? 'parent' : 'range';
+    const version = literal ? literal[3] : loop[2];
+
+    if (literal) {
+      const name = literal[1] ?? literal[2];
+      addPin(pins, name, { name, versions: [version], scope, line: index + 1 });
+      continue;
+    }
+
+    // Loop form: the package name is whatever the guard's pattern accepts.
+    const pattern = openers
+      .flatMap((line) => [...line.matchAll(/\/\^([^/]+?)\$\/\s*\.test\(\s*(\w+)\s*\)/g)])
+      .find((match) => match[2] === loop[1]);
+    if (!pattern) {
+      unattributed.push({ line: index + 1, expression: lines[index].trim() });
+      continue;
+    }
+    addPin(pins, `pattern:${pattern[1]}`, {
+      name: null,
+      namePattern: pattern[1],
+      versions: [version],
+      scope,
+      line: index + 1,
+    });
+  }
+
+  return {
+    pins: [...pins.values()].sort((left, right) =>
+      (left.name ?? left.namePattern).localeCompare(right.name ?? right.namePattern)),
+    unattributed,
+  };
+}
+
+export function parsePnpmfilePins(text) {
+  return parsePnpmfilePinAssignments(text).pins;
+}
+
+/**
+ * Every `name@version` the lockfile resolved, as name -> versions.
+ *
+ * Both the `packages` and `snapshots` sections are read because a peer-suffixed
+ * snapshot key carries the same name/version pair, and reading only one of them
+ * would make the answer depend on which section a package happened to land in.
+ */
+export function lockfilePackageVersions(text) {
+  const versions = new Map();
+  if (typeof text !== 'string') return versions;
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  let inSection = false;
+  for (const line of lines) {
+    if (/^(packages|snapshots):\s*$/.test(line)) {
+      inSection = true;
+      continue;
+    }
+    if (/^[A-Za-z]/.test(line)) {
+      inSection = false;
+      continue;
+    }
+    if (!inSection) continue;
+    // Two spaces exactly: a package key sits at that indent and its resolution
+    // block below is deeper, so nothing nested can be mistaken for a package.
+    const key = /^ {2}(\S+):(?:\s|$)/.exec(line);
+    if (!key) continue;
+    const name = key[1].replace(/^['"]|['"]$/g, '').split('(')[0];
+    const separator = name.lastIndexOf('@');
+    if (separator <= 0) continue;
+    const packageName = name.slice(0, separator);
+    const version = name.slice(separator + 1);
+    if (!versions.has(packageName)) versions.set(packageName, new Set());
+    versions.get(packageName).add(version);
+  }
+  return versions;
+}
+
+export function analyzeNpmPins({ pnpmfileText, lockfileText, pnpmfilePath = PNPMFILE, lockfilePath = LOCKFILE } = {}) {
+  if (pnpmfileText === undefined) return [];
+  const { pins, unattributed } = parsePnpmfilePinAssignments(pnpmfileText);
+
+  const findings = [];
+  for (const item of unattributed) {
+    findings.push(finding(
+      pnpmfilePath,
+      item.line,
+      'npm-pin-unattributed',
+      `operator-required: ${item.expression} names no package this checker can resolve, so the pin is unverified; pin it by name.`,
+    ));
+  }
+  if (typeof lockfileText !== 'string') {
+    findings.push(finding(
+      lockfilePath,
+      1,
+      'npm-pin-lock-missing',
+      `operator-required: commit ${lockfilePath}; an npm pin that no lockfile resolves is not a control.`,
+    ));
+    return findings;
+  }
+
+  const versions = lockfilePackageVersions(lockfileText);
+  for (const pin of pins) {
+    const label = pin.name ?? `/${pin.namePattern}/`;
+    const matched = pin.name
+      ? (versions.has(pin.name) ? [[pin.name, versions.get(pin.name)]] : [])
+      : [...versions.entries()].filter(([name]) => new RegExp(`^${pin.namePattern}$`).test(name));
+    if (matched.length === 0) continue;
+
+    for (const [name, resolved] of matched) {
+      const reached = pin.versions.filter((version) => resolved.has(version));
+      if (reached.length === 0) {
+        // The rule never took effect for this package: the lockfile holds a
+        // version the pin does not name, so the control reads as present and is
+        // not. One finding, not one per resolved version.
+        findings.push(finding(
+          lockfilePath,
+          1,
+          'npm-pin-not-in-lock',
+          `operator-required: ${pnpmfilePath} pins ${name} to ${pin.versions.join(', ')} (${label}); the lockfile resolved ${[...resolved].sort().join(', ')}. Re-resolve the lockfile.`,
+        ));
+        continue;
+      }
+      if (pin.scope !== 'range') continue;
+      const unpinned = [...resolved].filter((version) => !pin.versions.includes(version)).sort();
+      if (unpinned.length === 0) continue;
+      findings.push(finding(
+        lockfilePath,
+        1,
+        'npm-pin-version-drift',
+        `operator-required: ${name} is pinned to ${pin.versions.join(', ')} but the lockfile also resolved ${unpinned.join(', ')}; the rule is not reaching every requester.`,
+      ));
+    }
+  }
+
+  return findings;
+}
+
 function relativePath(root, filePath) {
   return relative(root, filePath).split(sep).join('/');
 }
@@ -359,6 +582,18 @@ export function scanRepository({ root = ROOT } = {}) {
     if (isDenoConfig(filePath)) findings.push(...analyzeDenoConfig(path, text, { baseDirectory: root }));
     if (isImportMap(filePath)) findings.push(...analyzeImportMap(path, text));
   }
+
+  // The npm transitive pins are not per-file: they are one pnpmfile against one
+  // lockfile, so they are compared once over the whole repository.
+  const pnpmfile = join(root, PNPMFILE);
+  const lockfile = join(root, LOCKFILE);
+  if (existsSync(pnpmfile)) {
+    findings.push(...analyzeNpmPins({
+      pnpmfileText: readFileSync(pnpmfile, 'utf8'),
+      lockfileText: existsSync(lockfile) ? readFileSync(lockfile, 'utf8') : null,
+    }));
+  }
+
   findings.sort((left, right) => left.path.localeCompare(right.path) || left.line - right.line || left.rule.localeCompare(right.rule));
   return { failed: findings.length > 0, findings };
 }

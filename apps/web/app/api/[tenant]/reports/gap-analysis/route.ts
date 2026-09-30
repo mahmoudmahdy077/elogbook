@@ -43,7 +43,7 @@ export async function POST(
     );
   }
 
-  const { user, profile, tenant } = security.context;
+  const { profile, tenant } = security.context;
   const { tenant: paramTenant } = await params;
   if (tenant.slug !== paramTenant || !['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

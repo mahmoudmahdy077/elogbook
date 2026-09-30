@@ -1,5 +1,12 @@
+-- The AAL2 wrappers still gate every privileged RPC, and the two legacy
+-- approval RPCs are no longer client-reachable at all: decide_case_command is
+-- the only path out of `pending`, because it resolves one locked approval
+-- request in the same transaction as the status change and writes the
+-- idempotency ledger, the audit row and the outbox row with it. The AAL1
+-- assertions below therefore still raise 42501, but from the grant rather than
+-- from the AAL2 check, and the AAL2 assertions say the door is closed.
 BEGIN;
-SELECT plan(34);
+SELECT plan(36);
 
 INSERT INTO public.tenants (id, name, slug, tenant_type, mrn_hash_salt, status)
 VALUES
@@ -192,13 +199,27 @@ SELECT lives_ok(
   $$SELECT public.get_analytics_data('00000000-0000-0000-0000-000000002601')$$,
   'AAL2 director can call the tenant analytics RPC'
 );
-SELECT lives_ok(
+SELECT throws_ok(
   $$SELECT public.approve_case('00000000-0000-0000-0000-000000002642', '00000000-0000-0000-0000-000000002611', 'AAL2')$$,
-  'AAL2 director can approve a tenant case'
+  '42501',
+  NULL,
+  'the retired approve_case RPC is not client-reachable at AAL2 either'
 );
-SELECT lives_ok(
+SELECT throws_ok(
   $$SELECT public.reject_case('00000000-0000-0000-0000-000000002643', '00000000-0000-0000-0000-000000002611', 'AAL2')$$,
-  'AAL2 director can reject a tenant case'
+  '42501',
+  NULL,
+  'the retired reject_case RPC is not client-reachable at AAL2 either'
+);
+SELECT is(
+  has_function_privilege('authenticated', 'public.approve_case(uuid,uuid,text)', 'EXECUTE'),
+  false,
+  'authenticated holds no execute grant on the retired approve_case RPC'
+);
+SELECT is(
+  has_function_privilege('authenticated', 'public.reject_case(uuid,uuid,text)', 'EXECUTE'),
+  false,
+  'authenticated holds no execute grant on the retired reject_case RPC'
 );
 
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000002614","role":"authenticated","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000002601","user_role":"admin"}}';

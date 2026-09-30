@@ -1,7 +1,8 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { getSecurityContext } from '@/lib/supabase/security-context';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
-import { NextResponse, after } from 'next/server';
+import { NextResponse } from 'next/server';
+import { runAfterResponse } from '@/lib/after-response';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { defaultTrustedOrigins } from '@/lib/csrf';
@@ -188,27 +189,29 @@ export async function POST(
     }
   }
 
-  // Fire webhook event after successful approval/rejection.
-  // `after()` guarantees post-response execution on serverless — a bare
-  // fire-and-forget promise here gets frozen when the response returns,
-  // which silently killed webhook deliveries in production.
-  after(async () => {
-    try {
-      await dispatchWebhookEvent({
-        tenant_id: profile.tenant_id,
-        event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
-        event_id: entryId,
-        data: { entry_id: entryId, acted_by: user.id },
-      });
-    } catch (err) {
-      logger.error('Failed to dispatch approval webhook', err, { entryId: entryId });
-    }
-  });
+  // Post-response work is scheduled durably through runAfterResponse (Next's
+  // `after()`), never as an unawaited fire-and-forget promise: a bare promise
+  // in a route handler is frozen when the response returns, which silently
+  // killed webhook deliveries in production.
+  runAfterResponse(
+    () => dispatchWebhookEvent({
+      tenant_id: profile.tenant_id,
+      event_type: action === 'approve' ? 'case.approved' : 'case.rejected',
+      event_id: entryId,
+      // Opaque metadata only. The approval comment is a free-text clinical note
+      // and must never reach a vendor webhook.
+      data: { entry_id: entryId, actor_id: user.id, status: approved ? 'approved' : 'rejected' },
+    }),
+    { label: 'approval-webhook', onError: (err) => logger.error('Failed to dispatch approval webhook', err, { entryId }) },
+  );
 
-  // Push notification to the resident (fire-and-forget; failures are logged).
-  after(() =>
-    notifyCaseApproval(entryId, entry.resident_id, approved ? 'approved' : 'rejected', profile.full_name ?? '')
-      .catch((err) => logger.error('Failed to send approval push notification', err, { entryId: entryId }))
+  // Push notification to the resident (post-response; failures are logged).
+  runAfterResponse(
+    () => notifyCaseApproval(entryId, entry.resident_id, approved ? 'approved' : 'rejected'),
+    {
+      label: 'approval-push',
+      onError: (err) => logger.error('Failed to send approval push notification', err, { entryId }),
+    },
   );
 
   // Email fallback when no push token (best-effort; never fails the approval).

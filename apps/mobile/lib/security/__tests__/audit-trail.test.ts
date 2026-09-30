@@ -18,10 +18,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Hoisted mocks (must be defined before vi.mock calls due to hoisting)
 // ---------------------------------------------------------------------------
 
-const { storage, mockInsert, mockGetSession, mockGetRoleFromAuth } =
+const { storage, mockInsert, mockRpc, mockGetSession, mockGetRoleFromAuth } =
   vi.hoisted(() => ({
     storage: new Map<string, string>(),
     mockInsert: vi.fn().mockResolvedValue({ error: null }),
+    mockRpc: vi.fn(),
     mockGetSession: vi.fn().mockResolvedValue({
       data: { session: { user: { id: 'user-123' } } },
       error: null,
@@ -59,6 +60,7 @@ vi.mock('../../supabase', () => ({
     from: vi.fn(() => ({
       insert: mockInsert,
     })),
+    rpc: (...args: unknown[]) => mockRpc(...args),
     auth: {
       getSession: mockGetSession,
     },
@@ -97,12 +99,15 @@ import {
   logPhiRead,
   logPhiWrite,
   getAuditDeliveryStatus,
+  auditBufferKey,
   type AuditEntry,
 } from '../audit-trail';
 import { setAccountContext, clearAccountContext } from '../../account-context';
 
-// N1: the audit buffer is per-account scoped.
-const SCOPED_AUDIT_KEY = 'user-123:tenant-1:audit_trail_buffer_v1';
+// N1: the audit buffer is per-account scoped. The session is part of the key
+// too, so a session can never overwrite the record of the one before it; the
+// tests below read the key from the module rather than pinning its text.
+let scopedAuditKey = '';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,6 +133,7 @@ describe('audit-trail', () => {
     clearAccountContext();
     setAccountContext({ userId: 'user-123', tenantId: 'tenant-1', profileId: 'profile-1' });
     mockInsert.mockReset().mockResolvedValue({ error: null });
+    mockRpc.mockReset().mockResolvedValue({ data: 'audit-row-1', error: null });
     mockGetSession.mockReset().mockResolvedValue({
       data: { session: { user: { id: 'user-123' } } },
       error: null,
@@ -140,6 +146,7 @@ describe('audit-trail', () => {
     });
     // Reset the module's internal buffer state by clearing + reloading
     await clearAuditLog();
+    scopedAuditKey = auditBufferKey();
     vi.useFakeTimers();
   });
 
@@ -308,6 +315,140 @@ describe('audit-trail', () => {
       expect(entries[499]!.row_id).toBe('r-501');
       expect((await getAuditDeliveryStatus()).dropped).toBe(1);
     });
+
+    it('keeps the persisted record byte-identical to the in-memory buffer', async () => {
+      // The stored value is built incrementally while entries are appended,
+      // so it has to stay exactly what a full re-serialization would produce.
+      for (let i = 0; i < 12; i++) {
+        await logAuditEvent({
+          userId: 'u1',
+          action: 'read',
+          table: 't',
+          rowId: `r-${i}`,
+          data: { patient_mrn: `MRN-${i}`, patient_dob: '1990-01-01' },
+        });
+        expect(storage.get(scopedAuditKey)).toBe(JSON.stringify(await getAuditLog(600)));
+      }
+    });
+
+    it('keeps the persisted record in sync across eviction', async () => {
+      for (let i = 0; i < 500; i++) {
+        await logAuditEvent({
+          userId: 'u1',
+          action: 'read',
+          table: 't',
+          rowId: `r-${i}`,
+          data: i,
+        });
+      }
+      // Full buffer, no eviction yet.
+      expect(storage.get(scopedAuditKey)).toBe(JSON.stringify(await getAuditLog(600)));
+
+      // Two more cross the cap, so the incremental text is dropped and
+      // rebuilt across a shift.
+      for (let i = 500; i < 502; i++) {
+        await logAuditEvent({
+          userId: 'u1',
+          action: 'create',
+          table: 't',
+          rowId: `r-${i}`,
+          data: 'new',
+        });
+      }
+      const entries = await getAuditLog(600);
+      expect(entries).toHaveLength(500);
+      expect(entries[0]!.row_id).toBe('r-2');
+      expect(storage.get(scopedAuditKey)).toBe(JSON.stringify(entries));
+    });
+
+    it('keeps the persisted record in sync after a flush removes delivered entries', async () => {
+      for (let i = 0; i < 8; i++) {
+        await logAuditEvent({
+          userId: 'u1',
+          action: 'read',
+          table: 't',
+          rowId: `r-${i}`,
+          data: i,
+        });
+      }
+
+      expect(await flushAuditLog()).toBe(8);
+
+      expect(await getAuditLog()).toEqual([]);
+      expect(storage.get(scopedAuditKey)).toBe('[]');
+    });
+
+    it('does not carry the previous account persisted record into a new scope', async () => {
+      for (let i = 0; i < 3; i++) {
+        await logAuditEvent({
+          userId: 'user-123',
+          action: 'read',
+          table: 'case_entries',
+          rowId: `a-${i}`,
+          data: 'x',
+        });
+      }
+      expect(storage.get(scopedAuditKey)).not.toBeUndefined();
+
+      setAccountContext({ userId: 'user-456', tenantId: 'tenant-2', profileId: 'profile-2' });
+      await logAuditEvent({
+        userId: 'user-456',
+        action: 'read',
+        table: 'case_entries',
+        rowId: 'b-1',
+        data: 'y',
+      });
+
+      const nextKey = auditBufferKey();
+      expect(nextKey).toContain('user-456:tenant-2:');
+      const persisted = JSON.parse(storage.get(nextKey)!) as AuditEntry[];
+      expect(persisted).toHaveLength(1);
+      expect(persisted[0]!.row_id).toBe('b-1');
+      expect(persisted[0]!.user_id).toBe('user-456');
+      // The previous account's own record is untouched by the switch.
+      expect(JSON.parse(storage.get(scopedAuditKey)!)).toHaveLength(3);
+    });
+
+    it('does not let a new session overwrite the previous session record', async () => {
+      // An entry that never reached the server is the only copy of that access.
+      // The buffer is a whole-value record, so a new session reading it and
+      // finding none of its own entries used to write its first event straight
+      // over the record, and the prior session's undelivered events were gone.
+      // A relaunch or a re-authentication creates such a session; sign-out is
+      // not the only way to reach one.
+      await logAuditEvent({
+        userId: 'u1',
+        action: 'read',
+        table: 'case_entries',
+        rowId: 'prior-session',
+        data: 'x',
+      });
+      const priorKey = auditBufferKey();
+      expect(JSON.parse(storage.get(priorKey)!) as AuditEntry[]).toHaveLength(1);
+
+      clearAccountContext();
+      setAccountContext({ userId: 'user-123', tenantId: 'tenant-1', profileId: 'profile-1' });
+      await logAuditEvent({
+        userId: 'u1',
+        action: 'read',
+        table: 'case_entries',
+        rowId: 'current-session',
+        data: 'y',
+      });
+
+      // The new session sees only its own event -- no exposure across sessions.
+      const visible = await getAuditLog();
+      expect(visible).toHaveLength(1);
+      expect(visible[0]!.row_id).toBe('current-session');
+      expect(await exportAuditLog()).not.toContain('prior-session');
+
+      // And the prior session's record is still there, undelivered, under a key
+      // this session cannot write.
+      expect(auditBufferKey()).not.toBe(priorKey);
+      const preserved = JSON.parse(storage.get(priorKey)!) as AuditEntry[];
+      expect(preserved).toHaveLength(1);
+      expect(preserved[0]!.row_id).toBe('prior-session');
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -421,7 +562,7 @@ describe('audit-trail', () => {
 
       expect(await getAuditLog()).toHaveLength(0);
       // AsyncStorage key should be removed
-      expect(storage.has(SCOPED_AUDIT_KEY)).toBe(false);
+      expect(storage.has(scopedAuditKey)).toBe(false);
     });
   });
 
@@ -429,51 +570,91 @@ describe('audit-trail', () => {
   // 6. flushAuditLog
   // -----------------------------------------------------------------------
   describe('flushAuditLog', () => {
-    it('inserts all buffered entries into Supabase audit_logs', async () => {
+    it('delivers buffered entries through the trusted write_audit_event RPC', async () => {
+      const ROW = '00000000-0000-4000-8000-0000000000a1';
       await logAuditEvent({
         userId: 'u1',
         action: 'read',
         table: 'case_entries',
-        rowId: 'r1',
+        rowId: ROW,
         data: { patient_mrn: 'MRN-100' },
       });
       await logAuditEvent({
         userId: 'u1',
         action: 'create',
         table: 'case_entries',
-        rowId: 'r2',
+        rowId: ROW,
         data: { patient_dob: '2000-01-01' },
       });
 
       const count = await flushAuditLog();
       expect(count).toBe(2);
 
-      // Verify Supabase insert was called with correct payload shape
-      expect(mockInsert).toHaveBeenCalledTimes(1);
-      const insertedRows = mockInsert.mock.calls[0]![0] as Array<Record<string, unknown>>;
-      expect(insertedRows).toHaveLength(2);
-      expect(insertedRows[0]).toEqual(expect.objectContaining({
-        tenant_id: 'tenant-1',
-        user_id: 'user-123',
-        action: 'read',
-        resource_type: 'case_entries',
-        resource_id: 'r1',
-        changes: expect.objectContaining({ data_hash: expect.any(String) }),
-      }));
-      expect(insertedRows[0]).not.toHaveProperty('timestamp');
-      expect(insertedRows[0]).not.toHaveProperty('table');
-      expect(insertedRows[0]).not.toHaveProperty('row_id');
-      expect(insertedRows[0]).not.toHaveProperty('data_hash');
+      // The audit_logs INSERT policy only admits trigger writes, so the flush
+      // must go through the RPC rather than a direct table insert.
+      expect(mockInsert).not.toHaveBeenCalled();
+      expect(mockRpc).toHaveBeenCalledTimes(2);
+      expect(mockRpc.mock.calls[0]![0]).toBe('write_audit_event');
+      expect(mockRpc.mock.calls[0]![1]).toEqual({
+        p_action: 'read',
+        p_resource_type: 'case_entries',
+        p_resource_id: ROW,
+        p_changes: expect.objectContaining({ data_hash: expect.any(String) }),
+        p_tenant_id: 'tenant-1',
+      });
       // No PHI in the payload
-      expect(JSON.stringify(insertedRows)).not.toContain('MRN-100');
+      expect(JSON.stringify(mockRpc.mock.calls)).not.toContain('MRN-100');
+      expect(JSON.stringify(mockRpc.mock.calls)).not.toContain('2000-01-01');
 
       // Buffer should be cleared after successful flush
       expect(await getAuditLog()).toHaveLength(0);
     });
 
+    it('delivers a PHI-read event through the trusted path', async () => {
+      const ROW = '00000000-0000-4000-8000-0000000000b2';
+      await logPhiRead({
+        userId: 'u1',
+        table: 'case_entries',
+        rowId: ROW,
+        phiFields: { patient_mrn: 'MRN-777', patient_dob: '1977-07-07' },
+      });
+
+      expect(await flushAuditLog()).toBe(1);
+      expect(mockRpc).toHaveBeenCalledTimes(1);
+      const [name, args] = mockRpc.mock.calls[0]!;
+      expect(name).toBe('write_audit_event');
+      expect(args).toMatchObject({
+        p_action: 'read',
+        p_resource_type: 'case_entries',
+        p_resource_id: ROW,
+        p_tenant_id: 'tenant-1',
+      });
+      const serialized = JSON.stringify(args);
+      expect(serialized).not.toContain('MRN-777');
+      expect(serialized).not.toContain('1977-07-07');
+      expect(serialized).toContain('data_hash');
+    });
+
+    it('uses the metadata-only resource type for a row id that is not a uuid', async () => {
+      await logAuditEvent({
+        userId: 'u1',
+        action: 'read',
+        table: 'case_entries',
+        rowId: 'legacy-row-key',
+        data: 'x',
+      });
+
+      expect(await flushAuditLog()).toBe(1);
+      expect(mockRpc.mock.calls[0]![1]).toMatchObject({
+        p_resource_type: 'mobile_buffer',
+        p_resource_id: null,
+      });
+    });
+
     it('returns 0 when buffer is empty', async () => {
       const count = await flushAuditLog();
       expect(count).toBe(0);
+      expect(mockRpc).not.toHaveBeenCalled();
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
@@ -486,9 +667,7 @@ describe('audit-trail', () => {
         data: 'x',
       });
 
-      mockInsert.mockResolvedValueOnce({
-        error: { message: 'network error' },
-      });
+      mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'network error' } });
 
       const count = await flushAuditLog();
       expect(count).toBe(0);
@@ -510,7 +689,8 @@ describe('audit-trail', () => {
         data: 'y',
       });
 
-      mockInsert.mockResolvedValueOnce({
+      mockRpc.mockResolvedValueOnce({
+        data: null,
         error: { message: 'relation "audit_logs" does not exist' },
       });
 
@@ -521,7 +701,7 @@ describe('audit-trail', () => {
       expect(await getAuditLog()).toHaveLength(1);
     });
 
-    it('keeps entries when insert throws an exception', async () => {
+    it('keeps entries when the RPC throws an exception', async () => {
       await logAuditEvent({
         userId: 'u1',
         action: 'update',
@@ -530,11 +710,59 @@ describe('audit-trail', () => {
         data: 'z',
       });
 
-      mockInsert.mockRejectedValueOnce(new Error('connection refused'));
+      mockRpc.mockRejectedValueOnce(new Error('connection refused'));
 
       const count = await flushAuditLog();
       expect(count).toBe(0);
       expect(await getAuditLog()).toHaveLength(1);
+    });
+
+    it('keeps an entry logged while the flush is still delivering', async () => {
+      // The flush removes what it delivered from the buffer it read when it
+      // started. If it writes that captured array back rather than the live one,
+      // anything appended during the round trip is discarded -- and this entry
+      // is the only copy of a real PHI access, so "discarded" means it is never
+      // written to audit_logs at all.
+      const ROW = '00000000-0000-4000-8000-0000000000d1';
+      await logAuditEvent({
+        userId: 'u1',
+        action: 'read',
+        table: 'case_entries',
+        rowId: ROW,
+        data: { patient_mrn: 'MRN-200' },
+      });
+
+      let release!: (result: { data: string; error: null }) => void;
+      let reachedRpc!: () => void;
+      const inFlight = new Promise<void>((resolve) => { reachedRpc = resolve; });
+      mockRpc.mockImplementation(() => new Promise((resolve) => {
+        release = resolve;
+        reachedRpc();
+      }));
+
+      const flush = flushAuditLog();
+      await inFlight;
+
+      // The account switches mid-flight, which is what replaces the buffer the
+      // flush captured.
+      setAccountContext({ userId: 'user-456', tenantId: 'tenant-2', profileId: 'profile-2' });
+      await logAuditEvent({
+        userId: 'user-456',
+        action: 'read',
+        table: 'case_entries',
+        rowId: ROW,
+        data: { patient_mrn: 'MRN-201' },
+      });
+
+      release({ data: 'audit-row-1', error: null });
+      expect(await flush).toBe(1);
+
+      // The one logged during the flush is still queued for delivery, under the
+      // scope it was logged in.
+      const otherKey = auditBufferKey();
+      const preserved = JSON.parse(storage.get(otherKey)!) as AuditEntry[];
+      expect(preserved).toHaveLength(1);
+      expect(preserved[0]!.row_id).toBe(ROW);
     });
   });
 
@@ -550,13 +778,13 @@ describe('audit-trail', () => {
         rowId: 'r1',
         data: 'x',
       });
-
       startAuditFlush();
 
       // Advance timer to trigger flush
       await vi.advanceTimersByTimeAsync(30_000);
 
-      expect(mockInsert).toHaveBeenCalled();
+      expect(mockRpc).toHaveBeenCalled();
+      expect(mockInsert).not.toHaveBeenCalled();
     });
 
     it('skips flush when not authenticated', async () => {
@@ -576,6 +804,7 @@ describe('audit-trail', () => {
       startAuditFlush();
       await vi.advanceTimersByTimeAsync(30_000);
 
+      expect(mockRpc).not.toHaveBeenCalled();
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
@@ -590,10 +819,11 @@ describe('audit-trail', () => {
 
       startAuditFlush();
       stopAuditFlush();
-      mockInsert.mockClear();
+      mockRpc.mockClear();
 
       await vi.advanceTimersByTimeAsync(60_000);
-      expect(mockInsert).not.toHaveBeenCalled();
+
+      expect(mockRpc).not.toHaveBeenCalled();
     });
 
     it('is safe to call startAuditFlush multiple times', async () => {
@@ -611,7 +841,7 @@ describe('audit-trail', () => {
       await vi.advanceTimersByTimeAsync(30_000);
 
       // Only one flush should occur per interval
-      expect(mockInsert).toHaveBeenCalledTimes(1);
+      expect(mockRpc).toHaveBeenCalledTimes(1);
 
       stopAuditFlush();
     });
@@ -831,8 +1061,8 @@ describe('audit-trail', () => {
         data: 'x',
       });
 
-      expect(storage.has(SCOPED_AUDIT_KEY)).toBe(true);
-      const raw = storage.get(SCOPED_AUDIT_KEY)!;
+      expect(storage.has(scopedAuditKey)).toBe(true);
+      const raw = storage.get(scopedAuditKey)!;
       const parsed = JSON.parse(raw) as AuditEntry[];
       expect(parsed).toHaveLength(1);
     });

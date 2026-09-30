@@ -29,7 +29,10 @@ function referenceFile(reference) {
 
 function hasAssertions(source, framework) {
   if (framework === 'pgTAP') return /SELECT\s+plan\s*\(\s*[1-9]\d*\s*\)/i.test(source);
-  return /\b(?:expect|assert)\s*\(/.test(source);
+  // Deno's assertion helpers are prefixed (assertEquals, assertThrows, ...), so
+  // the check has to allow the dotted import form the other frameworks do not
+  // use. Without it a Deno suite is registered but its assertions go unverified.
+  return /\b(?:expect|assert|assertEquals|assertStrictEquals|assertNotEquals|assertThrows|assertRejects|assertExists|assertMatch)\s*\(/.test(source);
 }
 
 function hasTestDeclaration(source, framework) {

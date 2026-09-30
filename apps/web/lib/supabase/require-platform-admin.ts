@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { logger } from '@/lib/logger';
 import { getServerVerifiedAal } from './security-context';
 
 /**
@@ -8,9 +9,12 @@ import { getServerVerifiedAal } from './security-context';
  * Authority comes ONLY from the `platform_admins` registry — a tenant
  * `admin`/`institution_admin` label confers no host permission. Checks,
  * in order: live session, active home profile (any tenant), active
- * registry row (via service-role; RLS denies direct reads), AAL2 with an
- * enrolled factor (fail closed; DISABLE_MFA=true bypasses for local dev
- * only, mirroring auth.ts P6.1).
+ * registry row (via service-role; RLS denies direct reads), then MFA.
+ *
+ * MFA is required: an enrolled, verified factor plus server-verified AAL2. The
+ * `DISABLE_MFA=true` development bypass is honoured only outside production and
+ * only outside setup mode, and it logs `platform_admin.mfa_bypassed` every time
+ * it is taken so the weakened control is never silent.
  *
  * Server-side only: imports the service-role client. Never import from
  * client components or the mobile app.
@@ -44,10 +48,25 @@ export async function requirePlatformAdmin(supabase: SupabaseClient) {
     return { ok: false as const, error: 'Platform access required', status: 403 as const };
   }
 
+  // The bypass exists for local development only. It is refused outright while
+  // the instance is in setup mode, because setup mode is the one state in which
+  // the control plane is reachable and unowned: an operator who set both flags
+  // would otherwise reach backup/restore/uninstall with no verified factor.
+  if (process.env.SETUP_MODE === 'true') {
+    return { ok: false as const, error: 'Platform access is unavailable during setup', status: 403 as const };
+  }
+
   const mfaDisabledForNonProduction =
     process.env.NODE_ENV !== 'production' && process.env.DISABLE_MFA === 'true';
 
-  if (!mfaDisabledForNonProduction) {
+  if (mfaDisabledForNonProduction) {
+    // Never silent: the bypass weakens exactly the control that makes this
+    // endpoint safe, and it is reachable wherever the control plane is.
+    logger.warn('platform_admin.mfa_bypassed', {
+      userId: user.id,
+      nodeEnv: process.env.NODE_ENV ?? 'unset',
+    });
+  } else {
     const {
       data: { session },
     } = await supabase.auth.getSession();

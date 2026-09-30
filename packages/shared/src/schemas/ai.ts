@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   AI_FIELD_KINDS,
-  AI_FIELD_NAMES,
   AI_INPUT_TOKENS,
   AI_MAX_CATEGORY_ITEMS,
   AI_MAX_CATEGORY_LENGTH,
@@ -23,7 +22,12 @@ export const AI_MAX_FAN_OUT = 4;
 
 const CONTROL_CONTENT = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 const EXECUTABLE_CONTENT = /(?:<\s*\/?\s*(?:script|iframe|object|embed|style|svg|img)\b|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html|(?:^|[\s`])(?:rm\s+-rf|curl\s+|wget\s+|powershell(?:\.exe)?\s+|bash\s+-c|sh\s+-c)\b|\b(?:drop|truncate|alter)\s+table\b|\bunion\s+select\b)/i;
-const PHI_CONTENT = /(?:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\+?\d[\d(). -]{7,}\d)|\b\d{1,5}\s+[A-Z][\w.-]*(?:\s+[A-Z][\w.-]*){0,4}\s+(?:STREET|ST|ROAD|RD|AVENUE|AVE|BOULEVARD|BLVD|LANE|LN|DRIVE|DR|COURT|CT|WAY|TERRACE|PLACE|PL)\b|\bP\.?\s*O\.?\s+BOX\s+\d+\b|\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{3}[- ]\d{2}[- ]\d{4}\b|\b(?:mrn|medical\s+record(?:\s+number)?|patient\s+record)\s*[:#=-]?\s*[A-Z0-9-]{4,}\b|\b\d{6,}\b|\b(?:Dr|Mr|Mrs|Ms|Miss)\.?\s+[A-Z][A-Z-]+(?:\s+[A-Z][A-Z-]+)+\b|\b(?:patient|resident)\s+[A-Z][A-Z-]+(?:\s+[A-Z][A-Z-]+)+\b)/i;
+// The e-mail local part is bounded at RFC 5321's 64 octets. Unbounded, the
+// leading `+` retries a whole run of matching characters from every offset it
+// can start at, which is quadratic in a value this scan is handed for every
+// in-budget request -- 32KB is ordinary input, not a mistake, so the byte
+// budget above does not stand in for the bound.
+const PHI_CONTENT = /(?:[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\+?\d[\d(). -]{7,}\d)|\b\d{1,5}\s+[A-Z][\w.-]*(?:\s+[A-Z][\w.-]*){0,4}\s+(?:STREET|ST|ROAD|RD|AVENUE|AVE|BOULEVARD|BLVD|LANE|LN|DRIVE|DR|COURT|CT|WAY|TERRACE|PLACE|PL)\b|\bP\.?\s*O\.?\s+BOX\s+\d+\b|\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{3}[- ]\d{2}[- ]\d{4}\b|\b(?:mrn|medical\s+record(?:\s+number)?|patient\s+record)\s*[:#=-]?\s*[A-Z0-9-]{4,}\b|\b\d{6,}\b|\b(?:Dr|Mr|Mrs|Ms|Miss)\.?\s+[A-Z][A-Z-]+(?:\s+[A-Z][A-Z-]+)+\b|\b(?:patient|resident)\s+[A-Z][A-Z-]+(?:\s+[A-Z][A-Z-]+)+\b)/i;
 const CLINICAL_NAME_EXCLUSIONS = /\b(?:laparoscopic|appendectomy|surgery|medical|clinical|patient|resident|case|general|internal|medicine|emergency|cardiology|orthopedic|pediatric|neurology|recovery|hospital|clinic|institution|department|program|template|logbook|quality|assessment|service|system|follow[- ]?up|outpatient|inpatient|diagnos\w*|procedure|treatment|therapy|anesthesia|complication|my|new|the|this|age|group|adult|child|infant|neonate|older)\b/i;
 
 const CATEGORY_VALUE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _./+()'-]{0,63}$/;
@@ -38,32 +42,6 @@ function hasLikelyPersonName(value: string): boolean {
 
 function hasUnsafeContent(value: string): boolean {
   return CONTROL_CONTENT.test(value) || EXECUTABLE_CONTENT.test(value) || PHI_CONTENT.test(value) || hasLikelyPersonName(value);
-}
-
-function hasPhiKey(value: string): boolean {
-  const normalized = normalizeAiFieldKey(value);
-  if (DEIDENTIFIED_FIELD_ALLOWLIST.has(normalized)) return false;
-  return ['address', 'contact', 'dob', 'email', 'identity', 'mrn', 'name', 'phone', 'resident', 'patient', 'ssn']
-    .some((part) => normalized.includes(part));
-}
-
-function findPhiValue(value: unknown, key = '', depth = 0, seen = new WeakSet<object>()): boolean {
-  if (depth > 8) return true;
-  if (value === null || value === undefined || typeof value === 'boolean') return false;
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return true;
-    const numericText = String(value);
-    return hasPhiKey(key) || PHI_CONTENT.test(numericText) || hasLikelyPersonName(numericText);
-  }
-  if (typeof value === 'string') return hasPhiKey(key) || PHI_CONTENT.test(value) || hasLikelyPersonName(value);
-  if (typeof value !== 'object' || seen.has(value)) return true;
-  seen.add(value);
-  try {
-    if (Array.isArray(value)) return value.some((item) => findPhiValue(item, key, depth + 1, seen));
-    return Object.entries(value as Record<string, unknown>).some(([childKey, child]) => hasPhiKey(childKey) || findPhiValue(child, childKey, depth + 1, seen));
-  } finally {
-    seen.delete(value);
-  }
 }
 
 function isCategoryValue(value: unknown): boolean {
@@ -104,7 +82,16 @@ function isAllowedDeidentifiedTree(value: unknown, depth = 0, seen = new WeakSet
 
 const safeText = (max: number, maxBytes = max) => z.string()
   .max(max)
-  .refine((value) => new TextEncoder().encode(value).byteLength <= maxBytes)
+  .refine((value) => {
+    // Cheap byte-budget guard, evaluated before any DLP scan. A UTF-16 code
+    // unit never encodes to fewer than one byte, so a string longer than the
+    // byte budget is always over budget and can be rejected on length alone.
+    // This guard aborts on failure so an over-budget value is never serialized.
+    // It is not what keeps the scan affordable: the PHI patterns bound their own
+    // repetition, because an in-budget value is the ordinary case.
+    if (value.length > maxBytes) return false;
+    return new TextEncoder().encode(value).byteLength <= maxBytes;
+  }, { abort: true })
   .refine((value) => !hasUnsafeContent(value));
 
 export const aiDeidentifiedFieldValuesSchema = z.record(z.string(), z.unknown()).superRefine((value, context) => {

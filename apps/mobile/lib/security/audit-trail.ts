@@ -9,9 +9,11 @@
  *   - table and row_id
  *   - one-way SHA-256 hash of the accessed data snapshot
  *
- * Entries are stored locally in AsyncStorage as a ring buffer (max 500)
- * and periodically flushed to the Supabase `audit_logs` table when the
- * device is online.
+ * Entries are stored locally in AsyncStorage as a ring buffer (max 500) and
+ * periodically flushed to the Supabase `audit_logs` table when the device is
+ * online. The buffer is one AsyncStorage record per account AND session, so a
+ * session can neither read another session's entries nor overwrite them; see
+ * `bufferKeyForContext` for why that is not only about isolation.
  *
  * SECURITY: The audit log itself never stores raw PHI — only a SHA-256
  * digest of the accessed values. This satisfies the HIPAA requirement to
@@ -19,7 +21,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAccountContext, scopedKey, scopedKeyForContext, type AccountContext } from '../account-context';
+import { getAccountContext, scopedKeyForContext, type AccountContext } from '../account-context';
 import { logWarn } from '../logger';
 import { supabase } from '../supabase';
 import { sha256, bytesToHex } from '../crypto/sha256';
@@ -70,6 +72,12 @@ const MAX_ENTRIES = 500;
 const FLUSH_INTERVAL_MS = 30_000; // 30 seconds
 const SUPABASE_TABLE = 'audit_logs';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 /**
  * Roles permitted to view or edit PHI per institutional policy.
  * Only residents, supervisors, and directors handle patient-identifiable data.
@@ -87,9 +95,49 @@ let _status: AuditDeliveryStatus | null = null;
 let _statusScope: string | null = null;
 let _flushTimer: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Cached JSON text of `_buffer`, or `null` when it is not known to be current.
+ *
+ * The buffer is a whole-value AsyncStorage record, so every logged event has
+ * to re-persist it. Re-running `JSON.stringify` over a buffer that grows to
+ * 500 entries costs O(buffer) per event, which makes a burst of PHI reads
+ * quadratic — on a device that is a full re-serialization of the ring, plus a
+ * correspondingly large storage write, for every single access. Appending to
+ * the cached text keeps the same durable record but costs O(1) amortised.
+ *
+ * The cache is only ever extended by `appendBufferEntry`. Every other
+ * mutation goes through `setBuffer`, which drops it so the next persist
+ * rebuilds the text from the buffer itself.
+ */
+let _serializedBuffer: string | null = null;
+
+/**
+ * Replace the ring buffer wholesale, discarding the incremental JSON cache.
+ * All non-append mutations of `_buffer` must go through this.
+ */
+function setBuffer(next: AuditEntry[]): void {
+  _buffer = next;
+  _serializedBuffer = null;
+}
+
+/**
+ * Append one entry to the ring buffer, extending the cached JSON text when it
+ * is current. The resulting text is byte-identical to `JSON.stringify(_buffer)`.
+ */
+function appendBufferEntry(entry: AuditEntry): void {
+  if (_serializedBuffer !== null) {
+    // Drop the closing bracket and splice the new entry in ahead of it.
+    const head = _serializedBuffer.slice(0, -1);
+    const separator = _buffer.length > 0 ? ',' : '';
+    _serializedBuffer = `${head}${separator}${JSON.stringify(entry)}]`;
+  }
+  _buffer.push(entry);
+}
+
 // ---------------------------------------------------------------------------
-// AsyncStorage persistence helpers (N1: per-account scope — the buffer holds
-// actor-bound entries and must never be readable across account switch).
+// AsyncStorage persistence helpers (N1: per-account, per-session scope — the
+// buffer holds actor-bound entries and must never be readable across an account
+// switch, and must never be overwritten by a later session of the same account).
 // ---------------------------------------------------------------------------
 
 function activeContext(): AccountContext {
@@ -104,8 +152,32 @@ function activeContext(): AccountContext {
   return context;
 }
 
+/**
+ * The AsyncStorage key for one session's ring buffer.
+ *
+ * The account (user + tenant) is the isolation boundary: a buffer of
+ * actor-bound entries is never readable, or writable, under another account's
+ * key, and the sign-out disposal in session-disposal.ts clears every key under
+ * the account prefix, so this shape stays inside that purge.
+ *
+ * The session is in the key as well, and it is there for a reason that is not
+ * isolation. The buffer is a whole-value record, so keyed by account alone a new
+ * session -- a relaunch, a re-authentication, anything that is not a sign-out --
+ * reads the record, finds none of its own entries, and writes its first event
+ * straight over it. The previous session's undelivered accesses are then gone
+ * with no record of the loss, and they were the only copy of a real PHI access
+ * until they reached `audit_logs`. With the session in the key the overwrite is
+ * impossible rather than unlikely: the prior record survives on disk under a key
+ * this session cannot write, and it is never read into this session's view.
+ */
+function bufferKeyForContext(context: AccountContext): string {
+  return `${context.userId}:${context.tenantId}:${context.sessionId ?? 'no-session'}:${STORAGE_KEY}`;
+}
+
 export function auditBufferKey(): string {
-  return scopedKey(STORAGE_KEY);
+  const context = getAccountContext();
+  if (!context) return `global:${STORAGE_KEY}`;
+  return bufferKeyForContext(context);
 }
 
 function scopeToken(context: AccountContext): string {
@@ -162,7 +234,7 @@ function normalizeEntry(value: unknown, context: AccountContext): AuditEntry | n
 async function loadBuffer(): Promise<AuditEntry[]> {
   const context = getAccountContext();
   if (!context) {
-    _buffer = [];
+    setBuffer([]);
     _loaded = true;
     _loadedScope = null;
     return _buffer;
@@ -170,7 +242,7 @@ async function loadBuffer(): Promise<AuditEntry[]> {
   const scope = scopeToken(context);
   if (_loaded && _loadedScope === scope) return _buffer;
   if (_loaded && _loadedScope !== scope) {
-    _buffer = [];
+    setBuffer([]);
     _status = null;
   }
   _loadedScope = scope;
@@ -180,15 +252,15 @@ async function loadBuffer(): Promise<AuditEntry[]> {
     if (raw) {
       const parsed = JSON.parse(raw);
       const values = Array.isArray(parsed) ? parsed : [];
-      _buffer = values
+      const restored = values
         .map((value) => normalizeEntry(value, context))
         .filter((value): value is AuditEntry => value !== null
           && value.tenant_id === context.tenantId
           && value.user_id === context.userId
           && value.session_id === (context.sessionId ?? ''));
-      if (_buffer.length > MAX_ENTRIES) _buffer = _buffer.slice(-MAX_ENTRIES);
+      setBuffer(restored.length > MAX_ENTRIES ? restored.slice(-MAX_ENTRIES) : restored);
     } else {
-      _buffer = [];
+      setBuffer([]);
     }
   } catch {
     try {
@@ -198,7 +270,7 @@ async function loadBuffer(): Promise<AuditEntry[]> {
       logWarn('audit-trail.corrupt-backup-failed');
     }
     logWarn('audit-trail.corrupt-buffer-quarantined');
-    _buffer = [];
+    setBuffer([]);
   }
   _loaded = true;
   return _buffer;
@@ -206,7 +278,8 @@ async function loadBuffer(): Promise<AuditEntry[]> {
 
 async function persistBuffer(): Promise<void> {
   const context = activeContext();
-  await AsyncStorage.setItem(scopedKeyForContext(context, STORAGE_KEY), JSON.stringify(_buffer));
+  if (_serializedBuffer === null) _serializedBuffer = JSON.stringify(_buffer);
+  await AsyncStorage.setItem(bufferKeyForContext(context), _serializedBuffer);
 }
 
 async function loadStatus(): Promise<AuditDeliveryStatus> {
@@ -243,7 +316,7 @@ async function updateStatus(update: Partial<AuditDeliveryStatus>): Promise<void>
 
 export function disposeAuditBuffer(): void {
   stopAuditFlush();
-  _buffer = [];
+  setBuffer([]);
   _status = null;
   _loaded = false;
   _loadedScope = null;
@@ -318,9 +391,11 @@ export async function logAuditEvent(params: {
     _status = { ...status, dropped: status.dropped + 1, lastError: 'audit queue full; oldest entry evicted' };
     await persistStatus();
     buffer.shift();
+    // Eviction drops the oldest entry, so the incremental JSON no longer
+    // describes the buffer and has to be rebuilt on the next persist.
+    _serializedBuffer = null;
   }
-  buffer.push(entry);
-  _buffer = buffer;
+  appendBufferEntry(entry);
   try {
     await persistBuffer();
     await updateStatus({ pending: _buffer.length, failed: _buffer.filter((item) => item.delivery_state === 'failed').length });
@@ -364,12 +439,12 @@ export async function getAuditDeliveryStatus(): Promise<AuditDeliveryStatus> {
 }
 
 export async function clearAuditLogForContext(context: AccountContext): Promise<void> {
-  _buffer = [];
+  setBuffer([]);
   _status = null;
   _loaded = false;
   _loadedScope = null;
   _statusScope = null;
-  await AsyncStorage.removeItem(scopedKeyForContext(context, STORAGE_KEY));
+  await AsyncStorage.removeItem(bufferKeyForContext(context));
   await AsyncStorage.removeItem(statusKey(context));
 }
 
@@ -379,7 +454,7 @@ export async function clearAuditLog(): Promise<void> {
     await clearAuditLogForContext(context);
     return;
   }
-  _buffer = [];
+  setBuffer([]);
   _status = null;
   _loaded = false;
   _loadedScope = null;
@@ -390,10 +465,18 @@ export async function clearAuditLog(): Promise<void> {
 
 /**
  * Flush pending audit entries to the Supabase `audit_logs` table.
- * Only uploads entries that haven't been confirmed yet (tracked via
- * a local flag). Operates in batches to respect network constraints.
  *
- * Returns the number of entries successfully flushed.
+ * The `audit_logs` INSERT policy only admits rows written from inside a
+ * trigger (`pg_trigger_depth() >= 1`), so a direct
+ * `supabase.from('audit_logs').insert(...)` from the app is always rejected
+ * with 42501 and the required audit event is silently lost. Every entry is
+ * delivered one at a time through the `write_audit_event` RPC, which is
+ * authenticated, AAL checked, tenant pinned to the caller's own tenant and
+ * metadata-only.
+ *
+ * Returns the number of entries successfully delivered. A failure keeps the
+ * entry buffered (marked `failed`) so the next interval retries it; a partial
+ * delivery keeps only the entries that succeeded.
  */
 export async function flushAuditLog(): Promise<number> {
   const context = activeContext();
@@ -404,19 +487,39 @@ export async function flushAuditLog(): Promise<number> {
     && entry.session_id === (context.sessionId ?? ''));
   if (entries.length === 0) return 0;
 
-  const serverRows = entries.map((entry) => ({
-    tenant_id: entry.tenant_id,
-    user_id: entry.user_id,
-    action: entry.action,
-    resource_type: entry.resource_type,
-    resource_id: entry.resource_id,
-    changes: entry.changes,
-  }));
+  const delivered = new Set<AuditEntry>();
+  let lastError: unknown = null;
 
-  try {
-    const { error } = await supabase.from(SUPABASE_TABLE).insert(serverRows);
-    if (error) throw new Error(error.message);
-    _buffer = buffer.filter((entry) => !entries.includes(entry));
+  for (const entry of entries) {
+    // audit_logs.resource_id is a uuid. A legacy row key that is not one is
+    // recorded as a metadata-only event attributed to the tenant row rather
+    // than dropped or coerced.
+    const resourceId = isUuid(entry.resource_id) ? entry.resource_id : null;
+    const resourceType = resourceId === null ? 'mobile_buffer' : entry.resource_type;
+
+    try {
+      const { data, error } = await supabase.rpc('write_audit_event', {
+        p_action: entry.action,
+        p_resource_type: resourceType,
+        p_resource_id: resourceId,
+        p_changes: entry.changes,
+        p_tenant_id: entry.tenant_id,
+      });
+      if (error) throw new Error(error.message);
+      if (typeof data !== 'string' || data.length === 0) throw new Error('audit write rejected');
+      delivered.add(entry);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (delivered.size > 0) {
+    // The live buffer, not the array this flush read when it started. Delivery
+    // is a round trip, so anything logged in the meantime is in `_buffer` and
+    // not in the captured copy: writing the captured one back would discard a
+    // real PHI access that exists nowhere else. Removing the delivered entries
+    // by identity from whatever is there now touches only what was delivered.
+    setBuffer(_buffer.filter((entry) => !delivered.has(entry)));
     try {
       await persistBuffer();
     } catch (storageError) {
@@ -426,23 +529,16 @@ export async function flushAuditLog(): Promise<number> {
         lastError: safeErrorMessage(storageError),
       };
       await persistStatus();
-      throw storageError;
+      return 0;
     }
-    await updateStatus({
-      pending: _buffer.filter((entry) => entry.delivery_state === 'pending').length,
-      failed: _buffer.filter((entry) => entry.delivery_state === 'failed').length,
-      lastError: null,
-      lastFailureAt: null,
-      lastSuccessAt: Date.now(),
-      storageUnavailable: false,
-    });
-    return entries.length;
-  } catch (error) {
-    const message = safeErrorMessage(error);
-    const failedEntries = new Set(entries);
-    _buffer = buffer.map((entry) => failedEntries.has(entry)
+  }
+
+  if (lastError !== null) {
+    const message = safeErrorMessage(lastError);
+    const failed = new Set(entries.filter((entry) => !delivered.has(entry)));
+    setBuffer(_buffer.map((entry) => failed.has(entry)
       ? { ...entry, delivery_state: 'failed' as const, attempts: entry.attempts + 1, last_error: message }
-      : entry);
+      : entry));
     try {
       await persistBuffer();
     } catch (storageError) {
@@ -459,8 +555,18 @@ export async function flushAuditLog(): Promise<number> {
       lastFailureAt: Date.now(),
     });
     logWarn('audit-trail.flush-failed', { error: message });
-    return 0;
+    return delivered.size;
   }
+
+  await updateStatus({
+    pending: _buffer.filter((entry) => entry.delivery_state === 'pending').length,
+    failed: _buffer.filter((entry) => entry.delivery_state === 'failed').length,
+    lastError: null,
+    lastFailureAt: null,
+    lastSuccessAt: Date.now(),
+    storageUnavailable: false,
+  });
+  return delivered.size;
 }
 
 // ---------------------------------------------------------------------------

@@ -154,12 +154,8 @@ export function parseIpAddress(value: string): ParsedIp | null {
   const withoutBrackets = normalized.startsWith('[') && normalized.endsWith(']')
     ? normalized.slice(1, -1)
     : normalized;
-  return parseIpv4(withoutBrackets) ?? parseIpv6(withoutBrackets);
-}
-
-function bytesToIpv4(bytes: number[]): string {
-  return bytes.join('.');
-}
+    return parseIpv4(withoutBrackets) ?? parseIpv6(withoutBrackets);
+  }
 
 function bytesToIpv6(bytes: number[]): string {
   const groups: string[] = [];

@@ -2,9 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_ATTACHMENT_BYTES } from '@/lib/attachments/upload-policy';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { getSecurityContext, type SecurityContextResult } from '@/lib/supabase/security-context';
+import { checkRateLimit } from '@/lib/rate-limit-redis';
 import { POST as uploadAttachment } from '../upload/route';
 import { GET as downloadAttachment } from '../[id]/download/route';
 import { DELETE as deleteAttachment } from '../[id]/route';
+
+vi.mock('@/lib/rate-limit-redis', () => ({
+  checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfter: 0 })),
+  rateLimitResponse: vi.fn((retryAfter: number) =>
+    new Response(JSON.stringify({ error: 'Too many requests.' }), {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    }),
+  ),
+}));
 
 vi.mock('@/lib/supabase/security-context', () => ({
   getSecurityContext: vi.fn(),
@@ -179,6 +190,7 @@ function cleanAttachment(overrides: Record<string, unknown> = {}) {
 describe('attachment upload broker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfter: 0 });
     fixture = {
       caseEntry: {
         id: CASE_ID,
@@ -320,6 +332,75 @@ describe('attachment upload broker', () => {
     });
 
     expect(response.status).toBe(503);
+    expect(storageUpload).not.toHaveBeenCalled();
+    expect(metadataInserts).toHaveLength(0);
+  });
+
+  it('rate limits the upload route itself, before any body is read', async () => {
+    // Uploads are the most expensive write path in the product: a bounded
+    // stream, a magic-byte check, a storage PUT and a metadata insert per call.
+    // An unthrottled route turns a single authenticated session into a storage
+    // exhaustion primitive.
+    vi.mocked(getSecurityContext).mockResolvedValue(authenticated());
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfter: 42 });
+
+    const response = await uploadAttachment(uploadRequest(), {
+      params: Promise.resolve({ tenant: 'tenant-a' }),
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('42');
+    expect(storageUpload).not.toHaveBeenCalled();
+    expect(metadataInserts).toHaveLength(0);
+  });
+
+  it('keys the upload rate limit on the caller, not the case', async () => {
+    vi.mocked(getSecurityContext).mockResolvedValue(authenticated());
+
+    await uploadAttachment(uploadRequest(), {
+      params: Promise.resolve({ tenant: 'tenant-a' }),
+    });
+
+    const [key] = vi.mocked(checkRateLimit).mock.calls[0] as [string, number];
+    expect(key).toContain('attachment-upload');
+    expect(key).toContain(PROFILE_ID);
+  });
+
+  it('never lets a browser or intermediary store an upload response', async () => {
+    // The 202 body carries the attachment id and the quarantine path is derived
+    // from it; a cached response would also survive the case being deleted.
+    vi.mocked(getSecurityContext).mockResolvedValue(authenticated());
+
+    const response = await uploadAttachment(uploadRequest(), {
+      params: Promise.resolve({ tenant: 'tenant-a' }),
+    });
+
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+
+  it('marks the scanner-unavailable refusal no-store too', async () => {
+    vi.mocked(getSecurityContext).mockResolvedValue(authenticated());
+
+    const response = await uploadAttachment(uploadRequest(), {
+      params: Promise.resolve({ tenant: 'tenant-a' }),
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+
+  it('rejects a declared content length that is not a plain integer', async () => {
+    // A declared length is a claim about the body; a non-integer claim is
+    // refused before the body is touched, so the byte cap is never the only
+    // thing standing between the process and a large allocation.
+    vi.mocked(getSecurityContext).mockResolvedValue(authenticated());
+
+    const response = await uploadAttachment(
+      uploadRequest(PDF_BYTES, 'report.pdf', { 'content-length': '10 MiB' }),
+      { params: Promise.resolve({ tenant: 'tenant-a' }) },
+    );
+
+    expect(response.status).toBe(400);
     expect(storageUpload).not.toHaveBeenCalled();
     expect(metadataInserts).toHaveLength(0);
   });

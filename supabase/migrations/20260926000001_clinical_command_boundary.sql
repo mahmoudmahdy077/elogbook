@@ -56,6 +56,17 @@
 --     migration replay, table owner, maintenance jobs) is governed by its own
 --     checks, not by a request JWT, so the AAL2 guard does not apply to it.
 --
+-- Correction, converged forward in 20260930000001 and noted here so this file is
+-- not read as the final definition: the direct-write tombstone guard below
+-- cannot work as written. write_once_submitted_check is SECURITY DEFINER, so
+-- inside it `current_user` is the function owner and never 'authenticated';
+-- the approved-tombstone check could not fire on any path, including the two
+-- SECURITY DEFINER RPCs this comment says it leaves intact. 20260930000001
+-- replaces the body with a reachable one keyed on auth.uid() and removes the
+-- privileged pre-approved INSERT branch that could create an approved record
+-- with no approval ledger. The rules below are unchanged; the enforcement is
+-- what was wrong.
+--
 -- Forward-only. No applied history is edited; this converges the final state.
 -- ============================================================================
 
@@ -158,6 +169,13 @@ COMMENT ON FUNCTION public.enforce_case_status_transition() IS
 -- current_user = 'authenticated' is precisely "this statement executed as the
 -- caller's own role", i.e. a direct REST/RPC write. SECURITY DEFINER command
 -- RPCs and the table owner are outside that condition and stay unaffected.
+--
+-- Superseded: this body is unreachable. write_once_submitted_check is SECURITY
+-- DEFINER, so `current_user` inside it is the function owner and the comparison
+-- is never true, which is how a resident reached an approved record through
+-- submit_case_operation('delete') and a privileged principal through
+-- soft_delete_case. 20260930000001 re-issues the body keyed on auth.uid(), which
+-- SECURITY DEFINER does not change. Read that file for the final definition.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.write_once_submitted_check()
 RETURNS TRIGGER AS $$
@@ -209,6 +227,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- ---------------------------------------------------------------------------
 -- 5. Insert-side guard: AAL2 for pre-approved/rejected case inserts.
+--
+-- Superseded in part: the privileged branch below let a supervisor at AAL2
+-- INSERT a case already `approved`, with no approval request and therefore no
+-- approval ledger. 20260930000001 removes that branch: an authenticated
+-- principal may only create a draft, so reaching `approved` means
+-- decide_case_command resolved an approval request. Individual tenants keep
+-- their documented server-side auto-approval.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.enforce_case_insert_status()
 RETURNS TRIGGER
@@ -516,6 +541,13 @@ COMMENT ON FUNCTION public.submit_case_command(UUID, TEXT, TEXT) IS
 
 -- ---------------------------------------------------------------------------
 -- 8. decide_case_command -- the only path out of `pending`.
+--
+-- The approval lookup is tenant-pinned on approval_requests itself, not only on
+-- the case row above it. approval_requests is a second table with its own tenant
+-- column, and this function is SECURITY DEFINER, so nothing downstream re-checks
+-- it: an entry_id-only lookup trusts that every request row pointing at the
+-- entry also belongs to the entry's tenant. 20260926000004 supersedes this
+-- definition and carries the same predicate, so the two agree.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.decide_case_command(
   p_case_id UUID,
@@ -628,6 +660,7 @@ BEGIN
     INTO v_approval
     FROM public.approval_requests
     WHERE entry_id = p_case_id
+      AND tenant_id = v_principal.tenant_id
     ORDER BY (supervisor_id = v_principal.profile_id) DESC, requested_at
     LIMIT 1;
 

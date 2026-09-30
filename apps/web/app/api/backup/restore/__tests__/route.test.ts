@@ -36,7 +36,7 @@ import {
   type PrincipalSpec,
 } from '@/lib/supabase/__tests__/platform-guard-fixture';
 import { restoreFromBackup } from '@/lib/setup/backup-manager';
-import { POST } from '../route';
+import { GET, POST } from '../route';
 
 const PASSWORD = ['fixture', 'database', 'password'].join('-');
 const LIVE_DATABASE = 'elogbook';
@@ -197,5 +197,63 @@ describe('POST /api/backup/restore (control plane)', () => {
     const body = await res.text();
     expect(body).not.toContain(PASSWORD);
     expect(body).not.toMatch(/psql|auth failed/i);
+  });
+});
+
+describe('GET /api/backup/restore (control plane target inventory)', () => {
+  const oldAllowlist = process.env.RESTORE_TARGET_ALLOWLIST;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.RESTORE_TARGET_ALLOWLIST = `${ALLOWED_TARGET},drill_2`;
+  });
+
+  afterEach(() => {
+    if (oldAllowlist === undefined) delete process.env.RESTORE_TARGET_ALLOWLIST;
+    else process.env.RESTORE_TARGET_ALLOWLIST = oldAllowlist;
+  });
+
+  it('lists the operator-provisioned target ids for an AAL2 operator', async () => {
+    applyPrincipal(operatorSpec());
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.restoreTargets).toEqual([ALLOWED_TARGET, 'drill_2']);
+    expect(res.headers.get('cache-control')).toContain('no-store');
+  });
+
+  it('never discloses a derived database name', async () => {
+    applyPrincipal(operatorSpec());
+    const res = await GET();
+    expect(await res.text()).not.toContain('elogbook_restore_');
+  });
+
+  it('drops reserved and malformed allowlist entries', async () => {
+    process.env.RESTORE_TARGET_ALLOWLIST = `${ALLOWED_TARGET},postgres,bad-id,`;
+    applyPrincipal(operatorSpec());
+    const res = await GET();
+    const body = await res.json();
+    expect(body.restoreTargets).toEqual([ALLOWED_TARGET]);
+  });
+
+  it('fails closed with an empty inventory when nothing is provisioned', async () => {
+    process.env.RESTORE_TARGET_ALLOWLIST = '';
+    applyPrincipal(operatorSpec());
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect((await res.json()).restoreTargets).toEqual([]);
+  });
+
+  it('denies a tenant admin before revealing any target', async () => {
+    applyPrincipal(tenantAdminSpec());
+    const res = await GET();
+    expect(res.status).toBe(403);
+    expect(await res.text()).not.toContain(ALLOWED_TARGET);
+  });
+
+  it('denies an unauthenticated caller with 401', async () => {
+    applyPrincipal(operatorSpec({ userId: null }));
+    const res = await GET();
+    expect(res.status).toBe(401);
   });
 });

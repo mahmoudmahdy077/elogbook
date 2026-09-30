@@ -4,6 +4,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+# Least privilege by default. No CI job needs to write repository content.
+permissions:
+  contents: read
 # N6: no global warning suppression (NODE_NO_WARNINGS /
 # VITE_CONFIG_NATIVE_IGNORE_WARNING are banned — fix or classify instead;
 # the test job fails on unapproved warning/error lines, see check-test-log).
@@ -202,7 +205,11 @@ jobs:
             supabase/tests/p3_03_case_operation_rpc.sql \
             supabase/tests/p3_04_mode_immutable.sql \
             supabase/tests/p3_05_definer_audit.sql \
-            supabase/tests/p3_06_audit_write_authority.sql
+            supabase/tests/p3_06_audit_write_authority.sql \
+            supabase/tests/p3_07_secondary_clinical_writes.sql \
+            supabase/tests/p3_08_case_trigger_state.sql \
+            supabase/tests/p3_09_admin_user_search.sql \
+            supabase/tests/p3_10_faculty_evaluation_correction.sql
   e2e:
     runs-on: ubuntu-latest
     # Full-stack harness (T02). Runs only when the owner enables it and
@@ -260,6 +267,11 @@ jobs:
         run: |
           set -o pipefail
           deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/index.test.ts 2>&1 | tail -n 20
+      - name: Stripe webhook entitlement and tenant-routing authority
+        shell: bash
+        run: |
+          set -o pipefail
+          deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-import --allow-net=localhost --allow-env supabase/functions/payment-webhook/entitlement-authority.test.ts 2>&1 | tail -n 20
       - name: Privileged Edge handlers keep the shared AAL2 guard
         shell: bash
         run: deno test --frozen --config supabase/functions/payment-webhook/deno.json --lock supabase/functions/payment-webhook/deno.lock --allow-read supabase/functions/privileged-auth.static.test.ts

@@ -4,6 +4,24 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
+import { PhiFieldCell } from '@/components/PhiFieldCell';
+
+interface TemplateFieldRow {
+  key?: string;
+  name?: string;
+  label?: string;
+  type?: string;
+  options?: string[];
+  required?: boolean;
+}
+interface TemplateRow {
+  name: string;
+  specialty: string;
+  fields: TemplateFieldRow[];
+}
+interface ResidentRow {
+  full_name: string;
+}
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -13,10 +31,18 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
   const supabase = await createServerSupabase();
 
+  // `*` minus the two direct identifiers. The MRN and DOB are not selected at
+  // all: selecting them would put a patient identifier in the server-component
+  // payload for this page, so the disclosure would happen on render rather than
+  // on request, with no audit row able to describe it. They are fetched one field
+  // at a time through the audited reveal in lib/cases/phi-reveal-actions.ts.
   const { data: entry, error: entryError } = await supabase
     .from('case_entries')
     .select(`
-      *,
+      id, tenant_id, resident_id, template_id, case_date, status, is_deidentified,
+      patient_age_years, encounter_date, setting, patient_context, action_plan,
+      form_type, ratings, overall_score, feedback, created_at, updated_at,
+      field_values,
       case_templates(name, specialty, fields),
       profiles!case_entries_resident_id_fkey(full_name),
       tenants(tenant_type)
@@ -29,6 +55,18 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
   }
 
   if (!entry) notFound();
+
+  // PostgREST types an embedded resource as an array when the relationship is
+  // not statically known to be to-one. The relationship is one template and one
+  // resident, so take the single row rather than spreading an array into a
+  // property access that would then be undefined.
+  const entryRow = entry as unknown as Record<string, unknown>;
+  const first = <T,>(value: T | T[] | null | undefined): T | null =>
+    Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+
+  const template = first(entryRow.case_templates as TemplateRow | TemplateRow[]);
+  const resident = first(entryRow.profiles as ResidentRow | ResidentRow[]);
+  const fields = template?.fields ?? [];
 
   const isResident = auth.profile.role === 'resident';
   if (isResident && entry.resident_id !== auth.profile.id) notFound();
@@ -80,9 +118,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
         <div className="flex justify-between items-center pb-4 border-b border-border">
           <div>
             <h1 className="text-xl font-bold">
-              {entry.case_templates?.specialty} — {entry.case_templates?.name}
+              {template?.specialty} — {template?.name}
             </h1>
-            <p className="text-sm text-text-muted">Logged by {entry.profiles?.full_name}</p>
+            <p className="text-sm text-text-muted">Logged by {resident?.full_name}</p>
           </div>
           <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(entry.status)}`}>
             {entry.status}
@@ -91,8 +129,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
         <div className="pt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient MRN</dt><dd className="text-text-primary">{entry.patient_mrn || '—'}</dd></dl>
-              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient DOB</dt><dd className="text-text-primary">{entry.patient_dob || '—'}</dd></dl>
+              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient MRN</dt><dd className="text-text-primary"><PhiFieldCell field="mrn" entryId={entry.id} /></dd></dl>
+              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient DOB</dt><dd className="text-text-primary"><PhiFieldCell field="dob" entryId={entry.id} /></dd></dl>
             </div>
             <div>
               <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Date</dt><dd className="text-text-primary">{entry.case_date}</dd></dl>
@@ -101,17 +139,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
 
           <div>
             <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Details</dt>
-            {Array.isArray(entry.case_templates?.fields) &&
-              (entry.case_templates.fields as Record<string, unknown>[]).map((f) => (
-                <div key={f.key as string} className="flex justify-between py-1 border-b border-divider">
-                  <span className="text-sm">{f.label as string}</span>
-                  <span className="text-sm font-medium">
-                    {String(
-                      (entry.field_values as Record<string, unknown>)[f.key as string] ?? '—'
-                    )}
-                  </span>
-                </div>
-              ))}
+            {fields.map((f) => (
+              <div key={String(f.key)} className="flex justify-between py-1 border-b border-divider">
+                <span className="text-sm">{String(f.label ?? '')}</span>
+                <span className="text-sm font-medium">
+                  {String((entry.field_values as Record<string, unknown>)[String(f.key)] ?? '—')}
+                </span>
+              </div>
+            ))}
           </div>
 
           {entry.status === 'draft' && isResident && (

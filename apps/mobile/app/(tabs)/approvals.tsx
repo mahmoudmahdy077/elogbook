@@ -203,7 +203,7 @@ export default function ApprovalsScreen() {
         action,
          comment,
          rpc: async (fn, args) => {
-           const { data, error } = await supabase.rpc(fn as 'approve_case' | 'reject_case', args as never);
+           const { data, error } = await supabase.rpc(fn as 'decide_case_command', args as never);
            return { data: data as { success?: unknown } | null, error: error ? { message: error.message } : null };
          },
        });

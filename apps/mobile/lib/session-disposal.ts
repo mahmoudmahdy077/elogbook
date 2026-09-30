@@ -10,7 +10,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { clearAccountContext, clearPreviousAccountContext, getAccountContext, getLastAccountContext, scopedKeyForContext, type AccountContext } from './account-context';
+import { clearAccountContext, clearPreviousAccountContext, getAccountContext, getLastAccountContext, scopedKeyForContext, whenSessionEpochSettled, type AccountContext } from './account-context';
 import { resetDatabase } from './db/database';
 import { clearDurableQueueForContext } from './durable-queue';
 import { invalidateDbEncryptionKey, resetDbEncryptionKeyCacheForTests } from './db/encryption-key';
@@ -38,6 +38,9 @@ const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
 
 async function removeScopedStorage(context: AccountContext | null): Promise<void> {
   let keys: string[] = [];
+  // The session epoch write is fire-and-forget. Draining it first stops a write
+  // that is still in flight from re-creating a key this wipe just removed.
+  await whenSessionEpochSettled();
   try {
     keys = await AsyncStorage.getAllKeys();
   } catch {

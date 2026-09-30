@@ -245,6 +245,39 @@ describe('process route', () => {
     expect(persisted).toContain('provider_http_502');
   });
 
+  it('passes the queue row as the provider idempotency key', async () => {
+    const { POST } = await import('../process/route');
+
+    await POST(new Request('http://x', {
+      method: 'POST',
+      headers: { 'x-cron-secret': 'test-secret-with-at-least-32-characters' },
+    }));
+
+    const call = mockState.sendWithFailover.mock.calls[0] as unknown as [OutboundMessage, unknown];
+    expect(call[0].idempotencyKey).toBe('q1');
+  });
+
+  it('quarantines an ambiguous delivery instead of retrying it on another transport', async () => {
+    // The provider may have accepted the message. A retry could produce a second
+    // copy in a resident's inbox, so the row is parked for reconciliation rather
+    // than resent.
+    mockState.sendWithFailover.mockRejectedValueOnce(
+      Object.assign(new Error('resend_transport_error'), { status: 500, code: 'ambiguous' }),
+    );
+    const { POST } = await import('../process/route');
+
+    const response = await POST(new Request('http://x', {
+      method: 'POST',
+      headers: { 'x-cron-secret': 'test-secret-with-at-least-32-characters' },
+    }));
+
+    expect(response.status).toBe(200);
+    const terminal = mockState.updates.filter((item) => item.values.status === 'failed');
+    expect(terminal).toHaveLength(1);
+    expect(terminal[0]?.values.last_error).toBe('ambiguous_delivery');
+    expect(mockState.sendAudit.some((row) => row.phase === 'ambiguous')).toBe(true);
+  });
+
   it('fails closed when suppression lookup is unavailable', async () => {
     mockState.suppressionError = { message: 'database unavailable' };
     const { POST } = await import('../process/route');

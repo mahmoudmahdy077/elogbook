@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:78fcea12-624c-472c-967d-13b55cad60e8",
+  "serialNumber": "urn:uuid:02731001-101d-4a24-a2b7-3f36ea3d528d",
   "version": 1,
   "metadata": {
     "tools": [
@@ -14,8 +14,8 @@
     "component": {
       "type": "application",
       "name": "elogbook-release",
-      "version": "b5b6dbc2b35f",
-      "bom-ref": "release:b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+      "version": "29894cb51d48",
+      "bom-ref": "release:29894cb51d480ca12e5f3980d7790de231ec5116"
     },
     "properties": [
       {
@@ -24,7 +24,7 @@
       },
       {
         "name": "elogbook.release.commit",
-        "value": "b5b6dbc2b35fb9c0ebc8c891f4b2dedbaeac823c"
+        "value": "29894cb51d480ca12e5f3980d7790de231ec5116"
       },
       {
         "name": "elogbook.docker.base-images",
@@ -40,8 +40,8 @@
     {
       "type": "container",
       "name": "elogbook-web",
-      "version": "b5b6dbc2b35f",
-      "bom-ref": "container:1976664b46aea14d0ac4c955740613c5",
+      "version": "29894cb51d48",
+      "bom-ref": "container:a28f6bba281ed8e73b567c50f9669529",
       "properties": [
         {
           "name": "elogbook.docker.base-images",

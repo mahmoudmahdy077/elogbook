@@ -4,7 +4,11 @@ import { getSecurityContext } from '@/lib/supabase/security-context';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { escapeCsvCell } from '@/lib/csv';
+import { NO_STORE_HEADERS } from '@/lib/audit/report-export';
+import { requireAuditEvent } from '@/lib/audit/write-audit-event';
 import { logger } from '@/lib/logger';
+
+const NO_STORE = NO_STORE_HEADERS;
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
@@ -53,8 +57,24 @@ export async function GET(request: NextRequest) {
 
   const csv = lines.join('\n');
 
+  try {
+    await requireAuditEvent(supabase, {
+      action: 'report_duty_hours',
+      resourceType: 'tenant',
+      resourceId: null,
+      tenantId: profile.tenant_id,
+      changes: { row_count: rows?.length ?? 0, format: 'csv' },
+    });
+  } catch {
+    return NextResponse.json(
+      { error: 'Could not record the export. Please try again.' },
+      { status: 500, headers: NO_STORE },
+    );
+  }
+
   return new NextResponse(csv, {
     headers: {
+      ...NO_STORE,
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="duty-hours.csv"',
     },

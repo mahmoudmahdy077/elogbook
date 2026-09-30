@@ -4,12 +4,25 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { escapeCsvCell } from '@/lib/csv';
+import { NO_STORE_HEADERS } from '@/lib/audit/report-export';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
 import type { UserRole } from '@/lib/supabase/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const ALLOWED_ROLES: UserRole[] = ['director', 'institution_admin', 'admin'];
+
+/**
+ * A compliance export is a disclosure: audit metadata with user ids and IP
+ * addresses, consent records, PHI inventory counts, soft-deletion tombstones.
+ *
+ * Every response is no-store, including the denials -- a cached 403 is still a
+ * tenant's export surface being fingerprinted by an intermediary.
+ *
+ * No ETag is emitted. A validator is a promise that a matching representation
+ * exists somewhere reusable, and answering `If-None-Match` with 304 is exactly
+ * that promise for a dataset that must not outlive the request.
+ */
+const NO_STORE = NO_STORE_HEADERS;
 
 type Section = 'data-access' | 'phi-inventory' | 'consent' | 'retention';
 
@@ -38,14 +51,14 @@ export async function GET(
   if (!security.ok) {
     return NextResponse.json(
       { error: security.status === 401 ? 'Unauthorized' : 'Forbidden' },
-      { status: security.status },
+      { status: security.status, headers: NO_STORE },
     );
   }
 
   const { profile, tenant } = security.context;
   const { tenant: tenantSlug } = await params;
   if (tenant.slug !== tenantSlug || !ALLOWED_ROLES.includes(profile.role as UserRole)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: NO_STORE });
   }
 
   // ---- Parse params ----
@@ -56,14 +69,14 @@ export async function GET(
   if (!section || !VALID_SECTIONS.includes(section)) {
     return NextResponse.json(
       { error: 'Invalid section. Must be one of: data-access, phi-inventory, consent, retention' },
-      { status: 400 },
+      { status: 400, headers: NO_STORE },
     );
   }
 
   if (format !== 'csv' && format !== 'pdf') {
     return NextResponse.json(
       { error: 'format must be "csv" or "pdf"' },
-      { status: 400 },
+      { status: 400, headers: NO_STORE },
     );
   }
 
@@ -84,40 +97,25 @@ export async function GET(
   // ---- Format response ----
   if (format === 'csv') {
     const csv = toCsv(rows);
-    const etag = crypto.createHash('sha256').update(csv).digest('hex') + '-csv';
-
-    // Check If-None-Match
-    const ifNoneMatch = request.headers.get('if-none-match');
-    if (ifNoneMatch && ifNoneMatch === etag) {
-      return new Response(null, { status: 304 });
-    }
-
     return new Response(csv, {
       headers: {
+        ...NO_STORE,
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}.csv"`,
-        'ETag': etag,
       },
     });
   }
 
   // PDF → HTML fallback (same pattern as audit export)
   const html = toHtml(title, rows, tenant.slug);
-  const htmlEtag = crypto.createHash('sha256').update(html).digest('hex') + '-html';
-
-  // Check If-None-Match
-  const ifNoneMatchHtml = request.headers.get('if-none-match');
-  if (ifNoneMatchHtml && ifNoneMatchHtml === htmlEtag) {
-    return new Response(null, { status: 304 });
-  }
 
   return new Response(html, {
     headers: {
+      ...NO_STORE,
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}.html"`,
       'X-Export-Format': 'html',
       'X-Export-Note': 'PDF generation unavailable; downloaded as HTML for browser print-to-PDF',
-      'ETag': htmlEtag,
     },
   });
 }

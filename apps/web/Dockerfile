@@ -58,7 +58,6 @@ CMD ["node", "apps/web/server.js"]
 
 FROM web-runner AS setup
 ARG APP_RELEASE_COMMIT
-USER root
 ENV NODE_ENV=development
 ENV SETUP_MODE=true
 ENV SETUP_PHASE=setup
@@ -66,6 +65,10 @@ ENV SETUP_BIND_ADDRESS=127.0.0.1
 ENV SETUP_REMOTE_TLS_REQUIRED=true
 ENV SETUP_STATE_DIR=/app/data
 ENV SETUP_SUPABASE_INTERNAL_URL=http://kong:8000
+# Root is needed only to install the system packages. The setup container then
+# runs unprivileged, so a compromised setup process is not root.
+USER root
 RUN apk add --no-cache git docker-cli docker-cli-compose postgresql-client
+USER nextjs
 
 FROM web-runner AS production

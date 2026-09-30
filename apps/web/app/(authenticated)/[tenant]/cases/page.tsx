@@ -8,13 +8,13 @@ import CaseFilters from '@/components/CaseFilters';
 import QuickAddWrapper from '@/components/QuickAddWrapper';
 import CaseImportButton from '@/components/CaseImportButton';
 import ExportCsvButton from '@/components/ExportCsvButton';
+import { PhiFieldCell } from '@/components/PhiFieldCell';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import type { StatusVariant } from '@elogbook/shared/components/web';
 
 type CaseEntryRow = {
   id: string;
   case_date: string;
-  patient_mrn: string | null;
   status: string;
   resident_id: string;
   case_templates: { name: string; specialty: string } | { name: string; specialty: string }[];
@@ -53,9 +53,14 @@ export default async function CasesPage({
   // U4.4: residents see only their own cases; supervisors+ see all
   const isResident = auth.profile.role === 'resident';
 
+  // patient_mrn is deliberately absent. Selecting it would ship every MRN on
+  // the page to the browser in the server-component payload, so the disclosure
+  // would happen before anyone asked to see a value and no audit row could
+  // describe it. The column is fetched per field, on demand, through the audited
+  // reveal in lib/cases/phi-reveal-actions.ts.
   let casesQuery = supabase
     .from('case_entries')
-    .select('id, case_date, patient_mrn, status, resident_id, case_templates!inner(name, specialty)', { count: 'exact' })
+    .select('id, case_date, status, resident_id, case_templates!inner(name, specialty)', { count: 'exact' })
     .eq('tenant_id', auth.profile.tenant_id);
   if (isResident) casesQuery = casesQuery.eq('resident_id', auth.profile.id);
   if (searchFilter) casesQuery = casesQuery.ilike('case_templates.name', `%${searchFilter}%`);
@@ -96,7 +101,7 @@ export default async function CasesPage({
             <CaseImportButton tenantId={auth.profile.tenant_id} tenantSlug={tenantSlug} />
           )}
           {entries && entries.length > 0 && (
-            <ExportCsvButton entries={entries} />
+            <ExportCsvButton entries={entries} tenantId={auth.profile.tenant_id} />
           )}
           <Link
             href={`/${tenantSlug}/cases/new`}
@@ -156,15 +161,18 @@ export default async function CasesPage({
                     <p className="text-xs text-text-muted mt-0.5 sm:hidden">{entry.case_date}</p>
                   </div>
 
-                  {/* MRN */}
-                  <div className="sm:flex items-center hidden">
-                    <span className="text-sm text-text-secondary tabular-nums">
-                      {entry.patient_mrn || '—'}
-                    </span>
-                  </div>
-                  <div className="sm:hidden text-xs text-text-muted">
-                    MRN: {entry.patient_mrn || '—'}
-                  </div>
+                  {/* MRN — not in the page payload; revealed through the audited action */}
+                  <PhiFieldCell
+                    field="mrn"
+                    entryId={entry.id}
+                    className="sm:flex items-center hidden"
+                  />
+                  <PhiFieldCell
+                    field="mrn"
+                    entryId={entry.id}
+                    className="sm:hidden text-xs text-text-muted"
+                    label="MRN"
+                  />
 
                   {/* Status + Date (mobile) */}
                   <div className="flex items-center gap-2">

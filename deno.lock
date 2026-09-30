@@ -368,7 +368,6 @@
             "npm:react-native-worklets@0.8.3",
             "npm:react-native@0.85.3",
             "npm:react@19.2.3",
-            "npm:sentry-expo@^7.2.0",
             "npm:tailwindcss@^4.3.0",
             "npm:typescript-eslint@^8.61.0",
             "npm:typescript@^6.0.3",
@@ -438,9 +437,9 @@
       "packages/shared": {
         "packageJson": {
           "dependencies": [
-            "npm:@types/nodemailer@^6.4.0",
+            "npm:@types/node@^25.9.1",
             "npm:@types/react@19",
-            "npm:nodemailer@^9.1.0",
+            "npm:nodemailer@^10.0.2",
             "npm:typescript@^6.0.3",
             "npm:vitest@^4.1.9",
             "npm:zod@^4.4.3"

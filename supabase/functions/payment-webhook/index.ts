@@ -117,14 +117,55 @@ export async function readBoundedBody(
   return { ok: true, body: new TextDecoder().decode(merged) };
 }
 
+/**
+ * Read `metadata.tenant_id` from a request body that has NOT been verified.
+ *
+ * This value is attacker-controlled: it is read before signature verification
+ * exists, purely to decide which signing secret to try. It selects a config
+ * lookup and nothing else. It is constrained to a bare UUID so it cannot be an
+ * injection payload against the config resolver, and callers must not use it
+ * for an entitlement decision -- see `verifiedTenantRouting`.
+ */
 export function readTenantIdFromEvent(body: string): string | null {
+  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   try {
     const parsed = JSON.parse(body) as { data?: { object?: { metadata?: { tenant_id?: unknown } } } };
     const tenantId = parsed.data?.object?.metadata?.tenant_id;
-    return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : null;
+    return typeof tenantId === 'string' && UUID_PATTERN.test(tenantId) ? tenantId : null;
   } catch {
     return null;
   }
+}
+
+export type VerifiedTenantRouting =
+  | { ok: true; tenantId: string }
+  | { ok: false; reason: 'tenant_mismatch' };
+
+/**
+ * Decide which tenant a VERIFIED event belongs to.
+ *
+ * Signature verification proves the payload was signed by the account whose
+ * secret matched. It does not make the payload's metadata trustworthy: whoever
+ * controls the Stripe account chose those metadata values, so a tenant
+ * provisioning its own gateway can sign a payload naming a different tenant.
+ *
+ * So the tenant that an entitlement write uses must satisfy both: it is the
+ * tenant whose secret verified the signature, AND if the event itself names a
+ * tenant, that name is the same one. Anything else is refused. Where the event
+ * carries no tenant metadata (the subscription lifecycle types), the signing
+ * secret is the only authority there is, and that is the tenant used.
+ */
+export function verifiedTenantRouting(args: {
+  verifiedEventTenantId: string | null;
+  signatureConfigTenantId: string;
+}): VerifiedTenantRouting {
+  if (args.verifiedEventTenantId === null) {
+    return { ok: true, tenantId: args.signatureConfigTenantId };
+  }
+  if (args.verifiedEventTenantId !== args.signatureConfigTenantId) {
+    return { ok: false, reason: 'tenant_mismatch' };
+  }
+  return { ok: true, tenantId: args.signatureConfigTenantId };
 }
 
 export interface StripeEventClaimInput {
@@ -275,6 +316,25 @@ export async function handleWebhook(req: Request): Promise<Response> {
     return jsonResponse({ error: 'Invalid Stripe event' }, 400, headers);
   }
 
+  // From here on the event is authenticated: the signature matched
+  // gwConfig.webhookSecret. The tenant used for the claim and the entitlement
+  // write is re-derived from the VERIFIED payload and must agree with the config
+  // that verified it. The pre-verification read above chose a secret to try; it
+  // is not authority.
+  const routing = verifiedTenantRouting({
+    verifiedEventTenantId: readTenantIdFromEvent(body),
+    signatureConfigTenantId: gwConfig.tenantId,
+  });
+  if (!routing.ok) {
+    logError('payment.tenant_routing_mismatch', new Error('verified event tenant does not match its signing config'), {
+      operation: 'tenant_routing',
+      eventId: event.id,
+      eventType: event.type,
+    });
+    return jsonResponse({ error: 'Webhook event does not belong to this account' }, 403, headers);
+  }
+  const tenantId = routing.tenantId;
+
   if (grantRequiresPlatformGateway(event as unknown as { type: string }, gwConfig)) {
     // Signature verification already passed, so this is a well-formed event on
     // the tenant's own account -- it just is not evidence of platform payment.
@@ -294,7 +354,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
       eventType: event.type,
       mode: gwConfig.mode,
       livemode: event.livemode,
-      tenantId: gwConfig.tenantId,
+      tenantId,
       eventCreated: ordering.created,
       objectVersion: ordering.objectVersion,
     });
@@ -318,7 +378,7 @@ export async function handleWebhook(req: Request): Promise<Response> {
       store,
       lifecycle,
       event as unknown as StripeEventLike,
-      gwConfig.tenantId,
+      tenantId,
       claimToken,
     );
   } catch (error) {

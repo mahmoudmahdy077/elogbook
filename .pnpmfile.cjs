@@ -29,18 +29,20 @@ function readPackage(pkg, context) {
   // + pnpmfile interplay), so pins live here via readPackage — the
   // established pattern for postcss/sharp/brace-expansion above.
 
-  // fast-uri (ajv chain, webpack) — GHSA-7p8r-x3mc-p8w7
+  // fast-uri (ajv chain, webpack) — GHSA-7p8r-x3mc-p8w7 (3.1.6),
+  // GHSA-qw65-cvwx-89v3 (>=3.0.0 <3.1.7), GHSA-58mr-gqgx-xq4g (=3.1.6)
   if (pkg.dependencies && pkg.dependencies['fast-uri'] && /^(\^|~)?3\./.test(pkg.dependencies['fast-uri'])) {
-    pkg.dependencies['fast-uri'] = '3.1.6'
-    context.log('override fast-uri to 3.1.6 in ' + pkg.name)
+    pkg.dependencies['fast-uri'] = '3.1.8'
+    context.log('override fast-uri to 3.1.8 in ' + pkg.name)
   }
 
-  // brace-expansion v5 (minimatch 10 / glob 13) — GHSA-rgw5-rvv9-x895
+  // brace-expansion v5 (minimatch 10 / glob 13) — GHSA-rgw5-rvv9-x895, plus
+  // the v5.0.10 and v5.0.11 advisories against the version this rule used to pin.
   if (pkg.name === 'minimatch' && pkg.version && /^10\./.test(pkg.version)) {
     pkg.dependencies = pkg.dependencies || {}
     if (pkg.dependencies['brace-expansion']) {
-      pkg.dependencies['brace-expansion'] = '5.0.9'
-      context.log('override brace-expansion to 5.0.9 in ' + pkg.name)
+      pkg.dependencies['brace-expansion'] = '5.0.12'
+      context.log('override brace-expansion to 5.0.12 in ' + pkg.name)
     }
   }
 
@@ -92,6 +94,15 @@ function readPackage(pkg, context) {
       pkg.dependencies['@xmldom/xmldom'] = '0.9.12'
       context.log('override @xmldom/xmldom to 0.9.12 in ' + pkg.name)
     }
+  }
+
+  // uuid v7 (xcode, via @expo/config-plugins iOS project generation) — missing
+  // buffer bounds check in v3/v5/v6 when a `buf` argument is supplied. 11.x keeps
+  // the CommonJS build and the `uuid.v4()` call shape xcode uses, so the pin is
+  // behaviour-preserving for its only call site.
+  if (pkg.dependencies && pkg.dependencies['uuid'] && /^(\^|~)?7\./.test(pkg.dependencies['uuid'])) {
+    pkg.dependencies['uuid'] = '11.1.1'
+    context.log('override uuid to 11.1.1 in ' + pkg.name)
   }
 
   if (pkg.dependencies) {

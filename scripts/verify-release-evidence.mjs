@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { readFileNoFollow } from './lib/read-file-no-follow.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildEvidence, EvidenceError, parseArguments, resolveCommit } from './generate-release-evidence.mjs';
@@ -21,12 +21,13 @@ function finding(path, rule, message) {
 }
 
 function readJson(path, label, findings) {
-  if (!existsSync(path) || !statSync(path).isFile()) {
+  const raw = readFileNoFollow(path, 'utf8');
+  if (raw === null) {
     findings.push(finding(path, 'evidence-file-missing', `${label} is missing`));
     return null;
   }
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    return JSON.parse(raw);
   } catch (error) {
     findings.push(finding(path, 'evidence-json-invalid', `${label} is not valid JSON: ${error.message}`));
     return null;
@@ -34,11 +35,11 @@ function readJson(path, label, findings) {
 }
 
 function compareFile(path, expected, actual, findings) {
-  if (!existsSync(path) || !statSync(path).isFile()) {
+  const content = readFileNoFollow(path, 'utf8');
+  if (content === null) {
     findings.push(finding(path, 'evidence-file-missing', 'required evidence file is missing'));
     return;
   }
-  const content = readFileSync(path, 'utf8');
   if (content !== expected) findings.push(finding(path, 'evidence-content-mismatch', 'evidence content differs from deterministic source evidence'));
   const expectedHash = createHash('sha256').update(expected).digest('hex');
   if (actual && actual.sha256 !== expectedHash) findings.push(finding(path, 'evidence-hash-mismatch', 'evidence digest differs from the manifest'));

@@ -22,6 +22,28 @@ on:
         description: HTTPS URL for the staging smoke test
         required: true
         type: string
+    # Declared one by one rather than forwarded wholesale, so a caller cannot
+    # pass this workflow the entire repository secret set. These are the only
+    # secrets the jobs below reference.
+    secrets:
+      EXPO_TOKEN:
+        required: true
+      EXPO_PUBLIC_SENTRY_DSN:
+        required: false
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+      SUPABASE_ACCESS_TOKEN:
+        required: true
+      SUPABASE_PROJECT_REF:
+        required: true
+      NEXT_PUBLIC_SUPABASE_URL:
+        required: false
+      NEXT_PUBLIC_SUPABASE_ANON_KEY:
+        required: false
 
 permissions:
   contents: read

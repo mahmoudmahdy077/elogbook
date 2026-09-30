@@ -485,7 +485,7 @@ function analyzeReleaseWorkflow(path, text, functionNames) {
 
   const production = productionJobs.find((job) => job.environment === 'production') ?? productionJobs[0];
   const reachable = production ? graphReachable(production.name, jobs) : new Set();
-  for (const [kind, rule] of RELEASE_REQUIRED_JOBS) {
+  for (const [kind] of RELEASE_REQUIRED_JOBS) {
     const matches = foundKinds.get(kind) ?? [];
     if (DIRECT_PROMOTION_KINDS.has(kind) && production && !matches.some((job) => production.needs.includes(job.name))) {
       findings.push(finding(path, production.start + 1, 'promotion-dependency-required', `${kind} must be a direct dependency of production promotion.`));

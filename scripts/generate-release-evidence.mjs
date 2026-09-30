@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { readFileNoFollow } from './lib/read-file-no-follow.mjs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,10 +50,10 @@ function unquote(value) {
 
 function readInput(root, definition) {
   const absolute = resolve(root, definition.path);
-  if (!existsSync(absolute) || !statSync(absolute).isFile()) {
+  const bytes = readFileNoFollow(absolute);
+  if (bytes === null) {
     throw new EvidenceError(`required evidence input missing: ${definition.path}`);
   }
-  const bytes = readFileSync(absolute);
   return {
     kind: definition.kind,
     path: definition.path.split(sep).join('/'),
@@ -165,7 +166,7 @@ function dockerEvidence(input) {
 
 function denoComponent(identifier) {
   const value = unquote(identifier);
-  let name = value;
+  let name;
   let version = 'locked';
   const versionMatch = value.match(/(?:@|^https:\/\/deno\.land\/std@)([0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?)/);
   if (versionMatch) version = versionMatch[1];
@@ -210,7 +211,8 @@ function mobileEvidence(input, root) {
   const appPath = resolve(root, 'apps/mobile/app.json');
   let app = null;
   try {
-    if (existsSync(appPath)) app = JSON.parse(readFileSync(appPath, 'utf8')).expo ?? null;
+    const raw = readFileNoFollow(appPath, 'utf8');
+    if (raw !== null) app = JSON.parse(raw).expo ?? null;
   } catch {
     app = null;
   }

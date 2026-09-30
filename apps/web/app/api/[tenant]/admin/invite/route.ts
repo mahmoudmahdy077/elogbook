@@ -147,7 +147,14 @@ export async function POST(
   if (queueError) {
     // An invitation nobody can reach is a dead record, not a pending one.
     const cleanup = await deleteInvitation(adminClient, invite.id);
-    logger.error('Failed to queue the invitation email', queueError ?? cleanup, { tenantSlug });
+    if (cleanup) {
+      logger.error('Failed to queue the invitation email and to remove the unreachable invitation', queueError, {
+        tenantSlug,
+        cleanupError: String(cleanup),
+      });
+    } else {
+      logger.error('Failed to queue the invitation email', queueError, { tenantSlug });
+    }
     return NextResponse.json(
       { error: 'The invitation could not be emailed. Please try again.' },
       { status: 502 },
@@ -170,7 +177,14 @@ export async function POST(
   }
   if (auditError) {
     const cleanup = await deleteInvitation(adminClient, invite.id);
-    logger.error('Failed to audit invited user', auditError ?? cleanup, { tenantSlug });
+    if (cleanup) {
+      logger.error('Failed to audit the invited user and to remove the unaudited invitation', auditError, {
+        tenantSlug,
+        cleanupError: String(cleanup),
+      });
+    } else {
+      logger.error('Failed to audit invited user', auditError, { tenantSlug });
+    }
     return NextResponse.json({ error: 'Failed to create user invitation' }, { status: 500 });
   }
 

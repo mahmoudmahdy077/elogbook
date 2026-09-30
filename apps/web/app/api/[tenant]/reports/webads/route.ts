@@ -35,7 +35,7 @@ export async function GET(
     );
   }
 
-  const { user, profile, tenant } = security.context;
+  const { profile, tenant } = security.context;
   const { tenant: paramTenant } = await params;
   if (tenant.slug !== paramTenant || !ALLOWED_ROLES.includes(profile.role as UserRole)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

@@ -190,7 +190,27 @@ export async function POST(request: Request) {
       }
 
       auditSetup('create-admin', 'ok');
-      return NextResponse.json({ success: true, userId, tenantId, pendingMfaPromotion: true });
+      // The authority contract, stated by the thing that created the account.
+      //
+      // This is a TENANT administrator. It carries no platform authority:
+      // `requirePlatformAdmin` reads the `platform_admins` registry and nothing
+      // else, and that registry is owner-attested out-of-band. So the control
+      // plane (backup, restore, uninstall) will answer 403 for this account
+      // until an operator runs scripts/grant-platform-admin.sql.
+      //
+      // Saying so here is the difference between a documented boundary and an
+      // install that looks broken. Failing closed is the right default -- an
+      // HTTP bootstrap request should not be able to mint platform authority --
+      // but it has to be a named requirement, not a 403 with no explanation.
+      return NextResponse.json({
+        success: true,
+        userId,
+        tenantId,
+        pendingMfaPromotion: true,
+        platformOperator: false,
+        platformOperatorProvisioning:
+          'This account is a tenant administrator and has no platform authority. To use the control plane (backup, restore, uninstall), run scripts/grant-platform-admin.sql as the installation owner with this account\'s email.',
+      });
     } finally {
       await pool.end();
     }

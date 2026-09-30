@@ -286,6 +286,10 @@ export async function POST(request: Request) {
         html,
         text,
         headers,
+        // The queue row is the message's identity. Providers dedupe on it, so a
+        // retry of this row cannot become a second email even if the first
+        // attempt's response was lost.
+        idempotencyKey: row.id,
       };
 
       const attemptId = crypto.randomUUID();
@@ -313,13 +317,31 @@ export async function POST(request: Request) {
         const result = await sendWithFailover(msg, {
           resend: (m) => {
             if (providerMode === 'smtp-only' || !apiKey) {
-              throw Object.assign(new Error('resend not configured'), { status: 500 });
+              // The primary was never contacted, so this refusal is proof of
+              // non-delivery and failing over is correct.
+              throw Object.assign(new Error('resend not configured'), { status: 500, definitive: true });
             }
-            return resendSend(apiKey, from, { to: m.to, subject: m.subject, html: m.html, text: m.text, headers: m.headers });
+            return resendSend(apiKey, from, {
+              to: m.to,
+              subject: m.subject,
+              html: m.html,
+              text: m.text,
+              headers: m.headers,
+              idempotencyKey: m.idempotencyKey,
+            });
           },
           smtp: (m) => {
-            if (!smtpCfg.host) throw Object.assign(new Error('smtp not configured'), { status: 500 });
-            return smtpSend(smtpCfg, { to: m.to, subject: m.subject, html: m.html, text: m.text, headers: m.headers });
+            if (!smtpCfg.host) {
+              throw Object.assign(new Error('smtp not configured'), { status: 500, definitive: true });
+            }
+            return smtpSend(smtpCfg, {
+              to: m.to,
+              subject: m.subject,
+              html: m.html,
+              text: m.text,
+              headers: m.headers,
+              idempotencyKey: m.idempotencyKey,
+            });
           },
         });
 
@@ -350,6 +372,37 @@ export async function POST(request: Request) {
         const status = (err as { status?: number }).status ?? 500;
         const code = emailErrorCode(err);
         const newAttempts = attempts + 1;
+
+        // An ambiguous delivery is neither a rejection nor a retryable failure.
+        // The provider may have accepted the message, so the row is parked as
+        // failed for an operator to reconcile against the provider's own record
+        // rather than retried -- a retry is the only path that can put a second
+        // copy of a clinical notification in a resident's inbox.
+        if ((err as { code?: string }).code === 'ambiguous') {
+          await recordSendAudit(admin, {
+            attemptId,
+            queueId: row.id,
+            tenantId,
+            templateKey: row.template_key,
+            provider: selectedProvider,
+            phase: 'ambiguous',
+            errorCode: 'ambiguous_delivery',
+          });
+          await admin.from('email_queue')
+            .update({ status: 'failed', attempts: newAttempts, last_error: 'ambiguous_delivery' })
+            .eq('id', row.id).eq('lease_token', row.lease_token);
+          await admin.from('email_logs').insert({
+            queue_id: row.id,
+            to_email: emailNorm,
+            template_key: row.template_key,
+            provider: selectedProvider,
+            status: 'failed',
+            error: 'ambiguous_delivery',
+          });
+          failed += 1;
+          continue;
+        }
+
         const phase = status === 401 || status === 403
           ? 'configuration'
           : status >= 400 && status < 500

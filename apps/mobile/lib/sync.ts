@@ -4,7 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
 import { migrateLegacyQueueOnce } from './legacy-migration';
 import { RETRY_DELAYS_MS } from './sync-retry';
-import { clearAccountContext, getAccountContext, setAccountContext } from './account-context';
+import { clearAccountContext, getAccountContext, primeAccountContext, setAccountContext } from './account-context';
 import { fetchCapabilitySnapshot } from './capability';
 import { noteAuthFailure } from './session';
 import { logInfo, logError } from './logger';
@@ -240,6 +240,7 @@ export function attachSyncAuthListener(
         clearAccountContext();
       }
       svc.setTenantId(cap.tenantId);
+      await primeAccountContext(cap);
       setAccountContext({
         userId: cap.userId,
         tenantId: cap.tenantId,

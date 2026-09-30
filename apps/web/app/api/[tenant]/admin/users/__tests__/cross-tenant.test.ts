@@ -30,6 +30,21 @@ vi.mock('@elogbook/env', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock logger
+//
+// `@/lib/logger` pulls in `@sentry/nextjs` (plus `@elogbook/shared/security/
+// outbound-url` and `./observability/redact`), which costs ~7s to transform and
+// evaluate on first import under the jsdom pool. Every route under test imports
+// it, so that cost lands inside the first test's 10s budget and times it out.
+// This suite asserts tenant scoping and the RPC contract — no assertion reads
+// log output, and a failing call still takes the same branch. The full exported
+// surface is kept so any transitive importer still resolves.
+vi.mock('@/lib/logger', () => ({
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  redactPHI: vi.fn((value: unknown) => value),
+}));
+
+// ---------------------------------------------------------------------------
 // Shared mock state
 // ---------------------------------------------------------------------------
 const TENANT_A = 'tenant-a-uuid';

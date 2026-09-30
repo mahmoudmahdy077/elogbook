@@ -2,9 +2,13 @@ import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import {
   chmodSync,
+   closeSync,
+   constants,
    copyFileSync,
    existsSync,
+   fstatSync,
    lstatSync,
+   openSync,
    mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -166,9 +170,34 @@ function ensureDir(dir: string): void {
 }
 
 function writePrivateFile(path: string, content: string): void {
-  if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error('Backup file cannot be a symlink');
-  writeFileSync(path, content, { encoding: 'utf8', mode: 0o600 });
+  // O_NOFOLLOW makes the open refuse a symlink, so the file cannot be swapped
+  // between a check and the write.
+  const fd = openSync(
+    path,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    writeFileSync(fd, content, { encoding: 'utf8' });
+  } finally {
+    closeSync(fd);
+  }
   chmodSync(path, 0o600);
+}
+
+function readPrivateFileLines(path: string): string[] | null {
+  // O_NOFOLLOW makes the open itself refuse a symlink, so there is no window
+  // between deciding the file is safe and reading it.
+  let fd: number | null = null;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    if (!fstatSync(fd).isFile()) return null;
+    return readFileSync(fd, 'utf8').trim().split(/\r?\n/);
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
 }
 
 function withPrivateUmask<T>(callback: () => T): T {
@@ -374,8 +403,8 @@ function verifyManifest(backupDir: string, manifest: BackupManifest): boolean {
       if (!existsSync(artifactPath) || lstatSync(artifactPath).isSymbolicLink() || !statSync(artifactPath).isFile() || sha256File(artifactPath) !== artifact.sha256) return false;
     }
     const checksumPath = join(backupDir, 'checksums.sha256');
-    if (!existsSync(checksumPath) || lstatSync(checksumPath).isSymbolicLink() || !statSync(checksumPath).isFile()) return false;
-    const checksumLines = readFileSync(checksumPath, 'utf8').trim().split(/\r?\n/);
+    const checksumLines = readPrivateFileLines(checksumPath);
+    if (checksumLines === null) return false;
     if (checksumLines.length !== manifest.artifacts.length + 1) return false;
     const expectedEntries = new Map<string, string>([
       ...manifest.artifacts.map(({ name, sha256 }) => [name, sha256] as const),

@@ -1,8 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { scanText } from '../../scripts/verify-secret-containment.mjs';
 
 // Assembled from parts so this file does not itself carry a real-shaped

@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync } from 'fs';
+import { closeSync, constants, fstatSync, openSync, readFileSync } from 'fs';
 import { isAbsolute, join, normalize, sep } from 'path';
 import type { RestoreEnv } from './restore-target';
 
@@ -50,11 +50,17 @@ export function isSetupComplete(env: RestoreEnv = process.env): boolean {
 export function readInstallConfig(env: RestoreEnv = process.env): InstallConfig | null {
   const path = installConfigPath(env);
   let parsed: unknown;
+  let fd: number | null = null;
   try {
-    if (!existsSync(path) || lstatSync(path).isSymbolicLink() || !lstatSync(path).isFile()) return null;
-    parsed = JSON.parse(readFileSync(path, 'utf-8'));
+    // O_NOFOLLOW makes the open itself refuse a symlink, so there is no window
+    // between the check and the read for the target to be swapped.
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    if (!fstatSync(fd).isFile()) return null;
+    parsed = JSON.parse(readFileSync(fd, 'utf-8'));
   } catch {
     return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
   if (typeof parsed !== 'object' || parsed === null) return null;
   const record = parsed as Record<string, unknown>;

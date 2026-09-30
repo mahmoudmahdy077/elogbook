@@ -1,5 +1,5 @@
 import { fetchCapabilitySnapshot, isCapabilityFresh, type CapabilitySnapshot, type SupabaseLike } from './capability';
-import { setAccountContext, clearAccountContext } from './account-context';
+import { primeAccountContext, setAccountContext, clearAccountContext } from './account-context';
 
 export type SessionState = 'idle' | 'resolving' | 'ready' | 'signed-out' | 'suspended' | 'error';
 
@@ -33,7 +33,10 @@ export function noteAuthFailure(status: number): void {
   if (status === 401 || status === 403) refreshRequested = true;
 }
 
-function populateContext(cap: CapabilitySnapshot): void {
+async function populateContext(cap: CapabilitySnapshot): Promise<void> {
+  // The durable session discriminator is read before it is minted, so a new
+  // session never lands on a key the previous one already used.
+  await primeAccountContext(cap);
   setAccountContext({
     userId: cap.userId,
     tenantId: cap.tenantId,
@@ -66,7 +69,7 @@ export async function bootSession(supabase: SupabaseLike): Promise<Session> {
       current = stateForDeniedCapability(cap);
       return current;
     }
-    populateContext(cap);
+    await populateContext(cap);
     current = { state: 'ready', capability: cap, error: null };
     return current;
   } catch (err) {
@@ -91,7 +94,7 @@ export async function requireFreshCapability(supabase: SupabaseLike): Promise<Ca
   if (cap.status !== 'active' || cap.tenantStatus !== 'active') {
     current = stateForDeniedCapability(cap);
   } else {
-    populateContext(cap);
+    await populateContext(cap);
     current = { state: 'ready', capability: cap, error: null };
   }
   return cap;

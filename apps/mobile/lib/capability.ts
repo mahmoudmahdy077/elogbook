@@ -160,7 +160,7 @@ const AAL2_ACTIONS = new Set([
   'export_identifiable',
   'export_deidentified',
   'view_identifiable',
-  'approve_case',
+  'decide_case',
   'manage_tenant',
   'tenant_read',
   'tenant_mutate',

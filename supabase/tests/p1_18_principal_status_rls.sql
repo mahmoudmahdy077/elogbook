@@ -1,3 +1,12 @@
+-- p1_18: a suspended profile or a suspended tenant loses every surface, and the
+-- case operation RPC says so with a stable code.
+--
+-- Every claim here carries an `aal`. public.submit_case_operation resolves the
+-- principal through get_authoritative_principal_with_aal and refuses a session
+-- whose claim carries no assurance level at all, so a fixture without one would
+-- raise 42501 on the way to the assertion instead of reaching the suspension
+-- check these two assertions are about. A resident is entitled to aal1, so the
+-- claim states the weakest value the boundary accepts.
 BEGIN;
 SELECT plan(12);
 
@@ -57,7 +66,7 @@ SELECT throws_ok(
 
 RESET ROLE;
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001811","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001811","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
 
 SELECT is(
   (SELECT count(*) FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000001841'),
@@ -77,7 +86,7 @@ SELECT throws_ok(
   'an active resident cannot write another tenant case'
 );
 
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001812","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001812","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
 
 SELECT is(
   (SELECT count(*) FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000001842'),
@@ -91,7 +100,7 @@ SET status = 'suspended'
 WHERE id = '00000000-0000-0000-0000-000000001822';
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001812","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001812","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
 
 SELECT is_empty(
   $$SELECT id FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000001842'$$,
@@ -116,7 +125,7 @@ SET status = 'suspended'
 WHERE id = '00000000-0000-0000-0000-000000001801';
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001811","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000001811","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000001801","user_role":"resident"}}';
 
 SELECT is_empty(
   $$SELECT id FROM public.case_entries WHERE id = '00000000-0000-0000-0000-000000001841'$$,

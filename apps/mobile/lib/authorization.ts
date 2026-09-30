@@ -64,7 +64,7 @@ export function canPerform(cap: CapabilitySnapshot | null, action: SensitiveActi
       return { ok: true };
     case 'case:approve':
       if (!APPROVER_ROLES.has(cap.role)) return { ok: false, reason: 'approver role required' };
-      if (requiresStepUp(cap, 'approve_case')) return { ok: false, reason: 'step-up authentication required' };
+      if (requiresStepUp(cap, 'decide_case')) return { ok: false, reason: 'step-up authentication required' };
       return { ok: true };
     case 'export:identifiable':
       if (cap.dataMode !== 'identifiable') return { ok: false, reason: 'tenant is de-identified mode' };

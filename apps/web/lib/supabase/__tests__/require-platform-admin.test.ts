@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/supabase/admin', () => ({ createServiceRoleClient: vi.fn() }));
 
+const warn = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/logger', () => ({ logger: { warn, info: vi.fn(), error: vi.fn() } }));
+
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requirePlatformAdmin } from '../require-platform-admin';
 
@@ -135,5 +138,34 @@ describe('requirePlatformAdmin (T17)', () => {
     const result = await requirePlatformAdmin(supabase as never);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.status).toBe(403);
+  });
+
+  it('does not honor DISABLE_MFA during setup mode', async () => {
+    // Setup mode is the one state where the control plane is reachable and
+    // unowned, so the development bypass must not apply there even outside
+    // production.
+    vi.stubEnv('SETUP_MODE', 'true');
+    process.env.DISABLE_MFA = 'true';
+    const supabase = mockSupabase({ userId: 'u1', profile: ACTIVE_PROFILE, registry: OPERATOR });
+    const result = await requirePlatformAdmin(supabase as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(403);
+      expect(result.error).toMatch(/setup/i);
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it('logs the MFA bypass instead of taking it silently', async () => {
+    // A silent bypass leaves no trace that the control protecting backup,
+    // restore and uninstall was skipped.
+    vi.stubEnv('NODE_ENV', 'development');
+    process.env.DISABLE_MFA = 'true';
+    const supabase = mockSupabase({ userId: 'u1', profile: ACTIVE_PROFILE, registry: OPERATOR });
+    await requirePlatformAdmin(supabase as never);
+
+    const logged = warn.mock.calls.map((call) => String(call[0])).join(' ');
+    expect(logged).toContain('platform_admin.mfa_bypassed');
+    vi.unstubAllEnvs();
   });
 });

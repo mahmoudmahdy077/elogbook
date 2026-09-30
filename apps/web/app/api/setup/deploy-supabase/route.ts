@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateSupabaseSecrets, cloneSupabase, writeSupabaseEnv, getSupabaseVersion } from '@/lib/setup/supabase-installer';
 import { isDockerAvailable, pullImage, networkExists } from '@/lib/setup/docker-api';
 import { execFileSync } from 'child_process';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { closeSync, constants, existsSync, openSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import {
   checkSetupRequest, checkRateLimit, acquireDurableLock, releaseDurableLock,
@@ -136,7 +136,18 @@ export async function POST(request: Request) {
     }
 
     configWritten = true;
-    writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 }); // lgtm[js/missing-rate-limiting]
+    // O_NOFOLLOW so a symlink at configPath cannot redirect this write, and the
+    // descriptor is closed explicitly rather than relying on the path.
+    const configFd = openSync(
+      configPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW,
+      0o600,
+    );
+    try {
+      writeFileSync(configFd, JSON.stringify(config, null, 2), { encoding: 'utf-8' });
+    } finally {
+      closeSync(configFd);
+    }
 
     const version = await getSupabaseVersion();
     writeSetupReceiptAtomically('setup-deploy.json', {

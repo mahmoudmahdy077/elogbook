@@ -5,6 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { newRequestId, saveCaseDraft } from '@/lib/cases/submit-flow';
+import {
+  MAX_IMPORT_BYTES,
+  parseCaseImportCsv,
+  type ImportTemplateField,
+  type ParsedImportRow,
+} from '@/lib/cases/import-rows';
 
 interface CaseImportProps {
   isOpen: boolean;
@@ -13,8 +19,33 @@ interface CaseImportProps {
   tenantSlug: string;
 }
 
-interface CsvRow {
-  [key: string]: string;
+interface TenantTemplate {
+  id: string;
+  name: string;
+  fields: ImportTemplateField[] | null;
+}
+
+interface PreviewRow {
+  cells: Record<string, string>;
+  caseDate: string;
+}
+
+const PREVIEW_ROWS = 10;
+const MAX_IMPORT_MB = Math.floor(MAX_IMPORT_BYTES / 1024 / 1024);
+
+/**
+ * One preview cell per CSV column, resolved back from the validated row.
+ *
+ * `case_date` and the template selector are projected into dedicated fields
+ * rather than `field_values`, so a column name that happens to collide with a
+ * projected field still renders the value the import will actually store.
+ */
+function previewCell(row: ParsedImportRow, column: string): string {
+  const normalized = column.trim().toLowerCase();
+  if (normalized === 'case_date') return row.caseDate;
+  if (normalized === 'template_name' || normalized === 'template') return row.templateSelector ?? '';
+  const value = Object.entries(row.fieldValues).find(([key]) => key.toLowerCase() === normalized)?.[1];
+  return value === undefined ? '' : String(value);
 }
 
 export default function CaseImport({
@@ -25,7 +56,14 @@ export default function CaseImport({
 }: CaseImportProps) {
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewRows, setPreviewRows] = useState<CsvRow[]>([]);
+  // The chosen file is held here, not read back out of the DOM. The input is
+  // unmounted once the preview is showing, so a DOM read at import time finds
+  // nothing and the import would silently no-op.
+  const selectedFileRef = useRef<File | null>(null);
+  const [templates, setTemplates] = useState<TenantTemplate[]>([]);
+  const [templateId, setTemplateId] = useState<string>('');
+  const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
+  const [rowCount, setRowCount] = useState(0);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -33,72 +71,55 @@ export default function CaseImport({
   const [imported, setImported] = useState(false);
   const [importCount, setImportCount] = useState(0);
 
-  // case_entries.template_id is NOT NULL — every imported row needs one.
-  // Resolved once per import: CSV template_name column (case-insensitive)
-  // matched against tenant templates, falling back to the first tenant
-  // template. Import is blocked when the tenant has no templates.
-  async function resolveTemplateId(rows: CsvRow[]): Promise<string | null> {
-    const { data: templates } = await supabase
+  /**
+   * Tenant templates, each with the field schema an import is validated
+   * against. The operator picks the template; the file never gets to define the
+   * shape of the data it is about to write.
+   */
+  async function fetchTemplates(): Promise<TenantTemplate[]> {
+    const { data } = await supabase
       .from('case_templates')
-      .select('id, name')
+      .select('id, name, fields')
       .eq('tenant_id', tenantId);
-    if (!templates || templates.length === 0) return null;
-
-    const byName = new Map<string, string>(
-      templates.map((t: { id: string; name: string }) => [t.name.trim().toLowerCase(), t.id] as const),
-    );
-    for (const row of rows) {
-      const wanted = (row.template_name || row.template || '').trim().toLowerCase();
-      if (wanted && byName.has(wanted)) return byName.get(wanted)!;
-    }
-    return templates[0].id;
+    return ((data ?? []) as TenantTemplate[]).map((template) => ({
+      ...template,
+      fields: Array.isArray(template.fields) ? (template.fields as ImportTemplateField[]) : [],
+    }));
   }
 
-  function parseCSV(text: string): { headers: string[]; rows: CsvRow[] } {
-    const lines = text.split('\n').filter((line) => line.trim());
-    if (lines.length === 0) {
-      throw new Error('CSV file is empty');
+  /**
+   * Load templates, resolve the one in force, and project the file. Returns
+   * either a refusal message or the projection to preview. Shared by intake and
+   * import so both see exactly the same decision.
+   */
+  async function projectFile(
+    text: string,
+    byteLength: number,
+  ): Promise<{ refusal: string } | { template: TenantTemplate; parsed: Extract<ReturnType<typeof parseCaseImportCsv>, { ok: true }> }> {
+    const available = await fetchTemplates();
+    setTemplates(available);
+
+    if (available.length === 0) {
+      return { refusal: 'No case templates exist for this program yet. Create a template before importing cases.' };
     }
 
-    const parsedHeaders = parseCSVLine(lines[0]);
-    const rows: CsvRow[] = [];
+    const chosen = available.find((candidate) => candidate.id === templateId) ?? available[0]!;
+    setTemplateId(chosen.id);
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      if (values.length === 0) continue;
-      const row: CsvRow = {};
-      parsedHeaders.forEach((header, idx) => {
-        row[header.trim()] = (values[idx] || '').trim();
-      });
-      rows.push(row);
-    }
-
-    return { headers: parsedHeaders, rows };
+    const parsed = parseCaseImportCsv({ text, fields: chosen.fields ?? [], byteLength });
+    if (!parsed.ok) return { refusal: parsed.message };
+    if (parsed.rows.length === 0) return { refusal: 'No data rows found in the CSV file' };
+    return { template: chosen, parsed };
   }
 
-  function parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-    return result;
+  function toPreview(
+    rows: ParsedImportRow[],
+    columns: string[],
+  ): PreviewRow[] {
+    return rows.slice(0, PREVIEW_ROWS).map((row) => ({
+      caseDate: row.caseDate,
+      cells: Object.fromEntries(columns.map((column) => [column, previewCell(row, column)])),
+    }));
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -107,18 +128,34 @@ export default function CaseImport({
     if (!file) return;
 
     setFileName(file.name);
+    selectedFileRef.current = file;
+
+    if (file.size > MAX_IMPORT_BYTES) {
+      setPreviewRows([]);
+      setRowCount(0);
+      setHeaders([]);
+      setError(`File is too large. CSV imports are limited to ${MAX_IMPORT_MB} MB.`);
+      return;
+    }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = event.target?.result as string;
-        const { headers, rows } = parseCSV(text);
-        setHeaders(headers);
-        setPreviewRows(rows.slice(0, 10));
+        const outcome = await projectFile(text, file.size);
+        if ('refusal' in outcome) {
+          setPreviewRows([]);
+          setRowCount(0);
+          setHeaders([]);
+          setError(outcome.refusal);
+          return;
+        }
+
+        setHeaders(outcome.parsed.headers);
+        setRowCount(outcome.parsed.rows.length);
+        setPreviewRows(toPreview(outcome.parsed.rows, outcome.parsed.headers));
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to parse CSV file'
-        );
+        setError(err instanceof Error ? err.message : 'Failed to parse CSV file');
       }
     };
     reader.onerror = () => {
@@ -133,72 +170,87 @@ export default function CaseImport({
     setImporting(true);
     setError(null);
 
-    // Re-parse the full file since previewRows only has first 10
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) return;
+    // Re-read the full file: the preview only holds the first rows, and the
+    // validation and the write must see the same projection.
+    const file = selectedFileRef.current;
+    if (!file) {
+      setError('The selected file is no longer available. Choose it again.');
+      setImporting(false);
+      return;
+    }
 
     try {
       const text = await file.text();
-      const { rows } = parseCSV(text);
-      if (rows.length === 0) {
-        setError('No data rows found in the CSV file');
+      const outcome = await projectFile(text, file.size);
+      if ('refusal' in outcome) {
+        setError(outcome.refusal);
         setImporting(false);
         return;
       }
 
-      const templateId = await resolveTemplateId(rows);
-      if (!templateId) {
-        setError(
-          'No case templates exist for this program yet. Create a template before importing cases.'
-        );
-        setImporting(false);
-        return;
+      const { template, parsed } = outcome;
+      const rows = parsed.rows;
+
+      // One file validates against exactly one template schema. A file that
+      // names a second template is refused rather than written under a schema
+      // its columns were never checked against.
+      const byName = new Map<string, TenantTemplate>(
+        templates.map((candidate) => [candidate.name.trim().toLowerCase(), candidate] as const),
+      );
+      for (const row of rows) {
+        const wanted = (row.templateSelector ?? '').trim().toLowerCase();
+        if (!wanted) continue;
+        const rowTemplate = byName.get(wanted);
+        if (!rowTemplate) {
+          setError(`Template "${row.templateSelector}" does not exist for this program.`);
+          setImporting(false);
+          return;
+        }
+        if (rowTemplate.id !== template.id) {
+          setError('This file mixes templates. Import one template at a time so every row is validated against the right schema.');
+          setImporting(false);
+          return;
+        }
       }
 
-      const BATCH_SIZE = 50;
+      const today = new Date().toISOString().split('T')[0] as string;
       let totalInserted = 0;
 
-      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        const batch = rows.slice(i, i + BATCH_SIZE);
+      for (const row of rows) {
+        // Every row crosses the server command boundary (`save_case_draft_command`),
+        // which re-validates required fields, PHI, and the write-once draft
+        // status. The client projection is a narrowing, never the authority.
+        const result = await saveCaseDraft(tenantSlug, {
+          request_id: newRequestId(),
+          template_id: template.id,
+          case_date: row.caseDate || today,
+          field_values: row.fieldValues,
+          accreditation_mappings: [],
+          is_deidentified: true,
+          patient_age_years: null,
+        });
 
-        for (const row of batch) {
-          const fieldValues = Object.fromEntries(
-            Object.entries(row).filter(
-              ([key]) => !/(^|_)(mrn|dob|date_of_birth|patient_hash)($|_)/i.test(key),
-            ),
-          );
-          const result = await saveCaseDraft(tenantSlug, {
-            request_id: newRequestId(),
-            template_id: templateId,
-            case_date: row.case_date || row.date || new Date().toISOString().split('T')[0],
-            field_values: fieldValues,
-            accreditation_mappings: [],
-            is_deidentified: true,
-            patient_age_years: null,
-          });
-
-          if (result.error) {
-            setError(result.error);
-            setImporting(false);
-            return;
-          }
-          totalInserted += 1;
+        if (result.error) {
+          setError(result.error);
+          setImporting(false);
+          return;
         }
+        totalInserted += 1;
       }
 
       setImportCount(totalInserted);
       setImported(true);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to import cases'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to import cases');
     }
 
     setImporting(false);
   }
 
   function resetForm() {
+    selectedFileRef.current = null;
     setPreviewRows([]);
+    setRowCount(0);
     setHeaders([]);
     setFileName(null);
     setError(null);
@@ -347,8 +399,15 @@ export default function CaseImport({
                         </button>
                       </div>
                       <p className="text-xs text-text-muted mt-1">
-                        Showing first {Math.min(previewRows.length, 10)} of{' '}
-                        {previewRows.length} rows
+                        Showing first {Math.min(previewRows.length, PREVIEW_ROWS)} of{' '}
+                        {rowCount} row{rowCount === 1 ? '' : 's'}
+                        {templates.length > 1 && templateId ? (
+                          <>
+                            {' '}
+                            &middot; template{' '}
+                            {templates.find((candidate) => candidate.id === templateId)?.name}
+                          </>
+                        ) : null}
                       </p>
                     </div>
 
@@ -367,14 +426,14 @@ export default function CaseImport({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                          {previewRows.slice(0, 10).map((row, idx) => (
+                          {previewRows.slice(0, PREVIEW_ROWS).map((row, idx) => (
                             <tr key={idx} className="hover:bg-black/[0.02]">
                               {headers.map((header) => (
                                 <td
                                   key={header}
                                   className="px-3 py-2 text-text-secondary truncate max-w-[150px]"
                                 >
-                                  {row[header] || ''}
+                                  {row.cells[header] || ''}
                                 </td>
                               ))}
                             </tr>

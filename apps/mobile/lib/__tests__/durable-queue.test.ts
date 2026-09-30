@@ -123,13 +123,53 @@ describe('durable queue M3 (local-first outbox)', () => {
     expect(await readDurableQueue()).toHaveLength(1);
   });
 
-  it('classifies errors without dropping unknown failures', () => {
+  it('classifies transport errors without dropping unknown failures', () => {
     expect(classifyQueueError('Network request failed')).toBe('transient');
     expect(classifyQueueError('JWT expired')).toBe('auth');
     expect(classifyQueueError('RLS policy violation')).toBe('policy');
     expect(classifyQueueError('duplicate key value')).toBe('conflict');
     expect(classifyQueueError('MAC verification failed')).toBe('tamper');
     expect(classifyQueueError('weird unknown boom')).toBe('unknown');
+  });
+
+  it('classifies on the stable server code rather than on message wording', () => {
+    // Rewording a server message must not change whether a resident's queued
+    // case is retried or quarantined.
+    expect(classifyQueueError('anything at all', 'transient: retryable')).toBe('transient');
+    expect(classifyQueueError('anything at all', 'internal_error')).toBe('transient');
+    expect(classifyQueueError('anything at all', 'forbidden')).toBe('policy');
+    expect(classifyQueueError('anything at all', 'account_inactive')).toBe('auth');
+    expect(classifyQueueError('anything at all', 'invalid_column')).toBe('validation');
+    expect(classifyQueueError('anything at all', 'conflict')).toBe('conflict');
+    expect(classifyQueueError('anything at all', 'quota_exceeded')).toBe('policy');
+  });
+
+  it('quarantines on a server code it does not recognise instead of retrying forever', () => {
+    expect(classifyQueueError('a new failure mode', 'code_from_the_future')).toBe('unknown');
+  });
+
+  it('retries a queued case on a transient server code', async () => {
+    await enqueueDurable('case_entries', 'insert', { a: 1 });
+    const sb = rpcWith(async () => ({
+      data: { success: false, error: 'operation_failed', code: 'internal_error' },
+      error: null,
+    }));
+    const res = await flushDurableQueue(sb as never);
+    expect(res.synced).toBe(0);
+    expect(res.transient).toBe(1);
+    expect((await getDurableCounts()).queued).toBe(1);
+  });
+
+  it('quarantines a queued case on a terminal server code', async () => {
+    await enqueueDurable('case_entries', 'update', { id: 'row-9', status: 'pending' });
+    const sb = rpcWith(async () => ({
+      data: { success: false, error: 'policy: denied', code: 'forbidden' },
+      error: null,
+    }));
+    const res = await flushDurableQueue(sb as never);
+    expect(res.synced).toBe(0);
+    expect(res.quarantined).toBe(1);
+    expect((await getDurableCounts()).quarantined).toBe(1);
   });
 
   it('recovers items stuck in sending (process death between push and ack)', async () => {

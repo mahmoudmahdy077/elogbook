@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@elogbook/shared/components/web';
 import ErrorDisplay from './ErrorDisplay';
 import { newRequestId } from '@/lib/cases/submit-flow';
+import { PhiFieldCell } from './PhiFieldCell';
 
 interface TemplateField {
   key: string;
@@ -17,11 +18,10 @@ interface TemplateField {
 
 interface CaseDetail {
   id: string;
+  tenant_id: string;
   case_date: string;
   status: string;
   is_deidentified: boolean;
-  patient_mrn: string | null;
-  patient_dob: string | null;
   field_values: Record<string, unknown>;
   profiles: { full_name: string; specialty: string | null }[];
   case_templates: { name: string; specialty: string; fields: TemplateField[] }[];
@@ -52,10 +52,15 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
     setLoading(true);
     setError(null);
 
+    // patient_mrn and patient_dob are deliberately absent. This is a client-side
+    // query, so selecting them would deliver the identifiers to the browser the
+    // moment the modal opens, whether or not anyone asked to see one, and no
+    // audit row could describe it. They are fetched per field through the audited
+    // reveal in lib/cases/phi-reveal-actions.ts.
     const { data, error: fetchErr } = await supabase
       .from('case_entries')
       .select(`
-        id, case_date, status, is_deidentified, patient_mrn, patient_dob, field_values,
+        id, tenant_id, case_date, status, is_deidentified, field_values,
         profiles:resident_id(full_name, specialty),
         case_templates:template_id(name, specialty, fields),
         approval_requests(id, status, comment, requested_at)
@@ -224,21 +229,22 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
                     <p className="text-sm font-medium text-text-primary mt-0.5">{caseData.case_date}</p>
                   </div>
 
-                  {/* Patient Info */}
-                  {!caseData.is_deidentified && (caseData.patient_mrn || caseData.patient_dob) && (
+                  {/* Patient Info — each identifier is fetched through its own
+                      audited reveal, so opening the modal discloses nothing. */}
+                  {!caseData.is_deidentified && (
                     <div className="grid grid-cols-2 gap-4">
-                      {caseData.patient_mrn && (
-                        <div>
-                          <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Patient MRN</p>
-                          <p className="text-sm font-medium text-text-primary mt-0.5">{caseData.patient_mrn}</p>
+                      <div>
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Patient MRN</p>
+                        <div className="mt-0.5">
+                          <PhiFieldCell field="mrn" entryId={caseData.id} />
                         </div>
-                      )}
-                      {caseData.patient_dob && (
-                        <div>
-                          <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Patient DOB</p>
-                          <p className="text-sm font-medium text-text-primary mt-0.5">{caseData.patient_dob}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wider">Patient DOB</p>
+                        <div className="mt-0.5">
+                          <PhiFieldCell field="dob" entryId={caseData.id} />
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 

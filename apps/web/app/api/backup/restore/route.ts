@@ -39,6 +39,28 @@ function controlPlaneAbsent() {
   return null;
 }
 
+/**
+ * Control-plane restore target inventory.
+ *
+ * The operator needs to know which opaque target ids exist on this installation
+ * before a drill can be run, and the client cannot invent one. Only ids that
+ * survive the operator allowlist (malformed and reserved entries already
+ * dropped) are returned; the derived database name never leaves the server, so
+ * this discloses routing identifiers, not connection targets.
+ */
+export async function GET() {
+  const absent = controlPlaneAbsent();
+  if (absent) return absent;
+
+  const platform = await requirePlatformAdmin(await createServerSupabase());
+  if (!platform.ok) {
+    return controlPlaneError(platform.error, platform.status);
+  }
+
+  const restoreTargets = restoreTargetAllowlistFromEnv();
+  return controlPlaneJson({ restoreTargets });
+}
+
 export async function POST(request: Request) {
   const absent = controlPlaneAbsent();
   if (absent) return absent;
