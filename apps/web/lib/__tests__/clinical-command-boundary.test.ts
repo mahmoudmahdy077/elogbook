@@ -152,7 +152,7 @@ describe('clinical command boundary — final state policy catalog', () => {
     // The same rule as the migration's own catalog assertion, asserted from the
     // source that would otherwise reintroduce one.
     expect(repairMigration).toContain(
-      "policy_record.polname NOT IN (\n        'residents edit own draft or rejected entries',\n        'residents soft delete own draft entries'\n      )",
+      "policy_record.policyname NOT IN (\n        'residents edit own draft or rejected entries',\n        'residents soft delete own draft entries'\n      )",
     );
     expect(repairMigration).toContain('SEC-015: a privileged or soft-delete UPDATE policy remains');
   });

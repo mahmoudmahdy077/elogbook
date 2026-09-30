@@ -80,7 +80,7 @@ export async function verifyReleaseEvidence({ root = ROOT, output = 'docs/upgrad
   }
 
   for (const path of REQUIRED_FILES) {
-    if (!existsSync(join(outputDirectory, path))) findings.push(finding(join(outputDirectory, path), 'evidence-file-missing', 'required evidence file is missing'));
+    if (readFileNoFollow(join(outputDirectory, path)) === null) findings.push(finding(join(outputDirectory, path), 'evidence-file-missing', 'required evidence file is missing'));
   }
 
   const manifest = readJson(join(outputDirectory, 'manifest.json'), 'release evidence manifest', findings);

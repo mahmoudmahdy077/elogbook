@@ -59,7 +59,7 @@ describe('case operation error contract', () => {
     expect(migration).toContain('CREATE OR REPLACE FUNCTION public.case_operation_error_code(');
     expect(migration).toContain('CREATE OR REPLACE FUNCTION public.case_operation_error_text(');
     // An unmapped state is admitted as unknown rather than guessed at.
-    expect(migration).toContain("ELSE RETURN 'internal_error'");
+    expect(migration).toMatch(/ELSE\s+RETURN\s+'internal_error'/);
   });
 
   it('keeps the helpers out of reach of client roles', () => {
