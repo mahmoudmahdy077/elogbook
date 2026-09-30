@@ -252,7 +252,7 @@ SELECT lives_ok(
 --    writer.
 SELECT is_empty(
   $$
-    SELECT policy_record.polname
+    SELECT policy_record.policyname
     FROM pg_policies AS policy_record
     WHERE policy_record.schemaname = 'public'
       AND policy_record.tablename = 'faculty_evaluations'

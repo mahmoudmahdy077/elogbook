@@ -935,7 +935,7 @@ DO $$
 DECLARE
   v_privileged TEXT;
 BEGIN
-  SELECT string_agg(policy_record.polname, ', ' ORDER BY policy_record.polname)
+  SELECT string_agg(policy_record.policyname, ', ' ORDER BY policy_record.policyname)
   INTO v_privileged
   FROM pg_policies AS policy_record
   WHERE policy_record.schemaname = 'public'
@@ -951,7 +951,7 @@ BEGIN
     WHERE policy_record.schemaname = 'public'
       AND policy_record.tablename = 'case_entries'
       AND policy_record.cmd IN ('UPDATE', 'ALL')
-      AND policy_record.polname NOT IN (
+      AND policy_record.policyname NOT IN (
         'residents edit own draft or rejected entries',
         'residents soft delete own draft entries'
       )

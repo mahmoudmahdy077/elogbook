@@ -459,12 +459,12 @@ SELECT is(
 --     boundary, and none of them can be added without a name this filters out.
 SELECT is_empty(
   $$
-    SELECT policy_record.polname
+    SELECT policy_record.policyname
     FROM pg_policies AS policy_record
     WHERE policy_record.schemaname = 'public'
       AND policy_record.tablename = 'case_entries'
       AND policy_record.cmd IN ('UPDATE', 'ALL')
-      AND policy_record.polname NOT IN (
+      AND policy_record.policyname NOT IN (
         'residents edit own draft or rejected entries',
         'residents soft delete own draft entries'
       )
