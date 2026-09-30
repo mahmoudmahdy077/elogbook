@@ -22,8 +22,9 @@ jobs:
       - name: Audit the shipped dependency graph
         run: |
           # Only production dependencies reach the deployed artifact, so only
-          # those gate the build. fast-uri arrives through ajv -> eslint, which
-          # is build-time only, so it is reported but does not block.
+          # those gate the build. Build-time advisories are still reported by the
+          # step below, and the release gate re-runs the full graph unfiltered,
+          # so narrowing this step does not lose a finding.
           pnpm audit --prod --audit-level=high --json > /tmp/audit.json || true
           # image-size (GHSA-1138808, GHSA-1138809) has no patched release
           # ("<0.0.0") and is a build-time dependency of metro (bundler
