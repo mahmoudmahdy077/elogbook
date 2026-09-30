@@ -85,9 +85,9 @@ BEGIN
     RETURN 'phi_detected';
   END IF;
 
-  -- A searched CASE expression: THEN takes a value, so the code is returned
-  -- rather than RETURNed.
-  CASE COALESCE(p_sqlstate, '') WHEN
+  -- Returned as a single CASE expression: a bare CASE is not a valid
+  -- PL/pgSQL statement, and THEN takes a value rather than a statement.
+  RETURN CASE COALESCE(p_sqlstate, '') WHEN
     -- insufficient_privilege
     '42501' THEN 'forbidden'
     -- unique_violation
@@ -109,7 +109,7 @@ BEGIN
     -- serialization_failure / deadlock_detected: the work is retryable
     '40001', '40P01' THEN 'transient: retryable'
     ELSE 'internal_error'
-  END CASE;
+  END;
 END;
 $$;
 
