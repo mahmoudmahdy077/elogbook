@@ -85,28 +85,30 @@ BEGIN
     RETURN 'phi_detected';
   END IF;
 
+  -- A searched CASE expression: THEN takes a value, so the code is returned
+  -- rather than RETURNed.
   CASE COALESCE(p_sqlstate, '') WHEN
     -- insufficient_privilege
-    '42501' THEN RETURN 'forbidden';
+    '42501' THEN 'forbidden'
     -- unique_violation
-    '23505' THEN RETURN 'conflict';
+    '23505' THEN 'conflict'
     -- foreign_key_violation
-    '23503' THEN RETURN 'invalid_reference';
+    '23503' THEN 'invalid_reference'
     -- not_null_violation
-    '23502' THEN RETURN 'validation: missing_value';
+    '23502' THEN 'validation: missing_value'
     -- check_violation
-    '23514' THEN RETURN 'validation: constraint_failed';
+    '23514' THEN 'validation: constraint_failed'
     -- invalid_text_representation / invalid_parameter_value
-    '22P02', '22007', '22008', '22003' THEN RETURN 'validation: invalid_value';
+    '22P02', '22007', '22008', '22003' THEN 'validation: invalid_value'
     -- invalid_json_text / invalid_datetime_format
-    '22032', '22007' THEN RETURN 'validation: invalid_value';
+    '22032', '22007' THEN 'validation: invalid_value'
     -- raise_exception from a state machine or a write-once guard
-    'P0001' THEN RETURN 'state_conflict';
+    'P0001' THEN 'state_conflict'
     -- raise_exception for a bad argument
-    'P0004' THEN RETURN 'invalid_request';
+    'P0004' THEN 'invalid_request'
     -- serialization_failure / deadlock_detected: the work is retryable
-    '40001', '40P01' THEN RETURN 'transient: retryable';
-    ELSE RETURN 'internal_error';
+    '40001', '40P01' THEN 'transient: retryable'
+    ELSE 'internal_error'
   END CASE;
 END;
 $$;
