@@ -673,6 +673,9 @@ BEGIN
     AND tenant_id = v_tenant_id
     AND actor_profile_id = v_profile_id;
 
+  -- resource_id is NOT NULL, but a refused insert has neither a created id nor
+  -- a row id. Derive a stable UUID from the operation id so a refusal is still
+  -- audited and points back at the operation that caused it.
   INSERT INTO public.audit_logs (
     tenant_id,
     user_id,
@@ -686,7 +689,7 @@ BEGIN
     auth.uid(),
     'case_' || p_action,
     'case_entries',
-    COALESCE((v_result ->> 'id')::UUID, p_row_id),
+    COALESCE((v_result ->> 'id')::UUID, p_row_id, md5(p_op_id)::UUID),
     jsonb_build_object(
       'op_id', p_op_id,
       'code', v_result ->> 'code',
