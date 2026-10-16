@@ -27,6 +27,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/resident/duty-hours', label: 'Duty Hours', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/billing', label: 'Billing', roles: ['institution_admin', 'admin'] },
   { href: '/analytics', label: 'Analytics', roles: ['director', 'institution_admin', 'admin'] },
+  { href: '/benchmarks', label: 'Benchmarks', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/audit', label: 'Audit', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/compliance', label: 'Compliance', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/admin', label: 'Admin', roles: ['director', 'institution_admin', 'admin'] },
