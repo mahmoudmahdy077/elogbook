@@ -3946,7 +3946,7 @@ beforeEach(() => {
       select: () => ({
         eq: () => ({
           eq: () => Promise.resolve({
-            data: table === 'push_tokens' ? [{ token: 'ExponentPushToken[abc]' }] : null,
+            data: table === 'push_tokens' ? [{ token: 'test-only' }] : null,
             error: null,
           }),
         }),
@@ -3955,7 +3955,7 @@ beforeEach(() => {
     }),
   } as never);
   updateMock.mockResolvedValue({ error: null });
-  globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ status: 'ok', to: 'ExponentPushToken[abc]' }] }), { status: 200 }));
+  globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ status: 'ok', to: 'test-only' }] }), { status: 200 }));
 });
 
 describe('sendPushNotification', () => {

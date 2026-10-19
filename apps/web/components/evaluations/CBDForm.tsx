@@ -1,5 +1,6 @@
 'use client';
 
+import { toUserMessage } from '@/lib/error-messages';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -85,7 +86,7 @@ export default function CBDForm({
     setSaving(false);
 
     if (insertError) {
-      setError(insertError.message);
+      setError(toUserMessage(insertError.message));
       return;
     }
 

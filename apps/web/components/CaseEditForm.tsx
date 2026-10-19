@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
+import { PhiFieldCell } from '@/components/PhiFieldCell';
 
 interface TemplateField {
   key?: string;
@@ -19,19 +20,17 @@ interface CaseEntry {
   tenant_id: string;
   resident_id: string;
   template_id: string;
-  patient_mrn: string | null;
-  patient_dob: string | null;
   patient_age_years: number | null;
   case_date: string;
   field_values: Record<string, unknown>;
   status: string;
   is_deidentified: boolean;
   accreditation_mappings: unknown[];
-  case_templates: {
-    name: string;
-    specialty: string;
-    fields: TemplateField[];
-  };
+  // PostgREST types an embedded resource as an array when the relationship is
+  // not statically to-one, so the editor accepts either shape and takes the row.
+  case_templates:
+    | { name: string; specialty: string; fields: TemplateField[] }
+    | { name: string; specialty: string; fields: TemplateField[] }[];
 }
 
 interface CaseEditFormProps {
@@ -50,11 +49,22 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
   const { show: showToast } = useToast();
 
   const [caseDate, setCaseDate] = useState(entry.case_date);
-  const [patientMrn, setPatientMrn] = useState(entry.patient_mrn || '');
-  const [patientDob, setPatientDob] = useState(entry.patient_dob || '');
+  // The stored MRN/DOB are PHI, so they are not pre-loaded into a visible input.
+  // They stay masked until the disclosure is audited, and an untouched field is
+  // omitted from the update so the stored value is preserved rather than cleared.
+  const [patientMrn, setPatientMrn] = useState('');
+  const [patientDob, setPatientDob] = useState('');
+  // Each PHI column is tracked on its own. A shared flag would let an MRN edit
+  // commit an empty DOB, erasing a stored clinical value that was never
+  // displayed to, or disclosed by, this editor.
+  const [mrnTouched, setMrnTouched] = useState(false);
+  const [dobTouched, setDobTouched] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(entry.field_values || {});
 
-  const fields = entry.case_templates?.fields || [];
+  const template = Array.isArray(entry.case_templates)
+    ? (entry.case_templates[0] ?? null)
+    : (entry.case_templates ?? null);
+  const fields = template?.fields || [];
 
   function getFieldKey(f: TemplateField): string {
     return f.key || f.name || '';
@@ -82,9 +92,17 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
       updateData.patient_dob = null;
       updateData.patient_age_years = entry.patient_age_years ?? null;
     } else {
-      updateData.patient_mrn = patientMrn || null;
-      updateData.patient_dob = patientDob || null;
-      updateData.patient_age_years = null;
+      // Each column is written only when this editor actually revealed or
+      // changed it, so an untouched PHI value is preserved rather than
+      // overwritten with the empty state it was never shown.
+      if (mrnTouched) {
+        updateData.patient_mrn = patientMrn || null;
+        updateData.patient_age_years = null;
+      }
+      if (dobTouched) {
+        updateData.patient_dob = patientDob || null;
+        updateData.patient_age_years = null;
+      }
     }
 
     const { error } = await supabase
@@ -105,7 +123,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
       <div className="panel">
         <div className="pb-4 border-b border-border">
           <h1 className="text-xl font-bold">
-            Edit Case — {entry.case_templates?.specialty} — {entry.case_templates?.name}
+            Edit Case — {template?.specialty} — {template?.name}
           </h1>
           <p className="text-sm text-text-muted mt-1">Edit your draft case details</p>
         </div>
@@ -149,10 +167,28 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                 <input
                   type="text"
                   value={patientMrn}
-                  onChange={(e) => setPatientMrn(e.target.value)}
+                  onChange={(e) => {
+                    setPatientMrn(e.target.value);
+                    setMrnTouched(true);
+                  }}
                   placeholder="Enter MRN"
                   aria-label="Patient MRN"
                   className={inputBase}
+                />
+                {/* The stored value is not part of this page's payload, so
+                    whether one exists is not disclosed here either. The cell
+                    reports it once the disclosure has been audited. */}
+                <PhiFieldCell
+                  field="mrn"
+                  entryId={entry.id}
+                  label="Stored MRN"
+                  onReveal={(value) => {
+                    // Only the MRN moves into a visible input. The DOB has its
+                    // own audited reveal, so recording one disclosure cannot
+                    // become the warrant for showing the other field.
+                    setPatientMrn(value);
+                    setMrnTouched(true);
+                  }}
                 />
               </div>
               <div className="space-y-1.5">
@@ -162,9 +198,21 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                 <input
                   type="date"
                   value={patientDob}
-                  onChange={(e) => setPatientDob(e.target.value)}
+                  onChange={(e) => {
+                    setPatientDob(e.target.value);
+                    setDobTouched(true);
+                  }}
                   aria-label="Patient date of birth"
                   className={inputBase}
+                />
+                <PhiFieldCell
+                  field="dob"
+                  entryId={entry.id}
+                  label="Stored DOB"
+                  onReveal={(value) => {
+                    setPatientDob(value);
+                    setDobTouched(true);
+                  }}
                 />
               </div>
             </>

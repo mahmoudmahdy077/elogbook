@@ -1,6 +1,8 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { promotePendingProfileIfNeeded } from '@/lib/supabase/profile-promotion';
+import { safeRelativePath } from '@/lib/safe-redirect';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -30,7 +32,7 @@ function MfaVerifyInner() {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClient();
-  const next = params.get('next') ?? '/dashboard';
+  const next = safeRelativePath(params.get('next') ?? '/dashboard');
   const [factor, setFactor] = useState<Factor | null>(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -75,6 +77,12 @@ function MfaVerifyInner() {
     });
     if (verifyError) {
       setError('Invalid verification code. Please check and re-enter.');
+      setLoading(false);
+      return;
+    }
+    const promotion = await promotePendingProfileIfNeeded(supabase);
+    if (!promotion.ok) {
+      setError(promotion.error);
       setLoading(false);
       return;
     }

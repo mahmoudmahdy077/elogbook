@@ -21,6 +21,11 @@ beforeEach(() => {
     from: () => ({ insert: insertMock }),
   } as never);
   insertMock.mockReset();
+  insertMock.mockReturnValue({
+    select: () => ({
+      single: async () => ({ data: { id: 'submission-1' }, error: null }),
+    }),
+  });
 });
 
 function makeRequest(body: unknown): NextRequest {
@@ -33,7 +38,11 @@ function makeRequest(body: unknown): NextRequest {
 
 describe('POST /api/contact', () => {
   it('stores a valid submission', async () => {
-    insertMock.mockResolvedValue({ error: null });
+    insertMock.mockReturnValue({
+      select: () => ({
+        single: async () => ({ data: { id: 'submission-1' }, error: null }),
+      }),
+    });
     const res = await POST(makeRequest({ name: 'Dr A', email: 'a@example.com', message: 'hello' }));
     expect(res.status).toBe(200);
     expect(insertMock).toHaveBeenCalledWith({ name: 'Dr A', email: 'a@example.com', message: 'hello' });

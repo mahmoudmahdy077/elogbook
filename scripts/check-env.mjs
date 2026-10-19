@@ -31,10 +31,38 @@ const REQUIRED = {
 const OPTIONAL = [
   'NEXT_PUBLIC_SITE_URL',
   'APP_ENCRYPTION_KEY',
+  'EMAIL_ENABLED',
+  'EMAIL_PROVIDER',
+  'EMAIL_FROM_ADDRESS',
+  'EMAIL_FROM_NAME',
+  'EMAIL_REPLY_TO',
+  'EMAIL_DATA_ENCRYPTION_KEYS',
+  'EMAIL_DATA_ACTIVE_KEY_VERSION',
+  'EMAIL_LOOKUP_HMAC_KEY',
+  'EMAIL_TOKEN_SIGNING_SECRET',
+  'EMAIL_CRON_SECRET',
+  'RESEND_API_KEY',
+  'RESEND_WEBHOOK_SECRET',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'CONTACT_ALERT_TO',
+  'EMAIL_RATE_PER_MIN',
   'SENTRY_DSN',
   'NEXT_PUBLIC_SENTRY_DSN',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
+];
+
+const EMAIL_PRODUCTION_REQUIRED = [
+  'EMAIL_FROM_ADDRESS',
+  'EMAIL_DATA_ENCRYPTION_KEYS',
+  'EMAIL_DATA_ACTIVE_KEY_VERSION',
+  'EMAIL_LOOKUP_HMAC_KEY',
+  'EMAIL_TOKEN_SIGNING_SECRET',
+  'EMAIL_CRON_SECRET',
+  'CONTACT_ALERT_TO',
 ];
 
 const PLACEHOLDERS = [
@@ -84,6 +112,16 @@ const allVars = isEdge ? REQUIRED.client : [...REQUIRED.client, ...REQUIRED.serv
 console.log(`[check-env] mode: ${isEdge ? 'edge' : 'server'} (${isProd ? 'production' : 'dev'})`);
 for (const v of allVars) checkVar(v, true);
 for (const v of OPTIONAL) checkVar(v, false);
+if (isProd && process.env.EMAIL_ENABLED !== 'false') {
+  for (const v of EMAIL_PRODUCTION_REQUIRED) checkVar(v, true);
+  if (process.env.EMAIL_PROVIDER === 'resend+smtp') {
+    checkVar('RESEND_API_KEY', true);
+    checkVar('RESEND_WEBHOOK_SECRET', true);
+    checkVar('SMTP_HOST', true);
+    checkVar('SMTP_USER', true);
+    checkVar('SMTP_PASS', true);
+  }
+}
 
 if (failed) {
   console.error('[check-env] Environment check FAILED');

@@ -25,6 +25,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export type RateLimitMode = 'distributed' | 'single-instance';
 
@@ -107,19 +108,16 @@ export function resolveMode(): RateLimitMode {
   if (cachedMode === 'single-instance' && hasRedisCredentials()) {
     if (!warnedSingleInstanceWithCreds) {
       warnedSingleInstanceWithCreds = true;
-      console.warn(
-        '[rate-limit] RATE_LIMIT_MODE=single-instance with Upstash credentials present: ' +
-          'credentials are ignored and local limiter will be used. Mode is the authority, not credential presence.',
-      );
+      logger.warn('RATE_LIMIT_MODE=single-instance with Upstash credentials present', {
+        message: 'credentials are ignored and local limiter will be used',
+      });
     }
   } else if (cachedMode === 'single-instance' && isProd) {
     // Only warn about single-instance in prod if we haven't already warned for creds case
     if (!warnedSingleInstanceWithCreds) {
-      console.warn(
-        '[rate-limit] RATE_LIMIT_MODE=single-instance in production: limits are ' +
-          'per-process and are NOT enforced across instances. Valid only for a ' +
-          'single-process deployment.',
-      );
+      logger.warn('RATE_LIMIT_MODE=single-instance in production', {
+        message: 'limits are per-process and are NOT enforced across instances',
+      });
     }
   }
 
@@ -288,9 +286,10 @@ export async function checkRateLimit(
       // Derive retryAfter from TTL per answer 3
       let retryAfter: number;
       if (ttl === -1) {
-        console.warn(
-          `[rate-limit] Redis TTL -1 for key ${key}: key has no expiry (Lua EXPIRE may have failed). Using ${WINDOW_SECONDS}s and key will not auto-expire.`,
-        );
+        logger.warn('Redis TTL -1 for rate limit key', {
+          key,
+          message: 'key has no expiry (Lua EXPIRE may have failed)',
+        });
         retryAfter = WINDOW_SECONDS;
       } else if (ttl === -2) {
         // Key gone — window already expired, conservative
@@ -312,12 +311,12 @@ export async function checkRateLimit(
 
     if (isCredentialKey(key)) {
       // Fail CLOSED for credential keys
-      console.warn('[rate-limit] Redis error, failing closed for credential key:', key, err);
+      logger.warn('Redis error, failing closed for credential key', { error: err, key });
       return { allowed: false, retryAfter: WINDOW_SECONDS };
     }
 
     // Fail OPEN for availability keys — local fallback + error log
-    console.warn('[rate-limit] Redis error, falling back to local for availability key:', key, err);
+    logger.warn('Redis error, falling back to local for availability key', { error: err, key });
     return localCheckRateLimit(key, maxRequests);
   }
 }

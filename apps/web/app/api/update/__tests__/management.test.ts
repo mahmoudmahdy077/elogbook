@@ -43,7 +43,7 @@ const DENIED = {
 function postReq(body: unknown, headers: Record<string, string> = {}) {
   return new Request('http://localhost/api/update/execute', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'content-length': '10', ...headers },
+    headers: { 'Content-Type': 'application/json', Origin: 'http://localhost', 'content-length': '10', ...headers },
     body: JSON.stringify(body),
   });
 }

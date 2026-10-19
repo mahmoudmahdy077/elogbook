@@ -3,6 +3,16 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { validatePageContent } from '@/lib/site-content';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const pageCreateSchema = z.object({
+  slug: z.string().trim().min(1).max(120),
+  locale: z.string().trim().min(2).max(10).optional(),
+  content: z.unknown().optional(),
+}).strict();
 
 export const runtime = 'nodejs';
 
@@ -25,25 +35,28 @@ export async function GET() {
     .select('id, slug, locale, published_revision_id, created_at, updated_at')
     .eq('scope', 'platform')
     .order('slug', { ascending: true });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to list site pages', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
   return NextResponse.json({ pages: data ?? [] });
 }
 
 export async function POST(request: Request) {
+  const guarded = await guardRequest(request, pageCreateSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const platform = await requirePlatformAdmin(await createServerSupabase());
   if (!platform.ok) {
     return NextResponse.json({ error: platform.error }, { status: platform.status });
   }
 
-  let body: { slug?: string; locale?: string; content?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
-  const locale = typeof body.locale === 'string' && body.locale ? body.locale.trim() : 'en';
+  const body = guarded.data;
+  const slug = body.slug;
+  const locale = body.locale || 'en';
   if (!SLUG_RE.test(slug)) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
   }
@@ -96,9 +109,8 @@ export async function POST(request: Request) {
       resource_id: pageId,
       changes: { slug, locale },
     });
-  } catch {
-    // Audit failure alerts via logs but never blocks (section 4.3).
-    console.warn('[platform-pages] audit insert failed for site_page_create', pageId);
+  } catch (auditError) {
+    logger.warn('Failed to audit site page creation', { pageId, error: auditError });
   }
 
   return NextResponse.json({ page, revision }, { status: 201 });

@@ -97,7 +97,6 @@ export default async function ConsentPage({
               description={t.description}
               granted={status?.granted ?? false}
               tenantId={auth.profile.tenant_id}
-              userId={auth.user.id}
             />
           );
         })}

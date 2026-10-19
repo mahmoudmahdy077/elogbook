@@ -1,14 +1,50 @@
 name: Backup DB
+
 on:
-  schedule: [{ cron: '0 3 * * *' }]
+  schedule:
+    - cron: '0 3 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   backup:
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - name: Install PostgreSQL 17 client (pg_dump)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Validate production backup controls
+        env:
+          BACKUP_STORAGE_PROVIDER: ${{ vars.BACKUP_STORAGE_PROVIDER }}
+          BACKUP_ENCRYPTION_PROVIDER: ${{ vars.BACKUP_ENCRYPTION_PROVIDER }}
+          BACKUP_ENCRYPTION_HOOK: ${{ vars.BACKUP_ENCRYPTION_HOOK }}
+          BACKUP_KMS_PROVIDER: ${{ vars.BACKUP_KMS_PROVIDER }}
+          BACKUP_KMS_KEY_REFERENCE: ${{ vars.BACKUP_KMS_KEY_REFERENCE }}
+          BACKUP_KMS_VERIFY_HOOK: ${{ vars.BACKUP_KMS_VERIFY_HOOK }}
+          BACKUP_OBJECT_LOCK_MODE: ${{ vars.BACKUP_OBJECT_LOCK_MODE }}
+          BACKUP_OBJECT_LOCK_RETENTION_DAYS: ${{ vars.BACKUP_OBJECT_LOCK_RETENTION_DAYS }}
+          BACKUP_OBJECT_LOCK_VERIFY_HOOK: ${{ vars.BACKUP_OBJECT_LOCK_VERIFY_HOOK }}
+          BACKUP_UPLOAD_HOOK: ${{ vars.BACKUP_UPLOAD_HOOK }}
+          BACKUP_REMOTE_VERIFY_HOOK: ${{ vars.BACKUP_REMOTE_VERIFY_HOOK }}
+        run: |
+          set -euo pipefail
+          for name in BACKUP_STORAGE_PROVIDER BACKUP_ENCRYPTION_PROVIDER BACKUP_KMS_PROVIDER BACKUP_KMS_KEY_REFERENCE; do
+            value="${!name:-}"
+            [[ -n "$value" ]] || { printf 'ERROR: %s is required\n' "$name" >&2; exit 1; }
+            [[ ! "${value,,}" =~ (local|placeholder|replace|example|dummy|test|fixture|changeme) ]] || { printf 'ERROR: %s is not production-approved\n' "$name" >&2; exit 1; }
+          done
+          for name in BACKUP_ENCRYPTION_HOOK BACKUP_KMS_VERIFY_HOOK BACKUP_UPLOAD_HOOK BACKUP_REMOTE_VERIFY_HOOK BACKUP_OBJECT_LOCK_VERIFY_HOOK; do
+            value="${!name:-}"
+            [[ -x "$value" ]] || { printf 'ERROR: %s must be executable\n' "$name" >&2; exit 1; }
+          done
+          [[ "${BACKUP_OBJECT_LOCK_MODE}" =~ ^(compliance|governance)$ ]] || { printf '%s\n' 'ERROR: invalid object-lock mode' >&2; exit 1; }
+          [[ "${BACKUP_OBJECT_LOCK_RETENTION_DAYS}" =~ ^[0-9]+$ ]] || { printf '%s\n' 'ERROR: invalid object-lock retention' >&2; exit 1; }
+          (( BACKUP_OBJECT_LOCK_RETENTION_DAYS >= 1 && BACKUP_OBJECT_LOCK_RETENTION_DAYS <= 3650 )) || { printf '%s\n' 'ERROR: invalid object-lock retention' >&2; exit 1; }
+      - name: Install PostgreSQL client
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
@@ -17,55 +53,64 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-      # GitHub-hosted runners are IPv4-only, but Supabase direct connections
-      # (db.<ref>.supabase.co) are IPv6-only and unreachable from the runner.
-      # Resolve the project's IPv4-reachable pooler host via the Management API.
-      - name: Resolve Supabase pooler host
+      - name: Resolve database pooler host
         id: pooler
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          PROJECT_JSON="$(curl -fsSL \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+          set -euo pipefail
+          umask 077
+          [[ "${SUPABASE_ACCESS_TOKEN}" =~ ^[A-Za-z0-9._-]+$ ]] || { printf '%s\n' 'ERROR: access token format is invalid' >&2; exit 1; }
+          [[ "${SUPABASE_PROJECT_REF}" =~ ^[A-Za-z0-9-]+$ ]] || { printf '%s\n' 'ERROR: project reference format is invalid' >&2; exit 1; }
+          curl_config="${RUNNER_TEMP}/supabase-curl.conf"
+          printf 'header = "Authorization: Bearer %s"\n' "${SUPABASE_ACCESS_TOKEN}" > "${curl_config}"
+          chmod 600 "${curl_config}"
+          trap 'rm -f "${curl_config}"' EXIT
+          project_json="$(curl --fail --silent --show-error --config "${curl_config}" \
             "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}")"
-          REGION="$(echo "${PROJECT_JSON}" | jq -r '.region // empty')"
-          POOLER_HOST="$(echo "${PROJECT_JSON}" | jq -r '.pooler.host // empty')"
-          if [[ -z "${POOLER_HOST}" && -n "${REGION}" ]]; then
-            POOLER_HOST="aws-0-${REGION}.pooler.supabase.com"
+          region="$(jq -r '.region // empty' <<<"${project_json}")"
+          pooler_host="$(jq -r '.pooler.host // empty' <<<"${project_json}")"
+          if [[ -z "${pooler_host}" && -n "${region}" ]]; then
+            pooler_host="aws-0-${region}.pooler.supabase.com"
           fi
-          if [[ -z "${POOLER_HOST}" ]]; then
-            echo "ERROR: could not resolve pooler host for ${SUPABASE_PROJECT_REF}" >&2
-            exit 1
-          fi
-          echo "pooler-host=${POOLER_HOST}" >> "${GITHUB_OUTPUT}"
-      - name: Run backup via pooler
+          [[ -n "${pooler_host}" ]] || { printf '%s\n' 'ERROR: pooler host resolution failed' >&2; exit 1; }
+          printf 'pooler-host=%s\n' "${pooler_host}" >> "${GITHUB_OUTPUT}"
+      - name: Run encrypted durable backup
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          POOLER_HOST: ${{ steps.pooler.outputs.pooler-host }}
+          PGHOST: ${{ steps.pooler.outputs.pooler-host }}
+          PGPORT: '5432'
+          PGUSER: postgres.${{ secrets.SUPABASE_PROJECT_REF }}
+          PGDATABASE: postgres
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          BACKUP_DIR: ${{ runner.temp }}/backups
+          LOG_FILE: ${{ runner.temp }}/backup.log
+          BACKUP_STORAGE_PROVIDER: ${{ vars.BACKUP_STORAGE_PROVIDER }}
+          BACKUP_ENCRYPTION_PROVIDER: ${{ vars.BACKUP_ENCRYPTION_PROVIDER }}
+          BACKUP_ENCRYPTION_HOOK: ${{ vars.BACKUP_ENCRYPTION_HOOK }}
+          BACKUP_KMS_PROVIDER: ${{ vars.BACKUP_KMS_PROVIDER }}
+          BACKUP_KMS_KEY_REFERENCE: ${{ vars.BACKUP_KMS_KEY_REFERENCE }}
+          BACKUP_KMS_VERIFY_HOOK: ${{ vars.BACKUP_KMS_VERIFY_HOOK }}
+          BACKUP_OBJECT_LOCK_MODE: ${{ vars.BACKUP_OBJECT_LOCK_MODE }}
+          BACKUP_OBJECT_LOCK_RETENTION_DAYS: ${{ vars.BACKUP_OBJECT_LOCK_RETENTION_DAYS }}
+          BACKUP_OBJECT_LOCK_VERIFY_HOOK: ${{ vars.BACKUP_OBJECT_LOCK_VERIFY_HOOK }}
+          BACKUP_UPLOAD_HOOK: ${{ vars.BACKUP_UPLOAD_HOOK }}
+          BACKUP_REMOTE_VERIFY_HOOK: ${{ vars.BACKUP_REMOTE_VERIFY_HOOK }}
+          BACKUP_OBJECT_PREFIX: ${{ vars.BACKUP_OBJECT_PREFIX }}
+          BACKUP_CONFIG_SOURCE: ${{ vars.BACKUP_CONFIG_SOURCE }}
         run: |
-          DB_URL="${SUPABASE_DB_URL/db.${SUPABASE_PROJECT_REF}.supabase.co/${POOLER_HOST}}"
-          if [[ "${DB_URL}" == "${SUPABASE_DB_URL}" ]]; then
-            echo "ERROR: could not rewrite db.${SUPABASE_PROJECT_REF}.supabase.co in SUPABASE_DB_URL" >&2
-            exit 1
-          fi
-          if [[ "${DB_URL}" =~ ^([a-z]+)://([^:/@]+)(:([^@]*))?@(.*)$ ]]; then
-            SCHEME="${BASH_REMATCH[1]}"
-            USERNAME="${BASH_REMATCH[2]}"
-            PASSWORD="${BASH_REMATCH[4]:-}"
-            REST="${BASH_REMATCH[5]}"
-            if [[ "${USERNAME}" != *.${SUPABASE_PROJECT_REF} ]]; then
-              USERNAME="${USERNAME}.${SUPABASE_PROJECT_REF}"
-            fi
-            if [[ -n "${PASSWORD}" ]]; then
-              DB_URL="${SCHEME}://${USERNAME}:${PASSWORD}@${REST}"
-            else
-              DB_URL="${SCHEME}://${USERNAME}@${REST}"
-            fi
-          else
-            echo "ERROR: unexpected SUPABASE_DB_URL format" >&2
-            exit 1
-          fi
-          PATH="/usr/lib/postgresql/17/bin:${PATH}" DB_URL="${DB_URL}" bash ./scripts/backup-db.sh
+          set -euo pipefail
+          umask 077
+          pass_file="${RUNNER_TEMP}/pgpass"
+          case "${SUPABASE_DB_PASSWORD}" in
+            *$'\n'*|*$'\r'*) printf '%s\n' 'ERROR: database password contains an invalid control character' >&2; exit 1 ;;
+          esac
+          escaped_password="${SUPABASE_DB_PASSWORD//\\/\\\\}"
+          escaped_password="${escaped_password//:/\\:}"
+          printf '*:*:*:*:%s\n' "${escaped_password}" > "${pass_file}"
+          unset escaped_password
+          chmod 600 "${pass_file}"
+          export PGPASSFILE="${pass_file}"
+          unset SUPABASE_DB_PASSWORD
+          PATH="/usr/lib/postgresql/17/bin:${PATH}" bash ./scripts/backup-db.sh
+          rm -f "${pass_file}"

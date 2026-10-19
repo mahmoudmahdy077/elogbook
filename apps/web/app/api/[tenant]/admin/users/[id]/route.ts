@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
-import { assertNotLastTenantAdmin } from '@/lib/supabase/tenant-admins';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const updateUserSchema = z.object({
+  full_name: z.string().trim().min(1).max(120).optional(),
+  specialty: z.string().trim().max(120).nullable().optional(),
+  role: z.enum(['resident', 'supervisor', 'director', 'institution_admin', 'admin']).optional(),
+  status: z.enum(['active', 'pending', 'suspended', 'deactivated']).optional(),
+}).strict();
 
 export async function GET(
   request: NextRequest,
@@ -47,6 +57,12 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
+  const guarded = await guardRequest(request, updateUserSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
   const _auth = await requireTenantAdmin(supabase, tenantSlug);
@@ -57,95 +73,41 @@ export async function PUT(
   const rl = await checkRateLimit(`admin-user-mut:${tenantSlug}`, 30);
   if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const profile = _auth.profile;
-  const user = _auth.user;
 
-  const body = await request.json();
-  const { full_name, specialty, role, status } = body;
+  const { full_name, specialty, role, status } = guarded.data;
 
-  // Validate role
-  const validRoles = ['resident', 'supervisor', 'director', 'institution_admin', 'admin'];
-  if (role && !validRoles.includes(role)) {
-    return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-  }
-
-  // Validate status
-  const validStatuses = ['active', 'pending', 'suspended', 'deactivated'];
-  if (status && !validStatuses.includes(status)) {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-  }
-
-  // Only admin can assign admin role
   if (role === 'admin' && profile.role !== 'admin') {
     return NextResponse.json({ error: 'Only admins can assign admin role' }, { status: 403 });
   }
 
-  const adminClient = createServiceRoleClient();
-
-  // Get target user — must belong to same tenant (service-role bypasses RLS)
-  const { data: targetProfile } = await adminClient
-    .from('profiles')
-    .select('id, user_id, role, tenant_id')
-    .eq('id', id)
-    .eq('tenant_id', profile.tenant_id)
-    .single();
-
-  if (!targetProfile) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  }
-
-  if ((targetProfile as { tenant_id: string }).tenant_id !== profile.tenant_id) {
-    return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
-  }
-
-  // T18: demoting the last institution_admin strands the tenant.
-  if (role !== undefined && role !== (targetProfile as { role: string }).role) {
-    const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
-      tenantId: profile.tenant_id,
-      profileId: id,
-      currentRole: (targetProfile as { role: string }).role,
-      newRole: role,
-    });
-    if (!lastAdmin.ok) {
-      return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
-    }
-  }
-
-  // Update profile
-  const updates: Record<string, unknown> = {};
+  const updates: Record<string, string | null> = {};
   if (full_name !== undefined) updates.full_name = full_name;
   if (specialty !== undefined) updates.specialty = specialty;
   if (role !== undefined) updates.role = role;
-  if (status !== undefined) {
-    updates.status = status;
-    if (status === 'deactivated') updates.deactivated_at = new Date().toISOString();
-    if (status === 'active') updates.deactivated_at = null;
-  }
-  updates.updated_at = new Date().toISOString();
-
-  const { error: updateError } = await adminClient
-    .from('profiles')
-    .update(updates)
-    .eq('id', id)
-    .eq('tenant_id', profile.tenant_id);
-
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-
-  // Update auth user role if changed
-  if (role && role !== targetProfile.role) {
-    await adminClient.auth.admin.updateUserById(targetProfile.user_id, {
-      app_metadata: { user_role: role },
-    });
+  if (status !== undefined) updates.status = status;
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No profile changes supplied' }, { status: 400 });
   }
 
-  // Audit log
-  await adminClient.from('audit_logs').insert({
-    tenant_id: profile.tenant_id,
-    user_id: user.id,
-    action: 'update_user',
-    resource_type: 'profiles',
-    resource_id: id,
-    changes: updates,
+  const { data: result, error: updateError } = await supabase.rpc('admin_update_profile', {
+    p_profile_id: id,
+    p_updates: updates,
   });
+  const resultCode = (result as { success?: boolean; error?: string } | null)?.error;
+  const success = (result as { success?: boolean } | null)?.success === true;
+  if (updateError || !success) {
+    logger.error('Failed to update user profile', updateError, { tenantSlug });
+    if (resultCode === 'profile_not_found') {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (resultCode === 'forbidden' || resultCode === 'tenant_inactive') {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    if (resultCode === 'last_administrator') {
+      return NextResponse.json({ error: 'Cannot remove the last institution admin of this tenant' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Failed to update user profile' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -154,6 +116,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
+  const guarded = await guardRequest(request, undefined, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    requireBody: false,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
   const _auth = await requireTenantAdmin(supabase, tenantSlug);
@@ -166,51 +134,45 @@ export async function DELETE(
   const profile = _auth.profile;
   const user = _auth.user;
 
-  const adminClient = createServiceRoleClient();
-
-  // Get target user — must belong to same tenant (service-role bypasses RLS)
-  const { data: targetProfile } = await adminClient
+  const { data: targetProfile, error: targetError } = await supabase
     .from('profiles')
-    .select('id, user_id, tenant_id, role')
+    .select('id, user_id, tenant_id, role, status')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .single();
-
-  if (!targetProfile) {
+  if (targetError || !targetProfile) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  if ((targetProfile as { tenant_id: string }).tenant_id !== profile.tenant_id) {
-    return NextResponse.json({ error: 'Target user is not in the same tenant' }, { status: 403 });
-  }
-
-  // Prevent self-deletion
   if (targetProfile.user_id === user.id) {
     return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
   }
 
-  // T18: deleting the last institution_admin strands the tenant.
-  const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
-    tenantId: profile.tenant_id,
-    profileId: id,
-    currentRole: (targetProfile as { role?: string }).role ?? '',
+  const { data: result, error: deleteError } = await supabase.rpc('admin_delete_profile', {
+    p_profile_id: id,
   });
-  if (!lastAdmin.ok) {
-    return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
+  const resultCode = (result as { success?: boolean; error?: string } | null)?.error;
+  const success = (result as { success?: boolean } | null)?.success === true;
+  if (deleteError || !success) {
+    logger.error('Failed to delete user profile', deleteError, { tenantSlug });
+    if (resultCode === 'profile_not_found') {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (resultCode === 'forbidden' || resultCode === 'tenant_inactive') {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    if (resultCode === 'last_administrator') {
+      return NextResponse.json({ error: 'Cannot remove the last institution admin of this tenant' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Failed to delete user profile' }, { status: 500 });
   }
 
-  // Delete auth user (cascades to profile)
-  const { error } = await adminClient.auth.admin.deleteUser(targetProfile.user_id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // Audit log
-  await adminClient.from('audit_logs').insert({
-    tenant_id: profile.tenant_id,
-    user_id: user.id,
-    action: 'delete_user',
-    resource_type: 'profiles',
-    resource_id: id,
-  });
+  const adminClient = createServiceRoleClient();
+  const { error: authError } = await adminClient.auth.admin.deleteUser(targetProfile.user_id);
+  if (authError) {
+    logger.error('Failed to delete user identity', authError, { tenantSlug });
+    return NextResponse.json({ error: 'Failed to delete user identity' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }

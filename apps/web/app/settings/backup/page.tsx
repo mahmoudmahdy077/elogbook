@@ -14,6 +14,7 @@ interface BackupManifest {
 
 export default function BackupSettingsPage() {
   const [backups, setBackups] = useState<BackupManifest[]>([]);
+  const [restoreTargets, setRestoreTargets] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -21,9 +22,17 @@ export default function BackupSettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadBackups = useCallback(async () => {
-    const res = await fetch('/api/backup');
-    const data = await res.json();
-    setBackups(data.backups || []);
+    // The restore target is an operator-provisioned, server-owned id. The page
+    // can only offer the ids the control plane reports; it can never name a
+    // database, and an empty inventory is reported rather than worked around.
+    const [backupsRes, targetsRes] = await Promise.all([
+      fetch('/api/backup'),
+      fetch('/api/backup/restore'),
+    ]);
+    const backupsData = await backupsRes.json().catch(() => null);
+    const targetsData = await targetsRes.json().catch(() => null);
+    setBackups(backupsData?.backups || []);
+    setRestoreTargets(Array.isArray(targetsData?.restoreTargets) ? targetsData.restoreTargets : []);
     setLoading(false);
   }, []);
 
@@ -46,19 +55,35 @@ export default function BackupSettingsPage() {
   }, [loadBackups]);
 
   const handleRestore = useCallback(async (backupId: string) => {
-    setRestoring(backupId);
     setError(null);
+    setResult(null);
+
+    // Fail closed before any request: the API refuses an unprovisioned target,
+    // and sending one would only produce a refusal the operator cannot act on.
+    const restoreTargetId = restoreTargets[0];
+    if (!restoreTargetId) {
+      setError(
+        'No disposable restore target is provisioned on this installation. Set RESTORE_TARGET_ALLOWLIST and create the matching database before running a restore drill.'
+      );
+      return;
+    }
+
+    setRestoring(backupId);
     try {
-      const res = await fetch('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backupId }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const res = await fetch('/api/backup/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backupId, restoreTargetId, confirmDisposableTarget: true }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Restore failed');
       setResult('Restore completed successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     } finally {
       setRestoring(null);
     }
-  }, []);
+  }, [restoreTargets]);
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;

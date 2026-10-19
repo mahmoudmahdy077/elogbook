@@ -4,80 +4,148 @@
  * - Stops registered workers (sync timers, listeners) via callbacks.
  * - Cancels in-flight requests via registered abort callbacks.
  * - Clears in-memory identity (telemetry user/session, cached keys).
- * - Wipes the outgoing draft (AsyncStorage scoped key) and removes the
- *   legacy plaintext remnant.
- * - Quarantines queued work: items stay under the OLD scope key (never
- *   deleted, never visible to the new scope) for the next sign-in of the
- *   same account or explicit user recovery.
+ * - Resets the WatermelonDB singleton and removes old scoped drafts,
+ *   queues, audit buffers, checkpoints, and notification cursors.
  * - Rotates push context + clears notification identity via callbacks.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { clearAccountContext, scopedKey } from './account-context';
-import { resetDbEncryptionKeyCacheForTests } from './db/encryption-key';
-import { clearTelemetryQueue } from './production/telemetry';
-import { disposeAuditBuffer } from './security/audit-trail';
+import { clearAccountContext, clearPreviousAccountContext, getAccountContext, getLastAccountContext, scopedKeyForContext, whenSessionEpochSettled, type AccountContext } from './account-context';
+import { resetDatabase } from './db/database';
+import { clearDurableQueueForContext } from './durable-queue';
+import { invalidateDbEncryptionKey, resetDbEncryptionKeyCacheForTests } from './db/encryption-key';
+import { clearTelemetryIdentity, clearTelemetryState } from './production/telemetry';
+import { clearAuditLogForContext, disposeAuditBuffer } from './security/audit-trail';
 
 export interface DisposalHooks {
   stopWorkers?: Array<() => void>;
   abortRequests?: Array<() => void>;
   clearTelemetryIdentity?: () => void;
   rotatePushContext?: () => void;
+  clearIdentityCaches?: () => void;
 }
 
 const DRAFT_KEY = 'case_form_draft.v1';
 const LEGACY_DRAFT_KEY = 'case_form_draft';
+const LEGACY_QUEUE_KEY = 'offline_case_queue_v2';
+const LEGACY_AUDIT_KEY = 'audit_trail_buffer_v1';
+const AUDIT_STATUS_KEY = 'audit_trail_status_v1';
+const AUDIT_QUARANTINE_KEY = 'audit_trail_buffer_v1.quarantine';
+const NOTIFICATION_KEY = 'last_notification_check';
+const SYNC_CHECKPOINT_KEY = 'sync_checkpoint_v1';
+const WAL_KEY = 'write_ahead_log_v1';
+const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
 
-export async function disposeAccountContext(hooks: DisposalHooks = {}): Promise<void> {
+async function removeScopedStorage(context: AccountContext | null): Promise<void> {
+  let keys: string[] = [];
+  // The session epoch write is fire-and-forget. Draining it first stops a write
+  // that is still in flight from re-creating a key this wipe just removed.
+  await whenSessionEpochSettled();
+  try {
+    keys = await AsyncStorage.getAllKeys();
+  } catch {
+    return;
+  }
+  const prefix = context ? `${context.userId}:${context.tenantId}:` : 'global:';
+  for (const key of keys) {
+    if (key.startsWith(prefix)) await AsyncStorage.removeItem(key);
+  }
+}
+
+async function removeStorage(keys: string[]): Promise<void> {
+  for (const key of keys) await AsyncStorage.removeItem(key);
+}
+
+export async function disposeAccountContext(hooks: DisposalHooks = {}, contextOverride?: AccountContext | null): Promise<void> {
+  const context = contextOverride ?? getAccountContext() ?? getLastAccountContext();
+  let disposalError: unknown = null;
+  const attempt = async (operation: () => Promise<void>) => {
+    try {
+      await operation();
+    } catch (error) {
+      disposalError ??= error;
+    }
+  };
+
   for (const stop of hooks.stopWorkers ?? []) {
     try {
       stop();
-    } catch {
-      // best-effort
+    } catch (error) {
+      disposalError ??= error;
     }
   }
   for (const abort of hooks.abortRequests ?? []) {
     try {
       abort();
-    } catch {
-      // best-effort
+    } catch (error) {
+      disposalError ??= error;
     }
   }
-  // Wipe outgoing draft + legacy remnant BEFORE dropping the scope pointer.
-  try {
-    await AsyncStorage.removeItem(scopedKey(DRAFT_KEY));
-  } catch {
-    // best-effort
+
+  await attempt(async () => {
+    if (typeof resetDatabase === 'function') await resetDatabase();
+  });
+  if (context) {
+    await attempt(() => clearDurableQueueForContext(context));
+    await attempt(() => clearAuditLogForContext(context));
+    await attempt(() => removeScopedStorage(context));
+  } else {
+    await attempt(() => removeStorage([LEGACY_DRAFT_KEY, LEGACY_QUEUE_KEY, LEGACY_AUDIT_KEY, AUDIT_QUARANTINE_KEY, `global:${AUDIT_STATUS_KEY}`]));
   }
+  await attempt(() => removeStorage([
+    context ? scopedKeyForContext(context, DRAFT_KEY) : `global:${DRAFT_KEY}`,
+    LEGACY_DRAFT_KEY,
+    LEGACY_QUEUE_KEY,
+    LEGACY_AUDIT_KEY,
+    AUDIT_QUARANTINE_KEY,
+    `global:${AUDIT_STATUS_KEY}`,
+    NOTIFICATION_KEY,
+    SYNC_CHECKPOINT_KEY,
+    WAL_KEY,
+    SYNC_TIMESTAMP_KEY,
+  ]));
+  await attempt(() => clearTelemetryState());
+  await attempt(async () => {
+    let keys: string[] = [];
+    try {
+      keys = await AsyncStorage.getAllKeys();
+    } catch {
+      return;
+    }
+    for (const key of keys) {
+      if (key.startsWith('@elogbook/ratelimit:')) await AsyncStorage.removeItem(key);
+    }
+  });
   try {
-    await AsyncStorage.removeItem(LEGACY_DRAFT_KEY);
-  } catch {
-    // best-effort
+    hooks.clearIdentityCaches?.();
+  } catch (error) {
+    disposalError ??= error;
   }
-  // Durable queue items stay under the old scope key (quarantine, not loss).
-  // Audit buffer: stop its flush worker and drop memory; the persisted
-  // scoped copy stays under the old scope (quarantine, not loss).
+
   try {
-    disposeAuditBuffer();
-  } catch {
-    // best-effort
-  }
-  // The analytics event queue is wiped (identity + behavior must not leak).
-  try {
-    await clearTelemetryQueue();
-  } catch {
-    // best-effort
-  }
-  try {
+    clearTelemetryIdentity();
     hooks.clearTelemetryIdentity?.();
-  } catch {
-    // best-effort
+  } catch (error) {
+    disposalError ??= error;
   }
   try {
     hooks.rotatePushContext?.();
-  } catch {
-    // best-effort
+  } catch (error) {
+    disposalError ??= error;
   }
+  await attempt(() => invalidateDbEncryptionKey());
   resetDbEncryptionKeyCacheForTests();
-  clearAccountContext();
+  disposeAuditBuffer();
+  const activeAfterDisposal = getAccountContext();
+  const shouldClearActiveContext = !contextOverride
+    || !activeAfterDisposal
+    || !context
+    || (activeAfterDisposal.userId === context.userId && activeAfterDisposal.tenantId === context.tenantId && activeAfterDisposal.profileId === context.profileId);
+  if (shouldClearActiveContext) clearAccountContext();
+  clearPreviousAccountContext();
+
+  if (disposalError) {
+    await invalidateDbEncryptionKey().catch(() => undefined);
+    throw disposalError;
+  }
 }

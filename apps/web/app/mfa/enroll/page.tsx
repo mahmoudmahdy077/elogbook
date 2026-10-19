@@ -1,6 +1,8 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { promotePendingProfileIfNeeded } from '@/lib/supabase/profile-promotion';
+import { safeRelativePath } from '@/lib/safe-redirect';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
@@ -33,7 +35,7 @@ function MfaEnrollInner() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
-  const next = params.get('next') ?? '/dashboard';
+  const next = safeRelativePath(params.get('next') ?? '/dashboard');
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +78,12 @@ function MfaEnrollInner() {
     });
     if (verifyError) {
       setError('Invalid verification code. Please check and re-enter.');
+      setLoading(false);
+      return;
+    }
+    const promotion = await promotePendingProfileIfNeeded(supabase);
+    if (!promotion.ok) {
+      setError(promotion.error);
       setLoading(false);
       return;
     }

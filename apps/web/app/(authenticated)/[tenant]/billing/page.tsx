@@ -37,7 +37,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       .eq('status', 'active')
       .maybeSingle(),
     supabase
-      .from('payment_gateway_config')
+      .from('secret_payment_gateway_config')
       .select('provider, publishable_key')
       .eq('tenant_id', auth.profile.tenant_id)
       .eq('is_active', true)
@@ -56,7 +56,8 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', auth.profile.tenant_id),
+      .eq('tenant_id', auth.profile.tenant_id)
+      .is('deleted_at', null),
     supabase
       .from('payments')
       .select('id, amount, status, created_at')

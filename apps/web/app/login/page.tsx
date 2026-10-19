@@ -213,7 +213,7 @@ export default function LoginPage() {
         </div>
 
         {/* Demo credentials banner (dev/staging only) */}
-        {process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (
+        {process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (
           <div className="mb-5 p-3.5 rounded-xl bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)]">
             <p className="text-xs font-semibold text-fg-success mb-1.5">🔐 Demo Accounts</p>
             <div className="space-y-0.5">

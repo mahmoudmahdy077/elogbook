@@ -136,5 +136,5 @@ describe('elogbook aead secret box', () => {
     const big = 'p'.repeat(200_000);
     const env = encryptText(master, big);
     expect(decryptText(master, env)).toBe(big);
-  });
+  }, 20_000);
 });

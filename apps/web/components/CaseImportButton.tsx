@@ -5,12 +5,12 @@ import CaseImport from '@/components/CaseImport';
 
 interface CaseImportButtonProps {
   tenantId: string;
-  residentId: string;
+  tenantSlug: string;
 }
 
 /** Toolbar button + modal wrapper that mounts the (previously unreachable)
  *  CSV case-import feature on the cases list page. */
-export default function CaseImportButton({ tenantId, residentId }: CaseImportButtonProps) {
+export default function CaseImportButton({ tenantId, tenantSlug }: CaseImportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ export default function CaseImportButton({ tenantId, residentId }: CaseImportBut
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
           tenantId={tenantId}
-          residentId={residentId}
+          tenantSlug={tenantSlug}
         />
       )}
     </>

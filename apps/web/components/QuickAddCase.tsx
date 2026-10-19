@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
+import { buildDeidentifiedPatientColumns } from '@/lib/cases/deidentified';
+import { caseSubmitPath, createCaseDraftAndSubmit, newRequestId, saveCaseDraft } from '@/lib/cases/submit-flow';
 
 interface TemplateField {
   key?: string;
@@ -37,7 +39,7 @@ function getFieldKey(f: TemplateField): string {
   return f.key || f.name || '';
 }
 
-export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _tenantSlug }: QuickAddCaseProps) {
+export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug }: QuickAddCaseProps) {
   const [supabase] = useState(() => createClient());
   const { show: showToast } = useToast();
   const prefersReduced = useReducedMotion();
@@ -125,49 +127,62 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
     const { data: profile } = await supabase.from('profiles').select('id, tenant_id, role').eq('user_id', user.id).single();
     if (!profile) { setErrors(['Profile not found.']); setSaving(false); return; }
 
-    // Workflow integrity: only supervisor+ may create pre-approved cases.
-    // Residents always enter the approval queue — never write status directly
-    // (INSERT bypasses the enforce_case_status_transition trigger).
-    const canSelfApprove = ['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role);
-
-    const insertData: Record<string, unknown> = {
-      tenant_id: profile.tenant_id,
-      resident_id: profile.id,
-      template_id: selectedTemplateId,
-      case_date: caseDate,
-      field_values: fieldValues,
-      status: canSelfApprove ? 'approved' : 'pending',
-      is_deidentified: isDeidentified,
+    const insertCaseRow = async (row: Record<string, unknown>) => {
+      return saveCaseDraft(tenantSlug, row);
     };
 
-    if (isDeidentified) {
-      const mrnForHash = patientMrn || `temp-${Date.now()}`;
-      const { data: hash, error: hashError } = await supabase.rpc('hash_patient_mrn', {
-        p_mrn: mrnForHash,
-        p_tenant_id: profile.tenant_id,
-      });
-      if (hashError) {
-        setErrors(['Failed to generate patient hash. Please try again.']);
-        setSaving(false);
-        return;
-      }
-      insertData.patient_mrn = null;
-      insertData.patient_dob = null;
-      insertData.patient_hash = hash || '';
-    } else {
-      insertData.patient_mrn = patientMrn || null;
-      insertData.patient_dob = patientDob || null;
-      insertData.patient_hash = null;
-    }
+    // The UI never writes a clinical status. It always creates a draft, then
+    // the submit_case command owns the transition and the approval requests.
+    const requestId = newRequestId();
 
-    const { error } = await supabase.from('case_entries').insert(insertData);
-    if (error) {
-      setErrors([error.message]);
+    const outcome = await createCaseDraftAndSubmit(
+      {
+        insertDraft: insertCaseRow,
+        submitCommand: async ({ caseId, requestId: rid }) => {
+          const res = await fetch(caseSubmitPath(tenantSlug, caseId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ request_id: rid, expected_status: 'draft' }),
+          });
+          return {
+            status: res.status,
+            body: (await res.json().catch(() => null)) as { success?: boolean; case_id?: string; code?: string } | null,
+          };
+        },
+      },
+      {
+        templateId: selectedTemplateId,
+        caseDate,
+        fieldValues,
+        accreditationMappings: [],
+        isDeidentified,
+        patientColumns: isDeidentified
+          ? // This quick-add form collects no age field, so a de-identified case
+            // carries no patient columns at all -- and never a derived hash.
+            { ...buildDeidentifiedPatientColumns(null) }
+          : { patient_mrn: patientMrn || null, patient_dob: patientDob || null, patient_age_years: null },
+        tenantId: profile.tenant_id,
+        residentId: profile.id,
+        requestId,
+      },
+    );
+
+    if (outcome.outcome === 'error') {
+      setErrors([outcome.message]);
       setSaving(false);
       return;
     }
 
-    showToast(canSelfApprove ? 'Case saved' : 'Case submitted for approval', 'success');
+    if (outcome.outcome === 'draft_only') {
+      setErrors([
+        outcome.code === 'no_eligible_reviewer'
+          ? 'Saved as a draft: your institution has no active supervisor or director to review it. Ask an administrator to assign a reviewer.'
+          : 'Saved as a draft, but it was not submitted for approval.',
+      ]);
+    } else {
+      showToast('Case submitted for approval', 'success');
+    }
+
     if (close) {
       resetForm();
       onClose();

@@ -7,20 +7,33 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: elogbook-web:setup
+      target: setup
+      args:
+        APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT:?APP_RELEASE_COMMIT must be a full 40-character commit}"
     container_name: elogbook-setup
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       SETUP_MODE: "true"
+      SETUP_PHASE: "setup"
+      SETUP_BIND_ADDRESS: "127.0.0.1"
+      SETUP_REMOTE_TLS_REQUIRED: "true"
+      SETUP_STATE_DIR: "/app/data"
+      SETUP_SUPABASE_INTERNAL_URL: "http://kong:8000"
     volumes:
       - ./volumes/elogbook:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - supabase_default
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+networks:
+  supabase_default:
+    external: true

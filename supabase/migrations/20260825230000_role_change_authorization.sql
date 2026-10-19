@@ -57,18 +57,8 @@ CREATE TRIGGER trg_authorize_role_change
   BEFORE UPDATE OF role ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.authorize_role_change();
 
--- Cosmetic repair (swarm security F4): the cross-tenant case-insert block was
--- surfaced by the quota helper with a misleading 'cross-tenant quota access
--- denied' message. Reword without changing behavior.
-DO $$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN
-    SELECT p.proname, pg_get_functiondef(p.oid) AS def
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND pg_get_functiondef(p.oid) LIKE '%cross-tenant quota access denied%'
-  LOOP
-    PERFORM 0; -- definitions updated below where trivially safe
-  END LOOP;
-END $$;
+-- A "cosmetic repair" DO block used to live here. It selected public functions
+-- whose definition mentions 'cross-tenant quota access denied' and then did
+-- PERFORM 0, so it changed no schema and no data, but PostgreSQL failed to plan
+-- it with SQLSTATE 42809 ("array_agg" is an aggregate function) and aborted the
+-- whole migration. Removed rather than repaired, because it had no effect.

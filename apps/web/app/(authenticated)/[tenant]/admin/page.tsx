@@ -42,15 +42,16 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .from('profiles')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false }),
       supabase
-        .from('ai_config')
-        .select('id, tenant_id, provider, model, endpoint_url, is_active, api_key_enc')
+        .from('secret_ai_config')
+        .select('id, tenant_id, provider, model, endpoint_url, is_active, has_api_key')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
       supabase
-        .from('payment_gateway_config')
-        .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, secret_key_enc, webhook_secret_enc')
+        .from('secret_payment_gateway_config')
+        .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, has_secret_key, has_webhook_secret')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
       supabase
@@ -78,7 +79,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     model: string;
     endpoint_url: string | null;
     is_active: boolean;
-    api_key_enc?: string | null;
+    has_api_key: boolean;
   }
 
   interface PaymentConfigRaw {
@@ -88,8 +89,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
     publishable_key: string;
     endpoint_url: string | null;
     is_active: boolean;
-    secret_key_enc?: string | null;
-    webhook_secret_enc?: string | null;
+    has_secret_key: boolean;
+    has_webhook_secret: boolean;
   }
 
   const aiConfig = aiConfigRaw
@@ -100,7 +101,7 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         model: (aiConfigRaw as AiConfigRaw).model,
         endpoint_url: (aiConfigRaw as AiConfigRaw).endpoint_url,
         is_active: (aiConfigRaw as AiConfigRaw).is_active,
-        has_key: !!((aiConfigRaw as AiConfigRaw).api_key_enc),
+        has_key: (aiConfigRaw as AiConfigRaw).has_api_key,
       }
     : null;
 
@@ -112,8 +113,8 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         publishable_key: (paymentConfigRaw as PaymentConfigRaw).publishable_key,
         endpoint_url: (paymentConfigRaw as PaymentConfigRaw).endpoint_url,
         is_active: (paymentConfigRaw as PaymentConfigRaw).is_active,
-        has_secret_key: !!((paymentConfigRaw as PaymentConfigRaw).secret_key_enc),
-        has_webhook_secret: !!((paymentConfigRaw as PaymentConfigRaw).webhook_secret_enc),
+        has_secret_key: (paymentConfigRaw as PaymentConfigRaw).has_secret_key,
+        has_webhook_secret: (paymentConfigRaw as PaymentConfigRaw).has_webhook_secret,
       }
     : null;
 

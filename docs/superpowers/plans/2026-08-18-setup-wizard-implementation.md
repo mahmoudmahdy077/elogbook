@@ -89,23 +89,35 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: elogbook-web:setup
+      target: setup
+      args:
+        APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT:?full commit required}"
     container_name: elogbook-setup
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT}"
       SETUP_MODE: "true"
+      SETUP_PHASE: "setup"
+      SETUP_BIND_ADDRESS: "127.0.0.1"
+      SETUP_REMOTE_TLS_REQUIRED: "true"
     volumes:
       - ./volumes/elogbook:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - supabase_default
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+networks:
+  supabase_default:
+    external: true
 ```
 
 - [ ] **Step 2: Create production docker-compose.yml**
@@ -123,11 +135,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: elogbook-web:latest
+      target: production
+      args:
+        APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT:?full commit required}"
     container_name: elogbook-web
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       NODE_ENV: production
       SETUP_MODE: "false"
@@ -135,13 +147,8 @@ services:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
-      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - ./volumes/elogbook:/app/data
-    depends_on:
-      api-gw:
-        condition: service_healthy
     networks:
       - elogbook
       - supabase_default
@@ -1624,7 +1631,7 @@ export async function POST(request: Request) {
     // 1. Generate secrets
     const config = generateSupabaseSecrets();
     config.installPath = installPath || '/opt/supabase';
-    if (postgresPassword) config.postgresPassword = postgresPassword;
+    if (postgresPassword) config['postgresPassword'] = postgresPassword;
     if (postgresDb) config.postgresDb = postgresDb;
     if (siteUrl) config.siteUrl = siteUrl;
 
@@ -1877,46 +1884,31 @@ export async function POST(request: Request) {
 - [ ] **Step 7: Create complete route**
 
 ```typescript
-// apps/web/app/api/setup/complete/route.ts
 import { NextResponse } from 'next/server';
-import { writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { parseAppReleaseCommit } from '@elogbook/env';
 import { updateComponentVersion } from '@/lib/setup/version-tracker';
-import { execSync } from 'child_process';
+import {
+  setupRuntimeEnabled, verifySetupReceipts, writeSetupMarkerAtomically,
+} from '@/lib/setup/guard';
 
 export const runtime = 'nodejs';
 
-function isSetupAllowed(): boolean {
-  if (process.env.SETUP_MODE !== 'true') return false;
-  return !existsSync('/app/data/.setup-complete');
-}
-
-export async function POST(request: Request) {
-  if (!isSetupAllowed()) {
-    return NextResponse.json({ error: 'Setup not available' }, { status: 403 });
+export async function POST() {
+  if (!setupRuntimeEnabled()) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
-  try {
-    // 1. Write setup-complete marker
-    writeFileSync('/app/data/.setup-complete', new Date().toISOString(), 'utf-8');
-
-    // 2. Update versions
-    const commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
-    updateComponentVersion('elogbook', '1.0.0', commitHash, ['elogbook-web:latest', 'caddy:2']);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Setup complete. The application will restart in normal mode.',
-      urls: {
-        app: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-        supabase_studio: 'http://localhost:3000 (Supabase Studio)',
-        supabase_api: 'http://localhost:8000',
-      },
-    });
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: errMsg }, { status: 500 });
+  const receipts = verifySetupReceipts();
+  if (!receipts.ok || !existsSync('/app/data/supabase-config.json')) {
+    return NextResponse.json({ error: 'Setup incomplete' }, { status: 409 });
   }
+
+  const commit = parseAppReleaseCommit(process.env.APP_RELEASE_COMMIT);
+  updateComponentVersion('elogbook', '1.0.0', commit, ['elogbook-web:latest', 'caddy:2']);
+  writeSetupMarkerAtomically();
+
+  return NextResponse.json({ success: true });
 }
 ```
 

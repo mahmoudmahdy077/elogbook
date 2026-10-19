@@ -1,0 +1,18 @@
+[
+  {
+    "status": "in_progress",
+    "step": "Inventory auth, server, database, and deployment surfaces"
+  },
+  {
+    "status": "pending",
+    "step": "Apply server-side auth, RLS, validation, and headers"
+  },
+  {
+    "status": "pending",
+    "step": "Remove secret leakage and harden dependencies/configuration"
+  },
+  {
+    "status": "pending",
+    "step": "Run security checks and verify changed paths"
+  }
+]

@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+
+const tenantStatusSchema = z.object({
+  status: z.enum(['active', 'suspended', 'archived']),
+  reason: z.string().max(1000).optional(),
+  expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
+}).strict();
 
 export const runtime = 'nodejs';
-
-const LIFECYCLE_STATUSES = ['active', 'suspended', 'archived'] as const;
 
 /**
  * Platform tenant lifecycle (T18). Suspend/reactivate/archive with audit
@@ -18,6 +25,12 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guarded = await guardRequest(request, tenantStatusSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { id } = await params;
 
   const platform = await requirePlatformAdmin(await createServerSupabase());
@@ -25,20 +38,7 @@ export async function POST(
     return NextResponse.json({ error: platform.error }, { status: platform.status });
   }
 
-  let body: { status?: string; reason?: string; expectedUpdatedAt?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  const { status, reason, expectedUpdatedAt } = body;
-
-  if (!status || !(LIFECYCLE_STATUSES as readonly string[]).includes(status)) {
-    return NextResponse.json(
-      { error: `status must be one of: ${LIFECYCLE_STATUSES.join(', ')}` },
-      { status: 400 },
-    );
-  }
+  const { status, reason, expectedUpdatedAt } = guarded.data;
 
   const adminClient = createServiceRoleClient();
   const { data: tenant } = await adminClient

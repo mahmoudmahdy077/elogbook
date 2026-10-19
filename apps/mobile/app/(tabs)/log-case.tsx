@@ -20,8 +20,15 @@ import { syncService } from '../../lib/sync';
 import { saveDraft, loadDraft, clearDraft, clearLegacyPlaintextDraft } from '../../lib/draft-store';
 
 import { useHaptics } from '../../lib/haptics';
-import { buildCasePayload } from '../../lib/case-payload';
-import { submitCase } from '../../lib/case-submit';
+import type { CaseContentInput } from '../../lib/case-payload';
+import {
+  createCaseDraftAndSubmit,
+  createCaseOperationSubmit,
+  editCaseAndResubmit,
+  newCaseCommandRequestId,
+  type CaseCommandDeps,
+  type CaseCommandOutcome,
+} from '../../lib/clinical-commands';
 import { bestKnownCapability } from '../../lib/session';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
@@ -63,6 +70,14 @@ export default function LogCaseScreen() {
   const [confirmationSuccess, setConfirmationSuccess] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const confirmationTypeRef = useRef<'offline' | 'submitted' | null>(null);
+  // The status the server reported for the row being edited. The command is
+  // only ever asked to move `draft` into the queue, so this is what the screen
+  // reports, not what it writes.
+  const [editStatus, setEditStatus] = useState<'draft' | 'rejected' | null>(null);
+  // One request id per submit attempt. Held in a ref so a retried tap replays
+  // the same command instead of opening a second approval round; cleared only
+  // once the attempt has actually landed.
+  const requestIdRef = useRef<string | null>(null);
 
   const syncColorMap: Record<string, string> = {
     // Intentional: sync status indicator colors — these are not UI theme colors
@@ -176,16 +191,25 @@ export default function LogCaseScreen() {
 
   // When the route is opened with `editCaseId`, hydrate the form from the
   // local DB row (or fall back to Supabase if not cached). The submit path
-  // then performs an UPDATE rather than an INSERT.
+  // then edits the row through the command boundary rather than choosing a
+  // status of its own.
   useEffect(() => {
     if (!editCaseId) return;
     (async () => {
       const { data } = await supabase
         .from('case_entries')
-        .select('id,template_id,is_deidentified,patient_mrn,patient_dob,patient_age_years,case_date,field_values')
+        .select('id,template_id,is_deidentified,patient_mrn,patient_dob,patient_age_years,case_date,field_values,status')
         .eq('id', editCaseId)
         .single();
       if (data) {
+        // The resident content-edit path is `draft` or `rejected` only. Anything
+        // else is with its reviewers or already signed, and the write would be
+        // refused, so say so instead of collecting a doomed form.
+        if (data.status !== 'draft' && data.status !== 'rejected') {
+          Alert.alert('Case not editable', 'Only draft or rejected cases can be edited and resubmitted.');
+          return;
+        }
+        setEditStatus(data.status);
         setIsDeidentified(Boolean(data.is_deidentified));
         setPatientMrn(data.patient_mrn ?? '');
         setPatientDob(data.patient_dob ?? '');
@@ -363,6 +387,42 @@ export default function LogCaseScreen() {
     if (validationError) setValidationError(null);
   };
 
+  /** The command boundary, bound to this device and this attempt's snapshot. */
+  const buildCommandDeps = useCallback(async (): Promise<CaseCommandDeps> => {
+    const capability = await bestKnownCapability(supabase as never);
+    return {
+      capability,
+      submit: createCaseOperationSubmit(supabase as never, capability),
+      submitCommand: async ({ caseId, requestId, expectedStatus }) => {
+        const { data, error } = await supabase.rpc('submit_case_command', {
+          p_case_id: caseId,
+          p_request_id: requestId,
+          p_expected_status: expectedStatus,
+        });
+        return {
+          data: data as { success?: boolean; case_id?: string; code?: string; error?: string } | null,
+          error: error ? { message: error.message } : null,
+        };
+      },
+    };
+  }, []);
+
+  /** What the resident is told, keyed by the outcome kind. Never a raw server string. */
+  const outcomeMessage = (outcome: CaseCommandOutcome): string => {
+    if (outcome.kind === 'draft-saved') {
+      return outcome.code === 'no_eligible_reviewer'
+        ? 'Saved as a draft: your program has no active supervisor or director to review it. Ask an administrator to assign a reviewer.'
+        : 'Saved as a draft, but it was not sent for review. You can retry from My Cases.';
+    }
+    if (outcome.kind === 'queued-locally') {
+      return 'Your changes are saved on this device. Reconnect and tap Resubmit to send this case for review.';
+    }
+    if (outcome.kind === 'rejected') {
+      return `Could not save this case (${outcome.reason}). Check your connection and try again.`;
+    }
+    return '';
+  };
+
   const handleSubmit = async () => {
     if (!selectedTemplate || isSubmitting.current) return;
 
@@ -406,16 +466,6 @@ export default function LogCaseScreen() {
 
     if (!profile) { setSubmitting(false); isSubmitting.current = false; return; }
 
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('tenant_type')
-      .eq('id', profile.tenant_id)
-      .single();
-
-    // Edits always re-submit for approval (status='pending' if individual, else
-    // 'draft' for the supervisor queue). New cases follow the same rule.
-    const status = tenant?.tenant_type === 'individual' ? 'pending' : 'draft';
-
     let patientHash: string | null = null;
     if (!isDeidentified && patientMrn) {
       const { data: hashData, error: hashError } = await supabase.rpc('hash_patient_mrn', {
@@ -431,9 +481,7 @@ export default function LogCaseScreen() {
       patientHash = hashData as string;
     }
 
-    const caseData = buildCasePayload({
-      tenantId: profile.tenant_id,
-      residentId: profile.id,
+    const content: CaseContentInput = {
       templateId: selectedTemplate.id,
       patientMrn,
       patientDob,
@@ -441,85 +489,57 @@ export default function LogCaseScreen() {
       caseDate,
       fieldValues,
       isDeidentified,
-      status,
       patientHash,
-    });
+    };
 
+    // One request id for the whole attempt. A retry replays the command rather
+    // than opening a second approval round; a new attempt mints a new one.
+    requestIdRef.current ??= newCaseCommandRequestId();
+    const requestId = requestIdRef.current;
+
+    const deps = await buildCommandDeps();
+
+    // The client never names a clinical status. An edit writes the content and
+    // `draft` — the only state the resident content-edit policy admits — and
+    // submit_case_command owns the transition into the queue, the approval
+    // requests, the audit row and the outbox row. A new case is created the
+    // same way: draft first, command second.
+    let outcome: CaseCommandOutcome;
     if (editCaseId) {
-      // M3: edits go through the same durable submit path (never silently online-only).
-      const capability =
-        await bestKnownCapability(supabase as never);
-      const outcome = await submitCase(
-        {
-          capability,
-          insertRow: async () => ({ serverId: null }),
-          updateRow: async (targetId, payload) => {
-            const { error } = await supabase.from('case_entries').update(payload).eq('id', targetId);
-            if (error) throw new Error(error.message);
-          },
-        },
-        { action: 'update', targetId: editCaseId, payload: { ...caseData, status: 'pending' } },
-      );
-      if (outcome.kind === 'submitted') {
-        haptics.submitSuccess();
-        setConfirmationSuccess(true);
-        confirmationTypeRef.current = 'submitted';
-        setShowConfirmation(true);
-      } else if (outcome.kind === 'queued-locally') {
-        haptics.offlineSave();
-        setConfirmationSuccess(false);
-        confirmationTypeRef.current = 'offline';
-        setShowConfirmation(true);
-      } else {
-        setSubmitting(false);
-        isSubmitting.current = false;
-        setValidationError(`Could not save this case (${outcome.reason}). Check your connection and try again.`);
-      }
-      setTimeout(() => {
-        setShowConfirmation(false);
-        setSubmitting(false);
-        isSubmitting.current = false;
-        confirmationTypeRef.current = null;
-      }, 2000);
-      return;
+      outcome = editStatus
+        ? await editCaseAndResubmit(deps, { caseId: editCaseId, status: editStatus, content, requestId })
+        : { kind: 'rejected', reason: 'this case is no longer editable' };
+    } else {
+      outcome = await createCaseDraftAndSubmit(deps, { content, requestId });
     }
 
-    // M3: single durable submit path — submitted vs saved-on-device vs rejected.
-    const capability =
-      await bestKnownCapability(supabase as never);
-    const outcome = await submitCase(
-      {
-        capability,
-        insertRow: async (payload) => {
-          const { data, error } = await supabase.from('case_entries').insert(payload).select('id').single();
-          if (error) throw new Error(error.message);
-          return { serverId: (data as { id?: string } | null)?.id ?? null };
-        },
-        updateRow: async () => ({}),
-      },
-      { action: 'insert', payload: caseData },
-    );
     if (outcome.kind === 'submitted') {
-      await clearDraft();
+      requestIdRef.current = null;
+      if (!editCaseId) await clearDraft();
       haptics.submitSuccess();
       setConfirmationSuccess(true);
       confirmationTypeRef.current = 'submitted';
       setShowConfirmation(true);
     } else if (outcome.kind === 'queued-locally') {
       haptics.offlineSave();
-      // Queued means saved on this device, not submitted — say exactly that.
+      // Queued means saved on this device, not submitted — say exactly that,
+      // and keep the request id so the retry is the same attempt.
       setConfirmationSuccess(false);
       confirmationTypeRef.current = 'offline';
       setShowConfirmation(true);
     } else {
-      setValidationError(`Could not save this case (${outcome.reason}). Please try again.`);
+      if (outcome.kind === 'draft-saved') requestIdRef.current = null;
+      setSubmitting(false);
+      isSubmitting.current = false;
+      setValidationError(outcomeMessage(outcome));
+      return;
     }
 
     setTimeout(() => {
       setShowConfirmation(false);
       setSubmitting(false);
       isSubmitting.current = false;
-      if (confirmationTypeRef.current === 'submitted') {
+      if (confirmationTypeRef.current === 'submitted' && !editCaseId) {
         setPatientMrn('');
         setPatientDob('');
         setPatientAge('');

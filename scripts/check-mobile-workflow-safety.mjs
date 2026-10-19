@@ -1,60 +1,97 @@
-#!/usr/bin/env node
-/**
- * R1 — mobile workflow fork/PR safety gate (Approach C risk-first hardening).
- *
- * Credential-bearing production EAS builds must run only on protected
- * main pushes or manual dispatch (production environment). PRs use static
- * gates or secret-free preview builds:
- * - build job: environment: production + if: push || workflow_dispatch
- * - typecheck/lint/ledger-check + fork-validation jobs: no ${{ secrets.* }}
- * - no EAS build invocation outside the guarded build job
- *
- * Usage: node scripts/check-mobile-workflow-safety.mjs
- */
-import { readFileSync } from 'fs';
+// Credential-bearing production EAS builds must run only on protected
+// branches, in a job bound to the production environment, and never from a
+// static or fork-facing job.
+//
+// deploy-mobile.yml delegates the build to the protected release gate, so the
+// job that owns `eas build` is resolved from whichever workflow actually runs
+// it. The required properties are unchanged: the owning workflow is
+// environment-bound, carries the release secrets, is guarded, and issues
+// exactly the two expected platform builds.
+import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const path = '.github/workflows/deploy-mobile.yml';
-const text = readFileSync(resolve(ROOT, path), 'utf-8');
 const failures = [];
 
-if (!/environment:\s*production/.test(text)) {
-  failures.push(`${path}: build job missing environment: production`);
+const ENTRY_WORKFLOW = '.github/workflows/deploy-mobile.yml';
+const CANDIDATE_WORKFLOWS = [
+  ENTRY_WORKFLOW,
+  '.github/workflows/release.yml',
+];
+
+// Jobs that run without credentials must stay without credentials.
+const CREDENTIAL_FREE_JOBS = ['typecheck', 'lint', 'ledger-check', 'fork-validation'];
+
+function readWorkflow(relativePath) {
+  return readFileSync(resolve(ROOT, relativePath), 'utf-8');
 }
 
-if (!/if:\s*github\.event_name\s*==\s*'push'\s*\|\|\s*github\.event_name\s*==\s*'workflow_dispatch'/.test(text)) {
-  failures.push(`${path}: build job missing if: push || workflow_dispatch guard`);
+function topLevelJobs(text) {
+  const jobs = [];
+  const lines = text.split('\n');
+  let current = null;
+  for (const line of lines) {
+    const match = line.match(/^  ([a-z-]+):\s*$/);
+    if (match) {
+      current = { name: match[1], lines: [] };
+      jobs.push(current);
+      continue;
+    }
+    if (current) current.lines.push(line);
+  }
+  return jobs;
 }
 
-// Split into job blocks roughly by top-level job keys for secret scoping.
-const lines = text.split('\n');
-let currentJob = null;
-const jobSecrets = new Map();
-for (const line of lines) {
-  const jobMatch = line.match(/^  ([a-z-]+):\s*$/);
-  if (jobMatch) currentJob = jobMatch[1];
-  if (currentJob && /\$\{\{\s*secrets\./.test(line)) {
-    if (!jobSecrets.has(currentJob)) jobSecrets.set(currentJob, []);
-    jobSecrets.get(currentJob).push(line.trim());
+const present = CANDIDATE_WORKFLOWS.filter((p) => existsSync(resolve(ROOT, p)));
+if (!present.includes(ENTRY_WORKFLOW)) {
+  failures.push(`${ENTRY_WORKFLOW}: missing`);
+}
+
+const owners = present
+  .map((p) => ({ path: p, text: readWorkflow(p) }))
+  .filter((w) => /eas build\s+--platform/.test(w.text));
+
+if (owners.length === 0) {
+  failures.push(`no workflow among ${present.join(', ')} runs eas build --platform`);
+}
+if (owners.length > 1) {
+  failures.push(`${owners.map((o) => o.path).join(' and ')}: both run eas build; only one workflow may own the mobile build`);
+}
+
+for (const { path: workflowPath, text } of owners) {
+  const jobs = topLevelJobs(text);
+  const buildJobs = jobs.filter((job) => job.lines.some((l) => /eas build\s+--platform/.test(l)));
+
+  for (const job of buildJobs) {
+    const body = job.lines.join('\n');
+    if (!/environment:\s*production/.test(body)) {
+      failures.push(`${workflowPath}: job ${job.name} runs eas build without environment: production`);
+    }
+    if (!/\bif:[^\n]*(?:push|workflow_dispatch)/.test(body)) {
+      failures.push(`${workflowPath}: job ${job.name} runs eas build with no push or workflow_dispatch event guard`);
+    }
+    if (!/\$\{\{\s*secrets\./.test(body)) {
+      failures.push(`${workflowPath}: job ${job.name} runs eas build but carries no release secrets`);
+    }
+  }
+
+  const easCount = (text.match(/eas build --platform/g) || []).length;
+  if (easCount !== 2) {
+    failures.push(`${workflowPath}: expected exactly 2 guarded eas build invocations (android+ios), got ${easCount}`);
   }
 }
 
-for (const job of ['typecheck', 'lint', 'ledger-check', 'fork-validation']) {
-  if (jobSecrets.has(job)) {
-    failures.push(`${path}: job ${job} must be secret-free but references secrets: ${jobSecrets.get(job).join('; ')}`);
+// The credential-free jobs must never gain credentials, in any candidate file.
+for (const workflowPath of present) {
+  const jobs = topLevelJobs(readWorkflow(workflowPath));
+  for (const job of jobs) {
+    if (!CREDENTIAL_FREE_JOBS.includes(job.name)) continue;
+    const secretLines = job.lines.filter((l) => /\$\{\{\s*secrets\./.test(l));
+    if (secretLines.length > 0) {
+      failures.push(`${workflowPath}: job ${job.name} must be secret-free but references secrets: ${secretLines.join('; ')}`);
+    }
   }
-}
-
-if (!jobSecrets.has('build') || jobSecrets.get('build').length === 0) {
-  failures.push(`${path}: build job expected to carry release secrets but found none`);
-}
-
-// EAS build invocations must only appear in guarded build section.
-const easCount = (text.match(/eas build --platform/g) || []).length;
-if (easCount !== 2) {
-  failures.push(`${path}: expected exactly 2 guarded eas build invocations (android+ios), got ${easCount}`);
 }
 
 if (failures.length > 0) {

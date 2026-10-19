@@ -3,16 +3,21 @@
 // See docs/upgrade-plan §DB-001. Returns 503 so callers fail loud.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { corsHeaders } from '../_shared/auth.ts';
 
-serve(async () => {
+serve(async (req) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...corsHeaders(req.headers.get('Origin')),
+  };
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers });
+  }
   return new Response(
     JSON.stringify({ error: 'SSO is disabled. Enterprise SSO is not yet available.' }),
     {
       status: 503,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers,
     },
   );
 });

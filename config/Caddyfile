@@ -23,8 +23,9 @@
   admin localhost:2019
 }
 
-# HTTP — redirect to HTTPS when a public host is configured, otherwise serve
-# directly (useful for localhost pilot without TLS).
+# HTTP — redirect public hosts to HTTPS, serve loopback directly (useful for
+# localhost pilot without TLS). Health probes always serve HTTP so the
+# orchestrator never follows a redirect loop.
 :80 {
   @health path /api/health /api/ready
   handle @health {
@@ -37,13 +38,17 @@
       # Do not trust client-supplied X-Forwarded-For — Caddy will append.
     }
   }
-  handle {
+  @loopback host localhost 127.0.0.1 ::1 app
+  handle @loopback {
     reverse_proxy app:3000 {
       trusted_proxies private_ranges
       header_up Host {host}
       header_up X-Real-IP {remote}
       header_up X-Forwarded-Proto {scheme}
     }
+  }
+  handle {
+    redir https://{host}{uri} permanent
   }
 }
 

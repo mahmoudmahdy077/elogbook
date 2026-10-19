@@ -3,6 +3,14 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const scimTokenSchema = z.object({
+  description: z.string().trim().max(200).optional(),
+}).strict();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,7 +82,7 @@ export async function GET(
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('scim list error:', error.message);
+    logger.error('Failed to list SCIM tokens', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
@@ -94,19 +102,17 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+  const guarded = await guardRequest(request, scimTokenSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 4 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
   const auth = await authorize(tenantSlug, false);
   if (auth.error) return auth.error;
 
-  let body: { description?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  const { description } = guarded.data;
 
   const plaintext = generateToken();
   const tokenHash = hashToken(plaintext);
@@ -117,7 +123,7 @@ export async function POST(
     .insert({
       tenant_id: auth.profile.tenant_id,
       token_hash: tokenHash,
-      description: body.description?.trim() || null,
+      description: description?.trim() || null,
       created_by: auth.profile.id,
     })
     .select(TOKEN_LIST_FIELDS)
@@ -127,7 +133,7 @@ export async function POST(
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Token collision — please try again' }, { status: 409 });
     }
-    console.error('scim create error:', error.message);
+    logger.error('Failed to create SCIM token', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
@@ -143,6 +149,12 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const guarded = await guardRequest(request, undefined, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    requireBody: false,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug } = await params;
   const auth = await authorize(tenantSlug, false);
   if (auth.error) return auth.error;
@@ -174,7 +186,7 @@ export async function DELETE(
     .eq('tenant_id', auth.profile.tenant_id);
 
   if (updateError) {
-    console.error('scim revoke error:', updateError.message);
+    logger.error('Failed to revoke SCIM token', updateError);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 

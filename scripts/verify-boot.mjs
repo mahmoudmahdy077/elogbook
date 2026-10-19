@@ -41,7 +41,23 @@ check('instrumentation calls resolveMode', instr.includes('resolveMode'));
 
 // 5. Setup routes return 404 in prod (runtime probe)
 const setupCheck=readFileSync(join(ROOT,'apps/web/app/api/setup/deploy-supabase/route.ts'),'utf8');
-check('setup routes guard prod 404', setupCheck.includes("NODE_ENV === 'production'") && setupCheck.includes('404'));
+check('setup routes guard prod 404', setupCheck.includes('setupRuntimeEnabled') && setupCheck.includes('404'));
+
+const setupCompose=readFileSync(join(ROOT,'setup.docker-compose.yml'),'utf8');
+const setupDockerfile=readFileSync(join(ROOT,'apps/web/Dockerfile'),'utf8');
+const setupEnv=readFileSync(join(ROOT,'packages/env/src/index.ts'),'utf8');
+const setupGuard=readFileSync(join(ROOT,'apps/web/lib/setup/guard.ts'),'utf8');
+const setupComplete=readFileSync(join(ROOT,'apps/web/app/api/setup/complete/route.ts'),'utf8');
+const setupStage=setupDockerfile.slice(setupDockerfile.indexOf('FROM web-runner AS setup'), setupDockerfile.indexOf('FROM web-runner AS production'));
+const productionStage=setupDockerfile.slice(setupDockerfile.indexOf('FROM web-runner AS production'));
+check('setup profile is non-production', /NODE_ENV:\s*development/.test(setupCompose) && !/NODE_ENV:\s*production/.test(setupCompose));
+check('setup profile joins Supabase network', /networks:\s*\n\s+- supabase_default/.test(setupCompose) && /supabase_default:\s*\n\s+external:\s*true/.test(setupCompose));
+check('setup image has required tools', /apk add[^\n]*(git|docker-cli)/.test(setupStage) && setupStage.includes('postgresql-client'));
+check('build release metadata is injected', setupDockerfile.includes('ARG APP_RELEASE_COMMIT') && setupDockerfile.includes('ENV APP_RELEASE_COMMIT=${APP_RELEASE_COMMIT}'));
+check('production image excludes setup tools', !/apk add[^\n]*(git|docker-cli|postgresql-client)/.test(productionStage) && !compose.includes('/var/run/docker.sock'));
+check('setup env has phase and release metadata', setupEnv.includes('APP_RELEASE_COMMIT') && setupEnv.includes('SETUP_PHASE') && setupGuard.includes("NODE_ENV !== 'production'"));
+check('setup completion verifies receipts and release metadata', setupGuard.includes('verifySetupReceipts') && setupComplete.includes('APP_RELEASE_COMMIT') && !/child_process|execSync|git rev-parse/.test(setupComplete));
+check('completion marker follows receipt verification', setupComplete.lastIndexOf('verifySetupReceipts') < setupComplete.lastIndexOf('writeSetupMarkerAtomically'));
 
 // 6. Optional live HTTP probe (T02): --probe-base-url=http://localhost:3000
 // performs real requests against a running server. Without the flag the

@@ -3,7 +3,12 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { isSafeOutboundUrl } from '@elogbook/shared/security/outbound-url';
+import { configuredOutboundHosts } from '@/lib/outbound-request';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const ALLOWED_EVENTS = [
   'case.created',
@@ -13,6 +18,30 @@ const ALLOWED_EVENTS = [
   'case.rejected',
   'case.deleted',
 ] as const;
+
+const createWebhookSchema = z.object({
+  url: z.string().url().max(2048),
+  events: z.array(z.enum(ALLOWED_EVENTS)).min(1).max(ALLOWED_EVENTS.length),
+  secret: z.string().min(8).max(512),
+  description: z.string().max(500).optional(),
+  is_active: z.boolean().optional(),
+}).strict();
+
+const updateWebhookSchema = z.object({
+  id: z.string().min(1).max(128),
+  url: z.string().url().max(2048).optional(),
+  events: z.array(z.enum(ALLOWED_EVENTS)).min(1).max(ALLOWED_EVENTS.length).optional(),
+  secret: z.string().min(8).max(512).optional(),
+  description: z.string().max(500).optional(),
+  is_active: z.boolean().optional(),
+}).strict();
+
+function isApprovedWebhookUrl(url: string): boolean {
+  return isSafeOutboundUrl(url, {
+    allowedHosts: configuredOutboundHosts(),
+    allowHttp: process.env.NODE_ENV !== 'production',
+  });
+}
 
 // ---------------------------------------------------------------------------
 // GET — list webhooks for the tenant
@@ -50,7 +79,7 @@ export async function GET(
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('webhooks list error:', error.message);
+    logger.error('Failed to list webhooks', error, { tenantId: profile.tenant_id });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
@@ -94,11 +123,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, createWebhookSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -113,53 +142,20 @@ export async function POST(
   const profile = _auth.profile;
   const user = _auth.user;
 
-  let body: { url?: string; events?: string[]; secret?: string; description?: string; is_active?: boolean };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  const { url, events, secret, description, is_active } = guarded.data;
+
+  if (!isApprovedWebhookUrl(url)) {
+    return NextResponse.json({ error: 'Webhook URL is not approved' }, { status: 400 });
   }
 
-  const { url, events, secret, description, is_active } = body;
-
-  if (!url || typeof url !== 'string') {
-    return NextResponse.json({ error: 'URL is required' }, { status: 400 });
-  }
-
-  try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return NextResponse.json({ error: 'URL must use http or https protocol' }, { status: 400 });
-    }
-    if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
-      return NextResponse.json({ error: 'HTTPS is required in production' }, { status: 400 });
-    }
-  } catch {
-    return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
-  }
-
-  if (!Array.isArray(events) || events.length === 0) {
-    return NextResponse.json({ error: 'At least one event type is required' }, { status: 400 });
-  }
-
-  const invalidEvents = events.filter((e) => !ALLOWED_EVENTS.includes(e as typeof ALLOWED_EVENTS[number]));
-  if (invalidEvents.length > 0) {
-    return NextResponse.json({
-      error: `Invalid event types: ${invalidEvents.join(', ')}. Allowed: ${ALLOWED_EVENTS.join(', ')}`,
-    }, { status: 400 });
-  }
-
-  if (!secret || typeof secret !== 'string' || secret.length < 8) {
-    return NextResponse.json({ error: 'Secret key is required (min 8 characters)' }, { status: 400 });
-  }
-
-  const { count, error: countError } = await supabase
+  const adminClient = createServiceRoleClient();
+  const { count, error: countError } = await adminClient
     .from('tenant_webhooks')
     .select('id', { count: 'exact', head: true })
     .eq('tenant_id', profile.tenant_id);
 
   if (countError) {
-    console.error('webhooks count error:', countError.message);
+    logger.error('Failed to count webhooks', countError, { tenantId: profile.tenant_id });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
@@ -167,28 +163,31 @@ export async function POST(
     return NextResponse.json({ error: 'Maximum of 10 webhooks per tenant' }, { status: 400 });
   }
 
-  const adminClient = createServiceRoleClient();
-  const { data: newWebhook, error: insertError } = await adminClient
-    .from('tenant_webhooks')
-    .insert({
-      tenant_id: profile.tenant_id,
-      url,
-      events,
-      secret,
-      description: description ?? null,
-      is_active: is_active ?? true,
-    })
-    .select('id, url, events, is_active, description, created_at')
-    .single();
+  const { data: storedWebhook, error: insertError } = await supabase.rpc('store_tenant_webhook', {
+    p_url: url,
+    p_events: events,
+    p_secret: secret,
+    p_description: description ?? null,
+    p_is_active: is_active ?? true,
+    p_webhook_id: null,
+  });
 
-  if (insertError) {
-    console.error('webhooks create error:', insertError.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (insertError || !storedWebhook?.success) {
+    logger.error('Failed to create webhook', insertError, { tenantId: profile.tenant_id, url });
+    return NextResponse.json({ error: storedWebhook?.error ?? 'Internal server error' }, { status: insertError ? 500 : 400 });
   }
 
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_create', resource_type: 'tenant_webhooks', resource_id: newWebhook!.id, changes: {} });
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_create', resource_type: 'tenant_webhooks', resource_id: storedWebhook.id, changes: {} });
 
-  return NextResponse.json({ webhook: newWebhook }, { status: 201 });
+  return NextResponse.json({
+    webhook: {
+      id: storedWebhook.id,
+      url,
+      events,
+      is_active: is_active ?? true,
+      description: description ?? null,
+    },
+  }, { status: 201 });
 }
 
 // ---------------------------------------------------------------------------
@@ -198,11 +197,11 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, updateWebhookSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -214,81 +213,47 @@ export async function PUT(
   const profile = _auth.profile;
   const user = _auth.user;
 
-  let body: { id?: string; url?: string; events?: string[]; secret?: string; description?: string; is_active?: boolean };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { id, url, events, secret, description, is_active } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: 'Webhook ID is required' }, { status: 400 });
-  }
+  const { id, url, events, secret, description, is_active } = guarded.data;
 
   const adminClient = createServiceRoleClient();
-  const { data: existing } = await adminClient
+  const { data: existing, error: existingError } = await adminClient
     .from('tenant_webhooks')
-    .select('id')
+    .select('id, url, events, description, is_active')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .single();
 
-  if (!existing) {
+  if (existingError || !existing) {
     return NextResponse.json({ error: 'Webhook not found' }, { status: 404 });
   }
-  if (url) {
-    try {
-      const parsed = new URL(url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        return NextResponse.json({ error: 'URL must use http or https protocol' }, { status: 400 });
-      }
-      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
-        return NextResponse.json({ error: 'HTTPS is required in production' }, { status: 400 });
-      }
-    } catch {
-      return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
-    }
+  if (url !== undefined && !isApprovedWebhookUrl(url)) {
+    return NextResponse.json({ error: 'Webhook URL is not approved' }, { status: 400 });
   }
-
-  if (events) {
-    if (!Array.isArray(events) || events.length === 0) {
-      return NextResponse.json({ error: 'At least one event type is required' }, { status: 400 });
-    }
-    const invalidEvents = events.filter((e) => !ALLOWED_EVENTS.includes(e as typeof ALLOWED_EVENTS[number]));
-    if (invalidEvents.length > 0) {
-      return NextResponse.json({
-        error: `Invalid event types: ${invalidEvents.join(', ')}`,
-      }, { status: 400 });
-    }
+  if (secret !== undefined && secret.length < 8) {
+    return NextResponse.json({ error: 'Secret key must be at least 8 characters' }, { status: 400 });
   }
-
-  const updatePayload: Record<string, unknown> = {};
-  if (url !== undefined) updatePayload.url = url;
-  if (events !== undefined) updatePayload.events = events;
-  if (secret !== undefined) {
-    if (secret.length < 8) {
-      return NextResponse.json({ error: 'Secret key must be at least 8 characters' }, { status: 400 });
-    }
-    updatePayload.secret = secret;
-  }
-  if (description !== undefined) updatePayload.description = description;
-  if (is_active !== undefined) updatePayload.is_active = is_active;
-
-  if (Object.keys(updatePayload).length === 0) {
+  if (
+    url === undefined
+    && events === undefined
+    && secret === undefined
+    && description === undefined
+    && is_active === undefined
+  ) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  const { error: updateError } = await adminClient
-    .from('tenant_webhooks')
-    .update(updatePayload)
-    .eq('id', id)
-    .eq('tenant_id', profile.tenant_id);
+  const { data: storedWebhook, error: updateError } = await supabase.rpc('store_tenant_webhook', {
+    p_url: url ?? existing.url,
+    p_events: events ?? existing.events,
+    p_secret: secret ?? null,
+    p_description: description === undefined ? existing.description : description,
+    p_is_active: is_active ?? existing.is_active,
+    p_webhook_id: id,
+  });
 
-  if (updateError) {
-    console.error('webhooks update error:', updateError.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (updateError || !storedWebhook?.success) {
+    logger.error('Failed to update webhook', updateError, { tenantId: profile.tenant_id, webhookId: id });
+    return NextResponse.json({ error: storedWebhook?.error ?? 'Internal server error' }, { status: updateError ? 500 : 400 });
   }
 
   await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_update', resource_type: 'tenant_webhooks', resource_id: id!, changes: {} });
@@ -303,8 +268,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, undefined, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    requireBody: false,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -343,7 +311,7 @@ export async function DELETE(
     .eq('tenant_id', profile.tenant_id);
 
   if (deleteError) {
-    console.error('webhooks delete error:', deleteError.message);
+    logger.error('Failed to delete webhook', deleteError, { tenantId: profile.tenant_id, webhookId: id });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 

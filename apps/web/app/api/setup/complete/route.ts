@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
-import { writeFileSync, existsSync, readFileSync } from 'fs';
-import { updateComponentVersion } from '@/lib/setup/version-tracker';
-import { execSync } from 'child_process';
+import { existsSync, unlinkSync } from 'fs';
+import { getVersions, saveVersions, updateComponentVersion } from '@/lib/setup/version-tracker';
+import { parseAppReleaseCommit } from '@elogbook/env';
 import {
   checkSetupRequest, checkRateLimit, acquireDurableLock, releaseDurableLock,
-  consumeSetupToken, clientIpOfRequest, auditSetup,
+  consumeSetupToken, clientIpOfRequest, auditSetup, setupRuntimeEnabled,
+  writeSetupMarkerAtomically, verifySetupReceipts, removeSetupMarker,
 } from '@/lib/setup/guard';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
 
 export async function POST(request: Request) {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
-  if (process.env.NODE_ENV === 'production') {
+  if (!setupRuntimeEnabled()) {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'x-setup-token': request.headers.get('x-setup-token') ?? undefined,
+        'x-forwarded-proto': request.headers.get('x-forwarded-proto') ?? undefined,
         origin: request.headers.get('origin') ?? undefined,
         referer: request.headers.get('referer') ?? undefined,
       },
@@ -49,27 +52,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Another setup operation is running' }, { status: 409 });
   }
 
+  const previousVersions = getVersions();
+  let versionWritten = false;
+
   try {
     // N9 transactional completion: prove every step before writing the
     // marker. A marker without these receipts is an unproven install.
     if (!existsSync('/app/data/supabase-config.json')) {
       return NextResponse.json({ error: 'Setup incomplete: Supabase is not deployed yet' }, { status: 409 });
     }
-    try {
-      const receipt = JSON.parse(readFileSync('/app/data/migrations-applied.json', 'utf-8')) as {
-        applied?: number; errors?: unknown[];
-      };
-      if (!receipt || (receipt.errors ?? []).length > 0 || (receipt.applied ?? 0) < 1) {
-        return NextResponse.json({ error: 'Setup incomplete: migrations have errors or never ran' }, { status: 409 });
-      }
-    } catch {
-      return NextResponse.json({ error: 'Setup incomplete: no migration receipt found' }, { status: 409 });
+    const receipts = verifySetupReceipts();
+    if (!receipts.ok) {
+      return NextResponse.json({ error: receipts.error }, { status: receipts.status });
     }
 
-    writeFileSync('/app/data/.setup-complete', new Date().toISOString(), 'utf-8');
-
-    const commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+    const commitHash = parseAppReleaseCommit(process.env.APP_RELEASE_COMMIT);
+    versionWritten = true;
     updateComponentVersion('elogbook', '1.0.0', commitHash, ['elogbook-web:latest', 'caddy:2']);
+    writeSetupMarkerAtomically();
 
     auditSetup('complete', 'ok');
     return NextResponse.json({
@@ -82,9 +82,21 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
+    if (versionWritten) {
+      if (previousVersions) {
+        saveVersions(previousVersions);
+      } else {
+        try {
+          unlinkSync('/app/data/versions.json');
+        } catch {
+          void 0;
+        }
+      }
+    }
+    removeSetupMarker();
+    logger.error('Setup completion failed', error);
     auditSetup('complete', 'error');
-    return NextResponse.json({ error: errMsg }, { status: 500 });
+    return NextResponse.json({ error: 'Setup completion failed' }, { status: 500 });
   } finally {
     releaseDurableLock('complete');
   }

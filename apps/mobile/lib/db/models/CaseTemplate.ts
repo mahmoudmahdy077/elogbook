@@ -6,6 +6,7 @@ export class CaseTemplate extends Model {
   static table = 'case_templates';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('specialty') specialty!: string;
   @text('name') name!: string;
   @json('fields', (raw: string) => (raw ? JSON.parse(raw) : [])) fields!: TemplateField[];

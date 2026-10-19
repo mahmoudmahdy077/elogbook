@@ -14,9 +14,10 @@
  */
 
 import { timingSafeEqual } from 'crypto';
-import { appendFileSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 import { z } from 'zod';
+import { getClientIp } from '../client-ip';
 
 export interface SetupRequest {
   url: string;
@@ -27,7 +28,11 @@ export interface SetupRequest {
 
 export interface SetupEnv {
   SETUP_MODE?: string;
+  SETUP_PHASE?: string;
+  SETUP_BIND_ADDRESS?: string;
+  SETUP_REMOTE_TLS_REQUIRED?: string;
   SETUP_BOOTSTRAP_TOKEN?: string;
+  APP_RELEASE_COMMIT?: string;
   NODE_ENV?: string;
 }
 
@@ -62,14 +67,113 @@ export function tokensEqual(a: string, b: string): boolean {
   }
 }
 
+export function setupRuntimeEnabled(env: SetupEnv = process.env as SetupEnv): boolean {
+  const loopbackBind = env.SETUP_BIND_ADDRESS === '127.0.0.1'
+    || env.SETUP_BIND_ADDRESS === '::1'
+    || env.SETUP_BIND_ADDRESS === 'loopback';
+  const releaseCommitValid = /^[0-9a-f]{40}$/i.test(env.APP_RELEASE_COMMIT ?? '');
+  return env.NODE_ENV !== 'production'
+    && env.SETUP_MODE === 'true'
+    && env.SETUP_PHASE === 'setup'
+    && env.SETUP_REMOTE_TLS_REQUIRED === 'true'
+    && releaseCommitValid
+    && loopbackBind;
+}
+
+export function writeSetupMarkerAtomically(
+  markerPath = '/app/data/.setup-complete',
+  value = new Date().toISOString(),
+): void {
+  mkdirSync(dirname(markerPath), { recursive: true });
+  const temporaryPath = `${markerPath}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, `${value}\n`, { encoding: 'utf8', mode: 0o600 });
+  renameSync(temporaryPath, markerPath);
+}
+
+export function removeSetupMarker(markerPath = '/app/data/.setup-complete'): void {
+  try {
+    unlinkSync(markerPath);
+  } catch {
+    void 0;
+  }
+}
+
+export const setupReceiptNames = [
+  'setup-deploy.json',
+  'migrations-applied.json',
+  'setup-admin.json',
+  'setup-domain.json',
+] as const;
+
+export type SetupReceiptName = (typeof setupReceiptNames)[number];
+
+function isSetupReceiptName(name: string): name is SetupReceiptName {
+  return (setupReceiptNames as readonly string[]).includes(name);
+}
+
+export function writeSetupReceiptAtomically(
+  name: SetupReceiptName,
+  value: unknown,
+  directory = stateDir(),
+): void {
+  if (!isSetupReceiptName(name)) throw new Error('Invalid setup receipt name');
+  mkdirSync(directory, { recursive: true });
+  const path = join(directory, name);
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(value)}\n`, { encoding: 'utf8', mode: 0o600 });
+  renameSync(temporaryPath, path);
+}
+
+export function removeSetupReceipt(name: SetupReceiptName, directory = stateDir()): void {
+  if (!isSetupReceiptName(name)) throw new Error('Invalid setup receipt name');
+  try {
+    unlinkSync(join(directory, name));
+  } catch {
+    void 0;
+  }
+}
+
+export function verifySetupReceipts(directory = stateDir()): GuardVerdict {
+  for (const name of setupReceiptNames) {
+    let receipt: { success?: unknown; applied?: unknown; errors?: unknown };
+    try {
+      receipt = JSON.parse(readFileSync(join(directory, name), 'utf8')) as typeof receipt;
+    } catch {
+      return deny(409, `Setup incomplete: missing ${name}`);
+    }
+    if (!receipt || receipt.success !== true) return deny(409, `Setup incomplete: ${name} did not succeed`);
+    if (name === 'migrations-applied.json') {
+      if (!Number.isInteger(receipt.applied) || (receipt.applied as number) < 1) {
+        return deny(409, 'Setup incomplete: migrations receipt has no applied migrations');
+      }
+      if (!Array.isArray(receipt.errors) || receipt.errors.length > 0) {
+        return deny(409, 'Setup incomplete: migration receipt contains errors');
+      }
+    }
+  }
+  return { ok: true };
+}
+
+function protocolOf(url: string): string {
+  try {
+    return new URL(url).protocol.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+const defaultSetupFs: SetupFs = {
+  markerExists: () => existsSync('/app/data/.setup-complete'),
+};
+
 export function checkSetupRequest(
   req: SetupRequest,
   _op: string,
   env: SetupEnv = process.env as SetupEnv,
-  fs: SetupFs = { markerExists: () => false },
+  fs: SetupFs = defaultSetupFs,
 ): GuardVerdict {
   if (env.NODE_ENV === 'production') return deny(404, 'Not Found');
-  if (env.SETUP_MODE !== 'true' || fs.markerExists()) return deny(403, 'Setup not available');
+  if (!setupRuntimeEnabled(env) || fs.markerExists()) return deny(403, 'Setup not available');
 
   const host = hostOf(req.url);
   const configured = env.SETUP_BOOTSTRAP_TOKEN;
@@ -78,6 +182,12 @@ export function checkSetupRequest(
 
   if (configured) {
     if (!tokenValid) return deny(401, 'Valid setup token required');
+    if (!isLoopback(host) && env.SETUP_REMOTE_TLS_REQUIRED !== 'false') {
+      const forwardedProtocol = req.headers['x-forwarded-proto'];
+      if (protocolOf(req.url) !== 'https:' && forwardedProtocol?.toLowerCase() !== 'https') {
+        return deny(403, 'TLS is required for remote setup requests');
+      }
+    }
   } else if (!isLoopback(host)) {
     // No token configured: localhost-bound bootstrapping only (fail-closed).
     return deny(401, 'Setup token not configured; localhost bootstrap only');
@@ -155,7 +265,7 @@ export const migrateInputSchema = z.object({
   port: z.number().int().min(1).max(65535).default(5432),
   database: z.string().regex(PG_IDENT_RE).default('supabase'),
   user: z.string().regex(PG_IDENT_RE).default('postgres'),
-  password: z.string().min(1).max(512),
+  password: z.string().min(1).max(512).optional(),
 });
 
 export const domainInputSchema = z.object({
@@ -178,33 +288,9 @@ export function auditSetup(op: string, result: string, detail?: string): void {
 }
 
 // --- N9: trusted proxy client IP --------------------------------------------
-// x-forwarded-for is attacker-controlled unless a trusted proxy contract
-// exists. hops = number of trusted proxy hops in front of us
-// (TRUSTED_PROXY_HOPS); with 0 hops the chain is untrusted and the direct
-// peer is unknown in this runtime, so callers get 'direct' (localhost-only
-// policies then apply conservatively).
 
-export function trustedProxyHops(): number {
-  const n = Number(process.env.TRUSTED_PROXY_HOPS ?? 0);
-  return Number.isInteger(n) && n > 0 ? n : 0;
-}
-
-/** Route helper: client IP honoring the trusted-proxy contract. */
 export function clientIpOfRequest(request: Request): string {
-  return clientIpFromHeaders(
-    { 'x-forwarded-for': request.headers.get('x-forwarded-for') ?? undefined },
-    trustedProxyHops(),
-  );
-}
-
-export function clientIpFromHeaders(headers: Record<string, string | undefined>, hops: number): string {
-  const raw = headers['x-forwarded-for'] ?? headers['X-Forwarded-For'];
-  if (!raw || hops <= 0) return 'direct';
-  const chain = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  if (chain.length === 0) return 'direct';
-  // With H trusted hops, the client is the leftmost untrusted address.
-  const idx = Math.max(0, chain.length - 1 - hops);
-  return chain[idx] ?? 'direct';
+  return getClientIp(request);
 }
 
 // --- N9: durable one-time token accounting ----------------------------------
@@ -219,7 +305,8 @@ function stateDir(): string {
 }
 
 export function consumeSetupToken(presented: string | undefined, configured: string | undefined): GuardVerdict {
-  if (!configured || !presented || !tokensEqual(presented, configured)) {
+  if (!configured) return { ok: true };
+  if (!presented || !tokensEqual(presented, configured)) {
     return deny(401, 'Valid setup token required');
   }
   const max = Math.max(1, Number(process.env.SETUP_TOKEN_MAX_USES ?? 50) || 50);

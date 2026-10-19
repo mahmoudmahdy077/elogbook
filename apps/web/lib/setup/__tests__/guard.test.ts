@@ -9,12 +9,16 @@ import {
   resetSetupLocksForTests,
   checkRateLimit,
   resetRateLimitsForTests,
-  clientIpFromHeaders,
+  clientIpOfRequest,
   consumeSetupToken,
   acquireDurableLock,
   releaseDurableLock,
+  writeSetupReceiptAtomically,
+  verifySetupReceipts,
+  removeSetupReceipt,
   adminInputSchema,
   migrateInputSchema,
+  setupRuntimeEnabled,
   type SetupRequest,
 } from '../guard';
 
@@ -28,7 +32,14 @@ function req(over: Partial<SetupRequest> = {}): SetupRequest {
   };
 }
 
-const MODE_ON = { SETUP_MODE: 'true', NODE_ENV: 'development' };
+const MODE_ON = {
+  SETUP_MODE: 'true',
+  SETUP_PHASE: 'setup',
+  SETUP_BIND_ADDRESS: '127.0.0.1',
+  SETUP_REMOTE_TLS_REQUIRED: 'true',
+  APP_RELEASE_COMMIT: 'a'.repeat(40),
+  NODE_ENV: 'development',
+};
 const noMarker = { markerExists: () => false };
 const doneMarker = { markerExists: () => true };
 
@@ -65,6 +76,51 @@ describe('setup guard (M8.1)', () => {
     ).toMatchObject({ ok: true });
   });
 
+  it('allows only the explicit non-production setup phase', () => {
+    const setupEnv = {
+      SETUP_MODE: 'true',
+      SETUP_PHASE: 'setup',
+      SETUP_BIND_ADDRESS: '127.0.0.1',
+      SETUP_REMOTE_TLS_REQUIRED: 'true',
+      APP_RELEASE_COMMIT: 'a'.repeat(40),
+      NODE_ENV: 'development',
+    };
+    expect(setupRuntimeEnabled(setupEnv)).toBe(true);
+    expect(setupRuntimeEnabled({ ...setupEnv, NODE_ENV: 'production' })).toBe(false);
+    expect(setupRuntimeEnabled({ ...setupEnv, APP_RELEASE_COMMIT: undefined })).toBe(false);
+    expect(setupRuntimeEnabled({ SETUP_MODE: 'true', SETUP_PHASE: 'setup', NODE_ENV: 'production' })).toBe(false);
+    expect(checkSetupRequest(req(), 'migrate', setupEnv, noMarker)).toMatchObject({ ok: true });
+    expect(checkSetupRequest(req(), 'migrate', { ...setupEnv, NODE_ENV: 'production' }, noMarker)).toMatchObject({ ok: false, status: 404 });
+  });
+
+  it('requires TLS for a remote setup request even when a token is valid', () => {
+    const env = { ...MODE_ON, SETUP_BOOTSTRAP_TOKEN: 'one-time-secret' };
+    expect(
+      checkSetupRequest(
+        req({ url: 'http://setup.example.test/api/setup/migrate', headers: { 'x-setup-token': 'one-time-secret' } }),
+        'migrate',
+        env,
+        noMarker,
+      ),
+    ).toMatchObject({ ok: false, status: 403 });
+    expect(
+      checkSetupRequest(
+        req({ url: 'https://setup.example.test/api/setup/migrate', headers: { 'x-setup-token': 'one-time-secret' } }),
+        'migrate',
+        env,
+        noMarker,
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      checkSetupRequest(
+        req({ url: 'http://setup.example.test/api/setup/migrate', headers: { 'x-setup-token': 'one-time-secret', 'x-forwarded-proto': 'https' } }),
+        'migrate',
+        env,
+        noMarker,
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
   it('allows localhost-bound requests without a token, denies remote ones', () => {
     expect(checkSetupRequest(req(), 'migrate', MODE_ON, noMarker)).toMatchObject({ ok: true });
     expect(
@@ -98,6 +154,7 @@ describe('setup guard (M8.1)', () => {
     ).toBe(true);
     expect(migrateInputSchema.safeParse({ host: 'db; rm -rf /', port: 5432 }).success).toBe(false);
     expect(migrateInputSchema.safeParse({ host: 'db', port: 99999 }).success).toBe(false);
+    expect(migrateInputSchema.safeParse({}).success).toBe(true);
     expect(migrateInputSchema.safeParse({ host: 'db', port: 5432, database: 'supabase', user: 'postgres', password: 'pw' }).success).toBe(true);
   });
 
@@ -114,13 +171,23 @@ describe('setup guard (M8.1)', () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
-    it('derives the client IP from trusted proxy hops only', () => {
-      const h = { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' };
-      // No trust configured: forwarded chain is untrusted, direct peer unknown.
-      expect(clientIpFromHeaders(h, 0)).toBe('direct');
-      // One trusted hop: client is the leftmost untrusted address.
-      expect(clientIpFromHeaders(h, 1)).toBe('203.0.113.9');
-      expect(clientIpFromHeaders({ 'x-forwarded-for': '203.0.113.9' }, 1)).toBe('203.0.113.9');
+    it('delegates client IP derivation to the centralized trust policy', () => {
+      const previousHops = process.env.TRUSTED_PROXY_HOPS;
+      process.env.TRUSTED_PROXY_HOPS = '2';
+      try {
+        const request = new Request('http://localhost/api/setup/migrate', {
+          headers: { 'x-forwarded-for': '198.51.100.77, 203.0.113.5, 10.0.0.1' },
+        });
+        expect(clientIpOfRequest(request)).toBe('203.0.113.5');
+      } finally {
+        if (previousHops === undefined) delete process.env.TRUSTED_PROXY_HOPS;
+        else process.env.TRUSTED_PROXY_HOPS = previousHops;
+      }
+    });
+
+    it('allows local setup without a token but still requires one when configured', () => {
+      expect(consumeSetupToken(undefined, undefined).ok).toBe(true);
+      expect(consumeSetupToken(undefined, 'configured-token').ok).toBe(false);
     });
 
     it('bounds token replay with durable single-use accounting', () => {
@@ -137,9 +204,18 @@ describe('setup guard (M8.1)', () => {
       releaseDurableLock('migrate');
       expect(acquireDurableLock('migrate', 60_000)).toBe(true);
       releaseDurableLock('migrate');
-      // Stale lease (taken 20 min ago, 1 min TTL) is taken over.
       expect(acquireDurableLock('deploy', 60_000, Date.now() - 20 * 60_000)).toBe(true);
       releaseDurableLock('deploy');
+    });
+
+    it('requires every successful step receipt and supports cleanup', () => {
+      const receipts = ['setup-deploy.json', 'migrations-applied.json', 'setup-admin.json', 'setup-domain.json'] as const;
+      for (const receipt of receipts) {
+        writeSetupReceiptAtomically(receipt, { success: true, applied: 1, errors: [] });
+      }
+      expect(verifySetupReceipts()).toEqual({ ok: true });
+      removeSetupReceipt('setup-admin.json');
+      expect(verifySetupReceipts()).toMatchObject({ ok: false });
     });
   });
 });

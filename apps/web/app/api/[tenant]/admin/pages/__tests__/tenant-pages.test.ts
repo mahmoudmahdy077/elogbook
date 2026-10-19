@@ -23,7 +23,7 @@ const DENIED = { ok: false as const, error: 'Forbidden', status: 403 as const } 
 function req(body?: unknown) {
   return new Request('http://localhost/x', {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' },
     body: body === undefined ? undefined : JSON.stringify(body),
   }) as never;
 }

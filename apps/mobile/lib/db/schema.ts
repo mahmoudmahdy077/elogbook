@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 /**
- * WatermelonDB schema v5 — offline-first.
+ * WatermelonDB schema v6 — offline-first.
  *
  * Changes from v4:
  *  - Added `server_updated_at` (number, optional) to all 8 tables for LWW conflict detection.
@@ -10,12 +10,13 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
  *  - Added `is_deleted` (boolean, default false) for tombstone-based soft-delete support.
  */
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     tableSchema({
       name: 'case_entries',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'template_id', type: 'string' },
         { name: 'patient_mrn', type: 'string', isOptional: true },
@@ -39,6 +40,7 @@ export const schema = appSchema({
       name: 'case_templates',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'specialty', type: 'string' },
         { name: 'name', type: 'string' },
         { name: 'fields', type: 'string' },
@@ -55,6 +57,7 @@ export const schema = appSchema({
       name: 'program_goals',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'title', type: 'string' },
         { name: 'target_count', type: 'number' },
@@ -72,6 +75,7 @@ export const schema = appSchema({
       name: 'rotations',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'title', type: 'string' },
         { name: 'specialty', type: 'string', isOptional: true },
@@ -93,6 +97,7 @@ export const schema = appSchema({
       name: 'milestones',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'competency_area', type: 'string' },
         { name: 'sub_competency', type: 'string' },
@@ -113,6 +118,7 @@ export const schema = appSchema({
       name: 'evaluation_forms',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'evaluator_id', type: 'string' },
         { name: 'form_type', type: 'string' },
@@ -136,6 +142,7 @@ export const schema = appSchema({
       name: 'comments',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'entry_id', type: 'string', isOptional: true },
         { name: 'evaluation_id', type: 'string', isOptional: true },
         { name: 'author_id', type: 'string' },
@@ -153,6 +160,7 @@ export const schema = appSchema({
       name: 'shifts',
       columns: [
         { name: 'tenant_id', type: 'string' },
+        { name: 'local_scope', type: 'string', isOptional: true },
         { name: 'resident_id', type: 'string' },
         { name: 'shift_date', type: 'string' },
         { name: 'hours_worked', type: 'number' },

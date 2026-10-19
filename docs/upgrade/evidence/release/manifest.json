@@ -1,0 +1,129 @@
+{
+  "schema": "elogbook.release-evidence/v1",
+  "commit": "29894cb51d480ca12e5f3980d7790de231ec5116",
+  "deterministic": true,
+  "provenance": {
+    "status": "unsigned",
+    "attestation": "pending",
+    "signatures": [],
+    "externalAttestationConfigured": false
+  },
+  "artifacts": {
+    "pnpm": {
+      "path": "pnpm.cdx.json",
+      "sha256": "eb993f0a9c0d64de04e5152a9fcd282fda5436c8958cbf03f820ff23a2bf8dcc",
+      "signature": {
+        "status": "unsigned"
+      }
+    },
+    "container": {
+      "path": "container.cdx.json",
+      "sha256": "e3a70a0989c14ff8a768e0d9e92b1792c2e17ec98a0d0f3ec770d2d8d368f890",
+      "signature": {
+        "status": "unsigned"
+      }
+    },
+    "deno": {
+      "path": "deno.cdx.json",
+      "sha256": "4f012c1073c3014bec6f95cef334f2636c72feb37ba358ce8e4c8ca7f7d21765",
+      "signature": {
+        "status": "unsigned"
+      }
+    },
+    "mobile": {
+      "path": "mobile.cdx.json",
+      "sha256": "219a481fd9a0f8e6f09238400f27a9a0e46fed1252be3c236d2454c61115a278",
+      "signature": {
+        "status": "unsigned"
+      }
+    }
+  },
+  "attestations": [],
+  "productionControls": {
+    "status": "pending",
+    "verifierConfigured": false
+  },
+  "inputs": [
+    {
+      "kind": "pnpm-lock",
+      "path": "pnpm-lock.yaml",
+      "sha256": "615f3f5efb3e9a378eb71cb88545624f68c6cf3d1cf36880b68f8c0b883acb90",
+      "bytes": 535348,
+      "metadata": {
+        "lockfileVersion": "9.0",
+        "componentCount": 1248
+      }
+    },
+    {
+      "kind": "dockerfile",
+      "path": "apps/web/Dockerfile",
+      "sha256": "a28f6bba281ed8e73b567c50f9669529e29db94203035147ca9456142b2fbd1a",
+      "bytes": 3466,
+      "metadata": {
+        "labels": {},
+        "baseImages": [
+          "node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402"
+        ]
+      }
+    },
+    {
+      "kind": "deno-config",
+      "path": "supabase/functions/payment-webhook/deno.json",
+      "sha256": "e5a889efecc5799fedd4ece0a959465104d729ca1f38f81f5366225dcca4a444",
+      "bytes": 26,
+      "metadata": {
+        "lock": "deno.lock"
+      }
+    },
+    {
+      "kind": "deno-lock",
+      "path": "supabase/functions/payment-webhook/deno.lock",
+      "sha256": "cb3d907b93421e4df47882d98ec42d2354031ad3cac25b2dc6b1f5a0e4fda511",
+      "bytes": 34484,
+      "metadata": {
+        "version": "5",
+        "componentCount": 266
+      }
+    },
+    {
+      "kind": "mobile-eas",
+      "path": "apps/mobile/eas.json",
+      "sha256": "180736e1603e31a465b091f06c65add6c0d32a23082556749f7d9529270d3521",
+      "bytes": 1336,
+      "metadata": {
+        "cliVersion": "14.0.0",
+        "profiles": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "production": {
+          "distribution": "store",
+          "channel": "production",
+          "androidBuildType": "app-bundle"
+        }
+      }
+    }
+  ],
+  "manifests": {
+    "pnpm": {
+      "path": "pnpm.cdx.json",
+      "sha256": "eb993f0a9c0d64de04e5152a9fcd282fda5436c8958cbf03f820ff23a2bf8dcc"
+    },
+    "container": {
+      "path": "container.cdx.json",
+      "sha256": "e3a70a0989c14ff8a768e0d9e92b1792c2e17ec98a0d0f3ec770d2d8d368f890"
+    },
+    "deno": {
+      "path": "deno.cdx.json",
+      "sha256": "4f012c1073c3014bec6f95cef334f2636c72feb37ba358ce8e4c8ca7f7d21765"
+    },
+    "mobile": {
+      "path": "mobile.cdx.json",
+      "sha256": "219a481fd9a0f8e6f09238400f27a9a0e46fed1252be3c236d2454c61115a278"
+    }
+  },
+  "checksums": {
+    "path": "checksums.json"
+  }
+}

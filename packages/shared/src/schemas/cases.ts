@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AI_INTENTS } from './ai-contract';
 
 export const fieldValidationSchema = z.object({
   minLength: z.number().int().min(0).optional(),
@@ -30,12 +31,14 @@ export const templateFieldSchema = z.object({
   { message: 'Select fields must have at least one option' }
 );
 
-export const caseTemplateSchema = z.object({
+const caseTemplateObjectSchema = z.object({
   specialty: z.string().min(1),
   name: z.string().min(1),
   fields: z.array(templateFieldSchema).min(1),
   required_fields: z.array(z.string()),
-}).refine(
+});
+
+export const caseTemplateSchema = caseTemplateObjectSchema.refine(
   (data) => {
     const fieldKeys = new Set(data.fields.map(f => f.key));
     return data.required_fields.every(k => fieldKeys.has(k));
@@ -55,6 +58,20 @@ export const caseTemplateSchema = z.object({
   }
 );
 
+export const caseTemplateUpdateSchema = caseTemplateObjectSchema.partial().strict().superRefine(
+  (data, ctx) => {
+    if (data.fields && data.required_fields) {
+      const fieldKeys = new Set(data.fields.map(f => f.key));
+      if (!data.required_fields.every(k => fieldKeys.has(k))) {
+        ctx.addIssue({ code: 'custom', message: 'All required_fields must exist in fields[].key', path: ['required_fields'] });
+      }
+      const keys = data.fields.map(f => f.key);
+      if (keys.length !== new Set(keys).size) {
+        ctx.addIssue({ code: 'custom', message: 'Duplicate field keys are not allowed', path: ['fields'] });
+      }
+    }
+  },
+);
 export const accreditationMappingSchema = z.object({
   framework_id: z.string().uuid(),
   milestone_code: z.string().min(1),
@@ -119,11 +136,11 @@ export const accreditationFrameworkSchema = z.object({
 });
 
 export const aiQuerySchema = z.object({
-  query: z.string().min(1).max(2000),
+  intent: z.enum(AI_INTENTS).default('overview'),
   resident_id: z.string().uuid(),
   tenant_id: z.string().uuid(),
-  stream: z.boolean().default(false),
-});
+  stream: z.literal(false).default(false),
+}).strict();
 
 export const residentAiToggleSchema = z.object({
   enabled: z.boolean(),

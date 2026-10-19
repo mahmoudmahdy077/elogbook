@@ -3,6 +3,14 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { validatePageContent } from '@/lib/site-content';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+
+const publishSchema = z.object({
+  revision_id: z.string().min(1).max(128),
+  expected_current_revision_id: z.string().max(128).nullable().optional(),
+}).strict();
 
 export const runtime = 'nodejs';
 
@@ -13,20 +21,18 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> },
 ) {
+  const guarded = await guardRequest(request, publishSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id: pageId } = await params;
   const supabase = await createServerSupabase();
   const auth = await requireTenantAdmin(supabase, tenantSlug, TENANT_ROLES);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  let body: { revision_id?: string; expected_current_revision_id?: string | null };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-  if (!body.revision_id) {
-    return NextResponse.json({ error: 'revision_id is required' }, { status: 400 });
-  }
+  const body = guarded.data;
 
   const adminClient = createServiceRoleClient();
   const { data: page } = await adminClient

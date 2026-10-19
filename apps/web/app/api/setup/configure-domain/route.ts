@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { writeCaddyfile, validateDomain } from '@/lib/setup/caddy-config';
 import {
   checkSetupRequest, checkRateLimit, acquireDurableLock, releaseDurableLock,
-  consumeSetupToken, clientIpOfRequest, auditSetup,
+  consumeSetupToken, clientIpOfRequest, auditSetup, domainInputSchema, setupRuntimeEnabled,
+  writeSetupReceiptAtomically, removeSetupReceipt,
 } from '@/lib/setup/guard';
+import { guardRequest } from '@/lib/http/request-guard';
 
 export const runtime = 'nodejs';
 
 
 export async function POST(request: Request) {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
-  if (process.env.NODE_ENV === 'production') {
+  if (!setupRuntimeEnabled()) {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'x-setup-token': request.headers.get('x-setup-token') ?? undefined,
+        'x-forwarded-proto': request.headers.get('x-forwarded-proto') ?? undefined,
         origin: request.headers.get('origin') ?? undefined,
         referer: request.headers.get('referer') ?? undefined,
       },
@@ -44,12 +47,12 @@ export async function POST(request: Request) {
   const rl = checkRateLimit(clientIp, 'configure-domain');
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: rl.status });
 
-  const body = await request.json();
-  const { domain } = body;
-
-  if (!domain) {
-    return NextResponse.json({ error: 'Domain is required' }, { status: 400 });
-  }
+  const guarded = await guardRequest(request, domainInputSchema, {
+    requireOrigin: false,
+    maxBodyBytes: 4 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+  const { domain } = guarded.data;
 
   const validation = validateDomain(domain);
   if (!validation.valid) {
@@ -58,11 +61,21 @@ export async function POST(request: Request) {
   if (!acquireDurableLock('configure-domain')) {
     return NextResponse.json({ error: 'Another setup operation is running' }, { status: 409 });
   }
+  removeSetupReceipt('setup-domain.json');
 
   try {
     const caddyfilePath = writeCaddyfile({ domain, appPort: 3000 });
+    writeSetupReceiptAtomically('setup-domain.json', {
+      success: true,
+      completed_at: new Date().toISOString(),
+      domain,
+    });
     auditSetup('configure-domain', 'ok');
     return NextResponse.json({ success: true, caddyfilePath, domain });
+  } catch {
+    removeSetupReceipt('setup-domain.json');
+    auditSetup('configure-domain', 'error');
+    return NextResponse.json({ error: 'Domain configuration failed' }, { status: 500 });
   } finally {
     releaseDurableLock('configure-domain');
   }

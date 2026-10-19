@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook to prevent committing sensitive files
+#
+# Installation:
+#   chmod +x .git/hooks/pre-commit
+#   ln -sf ../../.git-hooks/pre-commit .git/hooks/pre-commit
+
+set -e
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check for .env files
+if git diff --cached --name-only | grep -qE '\.env$|\.env\.local$|\.env\.production$|\.env\.development$'; then
+  echo -e "${RED}ERROR: Attempting to commit .env file!${NC}"
+  echo -e "${YELLOW}These files contain secrets and should NEVER be committed.${NC}"
+  echo ""
+  echo "Files blocked:"
+  git diff --cached --name-only | grep -E '\.env$|\.env\.local$|\.env\.production$|\.env\.development$'
+  echo ""
+  echo "To fix:"
+  echo "  1. Remove the file from staging: git reset HEAD <file>"
+  echo "  2. Ensure the file is in .gitignore"
+  echo "  3. If already committed, rotate all secrets and remove from history"
+  exit 1
+fi
+
+# Check for common secret patterns in staged files
+SECRET_PATTERNS=(
+  "SUPABASE_SERVICE_ROLE_KEY"
+  "PRIVATE_KEY"
+  "SECRET_KEY"
+  "API_SECRET"
+  "PASSWORD.*="
+  "bearer [a-zA-Z0-9\-\._~\+\/]+=*"
+  "api[_-]?key.*['\"][a-zA-Z0-9]{32,}['\"]"
+)
+
+for pattern in "${SECRET_PATTERNS[@]}"; do
+  if git diff --cached | grep -qiE "$pattern" 2>/dev/null; then
+    echo -e "${RED}WARNING: Potential secret detected in staged changes!${NC}"
+    echo -e "${YELLOW}Pattern matched: $pattern${NC}"
+    echo ""
+    echo "Please review your changes carefully before committing."
+    echo "If this is a false positive, you can skip this check with:"
+    echo "  git commit --no-verify"
+    echo ""
+    read -p "Do you want to continue anyway? (yes/no): " response
+    if [[ "$response" != "yes" ]]; then
+      exit 1
+    fi
+  fi
+done
+
+echo "✓ Pre-commit security checks passed"
+exit 0

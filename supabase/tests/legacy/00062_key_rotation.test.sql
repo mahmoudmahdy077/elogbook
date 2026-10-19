@@ -40,7 +40,7 @@ BEGIN
       v_tenant_id,
       'openai',
       'gpt-4o',
-      pgp_sym_encrypt('sk-test-OPENAI-PLAINTEXT-v1', current_setting('app.encryption_key_v1')),
+      pgp_sym_encrypt('test-only-ai-plaintext-v1', current_setting('app.encryption_key_v1')),
       1,
       true
     );
@@ -70,7 +70,7 @@ BEGIN
     FROM public.ai_config
    WHERE provider = 'openai'
    LIMIT 1;
-  IF v_decrypted <> 'sk-test-OPENAI-PLAINTEXT-v1' THEN
+  IF v_decrypted <> 'test-only-ai-plaintext-v1' THEN
     RAISE EXCEPTION 'ASSERTION FAILED: v1 decrypt returned %', v_decrypted;
   END IF;
   RAISE NOTICE 'PASS: v1 decrypt returned expected plaintext';
@@ -107,7 +107,7 @@ BEGIN
     FROM public.ai_config
    WHERE provider = 'openai'
    LIMIT 1;
-  IF v_ai_key <> 'sk-test-OPENAI-PLAINTEXT-v1' THEN
+  IF v_ai_key <> 'test-only-ai-plaintext-v1' THEN
     RAISE EXCEPTION 'ASSERTION FAILED: v2 decrypt of api_key returned %', v_ai_key;
   END IF;
 

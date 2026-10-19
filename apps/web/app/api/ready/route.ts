@@ -1,6 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { rateLimiterHealth } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,12 +48,12 @@ export async function GET() {
     if (error) {
       db = 'error';
       dbError = 'unavailable';
-      console.warn('[ready] database probe error:', error.message);
+      logger.warn('Database probe failed', { error: error.message });
     }
   } catch (e) {
     db = 'error';
     dbError = 'unavailable';
-    console.warn('[ready] database probe exception:', e instanceof Error ? e.message : String(e));
+    logger.warn('Database probe exception', { error: e instanceof Error ? e.message : String(e) });
   }
 
   // Rate limiter health — reflects redisDegradedSince set by checkRateLimit
@@ -65,10 +66,7 @@ export async function GET() {
     // If resolveMode throws (e.g., RATE_LIMIT_MODE unset in prod), treat as
     // degraded — readiness should not be ready. Detail stays server-side.
     rateLimitDegraded = true;
-    console.warn(
-      '[ready] rate-limiter health exception:',
-      e instanceof Error ? e.message : String(e),
-    );
+    logger.warn('Rate limiter health check exception', { error: e instanceof Error ? e.message : String(e) });
   }
 
   const durationMs = Date.now() - t0;

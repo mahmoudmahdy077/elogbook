@@ -5,6 +5,7 @@ export class Rotation extends Model {
   static table = 'rotations';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('resident_id') residentId!: string;
   @text('title') title!: string;
   @text('specialty') specialty!: string | null;

@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { recordPhiView } from '@/lib/audit/record-phi-view';
 
 interface PhiFieldsProps {
   mrn: string;
   dob: string;
   entryId: string;
   tenantId: string;
-  userId: string;
 }
 
-export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProps) {
+export function PhiFields({ mrn, dob, entryId, tenantId }: PhiFieldsProps) {
   const [mrnRevealed, setMrnRevealed] = useState(false);
   const [dobRevealed, setDobRevealed] = useState(false);
+  const [auditFailed, setAuditFailed] = useState(false);
 
   const maskMrn = (val: string | null) => {
     if (!val) return '—';
@@ -27,16 +28,15 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
     return '****-**-' + val.slice(-2);
   };
 
+  // Fail closed: the value is only revealed once the disclosure is recorded
+  // through the trusted audit path. A rejected audit write must not become an
+  // unlogged PHI disclosure.
   const reveal = async (field: 'mrn' | 'dob') => {
-    const supabase = createClient();
-    await supabase.from('audit_logs').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'phi_view',
-      resource_type: 'case_entry',
-      resource_id: entryId,
-      changes: {},
-    });
+    const recorded = await recordPhiView(createClient(), { entryId, tenantId, field });
+    if (!recorded) {
+      setAuditFailed(true);
+      return;
+    }
     if (field === 'mrn') setMrnRevealed(true);
     else setDobRevealed(true);
   };
@@ -65,6 +65,11 @@ export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProp
           )}
         </div>
       </div>
+      {auditFailed && (
+        <p role="alert" className="text-xs text-danger-foreground">
+          Could not record this access. The value stays hidden — try again.
+        </p>
+      )}
     </>
   );
 }

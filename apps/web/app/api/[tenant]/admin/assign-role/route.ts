@@ -1,20 +1,36 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
-import { assertNotLastTenantAdmin } from '@/lib/supabase/tenant-admins';
-import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+/**
+ * Role assignment.
+ *
+ * `profile_id` is the profiles surrogate key (profiles.id), which is what
+ * public.admin_assign_role(p_profile_id, p_role) resolves its target by. The
+ * request field used to be called `user_id`, which is auth.users.id -- a
+ * different key that the RPC never accepted, so a caller who read the field
+ * name literally got a bare 404 for a perfectly valid profile. The name now
+ * matches the RPC parameter.
+ */
+const assignRoleSchema = z.object({
+  profile_id: z.string().trim().min(1).max(128),
+  role: z.enum(['resident', 'supervisor', 'director', 'institution_admin', 'admin']),
+}).strict();
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
-  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
-  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
-
-  const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
-  if (csrfError) return csrfError;
+  const guarded = await guardRequest(request, assignRoleSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 8 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   const { tenant: tenantSlug } = await params;
 
@@ -27,69 +43,32 @@ export async function POST(
     return NextResponse.json({ error: _auth.error }, { status: _auth.status });
   }
   const profile = _auth.profile;
-  const user = _auth.user;
 
-  const body = await request.json();
-  const { user_id, role } = body;
-
-  if (!user_id || !role) {
-    return NextResponse.json({ error: 'user_id and role are required.' }, { status: 400 });
-  }
-
-  const validRoles = ['resident', 'supervisor', 'director', 'institution_admin', 'admin'];
-  if (!validRoles.includes(role)) {
-    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 });
-  }
+  const { profile_id: profileId, role } = guarded.data;
 
   if (role === 'admin' && profile.role !== 'admin') {
     return NextResponse.json({ error: 'Only admins can assign the admin role.' }, { status: 403 });
   }
 
-  const adminClient = createServiceRoleClient();
-
-  const { data: targetProfile } = await adminClient
-    .from('profiles')
-    .select('id, user_id, tenant_id, role')
-    .eq('id', user_id)
-    .eq('tenant_id', profile.tenant_id)
-    .single();
-
-  if (!targetProfile) {
-    return NextResponse.json({ error: 'Target user not found.' }, { status: 404 });
-  }
-
-  if (targetProfile.tenant_id !== profile.tenant_id) {
-    return NextResponse.json({ error: 'Target user is not in the same tenant.' }, { status: 403 });
-  }
-
-  // T18: never strand a tenant without an institution admin.
-  const lastAdmin = await assertNotLastTenantAdmin(adminClient, {
-    tenantId: profile.tenant_id,
-    profileId: user_id,
-    currentRole: (targetProfile as { role: string }).role,
-    newRole: role,
+  const { data: result, error: profileError } = await supabase.rpc('admin_assign_role', {
+    p_profile_id: profileId,
+    p_role: role,
   });
-  if (!lastAdmin.ok) {
-    return NextResponse.json({ error: lastAdmin.error }, { status: lastAdmin.status });
+  const resultCode = (result as { success?: boolean; error?: string } | null)?.error;
+  const success = (result as { success?: boolean } | null)?.success === true;
+  if (profileError || !success) {
+    logger.error('Failed to assign role', profileError, { tenantSlug });
+    if (resultCode === 'profile_not_found') {
+      return NextResponse.json({ error: 'Target user not found.' }, { status: 404 });
+    }
+    if (resultCode === 'forbidden' || resultCode === 'tenant_inactive') {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+    if (resultCode === 'last_administrator') {
+      return NextResponse.json({ error: 'Cannot remove the last institution admin of this tenant' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Failed to assign role' }, { status: 500 });
   }
-
-  const { error: profileError } = await adminClient
-    .from('profiles')
-    .update({ role })
-    .eq('id', user_id)
-    .eq('tenant_id', profile.tenant_id);
-
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
-  }
-
-  if (targetProfile.user_id) {
-    await adminClient.auth.admin.updateUserById(targetProfile.user_id, {
-      app_metadata: { user_role: role },
-    });
-  }
-
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'assign_role', resource_type: 'profiles', resource_id: user_id!, changes: { role } });
 
   return NextResponse.json({ success: true });
 }

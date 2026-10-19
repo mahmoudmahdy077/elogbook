@@ -51,9 +51,12 @@ export default function OnboardingPage() {
     if (!profile) return;
     setLoading(true);
     const supabase = createClient();
+    // Self-service fields only. `role` is an authorization column: a role
+    // changes exclusively through public.admin_assign_role (AAL2), and
+    // shipping it here would make the self-service write a role-arming path.
     const { error } = await supabase
       .from('profiles')
-      .update({ role: profile.role, full_name: fullName, specialty, onboarding_completed: true })
+      .update({ full_name: fullName, specialty, onboarding_completed: true })
       .eq('id', profile.id);
 
     if (error) setError(error.message);

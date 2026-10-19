@@ -33,7 +33,7 @@ Working tree at inspection: dirty (`apps/web/next-env.d.ts` modified, review/QA 
 | PRODUCTION_UPGRADE_PLAN D-5 (setup control plane) | CURRENT | Setup/update/backup routes still present in web artifact with production 404 guards; isolated `apps/ops` not yet built (T09) |
 | PRODUCTION_UPGRADE_PLAN D-6 (health/ready) | CURRENT with gaps | `/api/health` liveness + `/api/ready` exist and proxy exempts; F08 gap remains (middleware public-route omission, compose traffic gating) |
 | PRODUCTION_UPGRADE_PLAN D-7 (flaky test) | UNVERIFIED | Default `pnpm test` worker-timeout failure recorded in master plan §2; stable config not yet established (T01 substep) |
-| PRODUCTION_UPGRADE_PLAN D-9/D-10 (compose) | CURRENT with gaps | `docker-compose.yml` fixed (no api-gw, no :3000 publish, Caddyfile present); F01 notes `setup.docker-compose.yml` still mounts socket + publishes 3000 |
+| PRODUCTION_UPGRADE_PLAN D-9/D-10 (compose) | PARTIALLY VERIFIED | `docker-compose.yml` fixed (no api-gw, no :3000 publish, Caddyfile present); `setup.docker-compose.yml` now uses the non-production setup target, loopback publication, external `supabase_default` network, and setup-only Docker socket. Docker execution remains unavailable locally. |
 | F01–F17 (master plan §2) | CURRENT as inspection anchors | Line refs are anchors; re-read implementation before editing |
 | Old "compilation failure" claim | STALE | `pnpm typecheck` exit 0 on current tree (master plan §2 baseline) |
 | Old test-count claims | STALE | Counts replaced by behavioral assertions per plan Rule 10 |

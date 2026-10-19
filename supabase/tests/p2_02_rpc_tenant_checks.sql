@@ -14,7 +14,7 @@ INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
 VALUES ('00000000-0000-0000-0000-000000000093', '00000000-0000-0000-0000-000000000021', '00000000-0000-0000-0000-000000000021', 'resident', 'RPC Resident');
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000021","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000021","user_role":"resident"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000021","aal":"aal1","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000021","user_role":"resident"}}';
 
 SELECT throws_ok(
   $$SELECT * FROM public.get_dashboard_data('00000000-0000-0000-0000-000000000022', '00000000-0000-0000-0000-000000000093', 'resident')$$,

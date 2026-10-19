@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type AuthCallback = (event: string, session: { user?: { id: string } } | null) => Promise<void> | void;
 
@@ -8,10 +8,11 @@ const mockFrom = vi.fn();
 const mockSingle = vi.fn();
 const mockEq = vi.fn();
 const mockSelect = vi.fn();
+let activeUserId = 'user-1';
+let activeTenantId = 'tenant-abc';
+let tenantStatus = 'active';
+let profileError: unknown = null;
 
-// react-native is a peer of sync.ts (AppState/NetInfo paths) and ships Flow
-// syntax that the bundler used by vitest cannot parse. Mocking the surface
-// we actually touch keeps the test focused on the auth-wiring behavior.
 vi.mock('react-native', () => ({
   AppState: {
     addEventListener: () => ({ remove: () => undefined }),
@@ -56,19 +57,58 @@ vi.mock('../db/storage', () => ({
 vi.mock('../supabase', () => ({
   supabase: {
     auth: {
+      getUser: async () => ({ data: { user: { id: activeUserId } } }),
+      getSession: async () => ({ data: { session: { expires_at: Math.floor(Date.now() / 1000) + 3600 } } }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: 'aal2' }, error: null }),
+      },
       onAuthStateChange: (cb: AuthCallback) => {
-        capturedCallback = cb;
+        capturedCallback = async (event, session) => {
+          if (session?.user) {
+            activeUserId = session.user.id;
+          }
+          return cb(event, session);
+        };
         return { data: { subscription: { unsubscribe: mockUnsubscribe } } };
       },
     },
     from: (table: string) => {
       mockFrom(table);
-      return { select: mockSelect };
+      return {
+        select: (columns: string) => {
+          mockSelect(columns);
+          return {
+            eq: (column: string, value: string) => {
+              mockEq(column, value);
+              return {
+                single: async () => {
+                  if (table === 'profiles') {
+                    if (profileError) return { data: null, error: profileError };
+                    return {
+                      data: {
+                        id: 'profile-1',
+                        user_id: activeUserId,
+                        tenant_id: activeTenantId,
+                        role: 'resident',
+                        status: 'active',
+                      },
+                      error: null,
+                    };
+                  }
+                  if (table === 'tenants') {
+                    return { data: { id: activeTenantId, status: tenantStatus }, error: null };
+                  }
+                  return { data: { tenant_id: activeTenantId, mode: 'deidentified', version: 1 }, error: null };
+                },
+              };
+            },
+          };
+        },
+      };
     },
   },
 }));
 
-// Import after the mock so the module picks up the mocked supabase.
 import { attachSyncAuthListener, syncService } from '../sync';
 
 const resetSupabaseMocks = () => {
@@ -78,8 +118,10 @@ const resetSupabaseMocks = () => {
   mockEq.mockReset();
   mockSingle.mockReset();
   mockUnsubscribe.mockReset();
-  mockSelect.mockReturnValue({ eq: mockEq });
-  mockEq.mockReturnValue({ single: mockSingle });
+  activeUserId = 'user-1';
+  activeTenantId = 'tenant-abc';
+  tenantStatus = 'active';
+  profileError = null;
 };
 
 describe('attachSyncAuthListener', () => {
@@ -96,23 +138,21 @@ describe('attachSyncAuthListener', () => {
   });
 
   it('sets tenantId and starts periodic sync on a fresh sign-in', async () => {
-    syncService.setTenantId(null);
-    mockSingle.mockResolvedValueOnce({ data: { tenant_id: 'tenant-abc' }, error: null });
-
+    activeTenantId = 'tenant-abc';
     attachSyncAuthListener();
     expect(capturedCallback).not.toBeNull();
 
     await capturedCallback!('SIGNED_IN', { user: { id: 'user-1' } });
 
     expect(mockFrom).toHaveBeenCalledWith('profiles');
-    expect(mockSelect).toHaveBeenCalledWith('id,tenant_id');
+    expect(mockFrom).toHaveBeenCalledWith('tenants');
+    expect(mockSelect).toHaveBeenCalledWith('id,user_id,tenant_id,role,status');
     expect(mockEq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(syncService.getTenantId()).toBe('tenant-abc');
   });
 
   it('also wires on INITIAL_SESSION so a deep link / cold start works', async () => {
-    mockSingle.mockResolvedValueOnce({ data: { tenant_id: 'tenant-cold' }, error: null });
-
+    activeTenantId = 'tenant-cold';
     attachSyncAuthListener();
     await capturedCallback!('INITIAL_SESSION', { user: { id: 'user-2' } });
 
@@ -121,7 +161,6 @@ describe('attachSyncAuthListener', () => {
 
   it('clears tenantId and cleans up on SIGNED_OUT', async () => {
     syncService.setTenantId('tenant-abc');
-
     const setTenantIdSpy = vi.spyOn(syncService, 'setTenantId');
     const cleanupSpy = vi.spyOn(syncService, 'cleanup');
 
@@ -132,9 +171,16 @@ describe('attachSyncAuthListener', () => {
     expect(cleanupSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('does not set tenantId when the profile lookup fails', async () => {
-    mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'not found' } });
+  it('does not start sync when the tenant is suspended', async () => {
+    tenantStatus = 'suspended';
+    attachSyncAuthListener();
+    await capturedCallback!('SIGNED_IN', { user: { id: 'user-4' } });
 
+    expect(syncService.getTenantId()).toBeNull();
+  });
+
+  it('does not set tenantId when the server capability lookup fails', async () => {
+    profileError = { message: 'not found' };
     attachSyncAuthListener();
     await capturedCallback!('SIGNED_IN', { user: { id: 'user-3' } });
 
@@ -143,7 +189,6 @@ describe('attachSyncAuthListener', () => {
 
   it('does nothing for events without a user session', async () => {
     const setTenantIdSpy = vi.spyOn(syncService, 'setTenantId');
-
     attachSyncAuthListener();
     await capturedCallback!('TOKEN_REFRESHED', null);
 

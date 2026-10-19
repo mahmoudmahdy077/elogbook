@@ -19,18 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Build web image
         # P7.4: build the image that the CD pipeline would ship, so
         # the scanner sees the same artifact as production. We do
         # NOT push it; the scanner reads the local image.
-        run: docker build --tag elogbook-web:scan --file apps/web/Dockerfile .
+        run: docker build --build-arg "APP_RELEASE_COMMIT=${GITHUB_SHA}" --tag elogbook-web:scan --file apps/web/Dockerfile .
 
       - name: Run Trivy (SARIF)
         # Default severity gate: CRITICAL only (--exit-code 1 --severity CRITICAL).
         # Lower severities are reported in the SARIF + the run summary.
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: elogbook-web:scan
           format: 'sarif'
@@ -55,14 +57,14 @@ jobs:
 
       - name: Upload SARIF
         if: always() && hashFiles('trivy-web.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           sarif_file: trivy-web.sarif
           category: trivy-web
 
       - name: Upload SARIF artifact
         if: always() && hashFiles('trivy-web.sarif') != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: trivy-web-sarif
           path: trivy-web.sarif

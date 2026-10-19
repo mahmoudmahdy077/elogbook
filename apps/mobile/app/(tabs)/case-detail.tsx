@@ -11,7 +11,8 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
-import { bestKnownCapability } from '../../lib/session';
+import { bestKnownCapability, requireFreshCapability } from '../../lib/session';
+import { canPerform } from '../../lib/authorization';
 import { submitApproval } from '../../lib/operations';
 
 import { useHaptics } from '../../lib/haptics';
@@ -63,13 +64,26 @@ export default function CaseDetailScreen() {
       return;
     }
 
+    let capability;
+    try {
+      capability = await requireFreshCapability(supabase as never);
+    } catch {
+      setLoading(false);
+      return;
+    }
+    if (capability.role !== 'resident' && !canPerform(capability, 'tenant:read').ok) {
+      setLoading(false);
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, role, tenant_id')
+      .select('id, role, tenant_id, status')
       .eq('user_id', user.id)
+      .eq('status', 'active')
       .single();
 
-    if (!profile) {
+    if (!profile || profile.status !== 'active') {
       setLoading(false);
       return;
     }
@@ -77,13 +91,15 @@ export default function CaseDetailScreen() {
     setRole(profile.role as UserRole);
 
     if (!isOffline) {
-      const { data: entry } = await supabase
+      let caseQuery = supabase
         .from('case_entries')
         .select(
           'id, case_date, status, is_deidentified, patient_mrn, patient_dob, patient_age_years, patient_hash, field_values, created_at, updated_at, template_id, resident_id, case_templates(name, specialty), profiles(full_name), approval_requests(comment, status)'
         )
-        .eq('id', caseId)
-        .single();
+        .eq('tenant_id', profile.tenant_id)
+        .eq('id', caseId);
+      if (profile.role === 'resident') caseQuery = caseQuery.eq('resident_id', profile.id);
+      const { data: entry } = await caseQuery.single();
 
       if (entry) {
         const e = entry as Record<string, unknown>;
@@ -138,12 +154,13 @@ export default function CaseDetailScreen() {
         capability,
         entryId: caseId,
         action,
-        comment,
-        rpc: async (fn, args) => {
-          const { error } = await supabase.rpc(fn as 'approve_case' | 'reject_case', args as never);
-          return { error: error ? { message: error.message } : null };
-        },
-      });
+         comment,
+         rpc: async (fn, args) => {
+           const { data, error } = await supabase.rpc(fn as 'decide_case_command', args as never);
+           return { data: data as { success?: unknown } | null, error: error ? { message: error.message } : null };
+         },
+       });
+
 
       if (outcome.kind === 'confirmed') {
         haptics.submitSuccess();

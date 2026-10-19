@@ -62,7 +62,7 @@ jobs:
         run: |
           docker run --rm \
             -v "$PWD/zap-reports:/zap/wrk:rw" \
-            ghcr.io/zaproxy/zaproxy:stable \
+            ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
             zap-baseline.py \
               -t "${{ steps.url.outputs.url }}" \
               -m 10 \
@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload ZAP reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: zap-baseline-reports
           path: zap-reports/

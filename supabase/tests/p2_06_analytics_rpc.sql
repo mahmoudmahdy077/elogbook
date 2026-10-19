@@ -14,7 +14,7 @@ INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
 VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000061', 'director', 'Analytics Director');
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000061","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000061","user_role":"director"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000061","aal":"aal2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000061","user_role":"director"}}';
 
 SELECT throws_ok(
   $$SELECT * FROM public.get_analytics_data('00000000-0000-0000-0000-000000000062')$$,

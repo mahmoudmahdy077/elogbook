@@ -17,11 +17,19 @@ import { logWarn } from '../logger';
 // PHI field definitions per table
 // ---------------------------------------------------------------------------
 
-export type PHITable = 'case_entries' | 'evaluation_forms';
+export type PHITable =
+  | 'case_entries'
+  | 'evaluation_forms'
+  | 'comments'
+  | 'rotations'
+  | 'milestones'
+  | 'shifts'
+  | 'program_goals'
+  | 'approval_requests';
 
 export interface PHIColumn {
   name: string;
-  type: 'text' | 'json';
+  type: 'text' | 'json' | 'number';
 }
 
 /**
@@ -29,13 +37,44 @@ export interface PHIColumn {
  * The order matters — these are the fields we encrypt before storage.
  */
 export const PHI_FIELDS: Record<PHITable, PHIColumn[]> = {
+  // Quasi-identifiers are included deliberately. `patient_age_years` and
+  // `case_date` are individually innocuous and jointly identifying in a small
+  // cohort, and `patient_hash` is a stable per-patient pseudonym -- together
+  // they are re-identifying exactly the way an MRN is. Encrypting at rest is
+  // the same control applied to all four, not a judgement about which columns
+  // "look like" PHI.
   case_entries: [
     { name: 'patient_mrn', type: 'text' },
     { name: 'patient_dob', type: 'text' },
+    { name: 'patient_age_years', type: 'number' },
+    { name: 'patient_hash', type: 'text' },
+    { name: 'case_date', type: 'text' },
     { name: 'field_values', type: 'json' },
   ],
   evaluation_forms: [
+    { name: 'setting', type: 'text' },
     { name: 'patient_context', type: 'text' },
+    { name: 'ratings', type: 'json' },
+    { name: 'feedback', type: 'text' },
+    { name: 'action_plan', type: 'text' },
+  ],
+  comments: [
+    { name: 'body', type: 'text' },
+  ],
+  rotations: [
+    { name: 'notes', type: 'text' },
+  ],
+  milestones: [
+    { name: 'comments', type: 'text' },
+  ],
+  shifts: [
+    { name: 'notes', type: 'text' },
+  ],
+  program_goals: [
+    { name: 'description', type: 'text' },
+  ],
+  approval_requests: [
+    { name: 'comment', type: 'text' },
   ],
 };
 
@@ -72,11 +111,11 @@ export async function encryptPHIField(value: unknown): Promise<string | null | u
 export async function decryptPHIField(encryptedValue: unknown): Promise<string | null | undefined> {
   if (encryptedValue === null || encryptedValue === undefined) return encryptedValue as null | undefined;
   if (encryptedValue === '') return '';
-  if (typeof encryptedValue !== 'string') return encryptedValue as string;
+  if (typeof encryptedValue !== 'string') return null;
 
-  // Check if it looks like an AEAD envelope (hex string, starts with version byte 01)
-  if (encryptedValue.length < 4 || !/^[0-9a-f]+$/i.test(encryptedValue)) {
-    return encryptedValue; // not encrypted — pass through (migration/compat)
+  if (encryptedValue.length < 4 || !isEncrypted(encryptedValue)) {
+    logWarn('phi.plaintext-rejected');
+    return null;
   }
 
   try {
@@ -108,7 +147,12 @@ export async function encryptPHIRow<T extends Record<string, unknown>>(
   const result = { ...row };
   for (const col of phiColumns) {
     if (col.name in result) {
-      (result as Record<string, unknown>)[col.name] = await encryptPHIField(result[col.name]);
+      const value = result[col.name];
+      if (col.type === 'number' && typeof value === 'number' && Number.isFinite(value)) {
+        (result as Record<string, unknown>)[col.name] = await encryptPHIField(String(value));
+      } else {
+        (result as Record<string, unknown>)[col.name] = await encryptPHIField(value);
+      }
     }
   }
   return result;
@@ -127,9 +171,17 @@ export async function decryptPHIRow<T extends Record<string, unknown>>(
 
   const result = { ...row };
   for (const col of phiColumns) {
-    if (col.name in result) {
-      (result as Record<string, unknown>)[col.name] = await decryptPHIField(result[col.name]);
+    if (!(col.name in result)) continue;
+    const decrypted = await decryptPHIField(result[col.name]);
+    if (col.type === 'number') {
+      // Fail closed: a decrypted value that is not a finite number is
+      // quarantined to null rather than surfaced as the string "NaN" or
+      // coerced to 0, which would read as a real age.
+      const parsed = typeof decrypted === 'string' ? Number(decrypted) : NaN;
+      (result as Record<string, unknown>)[col.name] = Number.isFinite(parsed) ? parsed : null;
+      continue;
     }
+    (result as Record<string, unknown>)[col.name] = decrypted;
   }
   return result;
 }

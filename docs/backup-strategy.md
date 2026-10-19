@@ -1,381 +1,84 @@
-# Database Backup Strategy
+# Database backup strategy
 
-> **E-Logbook Enterprise** — Supabase PostgreSQL  
-> Document version: 1.0  
-> Status: **Approved**
+Status: controlled backup flow. Production backup is not considered complete until KMS identity verification, encrypted artifacts, the secret-free manifest, every remote SHA-256 value, and object-lock enforcement have been verified in the approved remote store.
 
----
+## Objectives
 
-## Table of Contents
+- Provisional RPO: 24 hours for the logical dump.
+- Provisional RTO: 4 hours from incident declaration to a verified isolated service candidate.
+- The operator must ratify or revise these targets after a measured restore drill.
+- A successful `pg_dump`, a local directory, a `/tmp` directory, or an upload without remote checksum verification is not durable evidence.
 
-1. [Overview](#overview)
-2. [Backup Frequency](#backup-frequency)
-3. [Retention Policy](#retention-policy)
-4. [Recovery Objectives](#recovery-objectives)
-5. [Backup Scripts](#backup-scripts)
-6. [Supabase Managed Backups](#supabase-managed-backups)
-7. [Restore Procedure](#restore-procedure)
-8. [Monitoring & Alerts](#monitoring--alerts)
-9. [Compliance Notes](#compliance-notes)
+## Operator decisions and blockers
 
----
+- **Key management / KMS:** `OPERATOR DECISION REQUIRED` — approved provider or custody process, key version, access roles, rotation, recovery, `BACKUP_KMS_VERIFY_HOOK`, and evidence location. The hook receives the provider and key reference and must return `verified` before `pg_dump` starts.
+- **Object storage:** `OPERATOR DECISION REQUIRED` — approved provider, region/residency, private namespace, `BACKUP_OBJECT_LOCK_MODE`, `BACKUP_OBJECT_LOCK_RETENTION_DAYS`, `BACKUP_OBJECT_LOCK_VERIFY_HOOK`, upload hook, remote checksum hook, and owner. Local placeholder keys are never production-approved.
+- **BAA/vendor review:** `OPERATOR DECISION REQUIRED` — legal/security status, subprocessors, breach terms, and review date. Pending status blocks ePHI transfer.
+- **Alerting:** `OPERATOR DECISION REQUIRED` — owner and escalation for backup, encryption, upload, checksum, decryption, and restore-hook failures.
 
-## Overview
+This repository does not select a cloud provider or KMS and does not claim legal certification.
 
-This document defines the database backup strategy for the E-Logbook
-Enterprise application, which stores Protected Health Information (PHI)
-in a Supabase PostgreSQL instance. The strategy uses a **defence-in-depth**
-approach combining:
+## Backup flow
 
-- **Automated daily pg_dump** — SQL-level backup via custom scripts.
-- **Supabase managed backups** — Infrastructure-level point-in-time recovery
-  (PITR) on Pro/Team plans.
-- **Weekly off-site copy** — Periodic transfer of encrypted dumps to a
-  separate geographic region or provider for disaster recovery.
+`backup-db.sh` is the scheduled production entry point. It accepts discrete `PGHOST`, `PGPORT`, `PGUSER`, and `PGDATABASE` values plus an owner-only `PGPASSFILE`. Database URLs and password-bearing process arguments are rejected by the flow.
 
----
+The script:
 
-## Backup Frequency
+1. Sets `umask 077` and creates owner-only staging, backup, log, manifest, and checksum paths.
+2. Validates the approved KMS provider, key reference, and executable `BACKUP_KMS_VERIFY_HOOK`, then requires `verified` before database content is dumped.
+3. Runs `pg_dump` through a pipefail-protected compression pipeline and verifies the compressed result.
+4. Encrypts the dump and any selected configuration source through an explicitly configured, approved encryption hook.
+5. Writes a secret-free manifest and SHA-256 checksum file.
+6. Verifies the local checksum set.
+7. Uploads the encrypted dump, encrypted configuration, manifest, and checksum file through the approved storage hook.
+8. Requires the remote checksum hook to return the matching SHA-256 for every object.
+9. Requires `BACKUP_OBJECT_LOCK_VERIFY_HOOK` to confirm the configured lock mode and retention for every object.
+10. Emits durable-success status only after all four remote checksum and object-lock verifications pass.
 
-| Backup Type     | Frequency     | Method                  | Location                    |
-|-----------------|---------------|-------------------------|-----------------------------|
-| Full snapshot   | Daily at 03:00 UTC | `pg_dump` + gzip  | Local disk (`BACKUP_DIR`)  |
-| PITR            | Continuous    | Supabase WAL archiving  | Supabase infrastructure     |
-| Off-site copy   | Weekly (Sun)  | rsync / s3cmd / scp     | Off-site object storage     |
+Production fails closed before dumping when the encryption provider/hook, KMS provider/reference/verification hook, or required connection settings are absent. It also fails closed before durable status when the storage provider, object-lock mode/retention/verification hook, upload hook, remote checksum hook, object prefix, or any verifier is absent or rejects the configured value. Hook errors and output are not copied into logs. A local test mode exists only for automated/local validation; it emits `LOCAL_TEST_ONLY`, does not upload, and must not be used as production evidence.
 
-**Daily at 03:00 UTC** is chosen to minimise overlap with peak usage hours
-for the primary clinical audience and to ensure the dump captures a
-consistent state shortly after daily operations conclude.
+### Hook contract
 
----
+Provider integrations are deliberately provider-neutral:
 
-## Retention Policy
+- Encryption hook: input path, output path; writes a non-empty encrypted artifact.
+- KMS verify hook: KMS provider and key reference; prints `verified` only after the operator-approved key is confirmed usable for backup encryption.
+- Upload hook: local path, remote object key, expected SHA-256; uploads to the approved private namespace.
+- Remote verify hook: remote object key, expected SHA-256; prints exactly one 64-character hexadecimal digest.
+- Object-lock verify hook: remote object key, approved mode, and retention days; prints `verified` only after remote retention is confirmed.
+- Decryption hook: encrypted input path, plaintext output path; used only in an isolated restore.
+- Post-restore hook: explicit disposable database name; runs RLS, tenant-isolation, audit, integrity, and readiness checks.
 
-| Backup Tier     | Retention Window | Quantity Stored |
-|-----------------|------------------|-----------------|
-| Daily (local)   | 30 days          | Up to 30 files  |
-| Weekly (off-site) | 12 months      | Up to 52 files  |
-| PITR (Supabase) | 7 days (Pro) / 14 days (Team) | N/A |
+The operator must provision and review these hooks. The scheduled production workflow requires `BACKUP_KMS_PROVIDER`, `BACKUP_KMS_KEY_REFERENCE`, `BACKUP_KMS_VERIFY_HOOK`, `BACKUP_OBJECT_LOCK_MODE`, `BACKUP_OBJECT_LOCK_RETENTION_DAYS`, and `BACKUP_OBJECT_LOCK_VERIFY_HOOK` before it installs PostgreSQL tools or starts a dump. They are not silently replaced by a provider-specific command or an unapproved KMS.
 
-**Cleanup logic** (in `backup-db.sh`):
+## Retention and monitoring
 
-- Files matching `{prefix}-db-*.sql.gz` and `{prefix}-db-*.sql` older than
-  `RETENTION_DAYS` (default: 30) are purged on every backup run.
-- Off-site cleanup is handled by the off-site transfer workflow (see
-  [Off-site Transfer](#off-site-transfer)).
+`RETENTION_DAYS` applies only after durable remote verification and only to the local encrypted artifact set. Remote object-lock retention is configured separately through `BACKUP_OBJECT_LOCK_MODE` and `BACKUP_OBJECT_LOCK_RETENTION_DAYS` and independently checked for every object before durable status. The minimum retained set and storage quota are enforced by the application manager; an over-quota condition alerts rather than deleting below the floor.
 
----
+Alert on:
 
-## Recovery Objectives
+- missing or invalid provider configuration;
+- database dump or compression failure;
+- encryption/decryption failure;
+- KMS identity or key-availability verification failure;
+- upload failure;
+- local or remote checksum mismatch;
+- object-lock mode or retention verification failure;
+- restore-hook failure; and
+- missed schedule or RPO breach.
 
-### RPO (Recovery Point Objective)
+Do not log connection strings, passwords, passfile contents, plaintext dumps, decrypted clinical values, or hook credentials.
 
-**24 hours** — The maximum acceptable data loss in a disaster scenario.
+## Restore drill
 
-The daily pg_dump at 03:00 UTC produces a fresh recovery point every 24
-hours. Combined with Supabase PITR (which provides continuous archiving
-with a 2–5 minute lag), the effective RPO is well under 24 hours for most
-scenarios.
+Use `docs/operations/backup-drill.md` for the quarterly procedure and `docs/upgrade/runbooks/restore.md` for the operator runbook. A drill must use a newly created disposable project/database, verify the manifest and remote checksums, run the post-restore hook, and record measured RPO/RTO and evidence links. It must not restore configuration files automatically or promote a disposable target to production without a separate approved change.
 
-### RTO (Recovery Time Objective)
-
-**4 hours** — The maximum acceptable time to restore service after a
-declared disaster.
-
-The restore procedure (below) is designed to be completable within 4 hours
-by an on-call engineer with access to the runbooks.
-
----
-
-## Backup Scripts
-
-### `scripts/backup-config.sh`
-
-Configuration file sourced by the backup script. Key settings:
-
-| Variable          | Default                  | Description                        |
-|-------------------|--------------------------|------------------------------------|
-| `BACKUP_DIR`      | `/var/elogbook/backups`  | Local dump destination             |
-| `RETENTION_DAYS`  | `30`                     | Max age before automatic cleanup   |
-| `DB_URL`          | (from env)               | PostgreSQL connection string       |
-| `LOG_FILE`        | `/var/log/elogbook/backup.log` | Backup operation log        |
-| `COMPRESS_CMD`    | `gzip`                   | Compression tool                   |
-| `PGDUMP_OPTS`     | `--no-owner --no-acl`    | Additional pg_dump flags           |
-
-### `scripts/backup-db.sh`
-
-The main backup script. Idempotent and safe to run from cron.
-
-**Usage:**
+## Verification
 
 ```bash
-# Full backup
-./scripts/backup-db.sh
-
-# Dry-run (preview without writing)
-./scripts/backup-db.sh --dry-run
-
-# Override connection string
-SUPABASE_DB_URL=postgresql://user:pass@host:5432/db ./scripts/backup-db.sh
+bash -n scripts/backup-db.sh
+bash -n scripts/restore-db.sh
+node --test tests/security/backup-flow.test.mjs
 ```
 
-**What it does:**
-
-1. Sources `backup-config.sh` for defaults.
-2. Validates that `DB_URL` and required tools (`pg_dump`, `gzip`) exist.
-3. Creates the backup and log directories.
-4. Runs `pg_dump $DB_URL $PGDUMP_OPTS -f <file>.sql`.
-5. Compresses the dump with `gzip`.
-6. Records the resulting file size in the log.
-7. Purges files older than `RETENTION_DAYS`.
-8. Exits with code 0 on success, 2 on failure.
-
-**Exit codes:**
-
-| Code | Meaning                |
-|------|------------------------|
-| 0    | Success                |
-| 1    | Configuration error    |
-| 2    | Backup or compression failure |
-
----
-
-## Supabase Managed Backups
-
-Supabase projects on Pro/Team plans include:
-
-1. **Daily snapshots** — Retained for 7 days (Pro) or 14 days (Team).
-   Accessible from the Supabase Dashboard → Database → Backups.
-2. **Point-in-Time Recovery (PITR)** — WAL archiving with 2–5 minute lag.
-   Allows restoring to any second within the retention window.
-
-### Scheduled Backup Log (00076_backup_schedule.sql)
-
-Migration `00076` adds an immutable `public.scheduled_backup_log` table and
-a `public.log_backup_run()` RPC to record backup outcomes directly in the
-database:
-
-```sql
--- Record a successful backup
-SELECT public.log_backup_run('success', 1048576, 'Daily backup completed');
-
--- Record a failure
-SELECT public.log_backup_run('failed', NULL, 'pg_dump failed: connection timeout');
-```
-
-The table serves as an **append-only audit trail** — records are never
-updated or deleted, ensuring compliance with PHI logging requirements.
-
-> **Note:** Automated invocation via `pg_cron` is documented in the migration
-> file comments. The `pg_cron` extension must be enabled at the Supabase
-> project level (Dashboard → Database → Extensions).
-
----
-
-## Restore Procedure
-
-### Prerequisites
-
-- PostgreSQL client tools (`pg_dump`, `pg_restore` / `psql`) installed.
-- Access to the backup file (local disk or off-site storage).
-- Target database (new or existing Supabase project) with `pgcrypto`
-  extension available.
-- Connection string (`SUPABASE_DB_URL`) for the target database.
-
-### Step-by-Step
-
-#### 1. Identify the backup to restore
-
-```bash
-# List available backups
-ls -lh /var/elogbook/backups/elogbook-db-*.sql.gz
-
-# Check the backup log for the most recent successful run
-tail -50 /var/log/elogbook/backup.log
-```
-
-#### 2. Decompress the dump
-
-```bash
-gunzip -k /var/elogbook/backups/elogbook-db-20260707T030000Z.sql.gz
-```
-
-#### 3. Prepare the target database
-
-```bash
-# Create the database (if not exists)
-createdb "$TARGET_DB_URL"
-
-# Ensure pgcrypto extension exists
-psql "$TARGET_DB_URL" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
-```
-
-#### 4. Restore the dump
-
-```bash
-psql "$TARGET_DB_URL" -f /var/elogbook/backups/elogbook-db-20260707T030000Z.sql
-```
-
-> **Note:** The dump is a plain SQL file (not custom format). Use `psql` for
-> restore. Expect this to take 5–30 minutes depending on database size.
-
-#### 5. Verify the restore
-
-```bash
-# Check row counts for core tables
-psql "$TARGET_DB_URL" -c "SELECT 'institutions', COUNT(*) FROM institutions"
-psql "$TARGET_DB_URL" -c "SELECT 'tenants', COUNT(*) FROM tenants"
-psql "$TARGET_DB_URL" -c "SELECT 'profiles', COUNT(*) FROM profiles"
-psql "$TARGET_DB_URL" -c "SELECT 'case_entries', COUNT(*) FROM case_entries"
-
-# Verify auth.users were also restored (if applicable)
-psql "$TARGET_DB_URL" -c "SELECT COUNT(*) FROM auth.users"
-```
-
-#### 6. Update application configuration
-
-```bash
-# Point the application to the restored database
-export SUPABASE_DB_URL="postgresql://user:pass@restored-host:5432/elogbook"
-```
-
-#### 7. Run post-restore checks
-
-- Confirm all application features load without errors.
-- Verify that RLS policies are intact (run `supabase db push` if needed).
-- Verify audit logs exist and are consistent.
-- Check that encryption functions (`pgp_sym_encrypt`/`pgp_sym_decrypt`)
-  work with the existing key.
-
-#### 8. Document the restoration
-
-Record the incident in the incident log, including:
-- Restoration timestamp
-- Backup file used
-- Duration of the restore
-- Any errors encountered
-
-### Restoring from Off-site Backup
-
-```bash
-# Fetch the weekly backup from off-site storage
-scp user@offsite-host:/backups/elogbook-weekly-20260706.sql.gz /tmp/
-gunzip /tmp/elogbook-weekly-20260706.sql.gz
-psql "$TARGET_DB_URL" -f /tmp/elogbook-weekly-20260706.sql
-```
-
-### Restoring via Supabase PITR
-
-For granular point-in-time recovery (e.g., recovery from accidental data
-deletion):
-
-1. Go to Supabase Dashboard → Database → Backups.
-2. Click **Restore** and choose **Point-in-Time**.
-3. Select the timestamp to restore to.
-4. Confirm — Supabase creates a new project branch with the restored data.
-5. Update your application connection string to point to the new branch.
-
-> This approach is faster for small-window disasters but creates a new
-> project rather than restoring in-place.
-
----
-
-## Monitoring & Alerts
-
-### Log-based monitoring
-
-The backup script logs to `LOG_FILE` (default: `/var/log/elogbook/backup.log`)
-with ISO-8601 timestamps and severity levels (`INFO`, `WARN`, `ERROR`).
-
-Set up a log shipper (e.g., `tail`, `systemd-journal`, or a SIEM agent) to
-watch for `ERROR` lines:
-
-```bash
-# Simple cron health check
-if grep -q "ERROR" /var/log/elogbook/backup.log; then
-  echo "Backup errors detected" | mail -s "E-Logbook Backup Alert" ops@example.com
-fi
-```
-
-### Database-level tracking
-
-Query the `scheduled_backup_log` table for recent backup status:
-
-```sql
--- Last 10 backup runs
-SELECT id, started_at, completed_at, status, size_bytes, notes
-  FROM public.scheduled_backup_log
-  ORDER BY id DESC
-  LIMIT 10;
-
--- Failed backups in the last 7 days
-SELECT COUNT(*)
-  FROM public.scheduled_backup_log
-  WHERE status = 'failed'
-    AND started_at > NOW() - INTERVAL '7 days';
-```
-
-### Supabase Dashboard
-
-- **Database → Backups**: View snapshot history and initiate PITR restores.
-- **Reports → Database**: Monitor disk usage, connection counts, and
-  performance trends.
-
----
-
-## Compliance Notes
-
-| Requirement        | How Addressed                                                    |
-|--------------------|------------------------------------------------------------------|
-| PHI data backup    | All dumps include the full database, including encrypted columns. |
-| Immutable audit    | `scheduled_backup_log` is append-only (no UPDATE/DELETE triggers). |
-| Encryption at rest | Dumps can be encrypted with GPG before off-site transfer.         |
-| Retention schedule | Configurable via `RETENTION_DAYS`; 30-day default for daily.      |
-| Off-site DR        | Weekly off-site copy ensures geographic redundancy.               |
-
-### Recommended Off-site Transfer (Script)
-
-Create a complementary script `scripts/transfer-offsite.sh`:
-
-```bash
-#!/usr/bin/env bash
-# Transfer the latest weekly backup to off-site storage.
-# Scheduled to run every Sunday after the daily backup.
-LATEST=$(ls -t /var/elogbook/backups/elogbook-db-*.sql.gz | head -1)
-gpg --recipient ops-key --encrypt "$LATEST"
-scp "${LATEST}.gpg" offsite-backup:/backups/elogbook/
-```
-
----
-
-## Appendix: Testing the Backup
-
-### 1. Test script syntax
-
-```bash
-bash -n scripts/backup-db.sh && echo "syntax OK"
-```
-
-### 2. Test dry-run mode
-
-```bash
-SUPABASE_DB_URL=postgresql://test:test@localhost:5432/elogbook \
-  ./scripts/backup-db.sh --dry-run
-```
-
-### 3. Test restore (in isolated environment)
-
-```bash
-# Create a temporary database
-createdb elogbook_restore_test
-
-# Restore the latest backup
-zcat /var/elogbook/backups/elogbook-db-$(date +%Y%m%d)T*.sql.gz \
-  | psql elogbook_restore_test
-
-# Verify
-psql elogbook_restore_test -c "\dt"
-
-# Clean up
-dropdb elogbook_restore_test
-```
+Run the repository security checks and a real isolated drill only after the operator decisions above are complete. A local fixture pass is not a substitute for a provider acceptance test or a restore drill.

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { caseTemplateSchema } from '@elogbook/shared';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const DIRECTOR_ROLES = ['director', 'institution_admin', 'admin'];
 
@@ -17,38 +22,28 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
+  const guarded = await guardRequest(request, z.unknown(), {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug } = await params;
   const supabase = await safeCreateSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const auth = await requireTenantAdmin(supabase, tenantSlug, DIRECTOR_ROLES);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  const profile = auth.profile;
 
   const rl = await checkRateLimit(`tpl-import:${tenantSlug}`, 10);
   if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
 
-  if (!DIRECTOR_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
-
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
+  const body = guarded.data as Record<string, unknown>;
 
   // Handle both formats: direct template object and export wrapper
   let templateData: Record<string, unknown>;
@@ -94,7 +89,10 @@ export async function POST(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to import template', error, { tenantSlug, templateName: parsed.data.name });
+    return NextResponse.json({ error: 'Failed to import template' }, { status: 500 });
+  }
 
   return NextResponse.json({ template }, { status: 201 });
 }

@@ -30,6 +30,21 @@ vi.mock('@elogbook/env', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock logger
+//
+// `@/lib/logger` pulls in `@sentry/nextjs` (plus `@elogbook/shared/security/
+// outbound-url` and `./observability/redact`), which costs ~7s to transform and
+// evaluate on first import under the jsdom pool. Every route under test imports
+// it, so that cost lands inside the first test's 10s budget and times it out.
+// This suite asserts tenant scoping and the RPC contract — no assertion reads
+// log output, and a failing call still takes the same branch. The full exported
+// surface is kept so any transitive importer still resolves.
+vi.mock('@/lib/logger', () => ({
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  redactPHI: vi.fn((value: unknown) => value),
+}));
+
+// ---------------------------------------------------------------------------
 // Shared mock state
 // ---------------------------------------------------------------------------
 const TENANT_A = 'tenant-a-uuid';
@@ -45,7 +60,17 @@ let mockAuthAdmin: {
   deleteUser: ReturnType<typeof vi.fn>;
 };
 
-let mockAdminFrom: ReturnType<typeof vi.fn>;
+let mockAdminFrom: ReturnType<typeof vi.fn> = vi.fn();
+let mockServerFrom = vi.fn<(table: string) => unknown>();
+let mockServerRpc = vi.fn<(name: string, args: Record<string, unknown>) => unknown>();
+
+function serverClientMock() {
+  return {
+    auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) },
+    from: (table: string) => mockServerFrom(table),
+    rpc: (name: string, args: Record<string, unknown>) => mockServerRpc(name, args),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Mock requireTenantAdmin — tenant-a admin
@@ -64,9 +89,7 @@ vi.mock('@/lib/supabase/require-admin', () => ({
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  createServerSupabase: vi.fn(async () => ({
-    auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) },
-  })),
+  createServerSupabase: vi.fn(async () => serverClientMock()),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -125,7 +148,7 @@ function makeProfileChain(targetProfile: Record<string, unknown> | null) {
 function mockRequest(body: unknown): Request {
   return new Request('http://localhost', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', origin: 'http://localhost:3000' },
     body: body ? JSON.stringify(body) : undefined,
   } as RequestInit);
 }
@@ -134,6 +157,9 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000');
+    mockServerFrom = vi.fn(() => makeProfileChain(null));
+    mockServerRpc = vi.fn(async () => ({ data: { success: true }, error: null }));
+    mockAdminFrom = vi.fn(() => ({ insert: vi.fn(async () => ({ error: null })) }));
 
     mockAuthAdmin = {
       getUserById: vi.fn(async () => ({
@@ -149,12 +175,13 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
   describe('PUT /api/[tenant]/admin/users/[id] — cross-tenant must be blocked', () => {
     it('returns 404 when target user is in another tenant', async () => {
       const victimInB = { id: VICTIM_PROFILE_ID, user_id: VICTIM_USER_ID, role: 'resident', tenant_id: TENANT_B };
-      mockAdminFrom = vi.fn(() => makeProfileChain(victimInB)) as unknown as ReturnType<typeof vi.fn>;
+       mockServerFrom = vi.fn(() => makeProfileChain(victimInB));
+       mockServerRpc = vi.fn(async () => ({ data: { success: false, error: 'profile_not_found' }, error: null }));
 
-      const { PUT } = await import('../[id]/route');
+       const { PUT } = await import('../[id]/route');
       const req = new Request('http://localhost', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', origin: 'http://localhost:3000' },
         body: JSON.stringify({ full_name: 'Hacked' }),
       });
       const res = await PUT(req as unknown as import('next/server').NextRequest, {
@@ -203,7 +230,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
   describe('DELETE /api/[tenant]/admin/users/[id] — cross-tenant must be blocked', () => {
     it('returns 404 when trying to delete user from another tenant', async () => {
       const victimInB = { id: VICTIM_PROFILE_ID, user_id: VICTIM_USER_ID, tenant_id: TENANT_B };
-      mockAdminFrom = vi.fn(() => makeProfileChain(victimInB)) as unknown as ReturnType<typeof vi.fn>;
+       mockServerFrom = vi.fn(() => makeProfileChain(victimInB));
 
       vi.resetModules();
       // Re-register mocks after reset
@@ -215,7 +242,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
         })),
       }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => serverClientMock()),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -241,7 +268,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
       });
 
       const { DELETE } = await import('../[id]/route');
-      const req = new Request('http://localhost', { method: 'DELETE' });
+      const req = new Request('http://localhost', { method: 'DELETE', headers: { origin: 'http://localhost:3000' } });
       const res = await DELETE(req as unknown as import('next/server').NextRequest, {
         params: Promise.resolve({ tenant: 'tenant-a', id: VICTIM_PROFILE_ID }),
       });
@@ -254,10 +281,9 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
 
     it.each(actions)('blocks %s when target is in another tenant', async (action) => {
       const victimInB = { id: VICTIM_PROFILE_ID, user_id: VICTIM_USER_ID, status: 'active', tenant_id: TENANT_B };
-      mockAdminFrom = vi.fn((table: string) => {
+      mockServerFrom = vi.fn((table: string) => {
         if (table === 'profiles') {
           const chain = makeProfileChain(victimInB);
-          // Ensure update chain would fail if called (should not be called for cross-tenant)
           chain.update = vi.fn(() => ({
             eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
           })) as unknown as typeof chain.update;
@@ -267,9 +293,9 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
           return { insert: vi.fn(() => Promise.resolve({ error: null })) } as unknown as ReturnType<typeof vi.fn>;
         }
         return makeProfileChain(victimInB) as unknown as ReturnType<typeof vi.fn>;
-      }) as unknown as ReturnType<typeof vi.fn>;
+       });
 
-      // Fresh import per action to avoid module cache issues
+       // Fresh import per action to avoid module cache issues
       vi.resetModules();
       vi.doMock('@/lib/supabase/require-admin', () => ({
         requireTenantAdmin: vi.fn(async () => ({
@@ -279,7 +305,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
         })),
       }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => serverClientMock()),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -316,11 +342,10 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
 
     it('reset-password fetches email and calls generateLink with recovery (not empty email)', async () => {
       const victimInA = { id: VICTIM_PROFILE_ID, user_id: VICTIM_USER_ID, status: 'active', tenant_id: TENANT_A };
-      mockAdminFrom = vi.fn((table: string) => {
-        if (table === 'profiles') return makeProfileChain(victimInA) as unknown as ReturnType<typeof vi.fn>;
-        if (table === 'audit_logs') return { insert: vi.fn(() => Promise.resolve({ error: null })) } as unknown as ReturnType<typeof vi.fn>;
-        return makeProfileChain(victimInA) as unknown as ReturnType<typeof vi.fn>;
-      }) as unknown as ReturnType<typeof vi.fn>;
+       mockServerFrom = vi.fn(() => makeProfileChain(victimInA));
+      mockAdminFrom = vi.fn(() => ({
+        insert: vi.fn(async () => ({ error: null })),
+      })) as unknown as ReturnType<typeof vi.fn>;
 
       vi.resetModules();
       vi.doMock('@/lib/supabase/require-admin', () => ({
@@ -331,7 +356,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
         })),
       }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => serverClientMock()),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -375,10 +400,10 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
     it('reset-password returns 400 if target has no email', async () => {
       const victimInA = { id: VICTIM_PROFILE_ID, user_id: VICTIM_USER_ID, status: 'active', tenant_id: TENANT_A };
       mockAuthAdmin.getUserById = vi.fn(async () => ({ data: { user: { id: VICTIM_USER_ID, email: null } }, error: null }));
-      mockAdminFrom = vi.fn((table: string) => {
-        if (table === 'profiles') return makeProfileChain(victimInA) as unknown as ReturnType<typeof vi.fn>;
-        return { insert: vi.fn(() => Promise.resolve({ error: null })) } as unknown as ReturnType<typeof vi.fn>;
-      }) as unknown as ReturnType<typeof vi.fn>;
+       mockServerFrom = vi.fn(() => makeProfileChain(victimInA));
+      mockAdminFrom = vi.fn(() => ({
+        insert: vi.fn(async () => ({ error: null })),
+      })) as unknown as ReturnType<typeof vi.fn>;
 
       vi.resetModules();
       vi.doMock('@/lib/supabase/require-admin', () => ({
@@ -389,7 +414,7 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
         })),
       }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => serverClientMock()),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),

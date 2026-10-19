@@ -138,6 +138,7 @@ export default function AdminTabPanel({
             <h3 className="font-semibold text-sm text-text-muted mb-2">Quick Invite (Legacy)</h3>
             <UserManager
               tenantId={tenantId}
+              tenantSlug={tenantSlug}
               users={users as never[]}
               currentUserRole={profileRole}
             />

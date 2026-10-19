@@ -9,6 +9,14 @@ import { createFullBackup } from '@/lib/setup/backup-manager';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
 import { acquireDurableLock, releaseDurableLock, tokensEqual } from '@/lib/setup/guard';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const updateRequestSchema = z.object({
+  component: z.enum(['elogbook', 'supabase', 'both']).optional(),
+}).strict();
 
 export const runtime = 'nodejs';
 
@@ -17,6 +25,12 @@ export async function POST(request: Request) {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
+
+  const guarded = await guardRequest(request, updateRequestSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 4 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
 
   if (!existsSync(process.env.SETUP_COMPLETE_PATH ?? '/app/data/.setup-complete')) {
     return NextResponse.json({ error: 'Setup not complete' }, { status: 400 });
@@ -34,13 +48,7 @@ export async function POST(request: Request) {
   }
   const { user, profile } = platform;
 
-  const body = await request.json();
-  const { component } = body;
-
-  const allowedComponents = ['elogbook', 'supabase', 'both'];
-  if (component && !allowedComponents.includes(component)) {
-    return NextResponse.json({ error: `Invalid component. Must be one of: ${allowedComponents.join(', ')}` }, { status: 400 });
-  }
+  const { component } = guarded.data;
 
   // T16: the synchronous in-app updater (F02) is retired. Durable execution
   // belongs to the manager job flow (T10-full/T14). Explicit escape hatch
@@ -95,8 +103,8 @@ export async function POST(request: Request) {
         host: 'db', port: 5432, database: config.postgresDb, user: 'postgres', password: config.postgresPassword,
       }, { elogbook: '1.0.0', supabase: '1.0.0' });
     } catch (backupError) {
-      const backupMsg = backupError instanceof Error ? backupError.message : String(backupError);
-      return NextResponse.json({ error: `Pre-update backup failed — refusing to mutate: ${backupMsg}` }, { status: 500 });
+      logger.error('Pre-update backup failed', backupError);
+      return NextResponse.json({ error: 'Pre-update backup failed — refusing to mutate' }, { status: 500 });
     }
 
     if (component === 'elogbook' || component === 'both') {
@@ -113,8 +121,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: 'Update completed successfully' });
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: errMsg }, { status: 500 });
+    logger.error('Update execution failed', error, { component });
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   } finally {
     releaseDurableLock('update-executor');
   }

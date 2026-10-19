@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-A graphical setup wizard that installs the complete E-Logbook platform on a fresh server (VPS or dedicated) without requiring terminal or SSH access. The wizard:
+A graphical setup wizard that installs the complete E-Logbook platform on a fresh server (VPS or dedicated) through a loopback/SSH-tunneled operator session. The wizard:
 
 **Scope decomposition** — This spec covers 4 independent sub-projects, each implementable separately:
 
@@ -91,8 +91,10 @@ A `.setup-complete` marker file in the data volume indicates setup has finished.
 # User runs this on a fresh server with Docker installed:
 git clone https://github.com/{owner}/elogbook.git
 cd elogbook
-docker compose -f setup.docker-compose.yml up -d
-# Opens browser to http://server:3000
+docker network create supabase_default
+export APP_RELEASE_COMMIT="$(git rev-parse HEAD)"
+docker compose -f setup.docker-compose.yml up -d --build
+# Use an SSH tunnel to 127.0.0.1:3000; never publish setup directly.
 ```
 
 ### 3.2 Wizard Steps
@@ -641,23 +643,38 @@ Located at `volumes/elogbook/versions.json`:
 ```yaml
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: setup
+      args:
+        APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT:?full commit required}"
+    ports:
+      - "127.0.0.1:3000:3000"
     environment:
-      - SETUP_MODE=true
-    ports: ["3000:3000"]
+      NODE_ENV: development
+      APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT}"
+      SETUP_MODE: "true"
+      SETUP_PHASE: "setup"
+      SETUP_BIND_ADDRESS: "127.0.0.1"
+      SETUP_REMOTE_TLS_REQUIRED: "true"
     volumes:
       - ./volumes/elogbook:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - setup-db
+    networks:
+      - supabase_default
 
-  setup-db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_PASSWORD: setup_temp
-      POSTGRES_DB: elogbook_setup
-    tmpfs: /var/lib/postgresql/data
+networks:
+  supabase_default:
+    external: true
 ```
+
+The setup target is separate from the production target and contains the
+Docker CLI and Git tools required by the installer. It is non-production by
+construction. The host Docker socket exists only in this setup service, and
+the published port is loopback-only. The operator must use an SSH tunnel; a
+remote reverse proxy must terminate TLS. The production service never mounts
+this socket and keeps `SETUP_MODE=false`.
 
 ### 11.2 Production Docker Compose
 
@@ -666,21 +683,23 @@ name: elogbook
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+      args:
+        APP_RELEASE_COMMIT: "${APP_RELEASE_COMMIT:?full commit required}"
     restart: unless-stopped
-    ports: ["3000:3000"]
     volumes:
       - ./volumes/elogbook:/app/data
     environment:
+      - NODE_ENV=production
+      - APP_RELEASE_COMMIT=${APP_RELEASE_COMMIT}
       - SETUP_MODE=false
-      - NEXT_PUBLIC_SUPABASE_URL=http://api-gw:8000
+      - NEXT_PUBLIC_SUPABASE_URL=http://kong:8000
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - NEXT_PUBLIC_SITE_URL=${SITE_URL}
-      - APP_ENCRYPTION_KEY=${APP_ENCRYPTION_KEY}
-    depends_on:
-      api-gw:
-        condition: service_healthy
     networks:
       - elogbook
       - supabase_default

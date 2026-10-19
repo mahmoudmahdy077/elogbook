@@ -1166,8 +1166,10 @@ paths:
       operationId: approvalAction
       summary: Approve or reject a case entry
       description: |
-        Server-side approval endpoint that calls the `approve_case` or
-        `reject_case` RPC with CSRF and rate-limit enforcement.
+        Server-side approval endpoint that calls the `decide_case_command` RPC with
+        CSRF and rate-limit enforcement. The command is the only path out of
+        `pending`: it resolves one locked approval request in the same
+        transaction as the status change and is idempotent per request id.
         Dispatches webhook events on success. Requires supervisor,
         director, institution_admin, or admin role.
       tags: [Approvals]
@@ -1970,11 +1972,17 @@ paths:
 # ============================================================================
 x-rpcs:
   - name: approve_case
-    summary: Approve a case entry
+    summary: Approve a case entry (RETIRED, not callable)
     description: |
-      Sets a case entry status to 'approved' and creates an approval
-      record. Requires supervisor, director, institution_admin, or admin
-      role. Tenant-scoped — caller must belong to the same tenant as the case.
+      Retired. This RPC wrote the status and the approval record directly, with
+      no idempotency ledger, no tenant match on the approval request and no
+      outbox row, so a retried call could approve twice and a decision could
+      land on another tenant's queue. It holds no client execute grant
+      (20260930000001). Use decide_case_command, which resolves one locked
+      pending approval request in the same transaction as the status change and
+      is idempotent on (tenant, actor, command, request_id). Reached from a
+      client through POST /{tenant}/approvals/action.
+    deprecated: true
     params:
       - name: p_entry_id
         type: uuid
@@ -2005,14 +2013,14 @@ x-rpcs:
           type: string
         code:
           type: string
-    grant: authenticated
+    grant: none
 
   - name: reject_case
-    summary: Reject a case entry
+    summary: Reject a case entry (RETIRED, not callable)
     description: |
-      Sets a case entry status to 'rejected' and creates a rejection
-      record. Requires supervisor, director, institution_admin, or admin
-      role. Tenant-scoped.
+      Retired for the same reason as approve_case. Use decide_case_command with
+      p_decision = 'reject'.
+    deprecated: true
     params:
       - name: p_entry_id
         type: uuid
@@ -2036,6 +2044,54 @@ x-rpcs:
         status:
           type: string
           enum: [rejected]
+    grant: none
+
+  - name: decide_case_command
+    summary: Approve or reject a pending case (the only approval path)
+    description: |
+      AAL2-gated clinical command. Resolves one locked pending approval request
+      and moves the case to 'approved' or 'rejected' in the same transaction,
+      writing the idempotency ledger, the audit row and the outbox row with it.
+      Returns a stable code from a closed vocabulary rather than raising:
+      invalid_request, forbidden, account_inactive, tenant_suspended,
+      not_found, state_conflict, idempotency_conflict, no_approval_request. A
+      replay with the same p_request_id returns the stored decision instead of
+      applying it twice.
+    params:
+      - name: p_case_id
+        type: uuid
+        required: true
+        description: ID of the case entry to decide
+      - name: p_request_id
+        type: string
+        required: true
+        maxLength: 128
+        description: Client-generated idempotency key, unique per decision
+      - name: p_decision
+        type: string
+        required: true
+        enum: [approve, reject]
+      - name: p_reason
+        type: string
+        required: false
+        default: null
+        maxLength: 2000
+    returns:
+      type: jsonb
+      properties:
+        success:
+          type: boolean
+        case_id:
+          type: uuid
+        approval_id:
+          type: uuid
+        status:
+          type: string
+          enum: [approved, rejected]
+        error:
+          type: string
+        code:
+          type: string
     grant: authenticated
 
   - name: get_case_stats

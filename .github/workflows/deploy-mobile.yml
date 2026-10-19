@@ -13,8 +13,20 @@ on:
       - 'apps/mobile/**'
       - 'packages/shared/**'
       - 'pnpm-lock.yaml'
-  # Manual protected releases (production environment approval required).
   workflow_dispatch:
+    inputs:
+      staging_approved:
+        description: Explicit approval after staging verification
+        required: true
+        type: boolean
+        default: false
+      staging_url:
+        description: HTTPS URL for the canonical staging smoke test
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-mobile-${{ github.ref }}
@@ -29,11 +41,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 9.15.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.14.0
           cache: 'pnpm'
@@ -46,11 +60,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 9.15.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.14.0
           cache: 'pnpm'
@@ -63,8 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.14.0
       # M0.4/N2.4: ledger schema, missing artifacts, forbidden certification
@@ -77,91 +95,17 @@ jobs:
           node scripts/check-mobile-adapters.mjs
           node scripts/check-sentry-consistency.mjs
           node scripts/check-mobile-workflow-safety.mjs
+          node scripts/verify-mobile-security.mjs
 
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+  release:
+    name: Delegate to protected release gate
     needs: [typecheck, lint, ledger-check]
-    # R1: production environment = protection rules + manual approval live here.
-    environment: production
-    # N8/R1 fork+PR safety: credential-bearing production builds run only on
-    # protected main pushes or manual dispatch (production environment).
-    # Same-repo PRs use static gates + fork-validation (no secrets, no builds).
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-          cache: 'pnpm'
-      - name: Install dependencies (frozen)
-        run: pnpm install --frozen-lockfile
-      - uses: expo/expo-github-action@v9
-        with:
-          eas-version: 14.0.0
-          token: ${{ secrets.EXPO_TOKEN }}
-      - name: Record source + config hashes (provenance)
-        run: |
-          git rev-parse HEAD > source-commit.txt
-          sha256sum pnpm-lock.yaml > config-hashes.txt
-          sha256sum apps/mobile/app.json apps/mobile/eas.json >> config-hashes.txt
-          cat source-commit.txt config-hashes.txt
-      - name: Expo prebuild (mobile project dir)
-        working-directory: apps/mobile
-        run: NODE_OPTIONS="--no-experimental-strip-types" pnpm exec expo prebuild --clean
-      # Fail-closed: --wait exits non-zero on build failure; --json captures
-      # the EXACT build record (ID + commit + artifact URL) for provenance.
-      - name: EAS Build (Android, wait)
-        working-directory: apps/mobile
-        run: eas build --platform android --profile production --non-interactive --wait --json > "$GITHUB_WORKSPACE/android-build.json"
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-      - name: EAS Build (iOS, wait)
-        working-directory: apps/mobile
-        run: eas build --platform ios --profile production --non-interactive --wait --json > "$GITHUB_WORKSPACE/ios-build.json"
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-      # N8: bind THIS invocation's builds to THIS candidate (commit/version/
-      # finished status/artifact URL). A generic "latest finished build" is
-      # not accepted as provenance.
-      - name: Verify build provenance (fail-closed)
-        run: node scripts/verify-eas-provenance.mjs android-build.json ios-build.json
-      - name: Download candidate artifacts (fail-closed)
-        run: |
-          set -euo pipefail
-          # shellcheck disable=SC1091
-          source build-ids.env
-          curl -fsSL "$ANDROID_ARTIFACT_URL" -o candidate-android.aab
-          curl -fsSL "$IOS_ARTIFACT_URL" -o candidate-ios.ipa
-          ls -la candidate-android.aab candidate-ios.ipa
-          sha256sum candidate-android.aab candidate-ios.ipa > artifact-hashes.txt
-          cat artifact-hashes.txt
-      - name: Dependency/license/security scan (SBOM inputs)
-        run: |
-          pnpm audit --audit-level=high
-          pnpm licenses list --json > licenses.json
-      - name: Upload build provenance
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-build-provenance
-          path: |
-            source-commit.txt
-            config-hashes.txt
-            pnpm-lock.yaml
-            licenses.json
-            android-build.json
-            ios-build.json
-            build-ids.env
-            artifact-hashes.txt
+    if: github.event_name == 'workflow_dispatch' && inputs.staging_approved == true
+    uses: ./.github/workflows/release.yml
+    with:
+      staging_approved: ${{ inputs.staging_approved }}
+      staging_url: ${{ inputs.staging_url }}
+    secrets: inherit
 
   fork-validation:
     # N8 fork-safe path: no secrets, no EAS builds — static gates only.
@@ -169,11 +113,13 @@ jobs:
     timeout-minutes: 20
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 9.15.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.14.0
           cache: 'pnpm'
@@ -187,3 +133,4 @@ jobs:
           node scripts/check-mobile-adapters.mjs
           node scripts/check-sentry-consistency.mjs
           node scripts/check-mobile-workflow-safety.mjs
+          node scripts/verify-mobile-security.mjs

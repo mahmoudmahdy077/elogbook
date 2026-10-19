@@ -18,7 +18,7 @@ VALUES
   ('00000000-0000-0000-0000-000000000091', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000011', 'resident', 'Secret Resident'),
   ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000012', 'institution_admin', 'Secret Admin');
 
--- Seed a key encrypted with a known GUC value so the decrypt path is exercised.
+-- Seed encrypted configuration metadata for the view predicate checks.
 SELECT set_config('app.encryption_key', 'test-encryption-key', false);
 
 INSERT INTO ai_config (tenant_id, provider, model, endpoint_url, is_active, api_key_enc, key_version)
@@ -40,12 +40,12 @@ SELECT is(
   'resident cannot read secret_payment_gateway_config rows'
 );
 
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000012","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000011","user_role":"institution_admin"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000012","aal":"aal2","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000011","user_role":"institution_admin"}}';
 
 SELECT is(
-  (SELECT api_key FROM public.secret_ai_config WHERE tenant_id = '00000000-0000-0000-0000-000000000011' LIMIT 1),
-  'super-secret-key',
-  'institution_admin of the tenant can read the decrypted api key'
+  (SELECT count(*) FROM public.secret_ai_config WHERE tenant_id = '00000000-0000-0000-0000-000000000011'),
+  1::bigint,
+  'an active AAL2 institution administrator can read non-secret AI configuration metadata'
 );
 
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000011","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000021","user_role":"resident"}}';

@@ -9,9 +9,10 @@ function snap(over: Partial<CapabilitySnapshot> = {}): CapabilitySnapshot {
     profileId: 'p1',
     role: 'resident',
     status: 'active',
+    tenantStatus: 'active',
     policyVersion: 3,
     dataMode: 'deidentified',
-    mfaVerifiedAt: Date.now(),
+    aal: 'aal2',
     expiresAt: Date.now() + 3600_000,
     fetchedAt: Date.now(),
     ...over,
@@ -24,10 +25,13 @@ describe('authorization adapters (M1.4)', () => {
     expect(canPerform(snap(), 'case:edit').ok).toBe(true);
   });
 
-  it('denies everything when suspended', () => {
-    const s = snap({ status: 'suspended' });
-    for (const a of ['case:create', 'case:approve', 'export:identifiable', 'admin:tenant'] as SensitiveAction[]) {
-      expect(canPerform(s, a).ok).toBe(false);
+  it('denies everything when account or tenant status is not active', () => {
+    const account = snap({ status: 'suspended' });
+    const tenant = snap({ tenantStatus: 'suspended' });
+    for (const cap of [account, tenant]) {
+      for (const a of ['case:create', 'case:approve', 'export:identifiable', 'admin:tenant'] as SensitiveAction[]) {
+        expect(canPerform(cap, a).ok).toBe(false);
+      }
     }
   });
 
@@ -37,11 +41,18 @@ describe('authorization adapters (M1.4)', () => {
     expect(canPerform(s, 'case:create').ok).toBe(true);
   });
 
-  it('requires identifiable mode + fresh step-up for identifiable export', () => {
+  it('requires identifiable mode + server AAL2 for identifiable export', () => {
     expect(canPerform(snap(), 'export:identifiable').ok).toBe(false);
     const s = snap({ dataMode: 'identifiable' });
     expect(canPerform(s, 'export:identifiable').ok).toBe(true);
-    expect(canPerform(snap({ dataMode: 'identifiable', mfaVerifiedAt: 0 }), 'export:identifiable').ok).toBe(false);
+    expect(canPerform(snap({ dataMode: 'identifiable', aal: 'aal1' }), 'export:identifiable').ok).toBe(false);
+  });
+
+  it('denies tenant-wide actions at AAL1', () => {
+    const s = snap({ aal: 'aal1', role: 'supervisor', dataMode: 'identifiable' });
+    for (const action of ['case:approve', 'export:identifiable', 'admin:tenant', 'evaluation:create', 'duty:create', 'attachment:upload', 'ai:insights'] as SensitiveAction[]) {
+      expect(canPerform(s, action).ok).toBe(false);
+    }
   });
 
   it('restricts approval to supervisor roles (server still authoritative)', () => {

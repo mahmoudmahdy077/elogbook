@@ -15,6 +15,8 @@ export interface AuthResult {
     id: string;
     tenant_id: string;
     role: UserRole;
+    status: string;
+    pending_role: string | null;
     full_name: string;
     specialty: string | null;
     onboarding_completed: boolean;
@@ -44,7 +46,7 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, tenant_id, role, full_name, specialty, onboarding_completed')
+    .select('id, tenant_id, role, status, pending_role, full_name, specialty, onboarding_completed')
     .eq('user_id', user.id)
     .single();
 
@@ -75,12 +77,18 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
   const role = profile.role as UserRole;
   const aal = (aalResult.data?.currentLevel === 'aal2' ? 'aal2' : 'aal1') as 'aal1' | 'aal2';
 
+  const pendingPromotion = profile.status === 'pending'
+    && typeof profile.pending_role === 'string'
+    && profile.pending_role !== 'resident';
+
   return {
     user: { id: user.id, email: user.email },
     profile: {
       id: profile.id,
       tenant_id: profile.tenant_id,
       role,
+      status: profile.status,
+      pending_role: profile.pending_role ?? null,
       full_name: profile.full_name,
       specialty: profile.specialty,
       onboarding_completed: profile.onboarding_completed ?? false,
@@ -95,12 +103,9 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
       ? { status: subscription.status, plan_id: subscription.plan_id, current_period_end: subscription.current_period_end }
       : null,
     aal,
-    // P6.1 MFA enforcement can be disabled per-deployment (DISABLE_MFA=true)
-    // for auth servers where GoTrue MFA endpoints are unavailable — otherwise
-    // director+ roles are permanently locked out at /mfa/enroll.
     mfaRequired:
-      process.env.DISABLE_MFA !== 'true' &&
-      isMfaRequiredForRole(role) &&
+      (process.env.NODE_ENV === 'production' || process.env.DISABLE_MFA !== 'true') &&
+      (isMfaRequiredForRole(role) || pendingPromotion) &&
       aal !== 'aal2',
   };
 });

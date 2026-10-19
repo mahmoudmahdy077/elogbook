@@ -1,16 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { escapeCsvCell } from '@/lib/csv';
 
 // Mirror of the toCsv function in the page (extracted here for testability).
 // Mirrors the CSV escaping rules in apps/web/app/(authenticated)/[tenant]/audit/page.tsx.
 function toCsv(rows: Record<string, unknown>[]): string {
   const headers = rows[0] ? Object.keys(rows[0]) : [];
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  };
+  const escape = escapeCsvCell;
   const lines = [headers.join(',')];
   for (const r of rows) {
     lines.push(headers.map((h) => escape(r[h])).join(','));
@@ -45,6 +40,11 @@ describe('audit CSV export (P6.7)', () => {
   it('escapes newlines inside fields', () => {
     const csv = toCsv([{ id: '1', action: 'line1\nline2' }]);
     expect(csv).toContain('"line1\nline2"');
+  });
+
+  it('neutralizes formulas before quoting', () => {
+    const csv = toCsv([{ id: '1', action: '=SUM(1,2)' }]);
+    expect(csv).toContain('"\'=SUM(1,2)"');
   });
 
   it('handles null and undefined as empty strings', () => {

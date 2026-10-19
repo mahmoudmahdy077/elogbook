@@ -5,6 +5,7 @@ export class Comment extends Model {
   static table = 'comments';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('entry_id') entryId!: string | null;
   @text('evaluation_id') evaluationId!: string | null;
   @text('author_id') authorId!: string;

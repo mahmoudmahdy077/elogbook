@@ -1,5 +1,15 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { authenticate, corsHeaders } from '../_shared/auth.ts';
+import { requirePrincipal, corsHeaders } from '../_shared/auth.ts';
+import { findPhi, validateAiRequest, validateStructuredOutput } from '../_shared/ai-guard.ts';
+
+const AI_BUDGET = {
+  maxInputBytes: 8_192,
+  maxOutputBytes: 16_384,
+  maxInputTokens: 4_096,
+  maxOutputTokens: 2_048,
+  maxCostCents: 100,
+  maxFanOut: 1,
+} as const;
 
 interface GapAnalysisRequest {
   resident_id: string;
@@ -13,22 +23,30 @@ interface GapResult {
   recommendation: string;
 }
 
+type GapCase = { case_templates?: { specialty?: string | null } | null };
+type GapMilestone = { competency_area: string; level: number };
+type GapGoal = { target_count: number; goal_progress?: Array<{ current_count?: number | null }> | null };
+
+function safeGapLabel(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const label = value.trim();
+  if (label.length === 0 || label.length > 64 || findPhi(label).length > 0) return fallback;
+  return /^[A-Za-z0-9][A-Za-z0-9 _./+()-]{0,63}$/.test(label) ? label : fallback;
+}
+
 serve(async (req) => {
   const headers = corsHeaders(req.headers.get('Origin'));
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
 
   try {
-    const auth = await authenticate(req);
+    const auth = await requirePrincipal(req, {
+      roles: ['supervisor', 'director', 'institution_admin', 'admin'],
+      aal: 'aal2',
+    });
     if (auth instanceof Response) return auth;
-    const { supabase, tenantId, role } = auth;
+    const { supabase, tenantId, role, principal } = auth;
 
-    if (!['supervisor', 'director', 'institution_admin', 'admin'].includes(role)) {
-      return new Response(JSON.stringify({ error: 'Forbidden: supervisor role or higher required' }), {
-        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
-
-    let body: GapAnalysisRequest & { is_deidentified?: boolean };
+    let body: GapAnalysisRequest;
     try {
       body = await req.json();
     } catch {
@@ -36,16 +54,33 @@ serve(async (req) => {
         status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
-    const { resident_id, is_deidentified } = body;
+    if (Object.keys(body).some((key) => key !== 'resident_id')) {
+      return new Response(JSON.stringify({ error: 'AI request contains unsupported fields' }), {
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+    const { resident_id } = body;
     if (!resident_id || typeof resident_id !== 'string') {
       return new Response(JSON.stringify({ error: 'resident_id required' }), {
         status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
-    if (is_deidentified !== true) {
-      return new Response(JSON.stringify({ error: 'Cannot send identifiable patient data to external AI. Set is_deidentified=true or remove PHI.' }), {
-        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
+    const aiRequest = validateAiRequest(
+      {
+        tenant_id: tenantId,
+        actor_id: principal.profileId,
+        action: 'ai:gap-analysis',
+        input: 'gap-analysis',
+        resident_id,
+        field_values: { status: 'approved' },
+      },
+      { actorId: principal.profileId, tenantId, role, status: 'active', aal: principal.aal },
+      { requireAal2: true, requireDeidentified: true, budget: AI_BUDGET },
+    );
+    if (!aiRequest.ok) {
+      return new Response(JSON.stringify({ error: aiRequest.reason === 'budget_exceeded' ? 'AI request exceeds the allowed budget' : 'AI request is not authorized' }), {
+        status: aiRequest.reason === 'budget_exceeded' ? 400 : 403, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -64,11 +99,11 @@ serve(async (req) => {
     }
 
     const [casesRes, milestonesRes, goalsRes] = await Promise.all([
-      supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, case_date, status, created_at, updated_at, case_templates!inner(specialty, name)')
+      supabase.from('case_entries').select('id, tenant_id, resident_id, template_id, status, case_templates!inner(specialty)')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId).is('deleted_at', null),
-      supabase.from('milestones').select('id, tenant_id, resident_id, competency_area, sub_competency, level')
+      supabase.from('milestones').select('id, tenant_id, resident_id, competency_area, level')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId),
-      supabase.from('program_goals').select('id, tenant_id, resident_id, title, target_count, deadline, goal_progress(current_count)')
+      supabase.from('program_goals').select('id, tenant_id, resident_id, target_count, goal_progress(current_count)')
         .eq('resident_id', resident_id).eq('tenant_id', tenantId),
     ]);
 
@@ -79,7 +114,7 @@ serve(async (req) => {
     // Compute gaps from case volume by specialty
     const specialtyCounts: Record<string, number> = {};
     for (const c of cases) {
-      const specialty = (c as any).case_templates?.specialty || 'Unknown';
+      const specialty = (c as GapCase).case_templates?.specialty || 'Unknown';
       specialtyCounts[specialty] = (specialtyCounts[specialty] || 0) + 1;
     }
 
@@ -113,29 +148,28 @@ serve(async (req) => {
 
     // Add milestone gaps
     for (const m of milestones) {
-      const milestone = m as any;
+      const milestone = m as unknown as GapMilestone;
       if (milestone.level < 3) {
         gaps.push({
-          competency: `${milestone.competency_area}: ${milestone.sub_competency}`,
+          competency: safeGapLabel(milestone.competency_area, 'Competency gap'),
           current: milestone.level,
           target: 3,
           gap: 3 - milestone.level,
-          recommendation: `Seek assessments in ${milestone.sub_competency} to reach level 3. Discuss with supervisor at next evaluation.`,
+          recommendation: 'Complete the competency gap to level 3 and discuss it with your supervisor.',
         });
       }
     }
 
-    // Add goal progress gaps
     for (const g of goals) {
-      const goal = g as any;
+      const goal = g as unknown as GapGoal;
       const current = goal.goal_progress?.[0]?.current_count || 0;
       if (current < goal.target_count) {
         gaps.push({
-          competency: `Goal: ${goal.title}`,
+          competency: 'Program goal gap',
           current,
           target: goal.target_count,
           gap: goal.target_count - current,
-          recommendation: `Complete ${goal.target_count - current} more by ${goal.deadline}. Current pace: ${Math.round(current / Math.max(1, goal.target_count) * 100)}%.`,
+          recommendation: `Complete ${goal.target_count - current} more progress units and review the goal with your supervisor.`,
         });
       }
     }
@@ -145,11 +179,17 @@ serve(async (req) => {
       ? `Found ${gaps.length} gaps. Top priority: ${gaps.slice(0, 3).map(g => `${g.competency} (${g.gap} remaining)`).join(', ')}.`
       : 'No significant gaps found. Resident is meeting all minimum requirements.';
 
-    return new Response(JSON.stringify({ gaps: gaps.slice(0, 20), summary }), {
+    const output = validateStructuredOutput({ gaps: gaps.slice(0, 20), summary }, 'gap', AI_BUDGET);
+    if (!output.ok) {
+      return new Response(JSON.stringify({ error: 'AI response failed the output safety boundary' }), {
+        status: 502, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify(output.value), {
       headers: { ...headers, 'Content-Type': 'application/json' },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }), {
+  } catch {
+    return new Response(JSON.stringify({ error: 'Gap analysis unavailable' }), {
       status: 500, headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }

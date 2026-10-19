@@ -5,6 +5,7 @@ export class CaseEntry extends Model {
   static table = 'case_entries';
 
   @text('tenant_id') tenantId!: string;
+  @text('local_scope') localScope!: string | null;
   @text('resident_id') residentId!: string;
   @text('template_id') templateId!: string;
   @text('patient_mrn') patientMrn!: string | null;

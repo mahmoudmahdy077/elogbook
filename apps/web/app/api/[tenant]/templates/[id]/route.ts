@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { caseTemplateSchema } from '@elogbook/shared';
+import { requireTenantAdmin } from '@/lib/supabase/require-admin';
+import { caseTemplateUpdateSchema } from '@elogbook/shared';
 import { GLOBAL_TENANT_ID } from '@elogbook/shared';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { logger } from '@/lib/logger';
 
 const DIRECTOR_ROLES = ['director', 'institution_admin', 'admin'];
+const templateUpdateSchema = caseTemplateUpdateSchema;
 
 async function safeCreateSupabase() {
   try {
@@ -55,28 +60,23 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
+  const guarded = await guardRequest(request, templateUpdateSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 32 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await safeCreateSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const auth = await requireTenantAdmin(supabase, tenantSlug, DIRECTOR_ROLES);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
-  if (!DIRECTOR_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = auth.profile;
 
   const { data: existing } = await supabase
     .from('case_templates')
@@ -97,11 +97,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const parsed = caseTemplateSchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
-  }
+  const parsed = { data: guarded.data, success: true as const };
 
   const { data: template, error } = await supabase
     .from('case_templates')
@@ -110,7 +106,10 @@ export async function PUT(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to update template', error, { tenantSlug, templateId: id });
+    return NextResponse.json({ error: 'Failed to update template' }, { status: 500 });
+  }
 
   return NextResponse.json({ template });
 }
@@ -119,28 +118,23 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> }
 ) {
+  const guarded = await guardRequest(request, undefined, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    requireBody: false,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await safeCreateSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role, tenants!inner(slug)')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || (profile.tenants as unknown as { slug: string }).slug !== tenantSlug) {
-    return NextResponse.json({ error: 'Invalid tenant' }, { status: 403 });
+  const auth = await requireTenantAdmin(supabase, tenantSlug, DIRECTOR_ROLES);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
-  if (!DIRECTOR_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-  }
+  const profile = auth.profile;
 
   const { count } = await supabase
     .from('case_entries')
@@ -161,7 +155,10 @@ export async function DELETE(
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    logger.error('Failed to delete template', error, { tenantSlug, templateId: id });
+    return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, message: 'Template deleted' });
 }

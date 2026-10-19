@@ -40,6 +40,7 @@ export default function SetupPage() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminFullName, setAdminFullName] = useState('');
+  const [platformOperatorProvisioning, setPlatformOperatorProvisioning] = useState<string | null>(null);
 
   const [domain, setDomain] = useState('');
 
@@ -129,6 +130,13 @@ export default function SetupPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
+      // The account just created is a tenant administrator, not a platform
+      // operator. Surfacing that here means the operator learns it from setup
+      // rather than from a bare 403 on the backup page later.
+      if (typeof data.platformOperatorProvisioning === 'string') {
+        setPlatformOperatorProvisioning(data.platformOperatorProvisioning);
+      }
 
       setStep(6);
     } catch (err) {
@@ -306,6 +314,12 @@ export default function SetupPage() {
           <motion.div key="step-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <h2 className="text-xl font-bold mb-4">Domain & SSL</h2>
             <p className="text-text-muted mb-4">Enter your domain name to configure automatic HTTPS via Caddy.</p>
+            {platformOperatorProvisioning && (
+              <div className="mb-6 rounded-lg border border-border bg-neutral-dark p-4">
+                <p className="text-sm font-medium text-text-primary mb-1">Platform operator access</p>
+                <p className="text-xs text-text-muted">{platformOperatorProvisioning}</p>
+              </div>
+            )}
             <div className="mb-6">
               <label className="block text-xs mb-1">Domain Name</label>
               <input value={domain} onChange={e => setDomain(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="elogbook.example.com" />

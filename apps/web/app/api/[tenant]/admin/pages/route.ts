@@ -3,6 +3,15 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { validatePageContent } from '@/lib/site-content';
+import { defaultTrustedOrigins } from '@/lib/csrf';
+import { guardRequest } from '@/lib/http/request-guard';
+import { z } from 'zod';
+
+const pageCreateSchema = z.object({
+  slug: z.string().trim().min(1).max(120),
+  locale: z.string().trim().min(2).max(10).optional(),
+  content: z.unknown().optional(),
+}).strict();
 
 export const runtime = 'nodejs';
 
@@ -39,20 +48,20 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const guarded = await guardRequest(request, pageCreateSchema, {
+    trustedOrigins: defaultTrustedOrigins(request),
+    maxBodyBytes: 64 * 1024,
+  });
+  if (!guarded.ok) return guarded.response;
+
   const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const auth = await requireTenantAdmin(supabase, tenantSlug, TENANT_ROLES);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  let body: { slug?: string; locale?: string; content?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
-  const locale = typeof body.locale === 'string' && body.locale ? body.locale.trim() : 'en';
+  const body = guarded.data;
+  const slug = body.slug;
+  const locale = body.locale || 'en';
   if (!SLUG_RE.test(slug)) {
     return NextResponse.json({ error: 'slug must be lowercase alphanumeric with dashes' }, { status: 400 });
   }

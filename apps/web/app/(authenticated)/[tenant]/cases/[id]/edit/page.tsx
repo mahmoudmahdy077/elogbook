@@ -12,10 +12,16 @@ export default async function CaseEditPage({ params }: { params: Promise<{ tenan
 
   const supabase = await createServerSupabase();
 
+  // `*` minus the two direct identifiers. The editor is handed a draft to change,
+  // and the MRN/DOB must not arrive in the payload just because the page was
+  // opened: they are fetched one field at a time through the audited reveal in
+  // lib/cases/phi-reveal-actions.ts, and an untouched field is left out of the
+  // update entirely.
   const { data: entry, error: entryError } = await supabase
     .from('case_entries')
     .select(`
-      *,
+      id, tenant_id, resident_id, template_id, case_date, status, is_deidentified,
+      patient_age_years, field_values, accreditation_mappings,
       case_templates(name, specialty, fields)
     `)
     .eq('id', id)

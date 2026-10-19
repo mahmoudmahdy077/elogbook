@@ -4,8 +4,8 @@ import type { CapabilitySnapshot } from '../capability';
 
 function cap(over: Partial<CapabilitySnapshot> = {}): CapabilitySnapshot {
   return {
-    userId: 'u1', tenantId: 't1', profileId: 'p1', role: 'resident', status: 'active',
-    policyVersion: 3, dataMode: 'deidentified', mfaVerifiedAt: Date.now(),
+    userId: 'u1', tenantId: 't1', profileId: 'p1', role: 'resident', status: 'active', tenantStatus: 'active',
+    policyVersion: 3, dataMode: 'deidentified', aal: 'aal2',
     expiresAt: Date.now() + 3600_000, fetchedAt: Date.now(), ...over,
   };
 }

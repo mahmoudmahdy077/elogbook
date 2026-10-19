@@ -44,6 +44,13 @@ supabase/.temp/
 
 .vercel
 .env*
+SECURITY_ALERT_ENV_SECRETS.md
+security-reports/
+secret-containment-report.*
+secret-scan-report.*
+gitleaks-report.*
+*.secret-scan.json
+*.secret-scan.txt
 
 # CI debug logs
 *_logs.zip

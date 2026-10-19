@@ -790,12 +790,12 @@ describe('audit export route — SEC-003', () => {
   beforeEach(() => { fetchMock.mockClear(); });
 
   it('sends the user JWT, not the service-role key, to the edge function', async () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'shhh-platform-secret';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = '[REDACTED]';
     const { POST } = await import('../route');
     const req = new Request('https://x/api/demo/audit/export?format=pdf', { method: 'POST' });
     await POST(req, { params: Promise.resolve({ tenant: 'demo' }) } as any);
     const authHeader = fetchMock.mock.calls[0][1].headers['Authorization'];
-    expect(authHeader).not.toContain('shhh-platform-secret');
+    expect(authHeader).not.toContain('[REDACTED]');
   });
 });
 ```
