@@ -20,6 +20,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/approvals', label: 'Approvals', roles: ['supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/goals', label: 'Goals', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/milestones', label: 'Milestones', roles: ['director', 'institution_admin', 'admin'] },
+  { href: '/reflections', label: 'Reflections', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/rotations', label: 'Rotations', roles: ['director', 'institution_admin', 'admin'] },
   { href: '/reports', label: 'Reports', roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'] },
   { href: '/evaluate', label: 'Evaluate', roles: ['supervisor', 'director', 'institution_admin', 'admin'] },

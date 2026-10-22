@@ -3,6 +3,7 @@ export * from './types/database';
 // They are intentionally NOT exported here to prevent secrets from reaching client bundles.
 export * from './schemas/cases';
 export * from './schemas/auth';
+export * from './schemas/reflections';
 export * from './schemas/subscriptions';
 export * from './constants/design-tokens';
 export * from './constants/animations';
