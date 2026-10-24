@@ -15,6 +15,8 @@ export type SensitiveAction =
   | 'case:approve'
   | 'evaluation:create'
   | 'duty:create'
+  | 'reflection:create'
+  | 'reflection:delete'
   | 'export:identifiable'
   | 'export:deidentified'
   | 'ai:insights'
@@ -44,6 +46,8 @@ export function canPerform(cap: CapabilitySnapshot | null, action: SensitiveActi
     case 'case:delete':
     case 'evaluation:create':
     case 'duty:create':
+    case 'reflection:create':
+    case 'reflection:delete':
     case 'export:deidentified':
     case 'ai:insights':
     case 'attachment:upload':

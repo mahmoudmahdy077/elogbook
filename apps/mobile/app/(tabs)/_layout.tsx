@@ -128,6 +128,7 @@ export default function TabLayout() {
           <Tabs.Screen name="milestones" options={{ href: null }} />
           <Tabs.Screen name="case-detail" options={{ href: null }} />
           <Tabs.Screen name="analytics" options={{ href: null }} />
+          <Tabs.Screen name="reflections" options={{ href: null }} />
         </Tabs>
       </ScreenErrorBoundary>
       <SideMenu role={role} userName={userName} />

@@ -67,6 +67,13 @@ export const SIDE_MENU_ITEMS: MenuItem[] = [
     roles: ['resident', 'supervisor', 'director', 'admin'],
   },
   {
+    key: 'reflections',
+    label: 'Reflections',
+    icon: 'book',
+    route: '/(tabs)/reflections',
+    roles: ['resident', 'supervisor', 'director', 'institution_admin', 'admin'],
+  },
+  {
     key: 'analytics',
     label: 'Analytics',
     icon: 'stats-chart',
