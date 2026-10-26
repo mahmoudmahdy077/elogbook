@@ -1,5 +1,5 @@
 {
-  "cycle": 100,
+  "cycle": 101,
   "total_target": 100,
   "phase": "test",
   "backlog": [
@@ -50,7 +50,7 @@
       "id": 6,
       "sev": "P2",
       "desc": "a11y.spec fails: expect().toPassAxe matcher not registered (axe-playwright missing/wrong setup)",
-      "status": "open"
+      "status": "VERIFIED-PASS: 2026-10-26 \u2014 matcher layout already removed in spec rewrite; ran live: a11y.spec 4/4 pass (cursor: server on :3000 w/ production env RATE_LIMIT_MODE=single-instance TRUSTED_PROXY_HOPS=0). Non-critical violations logged only. Evidence: playwright line reporter output."
     },
     {
       "id": 9,
