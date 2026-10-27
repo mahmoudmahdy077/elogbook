@@ -9,7 +9,7 @@ import {
   resetSetupLocksForTests,
   checkRateLimit,
   resetRateLimitsForTests,
-  clientIpFromHeaders,
+  clientIpOfRequest,
   consumeSetupToken,
   acquireDurableLock,
   releaseDurableLock,
@@ -115,12 +115,24 @@ describe('setup guard (M8.1)', () => {
     });
 
     it('derives the client IP from trusted proxy hops only', () => {
-      const h = { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' };
-      // No trust configured: forwarded chain is untrusted, direct peer unknown.
-      expect(clientIpFromHeaders(h, 0)).toBe('direct');
-      // One trusted hop: client is the leftmost untrusted address.
-      expect(clientIpFromHeaders(h, 1)).toBe('203.0.113.9');
-      expect(clientIpFromHeaders({ 'x-forwarded-for': '203.0.113.9' }, 1)).toBe('203.0.113.9');
+      const request = {
+        headers: new Headers({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }),
+      } as unknown as Request;
+      const OLD_HOPS = process.env.TRUSTED_PROXY_HOPS;
+      try {
+        // No trust configured: the forwarded chain is ignored entirely.
+        delete process.env.TRUSTED_PROXY_HOPS;
+        expect(clientIpOfRequest(request)).toBe('unknown');
+        // One trusted hop: the last entry is the address Caddy appended.
+        process.env.TRUSTED_PROXY_HOPS = '1';
+        expect(clientIpOfRequest(request)).toBe('10.0.0.1');
+        // Two trusted hops: the client is two entries from the end.
+        process.env.TRUSTED_PROXY_HOPS = '2';
+        expect(clientIpOfRequest(request)).toBe('203.0.113.9');
+      } finally {
+        if (OLD_HOPS === undefined) delete process.env.TRUSTED_PROXY_HOPS;
+        else process.env.TRUSTED_PROXY_HOPS = OLD_HOPS;
+      }
     });
 
     it('bounds token replay with durable single-use accounting', () => {
