@@ -181,7 +181,7 @@ export function auditSetup(op: string, result: string, detail?: string): void {
 
 // --- N9: trusted proxy client IP --------------------------------------------
 // Single source of truth: lib/client-ip.ts. This module must not parse the
-// forwarded-for header itself — Gate G (scripts/verify-single-ip.mjs) enforces
+// forwarded-for header itself - Gate G (scripts/verify-single-ip.mjs) enforces
 // exactly one reader so the trust boundary cannot drift between call sites.
 
 /** Route helper: client IP honoring the trusted-proxy contract. */
