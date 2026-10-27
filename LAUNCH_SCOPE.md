@@ -48,9 +48,9 @@
 ## 6. Exit criteria for this document (Phase 0)
 
 - [x] Merged to `main`
-- [ ] `RATE_LIMIT_MODE` in `packages/env/src/index.ts` Zod schema + `.env.example` (TICKET-001)
-- [ ] `apps/web/instrumentation.ts` calls validator at boot (TICKET-001)
-- [ ] Production boot with mode unset demonstrably exits non-zero (Gate C)
+- [x] `RATE_LIMIT_MODE` in `packages/env/src/index.ts` Zod schema + `.env.example` (TICKET-001) — verified in code + contract tests
+- [x] `apps/web/instrumentation.ts` calls validator at boot (TICKET-001) — `parseWebFullEnv` + `resolveMode()` in `register()`
+- [x] Production boot with mode unset demonstrably exits non-zero (Gate C) — verified 2026-10-27 on fresh `next build`: boot with `RATE_LIMIT_MODE` unset exits **1** (`[boot] fatal: deployment contract validation failed. Exiting.`); distributed without Upstash creds also exits 1; `single-instance` boots and serves `/api/ready` 200 with row-7 per-process warning. Fix: raw `throw` in `register()` did NOT exit the process (Next 16 logs uncaughtException and keeps the broken server alive) — instrumentation now catches and calls `process.exit(1)` itself.
 
 ---
 
