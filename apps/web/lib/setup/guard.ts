@@ -18,6 +18,8 @@ import { appendFileSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeF
 import { join } from 'path';
 import { z } from 'zod';
 
+import { getClientIp } from '@/lib/client-ip';
+
 export interface SetupRequest {
   url: string;
   method: string;
@@ -178,33 +180,13 @@ export function auditSetup(op: string, result: string, detail?: string): void {
 }
 
 // --- N9: trusted proxy client IP --------------------------------------------
-// x-forwarded-for is attacker-controlled unless a trusted proxy contract
-// exists. hops = number of trusted proxy hops in front of us
-// (TRUSTED_PROXY_HOPS); with 0 hops the chain is untrusted and the direct
-// peer is unknown in this runtime, so callers get 'direct' (localhost-only
-// policies then apply conservatively).
-
-export function trustedProxyHops(): number {
-  const n = Number(process.env.TRUSTED_PROXY_HOPS ?? 0);
-  return Number.isInteger(n) && n > 0 ? n : 0;
-}
+// Single source of truth: lib/client-ip.ts. This module must not parse the
+// forwarded-for header itself — Gate G (scripts/verify-single-ip.mjs) enforces
+// exactly one reader so the trust boundary cannot drift between call sites.
 
 /** Route helper: client IP honoring the trusted-proxy contract. */
 export function clientIpOfRequest(request: Request): string {
-  return clientIpFromHeaders(
-    { 'x-forwarded-for': request.headers.get('x-forwarded-for') ?? undefined },
-    trustedProxyHops(),
-  );
-}
-
-export function clientIpFromHeaders(headers: Record<string, string | undefined>, hops: number): string {
-  const raw = headers['x-forwarded-for'] ?? headers['X-Forwarded-For'];
-  if (!raw || hops <= 0) return 'direct';
-  const chain = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  if (chain.length === 0) return 'direct';
-  // With H trusted hops, the client is the leftmost untrusted address.
-  const idx = Math.max(0, chain.length - 1 - hops);
-  return chain[idx] ?? 'direct';
+  return getClientIp(request);
 }
 
 // --- N9: durable one-time token accounting ----------------------------------
