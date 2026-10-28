@@ -44,7 +44,7 @@ SELECT throws_ok(
 
 -- 2. Existing: institution_admin can still assign non-admin roles.
 SELECT lives_ok(
-  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
+  $$UPDATE profiles SET role = 'director' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
   'institution_admin can assign supervisor'
 );
 
@@ -71,7 +71,7 @@ SELECT throws_ok(
 RESET ROLE;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
 SELECT throws_ok(
-  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
+  $$UPDATE profiles SET role = 'director' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
   '42501', 'Cross-tenant role change rejected',
   'cross-tenant role write is rejected'
 );

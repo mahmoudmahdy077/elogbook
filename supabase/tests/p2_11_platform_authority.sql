@@ -33,9 +33,10 @@ INSERT INTO platform_admins (user_id, status) VALUES
   ('00000000-0000-0000-0000-000000000092', 'active')
 ON CONFLICT (user_id) DO NOTHING;
 
--- 3. Reserved slugs rejected.
+-- 3. Reserved slugs rejected. The salted tenant shape is complete so the
+-- reserved-slug rule, not a NOT NULL check, is what answers.
 SELECT throws_ok(
-  $$INSERT INTO tenants (id, name, slug, tenant_type) VALUES ('00000000-0000-0000-0000-000000000031', 'Fake Platform', 'platform', 'institution')$$,
+  $$INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt) VALUES ('00000000-0000-0000-0000-000000000031', 'Fake Platform', 'platform', 'institution', encode(gen_random_bytes(32), 'hex'))$$,
   '23514', NULL,
   'tenant slug "platform" is reserved'
 );

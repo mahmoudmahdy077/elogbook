@@ -47,6 +47,12 @@ SELECT is(
   'client_operation_id persisted on the row'
 );
 
+-- Every later step runs as a different caller, and RLS legitimately hides this
+-- row from them, so resolve the row id once here instead of through a filtered
+-- SELECT inside each call.
+SELECT set_config('test.p3_row_id',
+  (SELECT id::text FROM case_entries WHERE client_operation_id = 'p3-op-1'), false);
+
 -- 2. Duplicate delivery returns the stored result without a second row.
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-1', 'insert', NULL,
@@ -64,7 +70,7 @@ SELECT is(
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c2","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-x', 'update',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
+    current_setting('test.p3_row_id')::uuid,
     '{"status":"approved"}'::jsonb) ->> 'error'),
   'not_found',
   'tenant B caller cannot touch tenant A rows'
@@ -74,7 +80,7 @@ SELECT is(
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-f', 'update',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
+    current_setting('test.p3_row_id')::uuid,
     '{"status":"pending"}'::jsonb) ->> 'error'),
   'policy: forbidden',
   'non-owner resident cannot update another resident row'
@@ -84,23 +90,23 @@ SELECT is(
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"supervisor"}}';
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-ap', 'update',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
+    current_setting('test.p3_row_id')::uuid,
     '{"status":"approved"}'::jsonb) ->> 'success')::boolean),
   'supervisor approval succeeds'
 );
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-al', 'update',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
+    current_setting('test.p3_row_id')::uuid,
     '{"status":"draft"}'::jsonb) ->> 'error'),
   'policy: approved_locked',
   'owner cannot silently rewrite an approved record'
 );
 
 -- 6. Immutable identity columns rejected.
-SELECT like(
+SELECT matches(
   (SELECT public.submit_case_operation('p3-op-im', 'update',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
+    current_setting('test.p3_row_id')::uuid,
     '{"client_operation_id":"forged"}'::jsonb) ->> 'error'),
   'validation: immutable_column%',
   'client_operation_id cannot be rewritten through updates'
@@ -109,7 +115,7 @@ SELECT like(
 -- 7. Owner delete tombstones; replay reports already_deleted.
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-del', 'delete',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'), '{}'::jsonb) ->> 'success')::boolean),
+    current_setting('test.p3_row_id')::uuid, '{}'::jsonb) ->> 'success')::boolean),
   'owner delete tombstones the row'
 );
 SELECT ok(
@@ -118,7 +124,7 @@ SELECT ok(
 );
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-del', 'delete',
-    (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'), '{}'::jsonb) ->> 'already_deleted'),
+    current_setting('test.p3_row_id')::uuid, '{}'::jsonb) ->> 'already_deleted'),
   'true',
   'delete replay is idempotent'
 );
