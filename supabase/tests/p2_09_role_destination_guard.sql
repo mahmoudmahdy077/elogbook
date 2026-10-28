@@ -38,7 +38,7 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","
 -- 1. NEW: institution_admin cannot mint admin, even same-tenant.
 SELECT throws_ok(
   $$UPDATE profiles SET role = 'admin' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
-  'insufficient_privilege', 'Only admin may assign the admin role',
+  '42501', 'Only admin may assign the admin role',
   'institution_admin direct write to admin is rejected'
 );
 
@@ -59,7 +59,7 @@ SELECT lives_ok(
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000093","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000029","user_role":"resident"}}';
 SELECT throws_ok(
   $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
-  'insufficient_privilege', 'Role changes require institution_admin or admin authorization',
+  '42501', 'Role changes require institution_admin or admin authorization',
   'resident direct role write is rejected'
 );
 

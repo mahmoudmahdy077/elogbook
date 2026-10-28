@@ -33,28 +33,28 @@ ON CONFLICT (user_id) DO NOTHING;
 -- 3. Reserved slugs rejected.
 SELECT throws_ok(
   $$INSERT INTO tenants (id, name, slug, tenant_type) VALUES ('00000000-0000-0000-0000-000000000031', 'Fake Platform', 'platform', 'institution')$$,
-  '23514',
+  '23514', NULL,
   'tenant slug "platform" is reserved'
 );
 
 -- 4. Expired-at-birth grants rejected.
 SELECT throws_ok(
   $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000036', 'test', NOW() - INTERVAL '1 hour')$$,
-  '23514',
+  '23514', NULL,
   'grant expiry must be in the future'
 );
 
 -- 5. Unknown grant scope rejected.
 SELECT throws_ok(
   $$INSERT INTO platform_tenant_access (platform_user_id, tenant_id, purpose, scope, expires_at) VALUES ('00000000-0000-0000-0000-000000000092', '00000000-0000-0000-0000-000000000036', 'test', 'clinical:write', NOW() + INTERVAL '1 hour')$$,
-  '23514',
+  '23514', NULL,
   'grant scope is allowlisted (no clinical access grant exists)'
 );
 
 -- 6. Unknown operator status rejected.
 SELECT throws_ok(
   $$INSERT INTO platform_admins (user_id, status) VALUES ('00000000-0000-0000-0000-000000000096', 'super')$$,
-  '23514',
+  '23514', NULL,
   'operator status is allowlisted'
 );
 

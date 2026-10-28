@@ -30,14 +30,14 @@ ON CONFLICT (id) DO NOTHING;
 -- 1. Cross-tenant publish is rejected inside the database.
 SELECT throws_ok(
   $$SELECT public.publish_site_page('00000000-0000-0000-0000-0000000000c3', '00000000-0000-0000-0000-0000000000d4', NULL, false, NULL, '00000000-0000-0000-0000-0000000000b2')$$,
-  'P0005',
+  'P0005', NULL,
   'tenant_mismatch: tenant B cannot publish tenant A pages'
 );
 
 -- 2. Stale pointer is rejected (409 contract).
 SELECT throws_ok(
   $$SELECT public.publish_site_page('00000000-0000-0000-0000-0000000000c3', '00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000d5', true, NULL, '00000000-0000-0000-0000-0000000000a1')$$,
-  'P0003',
+  'P0003', NULL,
   'pointer_conflict: stale editors fail closed'
 );
 
@@ -63,7 +63,7 @@ SELECT ok(
 -- 6. Foreign revision is rejected.
 SELECT throws_ok(
   $$SELECT public.publish_site_page('00000000-0000-0000-0000-0000000000c3', '00000000-0000-0000-0000-0000000000f7', NULL, false, NULL, '00000000-0000-0000-0000-0000000000a1')$$,
-  'P0004',
+  'P0004', NULL,
   'revision_mismatch: revision must belong to the page'
 );
 
