@@ -14,6 +14,9 @@ SELECT is_empty(
   'authenticated users cannot enumerate revisions'
 );
 RESET ROLE;
+-- System path from here on: no caller identity, so the audit trigger does
+-- not write a user_id that has no auth.users row.
+SET LOCAL request.jwt.claims TO '{}';
 
 -- 3. Scope combinations enforced (platform rows carry no tenant).
 SELECT throws_ok(

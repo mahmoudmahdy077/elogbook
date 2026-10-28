@@ -32,7 +32,7 @@ VALUES ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000
 ON CONFLICT (id) DO NOTHING;
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1"}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
 
 -- 1. Insert happy path carries the client op ID into the row.
 SELECT ok(
@@ -61,7 +61,7 @@ SELECT is(
 );
 
 -- 3. Cross-tenant update by known row ID does not leak (not_found, not data).
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000b1"}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c2","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-x', 'update',
     (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
@@ -71,7 +71,7 @@ SELECT is(
 );
 
 -- 4. Same-tenant non-owner resident is forbidden.
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a2"}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-f', 'update',
     (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
@@ -81,14 +81,14 @@ SELECT is(
 );
 
 -- 5. Approved rows lock against resident edits, open to supervisors.
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a3"}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"supervisor"}}';
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-ap', 'update',
     (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),
     '{"status":"approved"}'::jsonb) ->> 'success')::boolean),
   'supervisor approval succeeds'
 );
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1"}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
 SELECT is(
   (SELECT public.submit_case_operation('p3-op-al', 'update',
     (SELECT id FROM case_entries WHERE client_operation_id = 'p3-op-1'),

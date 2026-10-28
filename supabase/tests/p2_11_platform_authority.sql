@@ -15,6 +15,9 @@ SELECT is_empty(
   'authenticated users cannot enumerate support grants'
 );
 RESET ROLE;
+-- System path from here on: no caller identity, so the audit trigger does
+-- not write a user_id that has no auth.users row.
+SET LOCAL request.jwt.claims TO '{}';
 
 -- Fixtures for constraint tests (superuser; ROLLBACK undoes all).
 -- NOTE: every file runs in its own rolled-back transaction, so fixtures

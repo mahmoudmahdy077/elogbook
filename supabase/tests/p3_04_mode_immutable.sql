@@ -35,10 +35,10 @@ SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000e1","
 -- regardless of role; run as owner to isolate the trigger from RLS).
 -- Open the identifiable ceilings first: otherwise trg_enforce_data_mode
 -- rejects the write before trg_forbid_mode_relabel is reached.
+RESET ROLE;
 UPDATE tenants SET allow_identifiable = true, data_mode_requested = 'identifiable'
  WHERE id = '00000000-0000-0000-0000-0000000000e0';
 UPDATE installation_policy SET phi_ready = true, allow_identifiable = true WHERE id = 1;
-RESET ROLE;
 SELECT throws_ok(
   $$UPDATE case_entries SET is_deidentified = false WHERE id = '00000000-0000-0000-0000-0000000000e6'$$,
   'P0001', NULL,

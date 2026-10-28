@@ -55,24 +55,30 @@ SELECT lives_ok(
   'admin can assign admin'
 );
 
--- 4. Existing: resident cannot change roles at all.
+-- 4. Existing: resident cannot change roles at all. Target their OWN row:
+-- RLS hides other profiles from a resident, and a hidden row would make the
+-- write a silent no-op instead of exercising the guard.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000093","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000029","user_role":"resident"}}';
 SELECT throws_ok(
-  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
+  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000193'$$,
   '42501', 'Role changes require institution_admin or admin authorization',
   'resident direct role write is rejected'
 );
 
--- 5. Existing: cross-tenant role write blocked (RLS denies before trigger).
+-- 5. Existing: cross-tenant role write blocked. Run as owner with a JWT that
+-- points at another tenant: RLS would otherwise hide the row and turn this
+-- into a no-op, so the tenant guard inside the trigger is what must fire.
+RESET ROLE;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
 SELECT throws_ok(
   $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
-  '42501',
+  '42501', 'Cross-tenant role change rejected',
   'cross-tenant role write is rejected'
 );
 
 -- 6. Existing: system/definer path (no JWT) still permitted.
 RESET ROLE;
+SET LOCAL request.jwt.claims TO '{}';
 SELECT lives_ok(
   $$UPDATE profiles SET role = 'resident' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
   'service_role system path can set roles'

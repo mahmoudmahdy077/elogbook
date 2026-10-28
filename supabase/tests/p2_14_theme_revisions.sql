@@ -15,6 +15,9 @@ SELECT throws_ok(
   'authenticated users cannot write theme revisions'
 );
 RESET ROLE;
+-- System path from here on: no caller identity, so the audit trigger does
+-- not write a user_id that has no auth.users row.
+SET LOCAL request.jwt.claims TO '{}';
 
 -- Fixture tenant (each file owns its fixtures; nothing persists past ROLLBACK).
 INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
