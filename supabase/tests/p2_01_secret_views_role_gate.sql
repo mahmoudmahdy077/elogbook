@@ -12,6 +12,12 @@ VALUES
   ('00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000000', 'secret-admin@example.com')
 ON CONFLICT (id) DO NOTHING;
 
+-- A verified MFA factor is required before a high-privilege role can be
+-- written (00086 trg_enforce_mfa).
+INSERT INTO auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at, secret)
+VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000012', 'pgtap', 'totp', 'verified', NOW(), NOW(), 'JBSWY3DPEHPK3PXP')
+ON CONFLICT DO NOTHING;
+
 DELETE FROM profiles WHERE user_id IN ('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000012');
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
 VALUES

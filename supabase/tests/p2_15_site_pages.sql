@@ -14,18 +14,21 @@ SELECT is_empty(
   'authenticated users cannot enumerate revisions'
 );
 RESET ROLE;
+-- System path from here on: no caller identity, so the audit trigger does
+-- not write a user_id that has no auth.users row.
+SET LOCAL request.jwt.claims TO '{}';
 
 -- 3. Scope combinations enforced (platform rows carry no tenant).
 SELECT throws_ok(
   $$INSERT INTO site_pages (scope, tenant_id, slug) VALUES ('platform', '00000000-0000-0000-0000-000000000021', 'bad-scope')$$,
-  '23514',
+  '23514', NULL,
   'platform scope rejects tenant linkage'
 );
 
 -- 4. Slug shape enforced.
 SELECT throws_ok(
   $$INSERT INTO site_pages (scope, slug) VALUES ('platform', 'Bad Slug!')$$,
-  '23514',
+  '23514', NULL,
   'slug shape enforced'
 );
 
@@ -35,7 +38,7 @@ VALUES ('00000000-0000-0000-0000-000000000061', 'platform', 'about-dup', 'en')
 ON CONFLICT DO NOTHING;
 SELECT throws_ok(
   $$INSERT INTO site_pages (scope, slug, locale) VALUES ('platform', 'about-dup', 'en')$$,
-  '23505',
+  '23505', NULL,
   'duplicate platform slug rejected'
 );
 

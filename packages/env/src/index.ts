@@ -61,12 +61,12 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
   }
 });
 
-function parseOrThrow<T extends z.ZodTypeAny>(
+function parseOrThrow<T extends z.ZodType>(
   schema: T,
   source: Record<string, string | undefined>,
   label: string,
-): z.infer<T> {
-  const result = (schema as z.ZodTypeAny).safeParse(source);
+): z.output<T> {
+  const result = schema.safeParse(source);
   if (!result.success) {
     const details = result.error.issues
       .map((i) => `  ${i.path.join('.')}: ${i.message}`)
