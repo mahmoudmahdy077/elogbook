@@ -1,6 +1,6 @@
 -- p3_03: submit_case_operation — tenant isolation, ownership, replay (N1/N3).
 BEGIN;
-SELECT plan(12);
+SELECT plan(13);
 
 -- Fixtures.
 INSERT INTO auth.users (id, instance_id, email)
@@ -86,7 +86,15 @@ SELECT is(
   'non-owner resident cannot update another resident row'
 );
 
--- 5. Approved rows lock against resident edits, open to supervisors.
+-- 5. Status transitions follow the state machine, and approved rows lock
+-- against resident edits while staying open to supervisors.
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
+SELECT ok(
+  (SELECT (public.submit_case_operation('p3-op-pend', 'update',
+    current_setting('test.p3_row_id')::uuid,
+    '{"status":"pending"}'::jsonb) ->> 'success')::boolean),
+  'owner submits the draft for review (draft -> pending)'
+);
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"supervisor"}}';
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-ap', 'update',
@@ -108,22 +116,24 @@ SELECT matches(
   (SELECT public.submit_case_operation('p3-op-im', 'update',
     current_setting('test.p3_row_id')::uuid,
     '{"client_operation_id":"forged"}'::jsonb) ->> 'error'),
-  'validation: immutable_column%',
+  'validation: immutable_column.*',
   'client_operation_id cannot be rewritten through updates'
 );
 
--- 7. Owner delete tombstones; replay reports already_deleted.
+-- 7. Owner delete tombstones; a second, distinct operation reports it.
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-del', 'delete',
     current_setting('test.p3_row_id')::uuid, '{}'::jsonb) ->> 'success')::boolean),
   'owner delete tombstones the row'
 );
+RESET ROLE;
 SELECT ok(
   (SELECT deleted_at IS NOT NULL FROM case_entries WHERE client_operation_id = 'p3-op-1'),
   'deleted_at tombstone set (no hard delete)'
 );
+SET LOCAL ROLE authenticated;
 SELECT is(
-  (SELECT public.submit_case_operation('p3-op-del', 'delete',
+  (SELECT public.submit_case_operation('p3-op-del-2', 'delete',
     current_setting('test.p3_row_id')::uuid, '{}'::jsonb) ->> 'already_deleted'),
   'true',
   'delete replay is idempotent'

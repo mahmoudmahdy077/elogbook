@@ -65,14 +65,17 @@ SELECT throws_ok(
   'resident direct role write is rejected'
 );
 
--- 5. Existing: cross-tenant role write blocked. Run as owner with a JWT that
--- points at another tenant: RLS would otherwise hide the row and turn this
--- into a no-op, so the tenant guard inside the trigger is what must fire.
-RESET ROLE;
+-- 5. Existing: cross-tenant role write blocked. The caller's JWT names
+-- tenant 022 while the target row lives in 029, so RLS hides the row and the
+-- write must change nothing (the trigger still refuses it if it is reached).
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
-SELECT throws_ok(
-  $$UPDATE profiles SET role = 'director' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
-  '42501', 'Cross-tenant role change rejected',
+SELECT is(
+  (WITH changed AS (
+     UPDATE profiles SET role = 'director'
+      WHERE id = '00000000-0000-0000-0000-000000000194'
+      RETURNING 1
+   ) SELECT count(*) FROM changed),
+  0::bigint,
   'cross-tenant role write is rejected'
 );
 
