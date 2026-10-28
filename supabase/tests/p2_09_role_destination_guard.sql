@@ -67,15 +67,13 @@ SELECT throws_ok(
 
 -- 5. Existing: cross-tenant role write blocked. The caller's JWT names
 -- tenant 022 while the target row lives in 029, so RLS hides the row and the
--- write must change nothing (the trigger still refuses it if it is reached).
+-- write must leave the role untouched (the trigger refuses it if reached).
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
+UPDATE profiles SET role = 'director' WHERE id = '00000000-0000-0000-0000-000000000194';
+RESET ROLE;
 SELECT is(
-  (WITH changed AS (
-     UPDATE profiles SET role = 'director'
-      WHERE id = '00000000-0000-0000-0000-000000000194'
-      RETURNING 1
-   ) SELECT count(*) FROM changed),
-  0::bigint,
+  (SELECT role FROM profiles WHERE id = '00000000-0000-0000-0000-000000000194'),
+  'supervisor',
   'cross-tenant role write is rejected'
 );
 

@@ -86,9 +86,19 @@ SELECT is(
   'non-owner resident cannot update another resident row'
 );
 
--- 5. Status transitions follow the state machine, and approved rows lock
--- against resident edits while staying open to supervisors.
+-- 5. Immutable identity columns rejected (checked before the row is approved,
+-- since the approved lock answers first).
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-0000000000c1","user_role":"resident"}}';
+SELECT matches(
+  (SELECT public.submit_case_operation('p3-op-im', 'update',
+    current_setting('test.p3_row_id')::uuid,
+    '{"client_operation_id":"forged"}'::jsonb) ->> 'error'),
+  'validation: immutable_column.*',
+  'client_operation_id cannot be rewritten through updates'
+);
+
+-- 6. Status transitions follow the state machine, and approved rows lock
+-- against resident edits while staying open to supervisors.
 SELECT ok(
   (SELECT (public.submit_case_operation('p3-op-pend', 'update',
     current_setting('test.p3_row_id')::uuid,
@@ -109,15 +119,6 @@ SELECT is(
     '{"status":"draft"}'::jsonb) ->> 'error'),
   'policy: approved_locked',
   'owner cannot silently rewrite an approved record'
-);
-
--- 6. Immutable identity columns rejected.
-SELECT matches(
-  (SELECT public.submit_case_operation('p3-op-im', 'update',
-    current_setting('test.p3_row_id')::uuid,
-    '{"client_operation_id":"forged"}'::jsonb) ->> 'error'),
-  'validation: immutable_column.*',
-  'client_operation_id cannot be rewritten through updates'
 );
 
 -- 7. Owner delete tombstones; a second, distinct operation reports it.
