@@ -46,3 +46,7 @@
 
 - [x] Add README section about the design token system (commit 6bd269c)
 - [x] Document the env package usage pattern (commit b7a229e)
+
+## Phase: Cycles Campaign Backlog (state.json)
+
+- [x] Prune dead exports in packages/shared (~99 reported) — re-scanned with dead-exports.mjs: 48 truly-unreferenced exports + 11 orphan modules removed, verified-in-use types retained (commit b9cf7ac, 2026-10-30; typecheck 6/6, lint clean, 1013 tests green)
