@@ -24,6 +24,3 @@ export const reflectionCreateSchema = z.object({
 });
 
 export const reflectionUpdateSchema = reflectionCreateSchema.partial();
-
-export type ReflectionCreateInput = z.infer<typeof reflectionCreateSchema>;
-export type ReflectionUpdateInput = z.infer<typeof reflectionUpdateSchema>;

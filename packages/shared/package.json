@@ -23,21 +23,6 @@
       "types": "./src/components/native.ts",
       "default": "./src/components/native.ts"
     },
-    "./types/database.server": {
-      "react-native": "./src/types/database.server.ts",
-      "browser": "./src/types/database.server.ts",
-      "default": "./src/types/database.server.ts"
-    },
-    "./types/branded": {
-      "react-native": "./src/types/branded.ts",
-      "browser": "./src/types/branded.ts",
-      "default": "./src/types/branded.ts"
-    },
-    "./test/fixtures": {
-      "react-native": "./src/test/fixtures.ts",
-      "browser": "./src/test/fixtures.ts",
-      "default": "./src/test/fixtures.ts"
-    },
     "./*": {
       "react-native": "./src/*",
       "browser": "./src/*",

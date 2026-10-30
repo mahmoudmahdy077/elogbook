@@ -102,20 +102,18 @@ export const programGoalSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
 });
 
-export const accreditationMilestoneSchema = z.object({
-  code: z.string().min(1),
-  description: z.string().min(1),
-  competency_area: z.string().min(1),
-  target_minimum: z.number().int().min(1),
-  specialty: z.string().optional(),
-});
-
 export const accreditationFrameworkSchema = z.object({
   name: z.string().min(1).max(200),
   tenant_id: z.string().uuid(),
   version: z.string().default('1.0'),
   framework_type: z.enum(['acgme', 'scfhs', 'gmc', 'canmeds', 'custom']),
-  milestones: z.array(accreditationMilestoneSchema).min(1),
+  milestones: z.array(z.object({
+  code: z.string().min(1),
+  description: z.string().min(1),
+  competency_area: z.string().min(1),
+  target_minimum: z.number().int().min(1),
+  specialty: z.string().optional(),
+})).min(1),
 });
 
 export const aiQuerySchema = z.object({

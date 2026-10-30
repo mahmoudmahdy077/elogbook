@@ -38,7 +38,7 @@
       "id": 4,
       "sev": "P3",
       "desc": "~99 dead exports in packages/shared (PHIString, ClinicalText family, StripeEvent...)",
-      "status": "open"
+      "status": "FIXED+VERIFIED: dead-export prune (2026-10-30) — re-scan found 48 truly-unreferenced exports + 11 orphan files (ai/consent/payments schemas, branded types, test fixtures, native-only Form/Spinner components). All removed; `pnpm -r typecheck` 6/6 clean, lint:all clean, 1013 tests green (web 476+1 skip, mobile 436, shared 101). Retained: TenantType/PaymentStatus/FieldValidation (intra-file uses) and accreditationMilestoneSchema (framework schema composition). Scanner: .hermes/cycles/dead-exports.mjs"
     },
     {
       "id": 5,

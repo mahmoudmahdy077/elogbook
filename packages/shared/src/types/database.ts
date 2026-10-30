@@ -31,13 +31,6 @@ export interface Tenant {
   deleted_at: string | null;
 }
 
-export interface ComplianceConfiguration {
-  region: string;
-  data_retention_days: number;
-  consent_required: boolean;
-  compliance_frameworks: string[];
-}
-
 export interface Profile {
   id: string;
   tenant_id: string;
@@ -83,12 +76,6 @@ export interface TemplateField {
   validation?: FieldValidation;
 }
 
-export interface TemplateFavorite {
-  user_id: string;
-  template_id: string;
-  created_at: string;
-}
-
 export interface DutyPeriod {
   id: string;
   tenant_id: string;
@@ -120,19 +107,6 @@ export interface CaseEntry {
   deleted_at: string | null;
 }
 
-export interface FacultyEvaluation {
-  id: string;
-  tenant_id: string;
-  resident_id: string;
-  evaluator_id: string;
-  evaluation_date: string;
-  clinical_skills: number;
-  professionalism: number;
-  procedures: number;
-  comments: string | null;
-  created_at: string;
-}
-
 export type FrameworkType = 'acgme' | 'scfhs' | 'gmc' | 'canmeds' | 'custom';
 
 export interface AccreditationMapping {
@@ -159,91 +133,6 @@ export interface AccreditationFramework {
   milestones: AccreditationMilestone[];
   created_at: string;
   updated_at: string;
-}
-
-export interface AttachmentSignature {
-  id: string;
-  tenant_id: string;
-  attachment_id: string;
-  resident_id: string;
-  signature_hash: string;
-  verification_method: 'camera_hash' | 'manual_hash' | 'device_signature';
-  verified_at: string;
-  created_at: string;
-}
-
-export interface InstitutionBilling {
-  id: string;
-  tenant_id: string;
-  billing_period_start: string;
-  billing_period_end: string;
-  active_residents: number;
-  base_amount: number;
-  per_resident_fee: number;
-  total_amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'canceled';
-  invoice_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CaseAttachment {
-  id: string;
-  entry_id: string;
-  tenant_id: string;
-  file_path: string;
-  file_name: string;
-  file_size: number;
-  file_type: string;
-  uploaded_by: string;
-  uploaded_at: string;
-}
-
-export interface ApprovalRequest {
-  id: string;
-  entry_id: string;
-  tenant_id: string;
-  supervisor_id: string;
-  status: 'pending' | 'approved' | 'rejected';
-  comment: string | null;
-  requested_at: string;
-  resolved_at: string | null;
-}
-
-export interface AuditLog {
-  id: string;
-  tenant_id: string;
-  user_id: string;
-  action: string;
-  resource_type: string;
-  resource_id: string;
-  changes: Record<string, unknown> | null;
-  ip_address: string;
-  created_at: string;
-}
-
-export interface AIConfig {
-  id: string;
-  tenant_id: string;
-  provider: 'openai' | 'anthropic' | 'azure' | 'openrouter' | 'aihubmix' | 'custom';
-  model: string;
-  // API key managed server-side only
-  has_key?: boolean;
-  endpoint_url: string | null;
-  is_active: boolean;
-}
-
-export interface AIQueryLog {
-  id: string;
-  tenant_id: string;
-  resident_id: string;
-  query: string;
-  response: string | null;
-  tokens_used: number | null;
-  disclaimer_rendered: boolean;
-  response_format: 'text' | 'stream';
-  safety_flags: string[];
-  created_at: string;
 }
 
 export interface ProgramGoal {
@@ -286,15 +175,6 @@ export interface Subscription {
   updated_at: string;
 }
 
-export interface StripeEvent {
-  id: string;
-  stripe_event_id: string;
-  type: string;
-  status: string;
-  created_at: string;
-  processed_at: string | null;
-}
-
 export interface Payment {
   id: string;
   tenant_id: string;
@@ -303,37 +183,4 @@ export interface Payment {
   status: PaymentStatus;
   stripe_event_id: string | null;
   created_at: string;
-}
-
-export interface OneTimePurchase {
-  id: string;
-  tenant_id: string;
-  resident_id: string;
-  purchase_type: string;
-  amount: number;
-  status: PaymentStatus;
-  created_at: string;
-}
-
-export interface ResidentAIToggle {
-  id: string;
-  tenant_id: string;
-  resident_id: string;
-  enabled: boolean;
-  quota_limit: number | null;
-  quota_used: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PaymentGatewayConfig {
-  id: string;
-  tenant_id: string;
-  provider: 'stripe' | 'paddle' | 'lemonsqueezy' | 'custom';
-  publishable_key: string;
-  // Secret key and webhook secret managed server-side only
-  has_secret_key?: boolean;
-  has_webhook_secret?: boolean;
-  endpoint_url: string | null;
-  is_active: boolean;
 }

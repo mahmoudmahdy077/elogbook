@@ -77,5 +77,3 @@ export const clinicalTokens = {
     stagger: 30,
   },
 } as const;
-
-export type ClinicalTokens = typeof clinicalTokens;
