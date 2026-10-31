@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
+import AIQualityPanel from '@/components/AIQualityPanel';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -187,6 +188,16 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI quality scoring: supervisor+ only, de-identified cases only
+          (the ai-quality edge function hard-codes both gates). */}
+      {!isResident && entry.is_deidentified && (
+        <AIQualityPanel
+          tenantId={entry.tenant_id}
+          caseEntryId={entry.id}
+          viewerRole={auth.profile.role}
+        />
       )}
 
       <CaseAttachments
