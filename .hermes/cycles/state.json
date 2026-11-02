@@ -7,7 +7,7 @@
       "id": 7,
       "sev": "P1",
       "desc": "RLS blocks soft-delete tombstones: resident UPDATE WITH CHECK forbids setting deleted_at on own cases (and supervisor policy only permits status='pending'). Mobile offline sync pushes tombstone upserts -> permanent sync errors; approved cases can never be corrected/retracted by any role. Needs policy fix: allow residents to set deleted_at on own entries (any status) + supervisors likewise within tenant.",
-      "status": "FIXED+VERIFIED: v4 partial-row sync upsert (00070ac) \u2014 tombstone via sync RPC returns 200; mobile offline delete works for any status",
+      "status": "FIXED+VERIFIED: v4 partial-row sync upsert (00070ac) — tombstone via sync RPC returns 200; mobile offline delete works for any status",
       "evidence": "/root/elogbook/.hermes/cycles/patch-test.mjs output: PATCH deleted_at -> 403 42501; field_values/case_date PATCH -> 204"
     },
     {
@@ -26,7 +26,7 @@
       "id": 2,
       "sev": "P1",
       "desc": "Web MiniCEXForm inserts columns (domains,total_score,evaluator_notes,completed_at) not in schema (ratings, overall_score, feedback)",
-      "status": "VERIFIED-FIXED: MiniCEXForm inserts ratings/overall_score/feedback/status \u2014 matches schema; web insert live-tested OK"
+      "status": "VERIFIED-FIXED: MiniCEXForm inserts ratings/overall_score/feedback/status — matches schema; web insert live-tested OK"
     },
     {
       "id": 3,
@@ -41,16 +41,16 @@
       "status": "FIXED+VERIFIED: dead-export prune (2026-10-30) — re-scan found 48 truly-unreferenced exports + 11 orphan files (ai/consent/payments schemas, branded types, test fixtures, native-only Form/Spinner components). All removed; `pnpm -r typecheck` 6/6 clean, lint:all clean, 1013 tests green (web 476+1 skip, mobile 436, shared 101). Retained: TenantType/PaymentStatus/FieldValidation (intra-file uses) and accreditationMilestoneSchema (framework schema composition). Scanner: .hermes/cycles/dead-exports.mjs"
     },
     {
-     "id": 5,
-     "sev": "P3",
-     "desc": "Orphaned edge functions: ai-quality, ai-gap-analysis - recheck callers after Cycle 99 changes",
-     "status": "RESOLVED 2026-10-31: ai-gap-analysis verified fully wired (reports/page.tsx director+ -> GapAnalysisRunner -> /api/[tenant]/reports/gap-analysis -> edge fn). ai-quality had ZERO callers in apps/packages -> wired into web case detail: new apps/web/components/AIQualityPanel.tsx (supervisor+ gate mirrors edge fn, deidentified-cases-only render, friendly errors for no-AI-config/PHI/403 paths) rendered in cases/[id]/page.tsx. Commit 830cd47"
+      "id": 5,
+      "sev": "P3",
+      "desc": "Orphaned edge functions: ai-quality, ai-gap-analysis - recheck callers after Cycle 99 changes",
+      "status": "RESOLVED 2026-10-31: ai-gap-analysis verified fully wired (reports/page.tsx director+ -> GapAnalysisRunner -> /api/[tenant]/reports/gap-analysis -> edge fn). ai-quality had ZERO callers in apps/packages -> wired into web case detail: new apps/web/components/AIQualityPanel.tsx (supervisor+ gate mirrors edge fn, deidentified-cases-only render, friendly errors for no-AI-config/PHI/403 paths) rendered in cases/[id]/page.tsx. Commit 830cd47"
     },
     {
       "id": 6,
       "sev": "P2",
       "desc": "a11y.spec fails: expect().toPassAxe matcher not registered (axe-playwright missing/wrong setup)",
-      "status": "VERIFIED-PASS: 2026-10-26 \u2014 matcher layout already removed in spec rewrite; ran live: a11y.spec 4/4 pass (cursor: server on :3000 w/ production env RATE_LIMIT_MODE=single-instance TRUSTED_PROXY_HOPS=0). Non-critical violations logged only. Evidence: playwright line reporter output."
+      "status": "VERIFIED-PASS: 2026-10-26 — matcher layout already removed in spec rewrite; ran live: a11y.spec 4/4 pass (cursor: server on :3000 w/ production env RATE_LIMIT_MODE=single-instance TRUSTED_PROXY_HOPS=0). Non-critical violations logged only. Evidence: playwright line reporter output."
     },
     {
       "id": 9,
@@ -61,7 +61,7 @@
     {
       "id": 11,
       "sev": "P3",
-      "status": "open-design-question",
+      "status": "VERIFIED-LIVE 2026-11-02: SEC-004 status guard (e97027c) confirmed in prod — 10/10 probe checks: pending->completed->acknowledged legal; completed->pending, ack->completed, ack content edit, insert-as-acknowledged all rejected P0001. Probes: .hermes/cycles/sec004-probe2.mjs",
       "desc": "evaluation_forms status has no transition guard: completed->pending PATCH succeeds; even post-ack edits untested. Decide whether ack'd evals should be immutable."
     }
   ],
@@ -120,7 +120,7 @@
     },
     {
       "cycle": 100,
-      "pass3": "prod route sweep replayed; audit_logs resident-scoping verified correct (own rows only \u2014 false alarm resolved)"
+      "pass3": "prod route sweep replayed; audit_logs resident-scoping verified correct (own rows only — false alarm resolved)"
     },
     {
       "cycle": 100,
@@ -128,19 +128,19 @@
     },
     {
       "cycle": 100,
-      "pass3": "shifts/rotations 7/7 PASS: rotation+shift lifecycle via sync RPC, partial-update preserves fields, tombstone works. (Note: shifts has no deleted_at col? raw shows deleted_at set \u2014 table evolved; sync handled it)"
+      "pass3": "shifts/rotations 7/7 PASS: rotation+shift lifecycle via sync RPC, partial-update preserves fields, tombstone works. (Note: shifts has no deleted_at col? raw shows deleted_at set — table evolved; sync handled it)"
     },
     {
       "cycle": 100,
-      "P1-FIXED e51ebed": "audit_logs INSERT block policy (00012 WITH CHECK false + 00049 FORCE RLS) made every trigger-audited INSERT fail for director+ roles \u2014 goal creation was broken in production. Fixed via pg_trigger_depth() >= 1: client-forged audit rows still impossible, trigger-generated rows work. Verified: director goal create 201, resident denial intact, RBAC 7/7."
+      "P1-FIXED e51ebed": "audit_logs INSERT block policy (00012 WITH CHECK false + 00049 FORCE RLS) made every trigger-audited INSERT fail for director+ roles — goal creation was broken in production. Fixed via pg_trigger_depth() >= 1: client-forged audit rows still impossible, trigger-generated rows work. Verified: director goal create 201, resident denial intact, RBAC 7/7."
     },
     {
       "cycle": 100,
-      "P1-FIXED d65553b": "list-invoices hung from birth: bare default-export handler with NO serve() wrapper \u2014 edge runtime never got a response. Wrapped in serve(); now responds 503 in 0.9s (Stripe key not configured in this deployment \u2014 correct fast-fail). Billing hang CLOSED."
+      "P1-FIXED d65553b": "list-invoices hung from birth: bare default-export handler with NO serve() wrapper — edge runtime never got a response. Wrapped in serve(); now responds 503 in 0.9s (Stripe key not configured in this deployment — correct fast-fail). Billing hang CLOSED."
     },
     {
       "cycle": 100,
-      "checkpoint-30": "Full regression replay: ALL 10 suites green (case-web 9/9, case-mobile 9/9, approvals 9/9 after freeing test-data slots, evals 6/6, rbac 7/7, reports 5/5, perf 7/7, comments 7/7, shifts 7/7, goals 7/7). Note: quota fills from replay data itself \u2014 free-slots.mjs is part of the test harness now."
+      "checkpoint-30": "Full regression replay: ALL 10 suites green (case-web 9/9, case-mobile 9/9, approvals 9/9 after freeing test-data slots, evals 6/6, rbac 7/7, reports 5/5, perf 7/7, comments 7/7, shifts 7/7, goals 7/7). Note: quota fills from replay data itself — free-slots.mjs is part of the test harness now."
     },
     {
       "cycle": 100,
@@ -148,11 +148,11 @@
     },
     {
       "cycle": 100,
-      "attachments": "case_attachments verified: resident insert own-case 201 (with tenant_id), tenant-scoped RLS correct. Earlier 403 was probe missing required tenant_id \u2014 product behavior correct."
+      "attachments": "case_attachments verified: resident insert own-case 201 (with tenant_id), tenant-scoped RLS correct. Earlier 403 was probe missing required tenant_id — product behavior correct."
     },
     {
       "cycle": 100,
-      "templates": "template mgmt 5/5: director create, resident visibility incl. global templates, resident delete correctly filtered (204 no-op, row survives \u2014 PostgREST filtered-delete semantics), director cleanup"
+      "templates": "template mgmt 5/5: director create, resident visibility incl. global templates, resident delete correctly filtered (204 no-op, row survives — PostgREST filtered-delete semantics), director cleanup"
     },
     {
       "cycle": 100,
@@ -164,11 +164,11 @@
     },
     {
       "cycle": 100,
-      "P2-FIXED d757917+0758113": "notifications: remote notifications_own FOR ALL policy drifted RESTRICTIVE, silently killing approval notifications (route ignores insert error). Split into permissive SELECT/UPDATE/DELETE owner policies; INSERT stays target-or-supervisor+. Verified: supervisor\u2192resident 201, resident forge 403, approvals still 9/9."
+      "P2-FIXED d757917+0758113": "notifications: remote notifications_own FOR ALL policy drifted RESTRICTIVE, silently killing approval notifications (route ignores insert error). Split into permissive SELECT/UPDATE/DELETE owner policies; INSERT stays target-or-supervisor+. Verified: supervisor→resident 201, resident forge 403, approvals still 9/9."
     },
     {
       "cycle": 100,
-      "P1-FIXED a681fc2": "set_user_consent RPC joined profiles.id (PK) to auth.uid() \u2014 always unmatched \u2192 tenant_mismatch for every user; consent toggling broken in production. Fixed join to profiles.user_id. Verified: grant 200 {success:true}, record visible, revoke 200."
+      "P1-FIXED a681fc2": "set_user_consent RPC joined profiles.id (PK) to auth.uid() — always unmatched → tenant_mismatch for every user; consent toggling broken in production. Fixed join to profiles.user_id. Verified: grant 200 {success:true}, record visible, revoke 200."
     },
     {
       "cycle": 100,
@@ -176,7 +176,7 @@
     },
     {
       "cycle": 100,
-      "cycles48-50": "compliance export queries 5/5 (all 4 sections queryable by director); push_tokens 5/5 (register/read/dup-409/delete; earlier 403 was probe payload bug \u2014 product RLS correct). HALF-WAY MARK."
+      "cycles48-50": "compliance export queries 5/5 (all 4 sections queryable by director); push_tokens 5/5 (register/read/dup-409/delete; earlier 403 was probe payload bug — product RLS correct). HALF-WAY MARK."
     },
     {
       "cycle": 100,
@@ -196,7 +196,7 @@
     },
     {
       "cycle": 100,
-      "cycles61-62": "edge fns verified: generate-pdf produces valid PDF (200, %PDF magic), ai-insights PHI guard correct, ai-gap-analysis + webads-export role gates + arg contracts correct, export-pdf name was wrong (it's generate-pdf). REMOVED dead broken dispatch-webhook stub (51bdaa5) \u2014 never in CD matrix, served BOOT_ERROR; delivery lives in lib/webhooks.ts."
+      "cycles61-62": "edge fns verified: generate-pdf produces valid PDF (200, %PDF magic), ai-insights PHI guard correct, ai-gap-analysis + webads-export role gates + arg contracts correct, export-pdf name was wrong (it's generate-pdf). REMOVED dead broken dispatch-webhook stub (51bdaa5) — never in CD matrix, served BOOT_ERROR; delivery lives in lib/webhooks.ts."
     },
     {
       "cycle": 100,
@@ -216,15 +216,15 @@
     },
     {
       "cycle": 100,
-      "cycles73-74": "mobile sync RPCs healthy post-RLS-changes (push 200, pull 200); cross-tenant isolation sweep on all newer tables \u2014 0 rows leak, forge insert 403"
+      "cycles73-74": "mobile sync RPCs healthy post-RLS-changes (push 200, pull 200); cross-tenant isolation sweep on all newer tables — 0 rows leak, forge insert 403"
     },
     {
       "cycle": 100,
-      "checkpoint-80": "22-suite replay ALL GREEN again (150 checks, zero failures) \u2014 second consecutive full-board green after all fixes"
+      "checkpoint-80": "22-suite replay ALL GREEN again (150 checks, zero failures) — second consecutive full-board green after all fixes"
     },
     {
       "cycle": 100,
-      "cycles77-79": "dashboard 2/2 re-verified; attachments suite corrected (probe payload missing tenant_id; resident-delete is RLS-filtered no-op by design \u2014 row survives, supervisor-only real delete) now 7/7. NO product regression \u2014 probe semantics were the issue."
+      "cycles77-79": "dashboard 2/2 re-verified; attachments suite corrected (probe payload missing tenant_id; resident-delete is RLS-filtered no-op by design — row survives, supervisor-only real delete) now 7/7. NO product regression — probe semantics were the issue."
     },
     {
       "cycle": 100,
@@ -232,19 +232,19 @@
     },
     {
       "cycle": 100,
-      "cycles83-84-PHI-GUARD": "Found live PHI-guard gap: ISO/slash-date patterns in scan_field_values_for_phi RAISE correctly, but MRN 6+digit pattern does NOT fire (probe rows with '999999'/'1234567' inserted 201). Pushed re-assert + regex-fix migrations (31fedb1, cc140ba \u2014 both CD-green) but MRN pattern still silent while date patterns work. Trigger EXISTS and enforces dates; the live function's MRN branch is broken/older. BLOCKED on diagnosis: needs Supabase SQL editor (pg_get_functiondef/pg_trigger) \u2014 no service-role access from box. All probe rows cleaned."
+      "cycles83-84-PHI-GUARD": "Found live PHI-guard gap: ISO/slash-date patterns in scan_field_values_for_phi RAISE correctly, but MRN 6+digit pattern does NOT fire (probe rows with '999999'/'1234567' inserted 201). Pushed re-assert + regex-fix migrations (31fedb1, cc140ba — both CD-green) but MRN pattern still silent while date patterns work. Trigger EXISTS and enforces dates; the live function's MRN branch is broken/older. BLOCKED on diagnosis: needs Supabase SQL editor (pg_get_functiondef/pg_trigger) — no service-role access from box. All probe rows cleaned."
     },
     {
       "cycle": 100,
-      "cycle85": "Definitive rebuild (15a0f32, drop fn+trigger, E-string regexes) applied CD-green \u2014 date patterns enforce, MRN pattern STILL silent. Probes cleaned. Confirms live function text differs from expectation; needs pg_get_functiondef from SQL editor."
+      "cycle85": "Definitive rebuild (15a0f32, drop fn+trigger, E-string regexes) applied CD-green — date patterns enforce, MRN pattern STILL silent. Probes cleaned. Confirms live function text differs from expectation; needs pg_get_functiondef from SQL editor."
     },
     {
       "cycle": 100,
-      "checkpoint-90": "24-suite replay ALL GREEN (152 checks, zero failures) \u2014 third consecutive full-board green. Includes corrected attachments suite 7/7 and dashboard 2/2."
+      "checkpoint-90": "24-suite replay ALL GREEN (152 checks, zero failures) — third consecutive full-board green. Includes corrected attachments suite 7/7 and dashboard 2/2."
     },
     {
       "cycle": 100,
-      "cycles91-95": "ai-quality contract re-verified (correct fast-fail without tenant AI config \u2014 by design); unauthenticated sweep across 10 sensitive tables: ZERO leaks (all RLS-empty for anon)"
+      "cycles91-95": "ai-quality contract re-verified (correct fast-fail without tenant AI config — by design); unauthenticated sweep across 10 sensitive tables: ZERO leaks (all RLS-empty for anon)"
     },
     {
       "cycle": 100,
@@ -276,7 +276,7 @@
   "blocked": [
     {
       "what": "PHI-scan trigger: MRN-pattern branch not enforcing (dates DO enforce)",
-      "evidence": "After definitive drop/recreate rebuild (15a0f32 CD-green): mrn:'999999' \u2192 201 \u2717; dob ISO/slash dates \u2192 400 \u2713. Same function, same run.",
+      "evidence": "After definitive drop/recreate rebuild (15a0f32 CD-green): mrn:'999999' → 201 ✗; dob ISO/slash dates → 400 ✓. Same function, same run.",
       "action_needed": "Run in Supabase SQL editor and paste: SELECT pg_get_functiondef('public.scan_field_values_for_phi()'::regprocedure);"
     }
   ]
