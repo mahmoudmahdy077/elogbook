@@ -186,6 +186,7 @@ describe('defaultTrustedOrigins', () => {
   });
 
   it('handles malformed request URL gracefully', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
     const req = new Request('https://valid.example.com/x', { method: 'GET' });
     // Stub the URL property to throw
     Object.defineProperty(req, 'url', { get: () => 'not-a-valid-url' });
