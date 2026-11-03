@@ -249,6 +249,10 @@
     {
       "cycle": 100,
       "FINAL-100": "100 cycles COMPLETE. Final checkpoint: 24 suites, 152 checks ALL GREEN (4th consecutive perfect board). Cumulative: 7 bugs fully fixed + 1 PHI-guard MRN gap diagnosed with fix migrations pushed (pending live-function introspection). 35+ slices verified across web/mobile/DB/edge/auth/billing/security. Prod healthy."
+    },
+    {
+      "cycle": 101,
+      "fix": "PHI-scan MRN branch root-caused + fixed (9fcc687, pushed main): trailing boundary was \\m (word-START) instead of \\M — mathematically unmatchable after a digit run, so MRN never enforced while dates did. Proof + 11-probe repro on local PG16 with exact deployed body. Fix migration 20261103000000_phi_scan_mrn_boundary_fix.sql (append-only). Same commit also fixes pre-existing csrf.test.ts env-stub failure -> web 476 passed/1 skip, tsc+lint clean web/mobile/shared."
     }
   ],
   "metrics": {
@@ -275,9 +279,9 @@
   ],
   "blocked": [
     {
-      "what": "PHI-scan trigger: MRN-pattern branch not enforcing (dates DO enforce)",
-      "evidence": "After definitive drop/recreate rebuild (15a0f32 CD-green): mrn:'999999' → 201 ✗; dob ISO/slash dates → 400 ✓. Same function, same run.",
-      "action_needed": "Run in Supabase SQL editor and paste: SELECT pg_get_functiondef('public.scan_field_values_for_phi()'::regprocedure);"
+      "what": "PHI-scan MRN enforcement: LIVE prod re-probe pending — migration 20261103000000 must deploy via CD first (service key expired, no direct SQL). After CD-green: POST case with is_deidentified=true & mrn 999999 must now return 400/trigger exception (was 201). Dates already verified 400 in prod on 2026-10-30 run.",
+      "evidence": "Local PG16 proof in commit message of 9fcc687; fixed function tested inline (11 probes: MRN end/mid/comma/letter/9-digit REJECTED, ISO+slash dates REJECTED, innocent text + 5-digit accepted).",
+      "action_needed": "Wait for CD to apply 20261103000000, then re-run prod probe (mrn 999999 -> expect refusal; healthy-month text -> expect 201)."
     }
   ]
 }
