@@ -32,6 +32,14 @@ BEGIN
   RETURN NEW;
 END $$;
 
+-- CD-DEPLOY FIX (2026-11-04): migrate WITHOUT `DROP TRIGGER IF EXISTS` fails on
+-- prod, where the trigger already exists (20260824170000 rebuild; dates still
+-- enforce there live). `CREATE TRIGGER` on an existing trigger is an error, so db
+-- push aborts and this migration can NEVER apply. This file was still UNAPPLIED on
+-- prod when edited (live probe 2026-11-04: mrn 999999 insert -> 201, i.e. the old
+-- body was in force), so the edit does not rewrite any applied history.
+DROP TRIGGER IF EXISTS trg_scan_field_values_phi ON public.case_entries;
+
 CREATE TRIGGER trg_scan_field_values_phi
   BEFORE INSERT OR UPDATE ON public.case_entries
   FOR EACH ROW EXECUTE FUNCTION public.scan_field_values_for_phi();
