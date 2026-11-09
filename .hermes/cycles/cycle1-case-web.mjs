@@ -79,12 +79,28 @@ const insDraft = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
     case_date: new Date().toISOString().split('T')[0],
     field_values: {"procedure_name":"Cycle1 draft"},
     status: 'pending', // SEC-002: residents insert into the approval queue
-    accreditation_mappings: [], is_deidentified: false,
+    accreditation_mappings: [], is_deidentified: true, // draft defaults deidentified (CaseForm isDeidentified=true)
     patient_mrn: null, patient_dob: null, patient_age_years: null, patient_hash: null
   })
 }).then(j);
 const draftId = Array.isArray(insDraft) ? insDraft[0]?.id : null;
 ok('case-draft-path', !!draftId, Array.isArray(insDraft)?draftId:JSON.stringify(insDraft).slice(0,150));
+
+// data-mode guard (T19, migration 20260907000004): demo tenant is deidentified mode
+// (allow_identifiable=false), so an IDENTIFIED insert must be rejected 42501.
+const insGuard = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
+  method:'POST', headers:{...H,'Prefer':'return=representation'},
+  body: JSON.stringify({
+    tenant_id: TENANT, resident_id: profileId, template_id: templateId,
+    case_date: new Date().toISOString().split('T')[0],
+    field_values: {"procedure_name":"Cycle1 guard probe"},
+    status: 'pending', accreditation_mappings: [],
+    is_deidentified: false, patient_mrn: null, patient_dob: null,
+    patient_age_years: 44, patient_hash: hash || 'guarprobe'
+  })
+}).then(j);
+const guardOk = insGuard?.code === '42501' || /identifiable records/.test(insGuard?.message ?? '');
+ok('data-mode-guard-rejects-identified', guardOk, JSON.stringify(insGuard).slice(0,150));
 
 // 7. quota after (should have moved by 2 if counting works)
 await new Promise(r=>setTimeout(r,800));

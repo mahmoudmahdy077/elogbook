@@ -57,7 +57,9 @@ const ins = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
 const mid = Array.isArray(ins) ? ins[0]?.id : null;
 ok('mobile-insert-deidentified', !!mid, Array.isArray(ins)?`${ins[0]?.status}`:JSON.stringify(ins).slice(0,150));
 
-// identified path with MRN -> hash RPC then insert
+// T19 data-mode guard (migration 20260907000004): demo tenant is deidentified mode
+// (allow_identifiable=false). An IDENTIFIED insert must be REJECTED 42501 — the
+// guard is the product-level expectation here, not a probe crash.
 const mrn = 'cycle2-mrn-' + Date.now();
 const hash = await fetch(`${URL}/rest/v1/rpc/hash_patient_mrn`, {method:'POST',headers:H,body:JSON.stringify({p_mrn:mrn,p_tenant_id:TENANT})}).then(r=>r.json());
 ok('mobile-hash-rpc', typeof hash === 'string' && hash.length>=32);
@@ -66,13 +68,14 @@ const ins2 = await fetch(`${URL}/rest/v1/case_entries?select=id,status`, {
   method:'POST', headers:{...H,'Prefer':'return=representation'}, body: JSON.stringify(payload2)
 }).then(r=>r.json());
 const mid2 = Array.isArray(ins2) ? ins2[0]?.id : null;
-ok('mobile-insert-identified', !!mid2, Array.isArray(ins2)?ins2[0]?.status:JSON.stringify(ins2).slice(0,150));
+const guardOk = ins2?.code === '42501' || /identifiable records/.test(ins2?.message ?? '');
+ok('data-mode-guard-rejects-identified', guardOk, JSON.stringify(ins2).slice(0,150));
 
-// edit-path update: mobile edits force status='pending'
-if (mid2) {
+// edit-path update: mobile edits force status='pending' (deidentified row from insert #1)
+if (mid) {
   let upd = {};
   {
-    const rr = await fetch(`${URL}/rest/v1/case_entries?id=eq.${mid2}`, {method:'PATCH',headers:H,body:JSON.stringify({status:'pending'})});
+    const rr = await fetch(`${URL}/rest/v1/case_entries?id=eq.${mid}`, {method:'PATCH',headers:H,body:JSON.stringify({status:'pending'})});
     if (rr.status !== 204) { try { upd = await rr.json(); } catch {} }
   }
   ok('edit-path-status-pending', !upd.error && !upd.code, '204 no-body');

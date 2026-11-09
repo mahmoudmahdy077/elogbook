@@ -257,6 +257,10 @@
   {
    "cycles-fix": "PHI-MRN live enforcement verified",
    "20261104": "CD was permanently blocked on migration 20261103000000: file created trg_scan_field_values_phi without DROP IF EXISTS though the trigger already exists on prod (170000 rebuild) -> db push aborted on 'trigger already exists'. Migration file still unapplied, so patched in place with DROP TRIGGER IF EXISTS (commit 606fdd0). Local PG16: applies cleanly over existing trigger; 7/7 behavior probes. LIVE re-probe after CD: PINNED 10/10 PASS — mrn 999999/end/mid/comma REJECTED 400 'PHI detected', ISO+slash dates still 400, 5-digit+innocent 201 then tombstoned. Probe script: .hermes/cycles/probe-phimrn.mjs. NOTE (honest correction): letter-suffixed '999999x' passes by design of \\m\\d{6,}\\M — 9fcc687's message overstated that case."
+  },
+  {
+   "cycle": 101,
+   "cycle101-checkpoint": "Full-rotation live replay (32 suites): 207/207 checks GREEN. Two pre-existing FAILs root-caused as STALE PROBES, not product regression: cycle1 draft path & cycle2 mobile-insert-identified asserted pre-T19 behavior (identified insert in deidentified tenant) — migration 20260907000004 data-mode guard correctly rejects with 42501 (verified: demo tenant allow_identifiable=false, data_mode_requested=deidentified). Probes realigned: draft path now deidentified; identified insert now asserts data-mode-guard-rejects-identified 42501. cycle1 10/10, cycle2 9/9. Mode probe: t19-mode-probe.mjs; replay: cycle101-replay.mjs + log 2026-11-09."
   }
  ],
  "metrics": {
