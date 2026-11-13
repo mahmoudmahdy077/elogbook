@@ -70,7 +70,11 @@ describe('PHI leakage sweep (R3 synthetic identifiable fixtures)', () => {
     const blob = dump.map(([k, v]) => `${k}=${v}`).join('\n');
     expect(blob).not.toContain(MRN);
     expect(blob).not.toContain(DOB);
-    // Identifiers may exist only as one-way hashes (audit data_hash).
-    expect(blob).not.toMatch(/1977/);
+    // Identifiers may exist only as one-way hashes (audit data_hash). Assert on
+    // the date SHAPE instead of the bare year: a random hex/base64 digest
+    // contains "1977" often enough to make a bare /1977/ check flaky (it did
+    // fail on one CI salt), while a "YYYY-MM-DD" run of plaintext cannot come
+    // out of a digest by accident.
+    expect(blob).not.toMatch(/19\d{2}-\d{2}-\d{2}/);
   });
 });

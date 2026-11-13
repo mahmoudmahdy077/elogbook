@@ -75,16 +75,26 @@ jobs:
           # A crash also exits non-zero, so assert the VALIDATION message:
           # otherwise a broken image passes this gate vacuously.
           set +e
-          out=$(docker run --rm -e NODE_ENV=production elogbook-web:boot 2>&1)
+          # The env schema validates base fields first and only runs its
+          # production refinements (RATE_LIMIT_MODE, TRUSTED_PROXY_HOPS) when
+          # those pass, so supply dummy values for every other required
+          # variable and leave RATE_LIMIT_MODE as the only violation.
+          out=$(docker run --rm \
+            -e NODE_ENV=production \
+            -e NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-for-boot-gate-only \
+            -e SUPABASE_SERVICE_ROLE_KEY=dummy-service-key-for-boot-gate-only \
+            -e TRUSTED_PROXY_HOPS=1 \
+            elogbook-web:boot 2>&1)
           code=$?
           set -e
           if [ $code -eq 0 ]; then
             echo "::error::production boot without RATE_LIMIT_MODE exited 0; fail-fast broken"
             exit 1
           fi
-          echo "$out" | grep -q "RATE_LIMIT_MODE" || {
+          echo "$out" | grep -q "RATE_LIMIT_MODE is required in production" || {
             echo "::error::boot failed without the fail-fast validation message (broken image?)"
-            echo "$out" | tail -5
+            echo "$out" | tail -20
             exit 1
           }
       - name: Boot with valid env and probe liveness/readiness

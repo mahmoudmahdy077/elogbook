@@ -36,9 +36,13 @@ function ensureDir(filePath: string): void {
 }
 
 export function getVersions(versionsPath: string = VERSIONS_PATH): VersionsFile | null {
-  if (!existsSync(versionsPath)) return null;
+  // versions.json is a runtime artifact written by the setup/update flow, not
+  // a build input. Without the ignore hint Turbopack traces the whole project
+  // ("Dynamic filesystem access causes tracing of the whole project"), which
+  // bloats the image and can break deploys on size limits.
+  if (!existsSync(/* turbopackIgnore: true */ versionsPath)) return null;
   try {
-    const data = readFileSync(versionsPath, 'utf-8');
+    const data = readFileSync(/* turbopackIgnore: true */ versionsPath, 'utf-8');
     return JSON.parse(data) as VersionsFile;
   } catch {
     return null;
