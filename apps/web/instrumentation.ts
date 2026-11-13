@@ -12,29 +12,17 @@
  *
  * Gate C asserts the process exits non-zero when RATE_LIMIT_MODE is unset in
  * production. That is verified by observing the exit code, not by reading code.
+ *
+ * The Node-only work lives in `instrumentation-node.ts` and is imported only
+ * for the nodejs runtime, so the Edge variant of this bundle never contains
+ * `process.exit` (Turbopack build warning) while behaviour is unchanged.
  */
 
 export async function register() {
-  // Only run on the server (Next calls this in both edge and node runtimes)
-  if (typeof window !== 'undefined') return;
+  // Next calls this hook in both the edge and node runtimes. Only the node
+  // runtime has the environment contract (and the ability to exit the process).
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
-  try {
-    // Validate the full env schema — throws if RATE_LIMIT_MODE missing in prod
-    // or if distributed mode lacks Upstash credentials.
-    const { parseWebFullEnv } = await import('@elogbook/env');
-    parseWebFullEnv(process.env as Record<string, string | undefined>);
-
-    // Validate and memoise the rate-limit mode; logs the startup warning for
-    // single-instance-with-creds and will throw for invalid values.
-    const { resolveMode } = await import('@/lib/rate-limit-redis');
-    resolveMode();
-  } catch (err) {
-    // Next.js 16 does NOT exit the process when the instrumentation hook
-    // throws — it logs uncaughtException/unhandledRejection and keeps the
-    // (broken) server alive. Gate C requires a non-zero exit before any
-    // traffic is accepted, so exit here instead of returning to Next.
-    console.error('[boot] fatal: deployment contract validation failed. Exiting.');
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
-  }
+  const { registerNode } = await import('./instrumentation-node');
+  await registerNode();
 }

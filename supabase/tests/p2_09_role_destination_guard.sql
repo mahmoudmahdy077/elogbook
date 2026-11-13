@@ -32,47 +32,53 @@ INSERT INTO profiles (id, tenant_id, user_id, role, full_name) VALUES
   ('00000000-0000-0000-0000-000000000194', '00000000-0000-0000-0000-000000000029', '00000000-0000-0000-0000-000000000094', 'resident', 'Role Target 1'),
   ('00000000-0000-0000-0000-000000000195', '00000000-0000-0000-0000-000000000029', '00000000-0000-0000-0000-000000000095', 'resident', 'Role Target 2');
 
+-- 1. A caller whose JWT names another tenant cannot touch this tenant's rows.
+-- Run it first, on a clean claims GUC, and assert the observable outcome.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
+UPDATE profiles SET role = 'director' WHERE id = '00000000-0000-0000-0000-000000000194';
+RESET ROLE;
+SELECT is(
+  (SELECT role FROM profiles WHERE id = '00000000-0000-0000-0000-000000000194'),
+  'resident',
+  'cross-tenant role write is rejected'
+);
+
+-- 2. institution_admin cannot mint admin, even same-tenant.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000029","user_role":"institution_admin"}}';
-
--- 1. NEW: institution_admin cannot mint admin, even same-tenant.
 SELECT throws_ok(
   $$UPDATE profiles SET role = 'admin' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
-  'insufficient_privilege', 'Only admin may assign the admin role',
+  '42501', 'Only admin may assign the admin role',
   'institution_admin direct write to admin is rejected'
 );
 
--- 2. Existing: institution_admin can still assign non-admin roles.
+-- 3. institution_admin can still assign non-admin roles.
 SELECT lives_ok(
   $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
   'institution_admin can assign supervisor'
 );
 
--- 3. Existing: admin can assign admin.
+-- 4. admin can assign admin.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000092","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000029","user_role":"admin"}}';
 SELECT lives_ok(
   $$UPDATE profiles SET role = 'admin' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
   'admin can assign admin'
 );
 
--- 4. Existing: resident cannot change roles at all.
+-- 5. resident cannot change roles at all. Target their OWN row: RLS hides
+-- other profiles from a resident, and a hidden row would be a silent no-op
+-- instead of exercising the guard.
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000093","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000029","user_role":"resident"}}';
 SELECT throws_ok(
-  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
-  'insufficient_privilege', 'Role changes require institution_admin or admin authorization',
+  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000193'$$,
+  '42501', 'Role changes require institution_admin or admin authorization',
   'resident direct role write is rejected'
 );
 
--- 5. Existing: cross-tenant role write blocked (RLS denies before trigger).
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000091","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000022","user_role":"institution_admin"}}';
-SELECT throws_ok(
-  $$UPDATE profiles SET role = 'supervisor' WHERE id = '00000000-0000-0000-0000-000000000194'$$,
-  '42501',
-  'cross-tenant role write is rejected'
-);
-
--- 6. Existing: system/definer path (no JWT) still permitted.
+-- 6. System/definer path (no JWT) still permitted.
 RESET ROLE;
+SET LOCAL request.jwt.claims TO '{}';
 SELECT lives_ok(
   $$UPDATE profiles SET role = 'resident' WHERE id = '00000000-0000-0000-0000-000000000195'$$,
   'service_role system path can set roles'

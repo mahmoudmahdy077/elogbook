@@ -9,12 +9,18 @@ INSERT INTO auth.users (id, instance_id, email)
 VALUES ('00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000000', 'analytics@example.com')
 ON CONFLICT (id) DO NOTHING;
 
+-- A verified MFA factor is required before a high-privilege role can be
+-- written (00086 trg_enforce_mfa).
+INSERT INTO auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at, secret)
+VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000061', 'pgtap', 'totp', 'verified', NOW(), NOW(), 'JBSWY3DPEHPK3PXP')
+ON CONFLICT DO NOTHING;
+
 DELETE FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000061';
 INSERT INTO profiles (id, tenant_id, user_id, role, full_name)
 VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000061', 'director', 'Analytics Director');
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000061","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000061","user_role":"director"}}';
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-000000000061","role":"authenticated","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000061","user_role":"director"}}';
 
 SELECT throws_ok(
   $$SELECT * FROM public.get_analytics_data('00000000-0000-0000-0000-000000000062')$$,

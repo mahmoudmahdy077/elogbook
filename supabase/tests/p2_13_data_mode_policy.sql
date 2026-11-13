@@ -25,7 +25,7 @@ ON CONFLICT (id) DO NOTHING;
 SELECT throws_ok(
   $$INSERT INTO case_entries (tenant_id, resident_id, template_id, case_date, field_values, status, is_deidentified, patient_mrn, patient_hash)
     VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-1', 'h')$$,
-  'insufficient_privilege',
+  '42501', NULL,
   'default policy denies identifiable inserts'
 );
 SELECT lives_ok(
@@ -47,8 +47,8 @@ SELECT lives_ok(
 UPDATE tenants SET data_mode_requested = 'deidentified' WHERE id = '00000000-0000-0000-0000-000000000041';
 SELECT throws_ok(
   $$INSERT INTO case_entries (tenant_id, resident_id, template_id, case_date, field_values, status, is_deidentified, patient_mrn, patient_hash)
-    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-3', 'h')$$,
-  'insufficient_privilege',
+    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-3', 'h')$$,
+  '42501', NULL,
   'tenant de-identified request denies identifiable inserts'
 );
 
@@ -56,8 +56,8 @@ SELECT throws_ok(
 UPDATE tenants SET data_mode_requested = 'identifiable', allow_identifiable = false WHERE id = '00000000-0000-0000-0000-000000000041';
 SELECT throws_ok(
   $$INSERT INTO case_entries (tenant_id, resident_id, template_id, case_date, field_values, status, is_deidentified, patient_mrn, patient_hash)
-    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-4', 'h')$$,
-  'insufficient_privilege',
+    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-4', 'h')$$,
+  '42501', NULL,
   'tenant ceiling off denies identifiable inserts'
 );
 
@@ -66,8 +66,8 @@ UPDATE installation_policy SET phi_ready = false WHERE id = 1;
 UPDATE tenants SET allow_identifiable = true WHERE id = '00000000-0000-0000-0000-000000000041';
 SELECT throws_ok(
   $$INSERT INTO case_entries (tenant_id, resident_id, template_id, case_date, field_values, status, is_deidentified, patient_mrn, patient_hash)
-    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-5', 'h')$$,
-  'insufficient_privilege',
+    VALUES ('00000000-0000-0000-0000-000000000041', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-5', 'h')$$,
+  '42501', NULL,
   'unqualified installation denies identifiable inserts'
 );
 
@@ -80,7 +80,7 @@ SELECT lives_ok(
 );
 SELECT throws_ok(
   $$UPDATE case_entries SET patient_mrn = 'MRN-CHANGED' WHERE id = '00000000-0000-0000-0000-000000000142'$$,
-  'insufficient_privilege',
+  '42501', NULL,
   'identifier edits stay gated after switch-off'
 );
 SELECT is(
@@ -93,7 +93,7 @@ SELECT is(
 SELECT throws_ok(
   $$INSERT INTO case_entries (tenant_id, resident_id, template_id, case_date, field_values, status, is_deidentified, patient_mrn, patient_hash)
     VALUES ('00000000-0000-0000-0000-000000000099', '00000000-0000-0000-0000-000000000141', '00000000-0000-4000-8000-000000000041', CURRENT_DATE, '{"procedure_name":"x"}', 'draft', false, 'MRN-6', 'h')$$,
-  'insufficient_privilege',
+  '42501', NULL,
   'unknown tenant denies identifiable inserts'
 );
 

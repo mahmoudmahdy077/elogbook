@@ -11,10 +11,13 @@ SELECT is_empty(
 );
 SELECT throws_ok(
   $$INSERT INTO tenant_theme_revisions (tenant_id, version, config) VALUES ('00000000-0000-0000-0000-000000000037', 1, '{}')$$,
-  '42501',
+  '42501', NULL,
   'authenticated users cannot write theme revisions'
 );
 RESET ROLE;
+-- System path from here on: no caller identity, so the audit trigger does
+-- not write a user_id that has no auth.users row.
+SET LOCAL request.jwt.claims TO '{}';
 
 -- Fixture tenant (each file owns its fixtures; nothing persists past ROLLBACK).
 INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
@@ -24,7 +27,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 3. Unknown revision status rejected.
 SELECT throws_ok(
   $$INSERT INTO tenant_theme_revisions (tenant_id, version, config, status) VALUES ('00000000-0000-0000-0000-000000000037', 1, '{}', 'live')$$,
-  '23514',
+  '23514', NULL,
   'revision status is allowlisted'
 );
 
@@ -33,7 +36,7 @@ INSERT INTO tenant_theme_revisions (id, tenant_id, version, config, status)
 VALUES ('00000000-0000-0000-0000-000000000051', '00000000-0000-0000-0000-000000000037', 1, '{}', 'published');
 SELECT throws_ok(
   $$INSERT INTO tenant_theme_revisions (tenant_id, version, config) VALUES ('00000000-0000-0000-0000-000000000037', 1, '{}')$$,
-  '23505',
+  '23505', NULL,
   'duplicate revision version rejected'
 );
 

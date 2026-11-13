@@ -15,7 +15,7 @@ SELECT is(
 -- 2. Status column accepts only the lifecycle states.
 SELECT throws_ok(
   $$INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt, status) VALUES ('00000000-0000-0000-0000-000000000032', 'Bad State', 'bad-state-tenant', 'institution', encode(gen_random_bytes(32), 'hex'), 'deleted')$$,
-  '23514',
+  '23514', NULL,
   'tenant status is allowlisted'
 );
 
