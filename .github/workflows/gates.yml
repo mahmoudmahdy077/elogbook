@@ -15,7 +15,7 @@ jobs:
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - name: Gate A — tenant-scope detector
-        run: node scripts/verify-tenant-scope.mjs
+        run: node scripts/verify-tenant-scope.mjs --self-test && node scripts/verify-tenant-scope.mjs
       - name: Gate B — rate-limiter contract (via vitest)
         run: pnpm exec vitest run apps/web/lib/__tests__/rate-limit-contract.test.ts
       - name: Gate C — boot + compose + health/ready + setup guard
