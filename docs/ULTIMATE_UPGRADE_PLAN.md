@@ -678,10 +678,16 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/app/(authenticated)/[tenant]/cases/[id]/page.tsx`
 
-- [ ] **Step 1:** Mask `patient_mrn` and `patient_dob` by default (show last 4 digits only: `***-**-1234`).
-- [ ] **Step 2:** Add a "Reveal" button that requires an explicit click.
-- [ ] **Step 3:** On reveal, insert an audit log entry: `{ action: 'phi_view', resource_type: 'case_entry', resource_id: entryId }`.
-- [ ] **Step 4:** Commit: `git add apps/web/app/(authenticated)/[tenant]/cases/[id]/page.tsx && git commit -m "fix(case-detail): mask PHI + audit-logged reveal (UX2-018)"`
+- [x] **Step 1:** Mask `patient_mrn` and `patient_dob` by default (show last 4 digits only: `***-**-1234`).
+- [x] **Step 2:** Add a "Reveal" button that requires an explicit click.
+- [x] **Step 3:** On reveal, insert an audit log entry: `{ action: 'phi_view', resource_type: 'case_entry', resource_id: entryId }`.
+- [x] **Step 4:** Commit: `git add apps/web/app/(authenticated)/[tenant]/cases/[id]/page.tsx && git commit -m "fix(case-detail): mask PHI + audit-logged reveal (UX2-018)"`
+
+> Implemented 2026-11-17: `PhiFields.tsx` rewritten to accept SERVER-MASKED values only
+> (full PHI never enters the RSC payload); new `POST /api/[tenant]/cases/[id]/phi-reveal`
+> verifies access (tenant slug + resident ownership + RLS-scoped read), writes the
+> `phi_view` audit row via the service-role client (audit_logs blocks authenticated
+> INSERTs — migration 00012), rate-limited, then returns the full values.
 
 ---
 

@@ -5,6 +5,19 @@ import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
 import AIQualityPanel from '@/components/AIQualityPanel';
+import { PhiFields } from '@/components/PhiFields';
+
+const maskMrn = (val: string | null | undefined) => {
+  if (!val) return '—';
+  if (val.length <= 4) return val;
+  return `***-**-${val.slice(-4)}`;
+};
+
+const maskDob = (val: string | null | undefined) => {
+  if (!val) return '—';
+  if (val.length <= 5) return val;
+  return `****-**-${val.slice(-2)}`;
+};
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
@@ -92,8 +105,13 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
         <div className="pt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient MRN</dt><dd className="text-text-primary">{entry.patient_mrn || '—'}</dd></dl>
-              <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient DOB</dt><dd className="text-text-primary">{entry.patient_dob || '—'}</dd></dl>
+            <PhiFields
+              mrnMasked={maskMrn(entry.patient_mrn)}
+              dobMasked={maskDob(entry.patient_dob)}
+              entryId={entry.id}
+              tenantSlug={tenantSlug}
+              hasPhi={!entry.is_deidentified && Boolean(entry.patient_mrn || entry.patient_dob)}
+            />
             </div>
             <div>
               <dl><dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Case Date</dt><dd className="text-text-primary">{entry.case_date}</dd></dl>

@@ -1,70 +1,68 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface PhiFieldsProps {
-  mrn: string;
-  dob: string;
+  /** Pre-masked by the server — the full value is never in the RSC payload. */
+  mrnMasked: string;
+  dobMasked: string;
   entryId: string;
-  tenantId: string;
-  userId: string;
+  tenantSlug: string;
+  /** False → de-identified or blank: nothing to reveal. */
+  hasPhi: boolean;
 }
 
-export function PhiFields({ mrn, dob, entryId, tenantId, userId }: PhiFieldsProps) {
-  const [mrnRevealed, setMrnRevealed] = useState(false);
-  const [dobRevealed, setDobRevealed] = useState(false);
+/**
+ * UX2-018: patient MRN / DOB are masked by default. Revealing requires an
+ * explicit click, which POSTs to the audit-logged phi-reveal endpoint —
+ * the audit row is written server-side before the values are returned.
+ */
+export function PhiFields({ mrnMasked, dobMasked, entryId, tenantSlug, hasPhi }: PhiFieldsProps) {
+  const [mrn, setMrn] = useState<string | null>(null);
+  const [dob, setDob] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const maskMrn = (val: string | null) => {
-    if (!val) return '—';
-    if (val.length <= 4) return val;
-    return '***-**-' + val.slice(-4);
-  };
+  const revealed = mrn !== null || dob !== null;
 
-  const maskDob = (val: string | null) => {
-    if (!val) return '—';
-    if (val.length <= 5) return val;
-    return '****-**-' + val.slice(-2);
-  };
-
-  const reveal = async (field: 'mrn' | 'dob') => {
-    const supabase = createClient();
-    await supabase.from('audit_logs').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'phi_view',
-      resource_type: 'case_entry',
-      resource_id: entryId,
-      changes: {},
-    });
-    if (field === 'mrn') setMrnRevealed(true);
-    else setDobRevealed(true);
+  const reveal = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/${tenantSlug}/cases/${entryId}/phi-reveal`, { method: 'POST' });
+      if (!res.ok) throw new Error(`reveal failed: ${res.status}`);
+      const data = (await res.json()) as { mrn: string | null; dob: string | null };
+      setMrn(data.mrn);
+      setDob(data.dob);
+    } catch {
+      setError('Could not reveal — try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
-      <div>
-        <label className="text-sm text-text-muted">Patient MRN</label>
-        <div className="flex items-center gap-2">
-          <p>{mrnRevealed ? (mrn || '—') : maskMrn(mrn)}</p>
-          {!mrnRevealed && mrn && (
-            <button onClick={() => reveal('mrn')} className="text-xs text-fg-primary hover:underline">
-              Reveal
-            </button>
-          )}
-        </div>
-      </div>
-      <div>
-        <label className="text-sm text-text-muted">Patient DOB</label>
-        <div className="flex items-center gap-2">
-          <p>{dobRevealed ? (dob || '—') : maskDob(dob)}</p>
-          {!dobRevealed && dob && (
-            <button onClick={() => reveal('dob')} className="text-xs text-fg-primary hover:underline">
-              Reveal
-            </button>
-          )}
-        </div>
-      </div>
+      <dl>
+        <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient MRN</dt>
+        <dd className="text-text-primary">{mrn ?? mrnMasked}</dd>
+      </dl>
+      <dl>
+        <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Patient DOB</dt>
+        <dd className="text-text-primary">{dob ?? dobMasked}</dd>
+      </dl>
+      {hasPhi && !revealed && (
+        <button
+          type="button"
+          onClick={reveal}
+          disabled={loading}
+          className="text-xs text-fg-primary hover:underline disabled:opacity-50"
+        >
+          {loading ? 'Revealing…' : 'Reveal PHI'}
+        </button>
+      )}
+      {error && <p className="text-xs text-fg-danger">{error}</p>}
     </>
   );
 }
