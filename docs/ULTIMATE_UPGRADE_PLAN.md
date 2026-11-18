@@ -427,16 +427,16 @@ CREATE TRIGGER trg_scan_field_values_phi BEFORE INSERT OR UPDATE ON public.case_
 **Files:**
 - Modify all `apps/web/app/api/[tenant]/admin/*/route.ts` files
 
-- [ ] **Step 1:** In each admin POST/PUT handler, add at the top:
+- [x] **Step 1:** In each admin POST/PUT handler, add at the top:
 ```ts
 const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
 if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
 ```
-- [ ] **Step 2:** After every successful mutation, insert an audit log row:
+- [x] **Step 2:** After every successful mutation, insert an audit log row:
 ```ts
 await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'sso_config', resource_id: newConfig.id, changes: { ...sanitizedChanges } });
 ```
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ && git commit -m "harden(admin): body size limits + audit logging (SEC2-012, SEC2-013)"`
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ && git commit -m "harden(admin): body size limits + audit logging (SEC2-012, SEC2-013)"`
 
 ---
 

@@ -322,5 +322,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: _auth.user.id, action: 'sso_config_delete', resource_type: 'tenant_sso_configs', resource_id: id, changes: {} });
+
   return NextResponse.json({ success: true });
 }

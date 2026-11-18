@@ -45,6 +45,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ tenant: string; id: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const { tenant: tenantSlug, id } = await params;
   const supabase = await createServerSupabase();
   const auth = await requireTenantAdmin(supabase, tenantSlug, TENANT_ROLES);
@@ -74,5 +77,15 @@ export async function PUT(
   if (error || !revision) {
     return NextResponse.json({ error: error?.message ?? 'Draft failed' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({
+    tenant_id: auth.profile.tenant_id,
+    user_id: auth.user.id,
+    action: 'tenant_page_revision_create',
+    resource_type: 'site_page_revisions',
+    resource_id: (revision as { id: string }).id,
+    changes: { page_id: id },
+  });
+
   return NextResponse.json({ revision }, { status: 201 });
 }
