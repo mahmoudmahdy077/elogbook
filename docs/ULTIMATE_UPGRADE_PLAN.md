@@ -304,9 +304,9 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Files:**
 - Modify: `apps/web/app/login/page.tsx` (lines 190-200)
 
-- [ ] **Step 1:** Read `apps/web/app/login/page.tsx` around line 189-200 (the demo banner block).
-- [ ] **Step 2:** Wrap the entire banner in: `{process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (<>...</>)}`
-- [ ] **Step 3:** Commit: `git add apps/web/app/login/page.tsx && git commit -m "fix(login): hide demo credentials banner in production (SEC2-006, UX2-005)"`
+- [x] **Step 1:** Read `apps/web/app/login/page.tsx` around line 189-200 (the demo banner block).
+- [x] **Step 2:** Wrap the entire banner in: `{process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_SHOW_DEMO_BANNER === 'true' && (<>...</>)}`
+- [x] **Step 3:** Commit: `git add apps/web/app/login/page.tsx && git commit -m "fix(login): hide demo credentials banner in production (SEC2-006, UX2-005)"`
 
 ---
 
