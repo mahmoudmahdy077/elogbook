@@ -361,14 +361,12 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Goal:** `ai-config`, `payment-gateway`, `webhooks`, `sso` route handlers use the `store_*` RPCs instead of writing plaintext to encrypted columns.
 
 **Files:**
-- Modify: `apps/web/app/api/[tenant]/admin/ai-config/route.ts`
-- Modify: `apps/web/app/api/[tenant]/admin/payment-gateway/route.ts`
 - Modify: `apps/web/app/api/[tenant]/admin/webhooks/route.ts`
 - Modify: `apps/web/app/api/[tenant]/admin/sso/route.ts`
 
-- [ ] **Step 1:** In each route, replace direct `.insert()` / `.update()` calls with `adminClient.rpc('store_ai_config', { ... })` / `store_payment_gateway_secret` / `store_tenant_webhook` / `store_sso_config` (the RPCs already exist in migrations 00053, 00074, 00058).
-- [ ] **Step 2:** Pass the plaintext key/secret as a parameter; the RPC handles `pgp_sym_encrypt`.
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ && git commit -m "fix(secrets): wire encryption RPCs in admin routes (SEC2-001, SEC2-002, SEC2-003)"`
+- [x] **Step 1:** In each route, replace direct `.insert()` / `.update()` calls with `adminClient.rpc('store_ai_config', { ... })` / `store_payment_gateway_secret` / `store_tenant_webhook` / `store_sso_config` (the RPCs already exist in migrations 00053, 00074, 00058). NOTE: `store_sso_config` did NOT exist — created in migration 20261120000000_store_sso_config_rpc.sql.
+- [x] **Step 2:** Pass the plaintext key/secret as a parameter; the RPC handles `pgp_sym_encrypt`.
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ && git commit -m "fix(secrets): wire encryption RPCs in admin routes (SEC2-001, SEC2-002, SEC2-003)"` (done: ai-config/payment-gateway previously; webhooks/sso in commit 5718b5a, 2026-11-20)
 
 ---
 
