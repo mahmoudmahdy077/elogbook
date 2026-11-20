@@ -23,9 +23,16 @@ jobs:
           #                    ^1.2.0 range does not accept
           # 1243066          - zod 3 as bundled inside @expo/cli; application
           #                    code is on zod 4.6.6
+          # 1247710          - picomatch <=4.0.7 (ReDoS, GHSA-fc5q-39xc-vjpf);
+          #                    NO patched version exists — 4.0.7 is the latest
+          #                    published release, so no override can clear it.
+          #                    Reached only through vitest>vite>tinyglobby and
+          #                    @expo/cli>glob at build/test time; `pnpm why
+          #                    picomatch` shows dev-only edges and the
+          #                    production tree has none.
           # node-forge and decode-uri-component are NOT excepted: both are
           # pinned past their fixed versions through pnpm.overrides.
-          jq 'del(.advisories["1138808"], .advisories["1138809"], .advisories["1239765"], .advisories["1239766"], .advisories["1240912"], .advisories["1243066"])' \
+          jq 'del(.advisories["1138808"], .advisories["1138809"], .advisories["1239765"], .advisories["1239766"], .advisories["1240912"], .advisories["1243066"], .advisories["1247710"])' \
             /tmp/audit.json > /tmp/audit-filtered.json
           HIGH="$(jq '[.advisories | to_entries[] | select(.value.severity == "high")] | length' /tmp/audit-filtered.json)"
           echo "high-severity advisories remaining: ${HIGH}"
