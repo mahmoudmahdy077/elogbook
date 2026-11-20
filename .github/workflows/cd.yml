@@ -52,6 +52,43 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod --yes'
+      # A green Vercel deploy means the BUILD succeeded; it says nothing about
+      # whether the deployed process can boot. On 2026-11-13 the production
+      # deployment succeeded while every dynamic route answered 500 (missing
+      # production env var → instrumentation.ts exits 1 at boot), and nothing
+      # in the pipeline noticed. Probe the deployed site so a deploy that
+      # cannot serve is red here, not silently live.
+      - name: Smoke test deployed site
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.preview-url || vars.PRODUCTION_SITE_URL || 'https://elogbook-web.vercel.app' }}
+        run: |
+          set -uo pipefail
+          probe() {
+            method="$1"; path="$2"; want="$3"
+            url="${SITE_URL%/}${path}"
+            for attempt in $(seq 1 12); do
+              code=$(curl -s -o /tmp/probe-body -w '%{http_code}' -X "$method" --max-time 20 "$url" || echo 000)
+              if [ "$code" = "$want" ]; then
+                echo "OK  $method $url -> $code"
+                return 0
+              fi
+              echo "attempt $attempt/12: $method $url -> $code (want $want)"
+              sleep 10
+            done
+            echo "::error::$method $url returned $code, expected $want"
+            echo "--- response body (first 500 bytes) ---"
+            head -c 500 /tmp/probe-body || true
+            echo
+            echo "--- deploy log ---"
+            echo "Deployment: ${{ steps.deploy.outputs.preview-url }}"
+            echo "See docs/env-reference.md#production-boot-contract for the required variables."
+            return 1
+          }
+          rc=0
+          probe GET /api/health 200 || rc=1
+          probe GET /login 200 || rc=1
+          probe POST /api/setup/deploy-supabase 404 || rc=1
+          exit "$rc"
 
   # ----------------------------------------------------------------------
   # Push database migrations
