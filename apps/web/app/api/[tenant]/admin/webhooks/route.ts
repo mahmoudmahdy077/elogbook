@@ -167,26 +167,36 @@ export async function POST(
     return NextResponse.json({ error: 'Maximum of 10 webhooks per tenant' }, { status: 400 });
   }
 
-  const adminClient = createServiceRoleClient();
-  const { data: newWebhook, error: insertError } = await adminClient
-    .from('tenant_webhooks')
-    .insert({
-      tenant_id: profile.tenant_id,
-      url,
-      events,
-      secret,
-      description: description ?? null,
-      is_active: is_active ?? true,
-    })
-    .select('id, url, events, is_active, description, created_at')
-    .single();
+  // SEC2-013: store via RPC so the secret is pgp_sym_encrypt'ed in-database
+  // (migration 00074) instead of written plaintext by the service-role client.
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('store_tenant_webhook', {
+    p_url: url,
+    p_events: events,
+    p_secret: secret,
+    p_description: description ?? null,
+    p_is_active: is_active ?? true,
+  });
 
-  if (insertError) {
-    console.error('webhooks create error:', insertError.message);
+  if (rpcError) {
+    console.error('webhooks create error:', rpcError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_create', resource_type: 'tenant_webhooks', resource_id: newWebhook!.id, changes: {} });
+  const stored = rpcResult as { error?: string; id?: string } | null;
+  if (stored?.error || !stored?.id) {
+    return NextResponse.json({ error: stored?.error ?? 'Failed to create webhook' }, { status: 400 });
+  }
+
+  const newWebhook = {
+    id: stored.id,
+    url,
+    events,
+    is_active: is_active ?? true,
+    description: description ?? null,
+  };
+
+  const adminClient = createServiceRoleClient();
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_create', resource_type: 'tenant_webhooks', resource_id: newWebhook.id, changes: {} });
 
   return NextResponse.json({ webhook: newWebhook }, { status: 201 });
 }
@@ -230,7 +240,7 @@ export async function PUT(
   const adminClient = createServiceRoleClient();
   const { data: existing } = await adminClient
     .from('tenant_webhooks')
-    .select('id')
+    .select('id, url, events, description, is_active')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .single();
@@ -278,6 +288,35 @@ export async function PUT(
 
   if (Object.keys(updatePayload).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  if (secret !== undefined) {
+    // SEC2-013: rotating the secret must go through the RPC so the new value
+    // is encrypted in-database. The RPC overwrites every column it is given,
+    // so pass the current row merged with the requested partial update.
+    const existing_ = existing as { url: string; events: string[]; description: string | null; is_active: boolean } | null;
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('store_tenant_webhook', {
+      p_url: updatePayload.url !== undefined ? (updatePayload.url as string) : existing_?.url ?? '',
+      p_events: updatePayload.events !== undefined ? (updatePayload.events as string[]) : existing_?.events ?? [],
+      p_secret: secret,
+      p_description: updatePayload.description !== undefined ? (updatePayload.description as string | null) : existing_?.description ?? null,
+      p_is_active: updatePayload.is_active !== undefined ? (updatePayload.is_active as boolean) : existing_?.is_active ?? true,
+      p_webhook_id: id,
+    });
+
+    if (rpcError) {
+      console.error('webhooks update error:', rpcError.message);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+
+    const stored = rpcResult as { error?: string } | null;
+    if (stored?.error) {
+      return NextResponse.json({ error: stored.error }, { status: 400 });
+    }
+
+    await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'webhook_update', resource_type: 'tenant_webhooks', resource_id: id!, changes: {} });
+
+    return NextResponse.json({ success: true });
   }
 
   const { error: updateError } = await adminClient
