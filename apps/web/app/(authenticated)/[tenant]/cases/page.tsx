@@ -9,6 +9,7 @@ import QuickAddWrapper from '@/components/QuickAddWrapper';
 import CaseImportButton from '@/components/CaseImportButton';
 import ExportCsvButton from '@/components/ExportCsvButton';
 import { StatusBadge } from '@elogbook/shared/components/web';
+import { maskMrn } from '@/lib/phi-mask';
 import type { StatusVariant } from '@elogbook/shared/components/web';
 
 type CaseEntryRow = {
@@ -159,11 +160,11 @@ export default async function CasesPage({
                   {/* MRN */}
                   <div className="sm:flex items-center hidden">
                     <span className="text-sm text-text-secondary tabular-nums">
-                      {entry.patient_mrn || '—'}
+                      {maskMrn(entry.patient_mrn)}
                     </span>
                   </div>
                   <div className="sm:hidden text-xs text-text-muted">
-                    MRN: {entry.patient_mrn || '—'}
+                    MRN: {maskMrn(entry.patient_mrn)}
                   </div>
 
                   {/* Status + Date (mobile) */}

@@ -3,7 +3,11 @@
  * Gate A — tenant-scope detector (not a proof).
  * Flags any file importing createServiceRoleClient that queries a tenant-scoped
  * table without `.eq('tenant_id'` in the same chain.
- * False negatives: helper functions, RPC, joins. False positives: intentionally global.
+ * The flagged chain must be on the service-role client itself: a file that mixes
+ * the RLS-bound session client with the admin client (phi-reveal: RLS read, admin
+ * audit write) is only checked for the admin-bound receiver.
+ * False negatives: helper functions, RPC, joins, aliased receivers it cannot
+ * resolve (those stay conservative and are still flagged). False positives: intentionally global.
  * See PRODUCTION_UPGRADE_PLAN.md Phase 1.7.
  */
 
@@ -54,10 +58,19 @@ const roots = [join(WEB_APP, 'app'), join(WEB_APP, 'lib')].filter(p => {
 });
 const allFiles = roots.flatMap(r => walk(r));
 
-for (const file of allFiles) {
-  const src = readFileSync(file, 'utf8');
-  if (!src.includes('createServiceRoleClient')) continue;
-  checked++;
+function findViolations(src) {
+  const out = [];
+
+  // Names bound to the service-role client in this file, plus one level of
+  // `const x = adminClient` aliases. Empty set → keep file-level behaviour.
+  const adminNames = new Set();
+  const adminRe = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?createServiceRoleClient\s*\(/g;
+  let a;
+  while ((a = adminRe.exec(src))) adminNames.add(a[1]);
+  const aliasRe = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\s*[;\n)]/g;
+  while ((a = aliasRe.exec(src))) {
+    if (adminNames.has(a[2]) && !adminNames.has(a[1])) adminNames.add(a[1]);
+  }
 
   // Find all from('table') occurrences
   const fromRe = /\.from\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
@@ -65,6 +78,14 @@ for (const file of allFiles) {
   while ((m = fromRe.exec(src))) {
     const table = m[1];
     if (!TENANT_SCOPED.has(table)) continue;
+
+    // Receiver of the chain, when it can be read unambiguously. Only relax to
+    // the named receiver when the file binds an admin client and the chain is
+    // provably on a different client; anything unclear stays flagged.
+    const pre = src.slice(Math.max(0, m.index - 400), m.index);
+    const recv = pre.match(/([A-Za-z_$][\w$]*)\s*$/);
+    if (recv && adminNames.size > 0 && !adminNames.has(recv[1])) continue;
+
     // Exempt comment: // tenant-scope-exempt: <reason>
     const lineStart = src.lastIndexOf('\n', m.index) + 1;
     const lineEnd = src.indexOf('\n', m.index);
@@ -78,9 +99,38 @@ for (const file of allFiles) {
     if (table === 'tenants' && window.includes('.select(')) continue;
 
     if (!window.includes("eq('tenant_id'") && !window.includes('eq("tenant_id"') && !window.includes("eq(`tenant_id`")) {
-      flagged.push({ file: file.replace(ROOT + '/', ''), table, snippet: line.trim().slice(0,120) });
+      out.push({ table, snippet: line.trim().slice(0, 120) });
     }
   }
+  return out;
+}
+
+// --self-test: the receiver logic is what keeps this gate honest, so prove it
+// still separates an admin read from an RLS-bound read before trusting a pass.
+if (process.argv.includes('--self-test')) {
+  const fixtures = [
+    ['admin read, no filter', `const c = createServiceRoleClient();\nreturn c.from('case_entries').select('*');`, 1],
+    ['admin read, multi-line', `const c = createServiceRoleClient();\nreturn c\n  .from('audit_logs')\n  .select('*');`, 1],
+    ['aliased admin read', `const c = createServiceRoleClient();\nconst db = c;\nreturn db.from('profiles').select('*');`, 1],
+    ['admin read, scoped', `const c = createServiceRoleClient();\nreturn c.from('case_entries').select('*').eq('tenant_id', t);`, 0],
+    ['rls read next to admin write', `const admin = createServiceRoleClient();\nconst supabase = await createServerSupabase();\nconst p = await supabase.from('profiles').select('*').eq('user_id', u);\nreturn { p, admin };`, 0],
+    ['exempt comment', `const c = createServiceRoleClient();\nreturn c.from('profiles').select('*'); // tenant-scope-exempt: platform admin list`, 0],
+  ];
+  let bad = 0;
+  for (const [name, src, want] of fixtures) {
+    const got = findViolations(src).length;
+    if ((got > 0 ? 1 : 0) !== want) { bad++; console.error(`self-test FAILED: ${name} — expected ${want ? 'flagged' : 'clean'}, got ${got}`); }
+  }
+  if (bad) process.exit(1);
+  console.log(`Gate A self-test passed: ${fixtures.length} fixtures`);
+  process.exit(0);
+}
+
+for (const file of allFiles) {
+  const src = readFileSync(file, 'utf8');
+  if (!src.includes('createServiceRoleClient')) continue;
+  checked++;
+  for (const v of findViolations(src)) flagged.push({ file: file.replace(ROOT + '/', ''), ...v });
 }
 
 if (flagged.length) {
