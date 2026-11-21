@@ -1,5 +1,9 @@
 # E-Logbook Ultimate Production-Ready Upgrade Plan v2
 
+> **Status (2026-11-21):** Tasks 1–36 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
+> code (checkboxes were stale) during a code-vs-plan sweep; Task 34 (hardcoded colors → tokens) was
+> implemented in commit 14ef0ac. Next undone task: **Task 37**.
+
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
 **Goal:** Get the elogbook SaaS to accept its first paying junior-doctor customer, with a fast 30-second case-logging experience, secure PHI handling, and a deployable CI/CD pipeline.
@@ -37,7 +41,7 @@ These tasks unblock the ability to accept a paying customer. Do these FIRST.
 - Create: `apps/web/app/signup/page.tsx`
 - Create: `apps/web/app/signup/__tests__/page.test.tsx`
 
-- [ ] **Step 1:** Create `apps/web/app/signup/page.tsx` as a server component that:
+- [x] **Step 1:** Create `apps/web/app/signup/page.tsx` as a server component that:
   - Reads `?plan=` query param
   - Renders email + password form (reuse shared `FormField` from `packages/shared/src/components/FormField.web.tsx`)
   - On submit, calls `supabase.auth.signUp({ email, password, options: { emailRedirectTo: '/auth/callback?next=/onboarding', data: { plan_slug } } })`
@@ -46,7 +50,7 @@ These tasks unblock the ability to accept a paying customer. Do these FIRST.
   - Uses design tokens (`bg-backdrop`, `text-text-primary`, `panel`, etc.) — NO hardcoded colors
   - Includes a hidden input or query param carrying the `plan` slug
 
-- [ ] **Step 2:** Create `apps/web/app/signup/__tests__/page.test.tsx`:
+- [x] **Step 2:** Create `apps/web/app/signup/__tests__/page.test.tsx`:
 ```tsx
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -71,9 +75,9 @@ describe('signup page', () => {
 });
 ```
 
-- [ ] **Step 3:** Run: `pnpm --filter @elogbook/web test -- signup`
-- [ ] **Step 4:** Run: `pnpm --filter @elogbook/web typecheck`
-- [ ] **Step 5:** Commit: `git add apps/web/app/signup/ && git commit -m "feat(signup): create /signup route with email+password (UX2-001)"`
+- [x] **Step 3:** Run: `pnpm --filter @elogbook/web test -- signup`
+- [x] **Step 4:** Run: `pnpm --filter @elogbook/web typecheck`
+- [x] **Step 5:** Commit: `git add apps/web/app/signup/ && git commit -m "feat(signup): create /signup route with email+password (UX2-001)"`
 
 ---
 
@@ -84,13 +88,13 @@ describe('signup page', () => {
 **Files:**
 - Create: `apps/web/app/contact/page.tsx`
 
-- [ ] **Step 1:** Create `apps/web/app/contact/page.tsx` — a simple server component with:
+- [x] **Step 1:** Create `apps/web/app/contact/page.tsx` — a simple server component with:
   - A heading "Contact Sales"
   - A `mailto:sales@elogbook.app` link
   - A short form (name, email, institution, message) that posts to `/api/contact` (create a stub route that just returns 200 for now)
   - Uses design tokens
 
-- [ ] **Step 2:** Commit: `git add apps/web/app/contact/ && git commit -m "feat(contact): create /contact route for enterprise sales (UX2-002)"`
+- [x] **Step 2:** Commit: `git add apps/web/app/contact/ && git commit -m "feat(contact): create /contact route for enterprise sales (UX2-002)"`
 
 ---
 
@@ -102,8 +106,8 @@ describe('signup page', () => {
 - Modify: `supabase/functions/create-checkout/index.ts`
 - Modify: `supabase/seed.sql` (add a platform gateway row)
 
-- [ ] **Step 1:** Read `supabase/functions/create-checkout/index.ts`. Find the `.from('secret_payment_gateway_config').select().eq('tenant_id', tenantId).single()` call.
-- [ ] **Step 2:** Change the query to fall back to a platform-default row when the per-tenant query returns null:
+- [x] **Step 1:** Read `supabase/functions/create-checkout/index.ts`. Find the `.from('secret_payment_gateway_config').select().eq('tenant_id', tenantId).single()` call.
+- [x] **Step 2:** Change the query to fall back to a platform-default row when the per-tenant query returns null:
 ```ts
 let { data: gwConfig, error } = await supabase
   .from('secret_payment_gateway_config')
@@ -124,8 +128,8 @@ if (!gwConfig) {
 }
 if (!gwConfig) return new Response(JSON.stringify({ error: 'Gateway not configured' }), { status: 400, headers });
 ```
-- [ ] **Step 3:** Add a platform gateway row to `supabase/seed.sql` (or a new migration `00097_platform_gateway.sql`) — but with placeholder values that operators must fill via env vars. Better: have the function read `STRIPE_SECRET_KEY` from Deno env as a final fallback.
-- [ ] **Step 4:** Commit: `git add supabase/functions/create-checkout/index.ts && git commit -m "fix(checkout): platform-default Stripe gateway fallback (SUB1-001)"`
+- [x] **Step 3:** Add a platform gateway row to `supabase/seed.sql` (or a new migration `00097_platform_gateway.sql`) — but with placeholder values that operators must fill via env vars. Better: have the function read `STRIPE_SECRET_KEY` from Deno env as a final fallback.
+- [x] **Step 4:** Commit: `git add supabase/functions/create-checkout/index.ts && git commit -m "fix(checkout): platform-default Stripe gateway fallback (SUB1-001)"`
 
 **Test:** `cd supabase/functions/create-checkout && deno test` (add a test mocking no per-tenant config → assert platform fallback used)
 
@@ -140,7 +144,7 @@ if (!gwConfig) return new Response(JSON.stringify({ error: 'Gateway not configur
 - Modify: `apps/web/app/(authenticated)/[tenant]/cases/new/page.tsx`
 - Modify: `apps/web/components/DashboardContent.tsx`
 
-- [ ] **Step 1:** Create `supabase/migrations/00098_case_quota_rpc.sql`:
+- [x] **Step 1:** Create `supabase/migrations/00098_case_quota_rpc.sql`:
 ```sql
 -- GATE2-001: Enforce Free plan 20-case limit at the DB level
 CREATE OR REPLACE FUNCTION public.check_case_quota(p_tenant_id UUID)
@@ -176,11 +180,11 @@ CREATE TRIGGER trg_enforce_case_quota BEFORE INSERT ON public.case_entries
   FOR EACH ROW EXECUTE FUNCTION public.enforce_case_quota();
 ```
 
-- [ ] **Step 2:** In `apps/web/app/(authenticated)/[tenant]/cases/new/page.tsx`, before rendering the form, call `supabase.rpc('check_case_quota', { p_tenant_id: tenantId })`. If `allowed=false`, render an upgrade card instead of the form.
+- [x] **Step 2:** In `apps/web/app/(authenticated)/[tenant]/cases/new/page.tsx`, before rendering the form, call `supabase.rpc('check_case_quota', { p_tenant_id: tenantId })`. If `allowed=false`, render an upgrade card instead of the form.
 
-- [ ] **Step 3:** In `apps/web/components/DashboardContent.tsx`, when `caseCount >= 18` and plan is Free, render a CTA card: "You're approaching your free limit — upgrade for unlimited cases."
+- [x] **Step 3:** In `apps/web/components/DashboardContent.tsx`, when `caseCount >= 18` and plan is Free, render a CTA card: "You're approaching your free limit — upgrade for unlimited cases."
 
-- [ ] **Step 4:** Commit: `git add supabase/migrations/00098_case_quota_rpc.sql apps/web/app apps/web/components/DashboardContent.tsx && git commit -m "feat(billing): enforce Free 20-case limit + upgrade prompt (GATE2-001, GATE2-002)"`
+- [x] **Step 4:** Commit: `git add supabase/migrations/00098_case_quota_rpc.sql apps/web/app apps/web/components/DashboardContent.tsx && git commit -m "feat(billing): enforce Free 20-case limit + upgrade prompt (GATE2-001, GATE2-002)"`
 
 **Test:** pgTAP test seeding 20 approved cases for a Free tenant → INSERT case #21 → assert RAISES EXCEPTION. `supabase db reset && supabase db test`.
 
@@ -194,14 +198,14 @@ CREATE TRIGGER trg_enforce_case_quota BEFORE INSERT ON public.case_entries
 - Create: `supabase/functions/create-portal-session/index.ts`
 - Modify: `apps/web/app/(authenticated)/[tenant]/billing/page.tsx`
 
-- [ ] **Step 1:** Create `supabase/functions/create-portal-session/index.ts` that:
+- [x] **Step 1:** Create `supabase/functions/create-portal-session/index.ts` that:
   - Authenticates via `_shared/auth.ts`
   - Reads `return_url` from body
   - Looks up the tenant's `stripe_customer_id` from `subscriptions`
   - Calls `stripe.billingPortal.sessions.create({ customer, return_url })`
   - Returns `{ url: session.url }`
-- [ ] **Step 2:** In `apps/web/app/(authenticated)/[tenant]/billing/page.tsx`, when subscription is active, add a "Manage subscription" button that calls the edge function and redirects to the returned URL.
-- [ ] **Step 3:** Commit: `git add supabase/functions/create-portal-session/ apps/web/app/(authenticated)/[tenant]/billing/page.tsx && git commit -m "feat(billing): Stripe Customer Portal for cancel/manage (SUB1-004)"`
+- [x] **Step 2:** In `apps/web/app/(authenticated)/[tenant]/billing/page.tsx`, when subscription is active, add a "Manage subscription" button that calls the edge function and redirects to the returned URL.
+- [x] **Step 3:** Commit: `git add supabase/functions/create-portal-session/ apps/web/app/(authenticated)/[tenant]/billing/page.tsx && git commit -m "feat(billing): Stripe Customer Portal for cancel/manage (SUB1-004)"`
 
 ---
 
@@ -212,12 +216,12 @@ CREATE TRIGGER trg_enforce_case_quota BEFORE INSERT ON public.case_entries
 **Files:**
 - Modify: `supabase/functions/payment-webhook/index.ts`
 
-- [ ] **Step 1:** Read `supabase/functions/payment-webhook/index.ts` switch statement (around line 190).
-- [ ] **Step 2:** Add cases:
+- [x] **Step 1:** Read `supabase/functions/payment-webhook/index.ts` switch statement (around line 190).
+- [x] **Step 2:** Add cases:
   - `customer.subscription.updated`: upsert subscription with new `plan_id` + `status` from `stripeSub.items.data[0].price` mapped to plan
   - `invoice.payment_failed`: set `subscriptions.status = 'past_due'` where `gateway_subscription_id = stripeSub.id`
   - `customer.subscription.trial_will_end`: log a notification (optional)
-- [ ] **Step 3:** Commit: `git add supabase/functions/payment-webhook/index.ts && git commit -m "fix(webhook): handle subscription.updated, payment_failed, trial_will_end (SUB1-002)"`
+- [x] **Step 3:** Commit: `git add supabase/functions/payment-webhook/index.ts && git commit -m "fix(webhook): handle subscription.updated, payment_failed, trial_will_end (SUB1-002)"`
 
 ---
 
@@ -228,15 +232,15 @@ CREATE TRIGGER trg_enforce_case_quota BEFORE INSERT ON public.case_entries
 **Files:**
 - Modify: `supabase/functions/payment-webhook/index.ts`
 
-- [ ] **Step 1:** In `checkout.session.completed` handler, read `session.customer` and write `stripe_customer_id` to the `subscriptions` upsert.
-- [ ] **Step 2:** In `invoice.paid` handler, after updating `subscriptions`, insert a row into `payments`:
+- [x] **Step 1:** In `checkout.session.completed` handler, read `session.customer` and write `stripe_customer_id` to the `subscriptions` upsert.
+- [x] **Step 2:** In `invoice.paid` handler, after updating `subscriptions`, insert a row into `payments`:
 ```ts
 await supabase.from('payments').insert({
   tenant_id, amount: invoice.amount_paid, currency: invoice.currency,
   gateway_payment_intent_id: invoice.payment_intent, status: 'succeeded',
 });
 ```
-- [ ] **Step 3:** Commit: `git add supabase/functions/payment-webhook/index.ts && git commit -m "fix(webhook): persist stripe_customer_id + populate payments (SUB1-003, SUB1-005)"`
+- [x] **Step 3:** Commit: `git add supabase/functions/payment-webhook/index.ts && git commit -m "fix(webhook): persist stripe_customer_id + populate payments (SUB1-003, SUB1-005)"`
 
 ---
 
@@ -248,9 +252,9 @@ await supabase.from('payments').insert({
 - Modify: `supabase/functions/ai-insights/index.ts`
 - Modify: `supabase/functions/manifest.json` (add `OPENAI_API_KEY` to required secrets)
 
-- [ ] **Step 1:** Read `supabase/functions/ai-insights/index.ts` around line 269 where it queries `secret_ai_config` per tenant.
-- [ ] **Step 2:** Add a fallback: if no per-tenant config, read `PLATFORM_OPENAI_KEY` from `Deno.env.get('PLATFORM_OPENAI_KEY')`. If present, use it with provider='openai', model='gpt-4o-mini'. Also verify the tenant's plan has `features.ai = true` (plan gating, GATE2-003).
-- [ ] **Step 3:** Commit: `git add supabase/functions/ai-insights/index.ts supabase/functions/manifest.json && git commit -m "feat(ai): platform-default OpenAI key fallback + plan gating (AI5-001, GATE2-003)"`
+- [x] **Step 1:** Read `supabase/functions/ai-insights/index.ts` around line 269 where it queries `secret_ai_config` per tenant.
+- [x] **Step 2:** Add a fallback: if no per-tenant config, read `PLATFORM_OPENAI_KEY` from `Deno.env.get('PLATFORM_OPENAI_KEY')`. If present, use it with provider='openai', model='gpt-4o-mini'. Also verify the tenant's plan has `features.ai = true` (plan gating, GATE2-003).
+- [x] **Step 3:** Commit: `git add supabase/functions/ai-insights/index.ts supabase/functions/manifest.json && git commit -m "feat(ai): platform-default OpenAI key fallback + plan gating (AI5-001, GATE2-003)"`
 
 ---
 
@@ -262,13 +266,13 @@ await supabase.from('payments').insert({
 - Create: `apps/web/app/api/[tenant]/admin/invite/route.ts`
 - Modify: `apps/web/components/UserManager.tsx`
 
-- [ ] **Step 1:** Create `apps/web/app/api/[tenant]/admin/invite/route.ts` that:
+- [x] **Step 1:** Create `apps/web/app/api/[tenant]/admin/invite/route.ts` that:
   - Verifies caller is `institution_admin` or `admin` for the tenant
   - Uses the service-role client to `auth.admin.createUser({ email, user_metadata: { full_name, specialty, tenant_id, role: inviteRole } })`
   - Inserts a `profiles` row with the tenant_id and role
   - Sends a password setup / magic link email
-- [ ] **Step 2:** In `apps/web/components/UserManager.tsx`, change `handleInvite` to POST to `/api/[tenant]/admin/invite` instead of calling `supabase.auth.signInWithOtp` directly.
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/invite/ apps/web/components/UserManager.tsx && git commit -m "fix(invite): server-side invite that sets tenant+role (INST10-001)"`
+- [x] **Step 2:** In `apps/web/components/UserManager.tsx`, change `handleInvite` to POST to `/api/[tenant]/admin/invite` instead of calling `supabase.auth.signInWithOtp` directly.
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/invite/ apps/web/components/UserManager.tsx && git commit -m "fix(invite): server-side invite that sets tenant+role (INST10-001)"`
 
 ---
 
@@ -283,15 +287,15 @@ await supabase.from('payments').insert({
 - Modify: `apps/web/app/api/[tenant]/admin/ai-config/route.ts`
 - Modify: `apps/web/components/AdminTabPanel.tsx` (remove webhooks + AI-config tabs for v1)
 
-- [ ] **Step 1:** In each of the 4 admin route files, add an early check at the top of the handler:
+- [x] **Step 1:** In each of the 4 admin route files, add an early check at the top of the handler:
 ```ts
 const { data: sub } = await supabase.from('subscriptions').select('plan_id').eq('tenant_id', profile.tenant_id).single();
 const { data: plan } = await supabase.from('subscription_plans').select('features').eq('id', sub.plan_id).single();
 if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ error: 'Not available on your plan' }, { status: 503 });
 ```
 (Use the appropriate feature key: `sso`, `scim`, `webhooks`, `ai_config`.)
-- [ ] **Step 2:** In `apps/web/components/AdminTabPanel.tsx`, remove `webhooks` and `ai-config` from the `TABS` array for v1.
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ apps/web/components/AdminTabPanel.tsx && git commit -m "fix(plan-gating): gate SSO/SCIM/webhooks/ai-config behind Enterprise (HIDE9-001..004)"`
+- [x] **Step 2:** In `apps/web/components/AdminTabPanel.tsx`, remove `webhooks` and `ai-config` from the `TABS` array for v1.
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/admin/ apps/web/components/AdminTabPanel.tsx && git commit -m "fix(plan-gating): gate SSO/SCIM/webhooks/ai-config behind Enterprise (HIDE9-001..004)"`
 
 ---
 
@@ -317,11 +321,11 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Files:**
 - Modify: `supabase/functions/ai-quality/index.ts` (lines 222-240, 279-292)
 
-- [ ] **Step 1:** Read `supabase/functions/ai-quality/index.ts`.
-- [ ] **Step 2:** Add `.eq('is_deidentified', true)` to the case query at line 222.
-- [ ] **Step 3:** After fetching the case, add a guard: `if (!caseEntry.is_deidentified) return new Response(JSON.stringify({ error: 'Case must be deidentified' }), { status: 403, headers });`
-- [ ] **Step 4:** In `callAiProvider`, before building `userPrompt`, scan `fieldValues` text for PHI patterns (MRN-like 6+ digit numbers, DOB date patterns) and abort with 403 if found.
-- [ ] **Step 5:** Commit: `git add supabase/functions/ai-quality/index.ts && git commit -m "fix(ai-quality): add is_deidentified guard + PHI scan (SEC2-004, AI5-002)"`
+- [x] **Step 1:** Read `supabase/functions/ai-quality/index.ts`.
+- [x] **Step 2:** Add `.eq('is_deidentified', true)` to the case query at line 222.
+- [x] **Step 3:** After fetching the case, add a guard: `if (!caseEntry.is_deidentified) return new Response(JSON.stringify({ error: 'Case must be deidentified' }), { status: 403, headers });`
+- [x] **Step 4:** In `callAiProvider`, before building `userPrompt`, scan `fieldValues` text for PHI patterns (MRN-like 6+ digit numbers, DOB date patterns) and abort with 403 if found.
+- [x] **Step 5:** Commit: `git add supabase/functions/ai-quality/index.ts && git commit -m "fix(ai-quality): add is_deidentified guard + PHI scan (SEC2-004, AI5-002)"`
 
 ---
 
@@ -332,12 +336,12 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Files:**
 - Modify: `supabase/functions/ai-gap-analysis/index.ts`
 
-- [ ] **Step 1:** Read `supabase/functions/ai-gap-analysis/index.ts`.
-- [ ] **Step 2:** Replace the service-role client creation (lines 27-29) with the `_shared/auth.ts` `authenticate()` helper (which uses the user's JWT + anon key so RLS applies).
-- [ ] **Step 3:** Remove `tenant_id` from the request body destructuring (line 39). Use `tenantId` from `authenticate()`.
-- [ ] **Step 4:** Replace `select('*')` with explicit column lists (no `field_values`, no `patient_mrn`).
-- [ ] **Step 5:** Add a role check: caller must be a supervisor+ in the same tenant to view `resident_id`'s data.
-- [ ] **Step 6:** Commit: `git add supabase/functions/ai-gap-analysis/index.ts && git commit -m "fix(ai-gap-analysis): use JWT tenant_id, drop service role (SEC2-005, AI5-003)"`
+- [x] **Step 1:** Read `supabase/functions/ai-gap-analysis/index.ts`.
+- [x] **Step 2:** Replace the service-role client creation (lines 27-29) with the `_shared/auth.ts` `authenticate()` helper (which uses the user's JWT + anon key so RLS applies).
+- [x] **Step 3:** Remove `tenant_id` from the request body destructuring (line 39). Use `tenantId` from `authenticate()`.
+- [x] **Step 4:** Replace `select('*')` with explicit column lists (no `field_values`, no `patient_mrn`).
+- [x] **Step 5:** Add a role check: caller must be a supervisor+ in the same tenant to view `resident_id`'s data.
+- [x] **Step 6:** Commit: `git add supabase/functions/ai-gap-analysis/index.ts && git commit -m "fix(ai-gap-analysis): use JWT tenant_id, drop service role (SEC2-005, AI5-003)"`
 
 ---
 
@@ -348,11 +352,11 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Files:**
 - Modify: `supabase/functions/ai-quality/index.ts`
 
-- [ ] **Step 1:** Read `supabase/functions/ai-quality/index.ts`.
-- [ ] **Step 2:** Import `isValidEndpoint` from `../_shared/auth.ts` (or duplicate the logic from `ai-insights/index.ts:53-90`).
-- [ ] **Step 3:** Call `isValidEndpoint(endpoint_url)` before fetching for `azure` and `custom` providers. Return 400 if invalid.
-- [ ] **Step 4:** In the catch block (around line 321), do NOT return `msg` to the caller. Return generic `'AI provider error'` and log `msg` server-side only.
-- [ ] **Step 5:** Commit: `git add supabase/functions/ai-quality/index.ts && git commit -m "fix(ai-quality): SSRF protection + scrub error messages (SEC2-009)"`
+- [x] **Step 1:** Read `supabase/functions/ai-quality/index.ts`.
+- [x] **Step 2:** Import `isValidEndpoint` from `../_shared/auth.ts` (or duplicate the logic from `ai-insights/index.ts:53-90`).
+- [x] **Step 3:** Call `isValidEndpoint(endpoint_url)` before fetching for `azure` and `custom` providers. Return 400 if invalid.
+- [x] **Step 4:** In the catch block (around line 321), do NOT return `msg` to the caller. Return generic `'AI provider error'` and log `msg` server-side only.
+- [x] **Step 5:** Commit: `git add supabase/functions/ai-quality/index.ts && git commit -m "fix(ai-quality): SSRF protection + scrub error messages (SEC2-009)"`
 
 ---
 
@@ -378,9 +382,9 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 - Modify: `apps/web/lib/supabase/middleware.ts`
 - Modify: `apps/web/app/auth/callback/route.ts`
 
-- [ ] **Step 1:** In `apps/web/lib/supabase/middleware.ts`, after `getUser()` returns a user, call `supabase.auth.getMfaIdentities()` (or check `session.user.aal`). If the user has verified MFA factors AND the session AAL is not `aal2`, redirect to `/mfa/verify?next=<original-path>`. Apply to `/[tenant]/admin/*` and `/api/[tenant]/admin/*` routes at minimum.
-- [ ] **Step 2:** In `apps/web/app/auth/callback/route.ts`, after `exchangeCodeForSession`, check if the user's profile role is director/admin and if they have MFA enrolled. If so, redirect to `/mfa/verify` instead of `/dashboard`.
-- [ ] **Step 3:** Commit: `git add apps/web/lib/supabase/middleware.ts apps/web/app/auth/callback/route.ts && git commit -m "fix(mfa): enforce AAL2 in middleware + callback (SEC2-008, SEC2-010)"`
+- [x] **Step 1:** In `apps/web/lib/supabase/middleware.ts`, after `getUser()` returns a user, call `supabase.auth.getMfaIdentities()` (or check `session.user.aal`). If the user has verified MFA factors AND the session AAL is not `aal2`, redirect to `/mfa/verify?next=<original-path>`. Apply to `/[tenant]/admin/*` and `/api/[tenant]/admin/*` routes at minimum.
+- [x] **Step 2:** In `apps/web/app/auth/callback/route.ts`, after `exchangeCodeForSession`, check if the user's profile role is director/admin and if they have MFA enrolled. If so, redirect to `/mfa/verify` instead of `/dashboard`.
+- [x] **Step 3:** Commit: `git add apps/web/lib/supabase/middleware.ts apps/web/app/auth/callback/route.ts && git commit -m "fix(mfa): enforce AAL2 in middleware + callback (SEC2-008, SEC2-010)"`
 
 ---
 
@@ -391,7 +395,7 @@ if (!(plan.features as Record<string, unknown>).sso) return NextResponse.json({ 
 **Files:**
 - Create: `supabase/migrations/00099_field_values_phi_scan.sql`
 
-- [ ] **Step 1:** Create `supabase/migrations/00099_field_values_phi_scan.sql`:
+- [x] **Step 1:** Create `supabase/migrations/00099_field_values_phi_scan.sql`:
 ```sql
 -- SEC2-007: Catch PHI in field_values even when is_deidentified=true
 CREATE OR REPLACE FUNCTION public.scan_field_values_for_phi() RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -412,7 +416,7 @@ END $$;
 CREATE TRIGGER trg_scan_field_values_phi BEFORE INSERT OR UPDATE ON public.case_entries
   FOR EACH ROW EXECUTE FUNCTION public.scan_field_values_for_phi();
 ```
-- [ ] **Step 2:** Commit: `git add supabase/migrations/00099_field_values_phi_scan.sql && git commit -m "fix(security): DB trigger scans field_values for PHI (SEC2-007)"`
+- [x] **Step 2:** Commit: `git add supabase/migrations/00099_field_values_phi_scan.sql && git commit -m "fix(security): DB trigger scans field_values for PHI (SEC2-007)"`
 
 **Test:** pgTAP: INSERT with `is_deidentified=true` and `field_values='{"notes":"MRN 123456"}'::jsonb` → assert RAISES EXCEPTION.
 
@@ -451,7 +455,7 @@ These tasks fix the slowest paths. The case-creation flow is the #1 priority.
 - Modify: `apps/web/components/case-form/TemplateStep.tsx`
 - Create: `supabase/migrations/00100_template_usage_rpc.sql`
 
-- [ ] **Step 1:** Create `supabase/migrations/00100_template_usage_rpc.sql`:
+- [x] **Step 1:** Create `supabase/migrations/00100_template_usage_rpc.sql`:
 ```sql
 CREATE OR REPLACE FUNCTION public.get_template_usage_counts(p_tenant_id UUID, p_resident_id UUID)
 RETURNS TABLE(template_id UUID, personal_count BIGINT, tenant_count BIGINT)
@@ -463,11 +467,11 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   GROUP BY ct.id;
 $$;
 ```
-- [ ] **Step 2:** In `CaseForm.tsx`, replace the 4 parallel queries (lines 92-131) with:
+- [x] **Step 2:** In `CaseForm.tsx`, replace the 4 parallel queries (lines 92-131) with:
   - `supabase.rpc('get_template_usage_counts', { p_tenant_id, p_resident_id })` for counts
   - `supabase.from('case_templates').select('id, name, specialty').ilike('name', `%${q}%`).limit(30)` for templates (with search + limit)
-- [ ] **Step 3:** In `TemplateStep.tsx`, add a search input at the top that updates `q` state on debounce (200ms). Re-query when `q` changes.
-- [ ] **Step 4:** Commit: `git add supabase/migrations/00100_template_usage_rpc.sql apps/web/components/CaseForm.tsx apps/web/components/case-form/TemplateStep.tsx && git commit -m "perf(case-form): search+limit templates + RPC counts (PERF2-001, PERF2-002)"`
+- [x] **Step 3:** In `TemplateStep.tsx`, add a search input at the top that updates `q` state on debounce (200ms). Re-query when `q` changes.
+- [x] **Step 4:** Commit: `git add supabase/migrations/00100_template_usage_rpc.sql apps/web/components/CaseForm.tsx apps/web/components/case-form/TemplateStep.tsx && git commit -m "perf(case-form): search+limit templates + RPC counts (PERF2-001, PERF2-002)"`
 
 **Test:** Vitest mocking Supabase to return 100 templates, render `<TemplateStep>`, type "append", assert only matching templates render and `.limit(30)` was called.
 
@@ -484,15 +488,15 @@ $$;
 - Modify: `apps/web/app/(authenticated)/[tenant]/dashboard/page.tsx`
 - Modify: `apps/web/app/(authenticated)/[tenant]/reports/page.tsx`
 
-- [ ] **Step 1:** In each file, replace `.select('status').eq(...)` followed by `.filter(...).length` with `head: true` count queries:
+- [x] **Step 1:** In each file, replace `.select('status').eq(...)` followed by `.filter(...).length` with `head: true` count queries:
 ```ts
 const [{ count: total }, { count: pending }] = await Promise.all([
   supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
   supabase.from('case_entries').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending'),
 ]);
 ```
-- [ ] **Step 2:** For the compliance page audit aggregation, use the existing `get_case_stats` RPC (migration `00003_triggers.sql:185`) or add a `get_audit_summary` RPC.
-- [ ] **Step 3:** Commit: `git add apps/web/app/ && git commit -m "perf: replace load-all-then-count with SQL aggregation (PERF2-003..007)"`
+- [x] **Step 2:** For the compliance page audit aggregation, use the existing `get_case_stats` RPC (migration `00003_triggers.sql:185`) or add a `get_audit_summary` RPC.
+- [x] **Step 3:** Commit: `git add apps/web/app/ && git commit -m "perf: replace load-all-then-count with SQL aggregation (PERF2-003..007)"`
 
 ---
 
@@ -503,9 +507,9 @@ const [{ count: total }, { count: pending }] = await Promise.all([
 **Files:**
 - Modify: `apps/web/app/api/[tenant]/export-pdf/route.ts`
 
-- [ ] **Step 1:** Read `apps/web/app/api/[tenant]/export-pdf/route.ts` line 39-45.
-- [ ] **Step 2:** Add `.limit(100)` to the query (matching the edge function's `MAX_CASE_IDS`).
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/export-pdf/route.ts && git commit -m "perf(export-pdf): limit to 100 cases (PERF2-008)"`
+- [x] **Step 1:** Read `apps/web/app/api/[tenant]/export-pdf/route.ts` line 39-45.
+- [x] **Step 2:** Add `.limit(100)` to the query (matching the edge function's `MAX_CASE_IDS`).
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/export-pdf/route.ts && git commit -m "perf(export-pdf): limit to 100 cases (PERF2-008)"`
 
 ---
 
@@ -516,7 +520,7 @@ const [{ count: total }, { count: pending }] = await Promise.all([
 **Files:**
 - Create: `supabase/migrations/00101_set_based_goal_recalc.sql`
 
-- [ ] **Step 1:** Create `supabase/migrations/00101_set_based_goal_recalc.sql` that replaces the `recalc_goal_progress` function (migration `00003_triggers.sql:133-175`) with a single set-based upsert:
+- [x] **Step 1:** Create `supabase/migrations/00101_set_based_goal_recalc.sql` that replaces the `recalc_goal_progress` function (migration `00003_triggers.sql:133-175`) with a single set-based upsert:
 ```sql
 CREATE OR REPLACE FUNCTION public.recalc_goal_progress() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE v_resident_id UUID := NEW.resident_id; v_tenant_id UUID := NEW.tenant_id;
@@ -534,7 +538,7 @@ BEGIN
   RETURN NEW;
 END $$;
 ```
-- [ ] **Step 2:** Commit: `git add supabase/migrations/00101_set_based_goal_recalc.sql && git commit -m "perf: set-based recalc_goal_progress trigger (PERF2-018)"`
+- [x] **Step 2:** Commit: `git add supabase/migrations/00101_set_based_goal_recalc.sql && git commit -m "perf: set-based recalc_goal_progress trigger (PERF2-018)"`
 
 ---
 
@@ -545,10 +549,10 @@ END $$;
 **Files:**
 - Modify: `apps/web/app/(authenticated)/[tenant]/billing/page.tsx`
 
-- [ ] **Step 1:** Read `apps/web/app/(authenticated)/[tenant]/billing/page.tsx` lines 20-69.
-- [ ] **Step 2:** Wrap all 6 queries in `Promise.all([ ... ])`.
-- [ ] **Step 3:** Replace `select('*')` with explicit column lists. For `payment_gateway_config`, select only `provider, publishable_key` (never `*`).
-- [ ] **Step 4:** Commit: `git add apps/web/app/(authenticated)/[tenant]/billing/page.tsx && git commit -m "perf(billing): parallelize queries + explicit columns (PERF2-010)"`
+- [x] **Step 1:** Read `apps/web/app/(authenticated)/[tenant]/billing/page.tsx` lines 20-69.
+- [x] **Step 2:** Wrap all 6 queries in `Promise.all([ ... ])`.
+- [x] **Step 3:** Replace `select('*')` with explicit column lists. For `payment_gateway_config`, select only `provider, publishable_key` (never `*`).
+- [x] **Step 4:** Commit: `git add apps/web/app/(authenticated)/[tenant]/billing/page.tsx && git commit -m "perf(billing): parallelize queries + explicit columns (PERF2-010)"`
 
 ---
 
@@ -560,11 +564,11 @@ END $$;
 - Modify: `apps/web/components/approvals/ApprovalsDashboard.tsx`
 - Delete: `apps/web/components/approvals/useApprovalsData.ts` (duplicate)
 
-- [ ] **Step 1:** Add `.limit(50)` to the pending query.
-- [ ] **Step 2:** Drop `field_values` from the select — fetch it lazily when an approval is expanded.
-- [ ] **Step 3:** Use the embedded relation `approval_requests!inner(...)` to avoid the second round-trip.
-- [ ] **Step 4:** Delete `useApprovalsData.ts` (it duplicates `ApprovalsDashboard` logic).
-- [ ] **Step 5:** Commit: `git add apps/web/components/approvals/ && git commit -m "perf(approvals): limit 50 + drop field_values + embedded relation (PERF2-011)"`
+- [x] **Step 1:** Add `.limit(50)` to the pending query.
+- [x] **Step 2:** Drop `field_values` from the select — fetch it lazily when an approval is expanded.
+- [x] **Step 3:** Use the embedded relation `approval_requests!inner(...)` to avoid the second round-trip.
+- [x] **Step 4:** Delete `useApprovalsData.ts` (it duplicates `ApprovalsDashboard` logic).
+- [x] **Step 5:** Commit: `git add apps/web/components/approvals/ && git commit -m "perf(approvals): limit 50 + drop field_values + embedded relation (PERF2-011)"`
 
 ---
 
@@ -575,14 +579,14 @@ END $$;
 **Files:**
 - Create: `supabase/migrations/00102_missing_indexes.sql`
 
-- [ ] **Step 1:** Create `supabase/migrations/00102_missing_indexes.sql`:
+- [x] **Step 1:** Create `supabase/migrations/00102_missing_indexes.sql`:
 ```sql
 CREATE INDEX IF NOT EXISTS idx_case_entries_deidentified ON case_entries(tenant_id) WHERE is_deidentified = true;
 CREATE INDEX IF NOT EXISTS idx_case_entries_resident_status_active ON case_entries(resident_id, status) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_case_templates_tenant_specialty ON case_templates(tenant_id, specialty);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_action ON audit_logs(tenant_id, action);
 ```
-- [ ] **Step 2:** Commit: `git add supabase/migrations/00102_missing_indexes.sql && git commit -m "perf: add missing indexes (PERF2-025, PERF2-026, PERF2-030)"`
+- [x] **Step 2:** Commit: `git add supabase/migrations/00102_missing_indexes.sql && git commit -m "perf: add missing indexes (PERF2-025, PERF2-026, PERF2-030)"`
 
 ---
 
@@ -594,7 +598,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_action ON audit_logs(tenant_id,
 - Modify: `apps/web/app/api/[tenant]/audit/export/route.ts` (`toCsv` function)
 - Modify: `apps/web/app/(authenticated)/[tenant]/audit/csv/route.ts` (if exists)
 
-- [ ] **Step 1:** Replace `toCsv(rows)` with a `ReadableStream` that emits CSV chunks:
+- [x] **Step 1:** Replace `toCsv(rows)` with a `ReadableStream` that emits CSV chunks:
 ```ts
 return new Response(new ReadableStream({
   start(controller) {
@@ -607,7 +611,7 @@ return new Response(new ReadableStream({
   }
 }), { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="${filename}"` } });
 ```
-- [ ] **Step 2:** Commit: `git add apps/web/app/api/[tenant]/audit/export/route.ts && git commit -m "perf(csv): stream export instead of building in memory (PERF2-015)"`
+- [x] **Step 2:** Commit: `git add apps/web/app/api/[tenant]/audit/export/route.ts && git commit -m "perf(csv): stream export instead of building in memory (PERF2-015)"`
 
 ---
 
@@ -620,10 +624,10 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/components/EmptyState.tsx`
 
-- [ ] **Step 1:** Read `apps/web/components/EmptyState.tsx` lines 27, 29.
-- [ ] **Step 2:** Replace `text-neutral-light/70` → `text-text-primary`, `text-neutral-light/50` → `text-text-secondary`.
-- [ ] **Step 3:** Replace `hover:bg-primary/90` → `hover:bg-primary-hover`.
-- [ ] **Step 4:** Commit: `git add apps/web/components/EmptyState.tsx && git commit -m "fix(empty-state): use readable text tokens (UX2-022)"`
+- [x] **Step 1:** Read `apps/web/components/EmptyState.tsx` lines 27, 29.
+- [x] **Step 2:** Replace `text-neutral-light/70` → `text-text-primary`, `text-neutral-light/50` → `text-text-secondary`.
+- [x] **Step 3:** Replace `hover:bg-primary/90` → `hover:bg-primary-hover`.
+- [x] **Step 4:** Commit: `git add apps/web/components/EmptyState.tsx && git commit -m "fix(empty-state): use readable text tokens (UX2-022)"`
 
 ---
 
@@ -634,9 +638,9 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/components/CaseForm.tsx` (line 66)
 
-- [ ] **Step 1:** Change `const [isDeidentified, setIsDeidentified] = useState(false);` → `useState(true);`
-- [ ] **Step 2:** Add a confirmation prompt when switching from de-identified → PII: "You're about to store patient PHI. Continue?"
-- [ ] **Step 3:** Commit: `git add apps/web/components/CaseForm.tsx && git commit -m "fix(case-form): default to de-identified mode (UX2-009)"`
+- [x] **Step 1:** Change `const [isDeidentified, setIsDeidentified] = useState(false);` → `useState(true);`
+- [x] **Step 2:** Add a confirmation prompt when switching from de-identified → PII: "You're about to store patient PHI. Continue?"
+- [x] **Step 3:** Commit: `git add apps/web/components/CaseForm.tsx && git commit -m "fix(case-form): default to de-identified mode (UX2-009)"`
 
 ---
 
@@ -647,9 +651,9 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/components/case-form/TemplateStep.tsx` (lines 13-24)
 
-- [ ] **Step 1:** Replace the `SPECIALTY_ICONS` emoji map with a uniform clipboard SVG icon (or two-letter monograms: SU, RA, EM, etc.).
-- [ ] **Step 2:** Add `aria-hidden="true"` to any decorative SVG.
-- [ ] **Step 3:** Commit: `git add apps/web/components/case-form/TemplateStep.tsx && git commit -m "fix(ui): replace emoji icons with SVG (UX2-010)"`
+- [x] **Step 1:** Replace the `SPECIALTY_ICONS` emoji map with a uniform clipboard SVG icon (or two-letter monograms: SU, RA, EM, etc.).
+- [x] **Step 2:** Add `aria-hidden="true"` to any decorative SVG.
+- [x] **Step 3:** Commit: `git add apps/web/components/case-form/TemplateStep.tsx && git commit -m "fix(ui): replace emoji icons with SVG (UX2-010)"`
 
 ---
 
@@ -660,12 +664,12 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/app/(authenticated)/[tenant]/cases/page.tsx`
 
-- [ ] **Step 1:** Add a filter bar above the case table:
+- [x] **Step 1:** Add a filter bar above the case table:
   - Search input (filters by `case_templates.name` ilike)
   - Status filter (multi-select: draft/pending/approved/rejected)
   - Sort dropdown (date / template / status)
-- [ ] **Step 2:** Use URL search params (`?search=&status=&sort=`) so filters are shareable and back-button friendly.
-- [ ] **Step 3:** Commit: `git add apps/web/app/(authenticated)/[tenant]/cases/page.tsx && git commit -m "feat(cases): search + filter + sort (UX2-017)"`
+- [x] **Step 2:** Use URL search params (`?search=&status=&sort=`) so filters are shareable and back-button friendly.
+- [x] **Step 3:** Commit: `git add apps/web/app/(authenticated)/[tenant]/cases/page.tsx && git commit -m "feat(cases): search + filter + sort (UX2-017)"`
 
 ---
 
@@ -698,10 +702,10 @@ return new Response(new ReadableStream({
 - Create: `apps/web/components/ErrorFallback.tsx` (shared)
 - Modify: all `error.tsx` files to use the shared component
 
-- [ ] **Step 1:** Replace all inline styles in `ErrorBoundary.tsx` with Tailwind classes using tokens (`bg-surface-solid`, `text-text-primary`, `text-danger`).
-- [ ] **Step 2:** Create `apps/web/components/ErrorFallback.tsx` accepting `{ title, description }` props, using tokens throughout.
-- [ ] **Step 3:** Replace each `error.tsx` file (10+ files) with a 5-line wrapper that calls `<ErrorFallback title="..." description="..." />`.
-- [ ] **Step 4:** Commit: `git add apps/web/components/ErrorBoundary.tsx apps/web/components/ErrorFallback.tsx apps/web/app/ && git commit -m "fix(error-states): use tokens + deduplicate (UX2-026, UX2-027)"`
+- [x] **Step 1:** Replace all inline styles in `ErrorBoundary.tsx` with Tailwind classes using tokens (`bg-surface-solid`, `text-text-primary`, `text-danger`).
+- [x] **Step 2:** Create `apps/web/components/ErrorFallback.tsx` accepting `{ title, description }` props, using tokens throughout.
+- [x] **Step 3:** Replace each `error.tsx` file (10+ files) with a 5-line wrapper that calls `<ErrorFallback title="..." description="..." />`.
+- [x] **Step 4:** Commit: `git add apps/web/components/ErrorBoundary.tsx apps/web/components/ErrorFallback.tsx apps/web/app/ && git commit -m "fix(error-states): use tokens + deduplicate (UX2-026, UX2-027)"`
 
 ---
 
@@ -712,10 +716,10 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: all `loading.tsx` files in `apps/web/app/`
 
-- [ ] **Step 1:** Run: `rg "rgba\(60, 60, 67|rgba\(255, 255, 255" apps/web/app/` to find all hardcoded loading colors.
-- [ ] **Step 2:** Replace `style={{ backgroundColor: 'rgba(60, 60, 67, 0.08)' }}` with `className="bg-default-200 animate-pulse"`.
-- [ ] **Step 3:** Replace `style={{ backgroundColor: 'rgba(255, 255, 255, 0.72)' }}` with `className="bg-surface border border-border"`.
-- [ ] **Step 4:** Commit: `git add apps/web/app/ && git commit -m "fix(loading): use tokens for dark mode (UX2-028)"`
+- [x] **Step 1:** Run: `rg "rgba\(60, 60, 67|rgba\(255, 255, 255" apps/web/app/` to find all hardcoded loading colors.
+- [x] **Step 2:** Replace `style={{ backgroundColor: 'rgba(60, 60, 67, 0.08)' }}` with `className="bg-default-200 animate-pulse"`.
+- [x] **Step 3:** Replace `style={{ backgroundColor: 'rgba(255, 255, 255, 0.72)' }}` with `className="bg-surface border border-border"`.
+- [x] **Step 4:** Commit: `git add apps/web/app/ && git commit -m "fix(loading): use tokens for dark mode (UX2-028)"`
 
 ---
 
@@ -726,8 +730,8 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: ~30 files in `apps/web/app/` and `apps/web/components/`
 
-- [ ] **Step 1:** Run to find all hardcoded colors: `rg "text-black|bg-white|text-\[#|bg-\[#|border-black|bg-black" apps/web/app apps/web/components`
-- [ ] **Step 2:** For each file, use `replaceAll: true` in the Edit tool:
+- [x] **Step 1:** Run to find all hardcoded colors: `rg "text-black|bg-white|text-\[#|bg-\[#|border-black|bg-black" apps/web/app apps/web/components`
+- [x] **Step 2:** For each file, use `replaceAll: true` in the Edit tool:
   - `text-black` → `text-text-primary`
   - `bg-white` → `bg-surface-solid`
   - `bg-[#F2F2F7]` → `bg-backdrop`
@@ -735,7 +739,7 @@ return new Response(new ReadableStream({
   - `text-[#8E8E93]` → `text-text-muted`
   - `border-black/5` → `border-border`
   - `bg-black/5 dark:bg-white/5` → `bg-surface-raised`
-- [ ] **Step 3:** Commit per-file or in batches: `git add -A && git commit -m "fix(theme): replace hardcoded colors with tokens (UX2-031)"`
+- [x] **Step 3:** Commit per-file or in batches: `git add -A && git commit -m "fix(theme): replace hardcoded colors with tokens (UX2-031)"`
 
 ---
 
@@ -746,8 +750,8 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: `apps/web/app/login/page.tsx` (line 234)
 
-- [ ] **Step 1:** Remove `tabIndex={-1}` from the password visibility toggle button.
-- [ ] **Step 2:** Commit: `git add apps/web/app/login/page.tsx && git commit -m "fix(a11y): remove tabIndex=-1 from password toggle (UX2-033)"`
+- [x] **Step 1:** Remove `tabIndex={-1}` from the password visibility toggle button.
+- [x] **Step 2:** Commit: `git add apps/web/app/login/page.tsx && git commit -m "fix(a11y): remove tabIndex=-1 from password toggle (UX2-033)"`
 
 ---
 
@@ -760,8 +764,8 @@ return new Response(new ReadableStream({
 - Modify: `apps/web/components/TemplateEditor.tsx` (2 instances)
 - Modify: `apps/web/components/UserManager.tsx` (2 instances)
 
-- [ ] **Step 1:** Replace each `<div onClick={...}>` with `<button type="button" onClick={...}>`.
-- [ ] **Step 2:** Commit: `git add apps/web/components/GoalForm.tsx apps/web/components/TemplateEditor.tsx apps/web/components/UserManager.tsx && git commit -m "fix(a11y): replace div onClick with button (UX2-034)"`
+- [x] **Step 1:** Replace each `<div onClick={...}>` with `<button type="button" onClick={...}>`.
+- [x] **Step 2:** Commit: `git add apps/web/components/GoalForm.tsx apps/web/components/TemplateEditor.tsx apps/web/components/UserManager.tsx && git commit -m "fix(a11y): replace div onClick with button (UX2-034)"`
 
 ---
 
