@@ -132,7 +132,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
               id="edit-deidentify"
               checked={entry.is_deidentified}
               disabled
-              className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary opacity-50"
+              className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary opacity-50"
             />
             <label htmlFor="edit-deidentify" className="text-sm text-text-secondary">
               De-identify patient data (cannot be changed after creation)
@@ -254,7 +254,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                             id={`edit-field-${key}`}
                             checked={!!value}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.checked }))}
-                            className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                            className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                             aria-label={label}
                           />
                           <label htmlFor={`edit-field-${key}`} className="text-sm text-text-secondary">

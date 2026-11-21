@@ -337,7 +337,7 @@ function ReflectionCard({
           {row.title}
         </h3>
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <span className="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold text-text-muted uppercase tracking-wider bg-black/5">
+          <span className="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold text-text-muted uppercase tracking-wider bg-default-100">
             {typeLabel(row.reflection_type)}
           </span>
           {onEdit && (

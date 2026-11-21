@@ -170,7 +170,7 @@ export default function CaseDetailsStep({
                         id={`field-${key}`}
                         checked={!!fieldValues[key]}
                         onChange={(e) => onFieldChange(key, e.target.checked)}
-                        className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                        className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                         aria-label={label}
                       />
                       <label htmlFor={`field-${key}`} className="text-sm text-text-secondary">

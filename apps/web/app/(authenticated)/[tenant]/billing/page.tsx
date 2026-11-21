@@ -113,7 +113,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       <h1 className="text-2xl font-bold">Billing &amp; Subscription</h1>
 
       {subscription && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+        <div className="bg-surface-solid rounded-2xl border border-border p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Current Plan</h2>
             <ManageSubscriptionButton />
@@ -143,7 +143,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       {subscription && <InvoiceHistory />}
 
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-3">Usage This Period</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -157,14 +157,14 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-3">Payment History</h2>
         {!payments || payments.length === 0 ? (
           <p className="text-sm text-text-muted">No payments recorded yet.</p>
         ) : (
           <div className="space-y-2">
             {payments.map((p: { id: string; amount: number; status: string; created_at: string }) => (
-              <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+              <div key={p.id} className="flex items-center justify-between border-b border-border pb-2">
                 <div>
                   <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
                   <p className="text-xs text-text-muted clinical-data">
@@ -186,7 +186,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         currentPlanId={subscription?.plan_id ?? null}
       />
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-3">AI Report Credits</h2>
         <p className="text-sm text-text-muted mb-4">
           Generate comprehensive AI analysis reports for your cases. One-time purchase of $4.99 per report.
@@ -197,7 +197,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
         ) : (
           <div className="space-y-2">
             {purchases.map((p: { id: string; purchase_type: string; amount: number; created_at: string; status: string }) => (
-              <div key={p.id} className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+              <div key={p.id} className="flex items-center justify-between border-b border-border pb-2">
                 <div>
                   <p className="text-sm font-medium">${Number(p.amount).toFixed(2)}</p>
                   <p className="text-xs text-text-muted clinical-data">

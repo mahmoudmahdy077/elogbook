@@ -37,7 +37,7 @@ export default function InvoiceHistory() {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-2">Invoice History</h2>
         <p className="text-sm text-fg-danger">{error}</p>
         <button
@@ -53,7 +53,7 @@ export default function InvoiceHistory() {
 
   if (invoices === null) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-3">Invoice History</h2>
         <p className="text-sm text-text-muted">Loading…</p>
       </div>
@@ -61,7 +61,7 @@ export default function InvoiceHistory() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+    <div className="bg-surface-solid rounded-2xl border border-border p-5">
       <h2 className="text-lg font-semibold mb-3">Invoice History</h2>
       {invoices.length === 0 ? (
         <p className="text-sm text-text-muted">No invoices yet.</p>

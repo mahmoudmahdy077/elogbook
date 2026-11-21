@@ -267,7 +267,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                   id="quickadd-deidentify"
                   checked={isDeidentified}
                   onChange={(e) => setIsDeidentified(e.target.checked)}
-                  className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                  className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                 />
                 <label htmlFor="quickadd-deidentify" className="text-sm text-text-secondary">
                   De-identify patient
@@ -394,7 +394,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                                 id={`quickadd-field-${key}`}
                                 checked={!!fieldValues[key]}
                                 onChange={(e) => handleFieldChange(key, e.target.checked)}
-                                className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                                className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                                 aria-label={label}
                               />
                               <label htmlFor={`quickadd-field-${key}`} className="text-sm text-text-secondary">
