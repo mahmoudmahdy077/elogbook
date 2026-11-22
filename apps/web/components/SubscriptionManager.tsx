@@ -250,34 +250,34 @@ function PlanEditorModal({ plan, tenantSlug, onClose, onSave }: { plan: Plan | n
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Plan Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+              <label htmlFor="plan-name" className="block text-xs mb-1 text-text-muted">Plan Name</label>
+              <input id="plan-name" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
             </div>
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Slug</label>
-              <input value={slug} onChange={e => setSlug(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+              <label htmlFor="slug" className="block text-xs mb-1 text-text-muted">Slug</label>
+              <input id="slug" value={slug} onChange={e => setSlug(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Price ($/mo)</label>
-              <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+              <label htmlFor="price-per-mo" className="block text-xs mb-1 text-text-muted">Price ($/mo)</label>
+              <input id="price-per-mo" type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
             </div>
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Type</label>
-              <select value={tenantType} onChange={e => setTenantType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
+              <label htmlFor="type" className="block text-xs mb-1 text-text-muted">Type</label>
+              <select id="type" value={tenantType} onChange={e => setTenantType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
                 <option value="individual">Individual</option>
                 <option value="institution">Institution</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Max Residents</label>
-              <input type="number" value={maxResidents} onChange={e => setMaxResidents(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" placeholder="Unlimited" />
+              <label htmlFor="max-residents" className="block text-xs mb-1 text-text-muted">Max Residents</label>
+              <input id="max-residents" type="number" value={maxResidents} onChange={e => setMaxResidents(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" placeholder="Unlimited" />
             </div>
           </div>
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Features (JSON)</label>
-            <textarea value={features} onChange={e => setFeatures(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm font-mono" rows={6} />
+            <label htmlFor="features-json" className="block text-xs mb-1 text-text-muted">Features (JSON)</label>
+            <textarea id="features-json" value={features} onChange={e => setFeatures(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm font-mono" rows={6} />
           </div>
         </div>
         <div className="flex gap-2 justify-end mt-6">

@@ -303,10 +303,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             )}
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="webhook-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Webhook URL <span className="text-fg-danger">*</span>
               </label>
               <input
+                id="webhook-url"
                 type="url"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
@@ -357,10 +358,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="secret-key" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Secret Key <span className="text-fg-danger">*</span>
               </label>
               <input
+                id="secret-key"
                 type="password"
                 value={formSecret}
                 onChange={(e) => setFormSecret(e.target.value)}
@@ -379,10 +381,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="webhook-description" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Description (optional)
               </label>
               <input
+                id="webhook-description"
                 type="text"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}

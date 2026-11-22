@@ -337,10 +337,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
             {formProtocol === 'saml' && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="metadata-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Metadata URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
+                    id="metadata-url"
                     type="url"
                     value={formMetadataUrl}
                     onChange={(e) => setFormMetadataUrl(e.target.value)}
@@ -354,10 +355,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="idp-entity-id" className="text-sm font-medium text-text-secondary block mb-1.5">
                     IdP Entity ID
                   </label>
                   <input
+                    id="idp-entity-id"
                     type="text"
                     value={formIdpEntityId}
                     onChange={(e) => setFormIdpEntityId(e.target.value)}
@@ -370,10 +372,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="idp-certificate" className="text-sm font-medium text-text-secondary block mb-1.5">
                     IdP Certificate
                   </label>
                   <textarea
+                    id="idp-certificate"
                     value={formIdpCertificate}
                     onChange={(e) => setFormIdpCertificate(e.target.value)}
                     placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
@@ -391,10 +394,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
             {formProtocol === 'oidc' && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="discovery-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Discovery URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
+                    id="discovery-url"
                     type="url"
                     value={formDiscoveryUrl}
                     onChange={(e) => setFormDiscoveryUrl(e.target.value)}
@@ -408,10 +412,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="client-id" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Client ID
                   </label>
                   <input
+                    id="client-id"
                     type="text"
                     value={formClientId}
                     onChange={(e) => setFormClientId(e.target.value)}
@@ -421,10 +426,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="client-secret" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Client Secret
                   </label>
                   <input
+                    id="client-secret"
                     type="password"
                     value={formClientSecret}
                     onChange={(e) => setFormClientSecret(e.target.value)}
@@ -440,10 +446,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
             {/* Default role */}
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="default-role" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Default Role
               </label>
               <select
+                id="default-role"
                 value={formDefaultRole}
                 onChange={(e) => setFormDefaultRole(e.target.value as RoleId)}
                 className="w-full rounded-xl bg-neutral-dark border border-border p-3 text-sm outline-none focus:border-primary transition-colors"
@@ -500,25 +507,27 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
           {/* ACS URL display */}
           {acsUrl && (
             <div className="mt-6 pt-5 border-t border-border">
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Assertion Consumer Service (ACS) URL
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 block bg-neutral-dark rounded-xl border border-border p-3 text-xs font-mono text-text-secondary break-all">
-                  {acsUrl}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(acsUrl);
-                    setSuccess('ACS URL copied to clipboard.');
-                  }}
-                  className="shrink-0 rounded-full border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-neutral-dark transition-colors"
-                  title="Copy ACS URL"
-                >
-                  Copy
-                </button>
-              </div>
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary block mb-1.5">
+                  Assertion Consumer Service (ACS) URL
+                </dt>
+                <dd className="flex items-center gap-2">
+                  <code className="flex-1 block bg-neutral-dark rounded-xl border border-border p-3 text-xs font-mono text-text-secondary break-all">
+                    {acsUrl}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(acsUrl);
+                      setSuccess('ACS URL copied to clipboard.');
+                    }}
+                    className="shrink-0 rounded-full border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-neutral-dark transition-colors"
+                    title="Copy ACS URL"
+                  >
+                    Copy
+                  </button>
+                </dd>
+              </dl>
               <p className="text-xs text-text-muted/50 mt-1">
                 Provide this URL to your identity provider as the SAML/OIDC callback endpoint.
               </p>

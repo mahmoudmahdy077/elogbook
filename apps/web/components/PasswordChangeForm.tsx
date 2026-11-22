@@ -44,9 +44,10 @@ export default function PasswordChangeForm({ onSaved, onCancel }: PasswordChange
     <div className="space-y-4">
       {error && <ErrorDisplay message={error} />}
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">New Password</label>
+        <label htmlFor="new-password" className="text-sm font-medium text-text-secondary block mb-1">New Password</label>
         <input
           type="password"
+          id="new-password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           required
@@ -55,9 +56,10 @@ export default function PasswordChangeForm({ onSaved, onCancel }: PasswordChange
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Confirm Password</label>
+        <label htmlFor="confirm-password" className="text-sm font-medium text-text-secondary block mb-1">Confirm Password</label>
         <input
           type="password"
+          id="confirm-password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required

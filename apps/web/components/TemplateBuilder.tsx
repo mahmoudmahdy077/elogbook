@@ -90,9 +90,10 @@ export default function TemplateBuilder({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs mb-1 text-text-muted">Template Name</label>
+          <label htmlFor="template-name" className="block text-xs mb-1 text-text-muted">Template Name</label>
           <input
             type="text"
+            id="template-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border"
@@ -100,8 +101,9 @@ export default function TemplateBuilder({
           />
         </div>
         <div>
-          <label className="block text-xs mb-1 text-text-muted">Specialty</label>
+          <label htmlFor="specialty" className="block text-xs mb-1 text-text-muted">Specialty</label>
           <select
+            id="specialty"
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
             className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border"

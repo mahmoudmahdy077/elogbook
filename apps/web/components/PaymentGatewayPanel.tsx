@@ -110,8 +110,9 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         )}
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">Payment Provider</label>
+          <label htmlFor="payment-provider" className="text-sm font-medium text-text-secondary block mb-1">Payment Provider</label>
           <select
+            id="payment-provider"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
             className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -124,8 +125,9 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         </div>
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">Publishable Key</label>
+          <label htmlFor="publishable-key" className="text-sm font-medium text-text-secondary block mb-1">Publishable Key</label>
           <input
+            id="publishable-key"
             type="text"
             value={publishableKey}
             onChange={(e) => setPublishableKey(e.target.value)}
@@ -136,8 +138,9 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         </div>
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">Secret Key</label>
+          <label htmlFor="secret-key" className="text-sm font-medium text-text-secondary block mb-1">Secret Key</label>
           <input
+            id="secret-key"
             type="password"
             value={secretKey}
             onChange={(e) => setSecretKey(e.target.value)}
@@ -147,8 +150,9 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
         </div>
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">Webhook Secret</label>
+          <label htmlFor="webhook-secret" className="text-sm font-medium text-text-secondary block mb-1">Webhook Secret</label>
           <input
+            id="webhook-secret"
             type="password"
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.target.value)}
@@ -159,8 +163,9 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
 
         {provider === 'custom' && (
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1">Custom Endpoint URL</label>
+            <label htmlFor="custom-endpoint-url" className="text-sm font-medium text-text-secondary block mb-1">Custom Endpoint URL</label>
             <input
+              id="custom-endpoint-url"
               type="text"
               value={endpointUrl}
               onChange={(e) => setEndpointUrl(e.target.value)}

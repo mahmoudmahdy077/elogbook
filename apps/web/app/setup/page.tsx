@@ -235,20 +235,20 @@ export default function SetupPage() {
             <h2 className="text-xl font-bold mb-4">Supabase Configuration</h2>
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-xs mb-1">Install Path</label>
-                <input value={installPath} onChange={e => setInstallPath(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="install-path" className="block text-xs mb-1">Install Path</label>
+                <input id="install-path" value={installPath} onChange={e => setInstallPath(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
               <div>
-                <label className="block text-xs mb-1">Database Password</label>
-                <input type="password" value={postgresPassword} onChange={e => setPostgresPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="Min 12 characters" />
+                <label htmlFor="database-password" className="block text-xs mb-1">Database Password</label>
+                <input id="database-password" type="password" value={postgresPassword} onChange={e => setPostgresPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="Min 12 characters" />
               </div>
               <div>
-                <label className="block text-xs mb-1">Database Name</label>
-                <input value={postgresDb} onChange={e => setPostgresDb(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="database-name" className="block text-xs mb-1">Database Name</label>
+                <input id="database-name" value={postgresDb} onChange={e => setPostgresDb(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
               <div>
-                <label className="block text-xs mb-1">Site URL</label>
-                <input value={siteUrl} onChange={e => setSiteUrl(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="site-url" className="block text-xs mb-1">Site URL</label>
+                <input id="site-url" value={siteUrl} onChange={e => setSiteUrl(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
             </div>
             {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
@@ -280,16 +280,16 @@ export default function SetupPage() {
             <h2 className="text-xl font-bold mb-4">Create Admin Account</h2>
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-xs mb-1">Full Name</label>
-                <input value={adminFullName} onChange={e => setAdminFullName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="full-name" className="block text-xs mb-1">Full Name</label>
+                <input id="full-name" value={adminFullName} onChange={e => setAdminFullName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
               <div>
-                <label className="block text-xs mb-1">Email</label>
-                <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="email" className="block text-xs mb-1">Email</label>
+                <input id="email" type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
               <div>
-                <label className="block text-xs mb-1">Password</label>
-                <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
+                <label htmlFor="password" className="block text-xs mb-1">Password</label>
+                <input id="password" type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" />
               </div>
             </div>
             {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
@@ -307,8 +307,8 @@ export default function SetupPage() {
             <h2 className="text-xl font-bold mb-4">Domain & SSL</h2>
             <p className="text-text-muted mb-4">Enter your domain name to configure automatic HTTPS via Caddy.</p>
             <div className="mb-6">
-              <label className="block text-xs mb-1">Domain Name</label>
-              <input value={domain} onChange={e => setDomain(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="elogbook.example.com" />
+              <label htmlFor="domain-name" className="block text-xs mb-1">Domain Name</label>
+              <input id="domain-name" value={domain} onChange={e => setDomain(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="elogbook.example.com" />
             </div>
             {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
             <div className="flex gap-2">

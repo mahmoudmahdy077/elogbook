@@ -156,10 +156,11 @@ export default function RotationForm({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
+                <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
                   Title *
                 </label>
                 <input
+                  id="title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -170,10 +171,11 @@ export default function RotationForm({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
+                <label htmlFor="specialty" className="block text-sm font-medium text-text-secondary mb-1">
                   Specialty
                 </label>
                 <input
+                  id="specialty"
                   type="text"
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
@@ -184,10 +186,11 @@ export default function RotationForm({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                  <label htmlFor="start-date" className="block text-sm font-medium text-text-secondary mb-1">
                     Start Date *
                   </label>
                   <input
+                    id="start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
@@ -196,10 +199,11 @@ export default function RotationForm({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                  <label htmlFor="end-date" className="block text-sm font-medium text-text-secondary mb-1">
                     End Date *
                   </label>
                   <input
+                    id="end-date"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
@@ -210,10 +214,11 @@ export default function RotationForm({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
+                <label htmlFor="site" className="block text-sm font-medium text-text-secondary mb-1">
                   Site
                 </label>
                 <input
+                  id="site"
                   type="text"
                   value={site}
                   onChange={(e) => setSite(e.target.value)}
@@ -224,10 +229,11 @@ export default function RotationForm({
 
               {supervisors.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                  <label htmlFor="supervisor" className="block text-sm font-medium text-text-secondary mb-1">
                     Supervisor
                   </label>
                   <select
+                    id="supervisor"
                     value={supervisorId}
                     onChange={(e) => setSupervisorId(e.target.value)}
                     className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"

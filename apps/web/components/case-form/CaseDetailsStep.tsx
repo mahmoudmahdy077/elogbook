@@ -87,10 +87,11 @@ export default function CaseDetailsStep({
       </h3>
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-text-primary">
+        <label htmlFor="case-date" className="block text-sm font-medium text-text-primary">
           Case Date<span className="text-fg-danger ml-0.5">*</span>
         </label>
         <input
+          id="case-date"
           type="date"
           value={caseDate}
           onChange={(e) => onCaseDateChange(e.target.value)}
@@ -113,8 +114,9 @@ export default function CaseDetailsStep({
                 case 'textarea':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-text-primary">{label}</label>
+                      <label htmlFor={`field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                       <textarea
+                        id={`field-${key}`}
                         value={(fieldValues[key] as string) || ''}
                         onChange={(e) => onFieldChange(key, e.target.value)}
                         aria-label={label}
@@ -139,8 +141,9 @@ export default function CaseDetailsStep({
                 case 'number':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-text-primary">{label}</label>
+                      <label htmlFor={`field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
+                        id={`field-${key}`}
                         type="number"
                         value={(fieldValues[key] as string) || ''}
                         onChange={(e) => onFieldChange(key, e.target.value)}
@@ -152,8 +155,9 @@ export default function CaseDetailsStep({
                 case 'date':
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-text-primary">{label}</label>
+                      <label htmlFor={`field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
+                        id={`field-${key}`}
                         type="date"
                         value={(fieldValues[key] as string) || ''}
                         onChange={(e) => onFieldChange(key, e.target.value)}
@@ -181,8 +185,9 @@ export default function CaseDetailsStep({
                 default:
                   return (
                     <div key={key} className="space-y-1.5">
-                      <label className="block text-sm font-medium text-text-primary">{label}</label>
+                      <label htmlFor={`field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                       <input
+                        id={`field-${key}`}
                         type="text"
                         value={(fieldValues[key] as string) || ''}
                         onChange={(e) => onFieldChange(key, e.target.value)}

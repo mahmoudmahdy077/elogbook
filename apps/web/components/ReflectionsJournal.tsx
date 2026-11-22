@@ -222,11 +222,12 @@ function ReflectionForm({
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1">
+            <label htmlFor="reflection-title" className="text-sm font-medium text-text-secondary block mb-1">
               Title
             </label>
             <input
               type="text"
+              id="reflection-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -236,10 +237,11 @@ function ReflectionForm({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1">
+            <label htmlFor="reflection-category" className="text-sm font-medium text-text-secondary block mb-1">
               Category
             </label>
             <select
+              id="reflection-category"
               value={reflectionType}
               onChange={(e) => setReflectionType(e.target.value)}
               className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -254,10 +256,11 @@ function ReflectionForm({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1">
+            <label htmlFor="reflection-body" className="text-sm font-medium text-text-secondary block mb-1">
               What happened, what went well, what you would do differently
             </label>
             <textarea
+              id="reflection-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               required

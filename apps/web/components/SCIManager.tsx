@@ -296,11 +296,12 @@ export default function SCIManager({
             )}
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="token-description" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Description (optional)
               </label>
               <input
                 type="text"
+                id="token-description"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder="e.g. Okta production, Entra ID dev"

@@ -1,8 +1,10 @@
 # E-Logbook Ultimate Production-Ready Upgrade Plan v2
 
-> **Status (2026-11-21):** Tasks 1–36 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
+> **Status (2026-11-22):** Tasks 1–37 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
 > code (checkboxes were stale) during a code-vs-plan sweep; Task 34 (hardcoded colors → tokens) was
-> implemented in commit 14ef0ac. Next undone task: **Task 37**.
+> implemented in commit 14ef0ac; Task 37 (a11y label associations, UX2-035) done — 106 labels got
+> htmlFor+id, 1 read-only pair → dl/dt/dd; 8 residual labels are legitimate skips (button-group
+> ratings, custom components without id prop, group labels). Next undone task: **Task 38**.
 
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
@@ -776,9 +778,9 @@ return new Response(new ReadableStream({
 **Files:**
 - Modify: all files with `<label>` elements lacking `htmlFor` (run `rg "<label" apps/web/`)
 
-- [ ] **Step 1:** For label/value pairs (read-only displays like case detail), replace `<label>...<p>` with `<dl><dt>...</dt><dd>...</dd></dl>`.
-- [ ] **Step 2:** For actual form labels, add `htmlFor="inputId"` and `id="inputId"` to the input.
-- [ ] **Step 3:** Commit: `git add -A && git commit -m "fix(a11y): label associations (UX2-035)"`
+- [x] **Step 1:** For label/value pairs (read-only displays like case detail), replace `<label>...<p>` with `<dl><dt>...</dt><dd>...</dd></dl>`. (1 pair in SSOManager — ACS URL)
+- [x] **Step 2:** For actual form labels, add `htmlFor="inputId"` and `id="inputId"` to the input. (106 labels across 27 files, commits in this session)
+- [x] **Step 3:** Commit: `git add -A && git commit -m "fix(a11y): label associations (UX2-035)"`
 
 ---
 
