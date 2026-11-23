@@ -95,13 +95,20 @@ export default async function TenantLayout({
         visibleLinks={visibleLinks}
         tenantSlug={tenantSlug}
         pendingCount={pendingApprovals}
+        userId={auth.user.id}
+        tenantId={auth.profile.tenant_id}
         user={{
           name: auth.profile.full_name,
           role: auth.profile.role,
           tenantName: auth.tenant.slug,
         }}
       />
-      <MobileNav visibleLinks={visibleLinks} tenantSlug={tenantSlug} />
+      <MobileNav
+        visibleLinks={visibleLinks}
+        tenantSlug={tenantSlug}
+        userId={auth.user.id}
+        tenantId={auth.profile.tenant_id}
+      />
       <SubscriptionStatusProvider status={subscriptionStatus} periodEnd={auth.subscription?.current_period_end}>
         <main id="main-content" className="flex-1 overflow-auto pb-16 md:pb-6">
           <ReadOnlyBanner tenantSlug={tenantSlug} />

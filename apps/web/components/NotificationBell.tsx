@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,13 +17,17 @@ interface Notification {
 interface NotificationBellProps {
   userId: string;
   tenantId: string;
+  /** Open the dropdown upward (mobile bottom bars). */
+  dropUp?: boolean;
 }
 
 export default function NotificationBell({
   userId,
   tenantId,
+  dropUp = false,
 }: NotificationBellProps) {
   const supabase = createClient();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -112,6 +117,26 @@ export default function NotificationBell({
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .eq('id', notificationId);
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId && n.read_at === null
+          ? { ...n, read_at: new Date().toISOString() }
+          : n
+      )
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }
+
+  // APP3-002: clicking a notification marks it read and navigates to its
+  // target (e.g. the case that was approved/rejected).
+  async function handleNotificationClick(notification: Notification) {
+    if (notification.read_at === null) {
+      await markAsRead(notification.id);
+    }
+    setIsOpen(false);
+    if (notification.link) {
+      router.push(notification.link);
+    }
   }
 
   async function markAllAsRead() {
@@ -170,11 +195,13 @@ export default function NotificationBell({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.95 }}
+            initial={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.95 }}
+            exit={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface-solid border border-border rounded-2xl overflow-hidden z-50"
+            className={`absolute right-0 ${
+              dropUp ? 'bottom-full mb-2' : 'mt-2'
+            } w-80 sm:w-96 bg-surface-solid border border-border rounded-2xl overflow-hidden z-50`}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -216,7 +243,7 @@ export default function NotificationBell({
                   <button
                     key={notif.id}
                     type="button"
-                    onClick={() => markAsRead(notif.id)}
+                    onClick={() => handleNotificationClick(notif)}
                     className={`w-full text-left px-4 py-3 hover:bg-neutral-dark transition-colors ${
                       notif.read_at === null ? 'bg-primary-glow' : ''
                     }`}

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type ReactElement } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
+import NotificationBell from '@/components/NotificationBell';
 
 type NavLink = {
   href: string;
@@ -28,9 +29,14 @@ const ICONS: Record<string, ReactElement> = {
 export default function MobileNav({
   visibleLinks,
   tenantSlug,
+  userId,
+  tenantId,
 }: {
   visibleLinks: NavLink[];
   tenantSlug: string;
+  /** Auth user id — enables the notification bell when present. */
+  userId?: string;
+  tenantId?: string;
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -135,6 +141,11 @@ export default function MobileNav({
               )}
             </AnimatePresence>
           </div>
+        )}
+
+        {/* APP3-001: notifications bell on mobile — dropdown opens upward. */}
+        {userId && tenantId && (
+          <NotificationBell userId={userId} tenantId={tenantId} dropUp />
         )}
       </nav>
     </div>

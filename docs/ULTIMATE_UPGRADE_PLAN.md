@@ -1,10 +1,14 @@
 # E-Logbook Ultimate Production-Ready Upgrade Plan v2
 
-> **Status (2026-11-22):** Tasks 1–37 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
+> **Status (2026-11-23):** Tasks 1–38 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
 > code (checkboxes were stale) during a code-vs-plan sweep; Task 34 (hardcoded colors → tokens) was
 > implemented in commit 14ef0ac; Task 37 (a11y label associations, UX2-035) done — 106 labels got
 > htmlFor+id, 1 read-only pair → dl/dt/dd; 8 residual labels are legitimate skips (button-group
-> ratings, custom components without id prop, group labels). Next undone task: **Task 38**.
+> ratings, custom components without id prop, group labels). Task 38 (notifications end-to-end,
+> APP3-001/APP3-002): schema wiring + approval insert were already in code; this run mounted the
+> NotificationBell in Sidebar + MobileNav (layout passes user/tenant ids), added click-through
+> navigation to `link` with mark-as-read, and dropUp positioning for the mobile bottom bar.
+> Next undone task: **Task 39**.
 
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
@@ -793,13 +797,13 @@ return new Response(new ReadableStream({
 - Modify: `apps/web/components/NotificationBell.tsx`
 - OR: Modify: `apps/web/app/(authenticated)/[tenant]/layout.tsx` (hide the bell)
 
-- [ ] **Step 1:** Fix the schema mismatch in `NotificationBell.tsx`: change `read` → `read_at IS NULL` for unread, `data` → `link` for the URL.
-- [ ] **Step 2:** In `approvals/action/route.ts`, after approving/rejecting, insert a notification:
+- [x] **Step 1:** Fix the schema mismatch in `NotificationBell.tsx`: change `read` → `read_at IS NULL` for unread, `data` → `link` for the URL.
+- [x] **Step 2:** In `approvals/action/route.ts`, after approving/rejecting, insert a notification:
 ```ts
 await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.resident_id, type: 'approval', title: `Case ${approved ? 'approved' : 'rejected'}`, body: comment, link: `/${tenantSlug}/cases/${caseEntryId}` });
 ```
-- [ ] **Step 3:** If you can't wire email/push for v1, hide the bell in the layout and add a TODO.
-- [ ] **Step 4:** Commit: `git add apps/web/app/api/[tenant]/approvals/action/route.ts apps/web/components/NotificationBell.tsx && git commit -m "fix(notifications): wire schema + approval notifications (APP3-001, APP3-002)"`
+- [x] **Step 3:** If you can't wire email/push for v1, hide the bell in the layout and add a TODO. (Email/push for v1 handled: in-app realtime bell mounted in Sidebar + MobileNav; push via notifyCaseApproval already wired.)
+- [x] **Step 4:** Commit: notification bell mounted end-to-end (Sidebar + MobileNav + layout wiring + click-through navigation)
 
 ---
 
