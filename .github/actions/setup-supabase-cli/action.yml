@@ -1,0 +1,87 @@
+name: Setup Supabase CLI (pinned, retried)
+description: >-
+  Install a pinned Supabase CLI release. Replaces supabase/setup-cli, which
+  downloads the release archive anonymously through @actions/tool-cache: on
+  shared GitHub-hosted runner IPs that fetch intermittently returns
+  "Unexpected HTTP response: 403" (CD run 45317374548, 2026-11-24), failing the
+  whole job in ~100 ms before anything runs. This action downloads the same
+  pinned asset with a bearer token and curl retries.
+
+inputs:
+  version:
+    description: Supabase CLI version to install, without the leading "v".
+    required: true
+  github-token:
+    description: Token used for the GitHub release download, to avoid anonymous throttling.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install supabase CLI
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.version }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+
+        if command -v supabase >/dev/null 2>&1 && command -v supabase-go >/dev/null 2>&1; then
+          installed="$(supabase --version 2>/dev/null | tail -n1 || true)"
+          if [ "${installed}" = "${CLI_VERSION}" ]; then
+            echo "supabase ${CLI_VERSION} already installed"
+            exit 0
+          fi
+        fi
+
+        case "$(uname -m)" in
+          x86_64) arch=amd64 ;;
+          aarch64|arm64) arch=arm64 ;;
+          *)
+            echo "::error::Unsupported architecture for Supabase CLI: $(uname -m)"
+            exit 1
+            ;;
+        esac
+
+        url="https://github.com/supabase/cli/releases/download/v${CLI_VERSION}/supabase_${CLI_VERSION}_linux_${arch}.tar.gz"
+        archive="${RUNNER_TEMP}/supabase-cli-${CLI_VERSION}.tar.gz"
+        dest="${RUNNER_TEMP}/supabase-cli-${CLI_VERSION}"
+
+        # A bearer token keeps the download out of the anonymous throttle that
+        # produced the 403; curl drops the header on the cross-host redirect to
+        # the signed asset URL, so the token never reaches the CDN either.
+        auth_args=()
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+          auth_args=(--header "Authorization: Bearer ${GITHUB_TOKEN}")
+        fi
+
+        echo "Downloading ${url}"
+        curl --fail --location --silent --show-error \
+          --retry 5 --retry-delay 3 --retry-all-errors \
+          "${auth_args[@]}" \
+          --output "${archive}" "${url}"
+
+        mkdir -p "${dest}"
+        # The tarball holds two co-located binaries: "supabase" is a shim that
+        # forwards to "supabase-go" and fails without it, so unpack both.
+        tar -xzf "${archive}" -C "${dest}" supabase supabase-go
+
+        if [ -w /usr/local/bin ]; then
+          bin_dir=/usr/local/bin
+        else
+          bin_dir="${RUNNER_TEMP}/supabase-cli-bin"
+          mkdir -p "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+        fi
+        install -m 0755 "${dest}/supabase" "${bin_dir}/supabase"
+        install -m 0755 "${dest}/supabase-go" "${bin_dir}/supabase-go"
+        export PATH="${bin_dir}:${PATH}"
+
+        # Fail here, with the version in the message, rather than mid-deploy.
+        got="$(supabase --version | tail -n1)"
+        if [ "${got}" != "${CLI_VERSION}" ]; then
+          echo "::error::Expected supabase ${CLI_VERSION}, got ${got}"
+          exit 1
+        fi
+        echo "supabase ${got} installed"

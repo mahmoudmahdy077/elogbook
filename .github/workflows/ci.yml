@@ -122,10 +122,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
+      - uses: ./.github/actions/setup-supabase-cli
         with: { version: 2.109.1 }
-        env:
-          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
       - name: Start local Supabase (with retries)
         id: sbstart
         shell: bash

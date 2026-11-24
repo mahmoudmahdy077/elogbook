@@ -63,11 +63,9 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
+      - uses: ./.github/actions/setup-supabase-cli
         with:
           version: 2.109.1
-        env:
-          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -89,11 +87,9 @@ jobs:
         function: [ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export]
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v2
+      - uses: ./.github/actions/setup-supabase-cli
         with:
           version: 2.109.1
-        env:
-          SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
       - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
