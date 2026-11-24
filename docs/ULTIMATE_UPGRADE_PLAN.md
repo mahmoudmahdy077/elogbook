@@ -1,6 +1,6 @@
 # E-Logbook Ultimate Production-Ready Upgrade Plan v2
 
-> **Status (2026-11-23):** Tasks 1–38 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
+> **Status (2026-11-24):** Tasks 1–39 done. Tasks 1–18 and 19–33, 35–36 were verified implemented in
 > code (checkboxes were stale) during a code-vs-plan sweep; Task 34 (hardcoded colors → tokens) was
 > implemented in commit 14ef0ac; Task 37 (a11y label associations, UX2-035) done — 106 labels got
 > htmlFor+id, 1 read-only pair → dl/dt/dd; 8 residual labels are legitimate skips (button-group
@@ -8,7 +8,12 @@
 > APP3-001/APP3-002): schema wiring + approval insert were already in code; this run mounted the
 > NotificationBell in Sidebar + MobileNav (layout passes user/tenant ids), added click-through
 > navigation to `link` with mark-as-read, and dropUp positioning for the mobile bottom bar.
-> Next undone task: **Task 39**.
+> Task 39 (audit "PDF" export, EXP4-001): the route accepted `format=pdf` but proxied to a
+> `generate-audit-pdf` edge function that never shipped — every PDF request silently returned
+> HTML. Fixed honestly (plan option b): endpoint is CSV-only now (dead PDF/HTML branch and
+> helpers removed, 400 on any other format), UI cleaned to CSV-only download, openapi.yaml
+> updated, tests assert `format=pdf` → 400 and zero external fetches (SEC-003 stronger form).
+> Next undone task: **Task 40**.
 
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
@@ -814,9 +819,9 @@ await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.r
 **Files:**
 - Modify: `apps/web/app/api/[tenant]/audit/export/route.ts`
 
-- [ ] **Step 1:** Stop routing audit data through the case-PDF edge function (it filters by `status='approved'` which audit logs aren't).
-- [ ] **Step 2:** Either (a) use `pdf-lib` to render a real PDF server-side, or (b) rename the endpoint to "Export as HTML" honestly and update the UI label.
-- [ ] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/audit/export/route.ts && git commit -m "fix(audit-export): honest format label or real PDF (EXP4-001)"`
+- [x] **Step 1:** Stop routing audit data through the case-PDF edge function (it filters by `status='approved'` which audit logs aren't).
+- [x] **Step 2:** Either (a) use `pdf-lib` to render a real PDF server-side, or (b) rename the endpoint to "Export as HTML" honestly and update the UI label.
+- [x] **Step 3:** Commit: `git add apps/web/app/api/[tenant]/audit/export/route.ts && git commit -m "fix(audit-export): honest format label or real PDF (EXP4-001)"`
 
 ---
 

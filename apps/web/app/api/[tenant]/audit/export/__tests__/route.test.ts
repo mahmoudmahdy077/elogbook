@@ -296,19 +296,15 @@ describe('GET /api/[tenant]/audit/export', () => {
     expect(res.headers.get('Content-Type')).toContain('text/csv');
   });
 
-  it('returns HTML export when PDF generation fails (fallback)', async () => {
+  it('rejects the removed pdf format with a 400 (API is CSV-only)', async () => {
+    // format=pdf used to fall back to HTML because the generate-audit-pdf
+    // edge function never shipped — that silent fallback is gone.
     const req = makeGetRequest('https://app.elogbook.dev/demo/audit/export?format=pdf');
     const res = await GET(req, { params });
 
-    // When NEXT_PUBLIC_SUPABASE_URL is not set, PDF fetch will fail,
-    // falling through to generateAuditPdfInline which returns HTML.
-    expect(res.status).toBe(200);
-    expect(res.headers.get('Content-Type')).toContain('text/html');
-    expect(res.headers.get('X-Export-Format')).toBe('html');
-    // HTML should contain the log data
-    const text = await res.text();
-    expect(text).toContain('Audit Log Export');
-    expect(text).toContain('entry-1');
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('format must be "csv"');
   });
 
   it('applies date range filter when startDate and endDate are provided', async () => {
