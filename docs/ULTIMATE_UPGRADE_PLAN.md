@@ -834,9 +834,9 @@ await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.r
 **Files:**
 - Delete: `.github/workflows/deploy-web.yml` (or delete the web job in `cd.yml`)
 
-- [ ] **Step 1:** Read both `.github/workflows/cd.yml` and `.github/workflows/deploy-web.yml`.
-- [ ] **Step 2:** Delete `deploy-web.yml` (keep the `cd.yml` web job which has more complete config).
-- [ ] **Step 3:** Commit: `git rm .github/workflows/deploy-web.yml && git commit -m "fix(cd): delete duplicate web deploy workflow (CD-001)"`
+- [x] **Step 1:** Read both `.github/workflows/cd.yml` and `.github/workflows/deploy-web.yml`.
+- [x] **Step 2:** Delete `deploy-web.yml` (keep the `cd.yml` web job which has more complete config).
+- [x] **Step 3:** Commit: `git rm .github/workflows/deploy-web.yml && git commit -m "fix(cd): delete duplicate web deploy workflow (CD-001)"`
 
 ---
 
