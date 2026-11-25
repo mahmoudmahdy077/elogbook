@@ -28,11 +28,11 @@ interface Webhook {
 }
 
 interface WebhookManagerProps {
-  tenantId: string;
+  tenantSlug: string;
   initialWebhooks: Webhook[];
 }
 
-export default function WebhookManager({ tenantId, initialWebhooks }: WebhookManagerProps) {
+export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookManagerProps) {
   const router = useRouter();
   const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
   const [error, setError] = useState('');
@@ -147,7 +147,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
         payload.id = editingId;
       }
 
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -174,7 +174,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
   async function refreshWebhooks() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`);
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`);
       if (res.ok) {
         const data = await res.json();
         setWebhooks(data.webhooks ?? []);
@@ -186,7 +186,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
   async function handleToggleActive(wh: Webhook) {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: wh.id, is_active: !wh.is_active }),
@@ -210,7 +210,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
     if (!confirm(`Delete webhook "${wh.description || wh.url}"? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks?id=${wh.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks?id=${wh.id}`, {
         method: 'DELETE',
       });
 
@@ -232,7 +232,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
     try {
       // Send test via the API, which will proxy to testWebhookEndpoint
-      const res = await fetch(`/api/${tenantId}/admin/webhooks/test`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhook_id: wh.id }),

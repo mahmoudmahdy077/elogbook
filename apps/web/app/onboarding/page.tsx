@@ -36,8 +36,13 @@ export default function OnboardingPage() {
         .single();
 
       if (p?.onboarding_completed) {
-        const { data: { slug } } = await supabase.from('tenants').select('slug').eq('id', p.tenant_id).single();
-        router.replace(`/${slug}/dashboard`);
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('slug')
+          .eq('id', p.tenant_id)
+          .maybeSingle();
+        // `.single()` threw a TypeError here when the tenant row was absent.
+        router.replace(tenant?.slug ? `/${tenant.slug}/dashboard` : '/login');
         return;
       }
       setProfile(p as Profile);
@@ -56,10 +61,16 @@ export default function OnboardingPage() {
       .update({ role: profile.role, full_name: fullName, specialty, onboarding_completed: true })
       .eq('id', profile.id);
 
-    if (error) setError(error.message);
-    else {
-      const { data: { slug } } = await supabase.from('tenants').select('slug').eq('id', profile.tenant_id).single();
-      router.replace(`/${slug}/dashboard`);
+    if (error) {
+      setError(error.message);
+    } else {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', profile.tenant_id)
+        .maybeSingle();
+      if (tenant?.slug) router.replace(`/${tenant.slug}/dashboard`);
+      else setError('Your institution could not be found. Contact your administrator.');
     }
     setLoading(false);
   };

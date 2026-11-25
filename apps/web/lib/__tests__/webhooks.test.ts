@@ -5,6 +5,11 @@ const mockClient = {
   from: vi.fn(),
 };
 
+vi.mock('@/lib/webhook-url-guard', () => ({
+  UnsafeWebhookUrlError: class UnsafeWebhookUrlError extends Error {},
+  assertSafeWebhookUrl: async (url: string) => new URL(url),
+}));
+
 vi.mock('@/lib/supabase/admin', () => ({
   createServiceRoleClient: () => mockClient,
 }));

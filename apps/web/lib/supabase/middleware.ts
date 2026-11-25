@@ -24,7 +24,17 @@ function csrfGuard(request: NextRequest): NextResponse | null {
 
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
-  const requestOrigin = origin ?? (referer ? new URL(referer).origin : null);
+  // A malformed Referer must be rejected, not thrown: `new URL()` raises on
+  // garbage and would turn one bad header into a 500 on the request.
+  let refererOrigin: string | null = null;
+  if (referer) {
+    try {
+      refererOrigin = new URL(referer).origin;
+    } catch {
+      refererOrigin = null;
+    }
+  }
+  const requestOrigin = origin ?? refererOrigin;
 
   if (!requestOrigin) {
     return NextResponse.json(
@@ -223,9 +233,15 @@ export async function updateSession(request: NextRequest) {
 
     if (urlTenantSlug) {
       const info = await getUserTenantSlug(supabase, user.id);
-      if (info && info.slug !== urlTenantSlug) {
+      // Fail closed: a missing profile/tenant used to skip this check
+      // entirely, letting a user walk into any tenant's URL. No identity
+      // mapping means no tenant access.
+      if (!info) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+      if (info.slug !== urlTenantSlug) {
         return NextResponse.redirect(
-          new URL(`/${info.slug}/dashboard`, request.url),
+          new URL(`/${info.slug || 'default'}/dashboard`, request.url),
         );
       }
     }

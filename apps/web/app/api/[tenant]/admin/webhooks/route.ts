@@ -4,6 +4,7 @@ import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
+import { assertSafeWebhookUrl } from '@/lib/webhook-url-guard';
 
 const ALLOWED_EVENTS = [
   'case.created',
@@ -127,15 +128,13 @@ export async function POST(
   }
 
   try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return NextResponse.json({ error: 'URL must use http or https protocol' }, { status: 400 });
-    }
-    if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
-      return NextResponse.json({ error: 'HTTPS is required in production' }, { status: 400 });
-    }
-  } catch {
-    return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    // Rejects internal/metadata targets as well as bad schemes (SSRF).
+    await assertSafeWebhookUrl(url, { requireHttps: process.env.NODE_ENV === 'production' });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Invalid URL format' },
+      { status: 400 },
+    );
   }
 
   if (!Array.isArray(events) || events.length === 0) {
@@ -250,15 +249,12 @@ export async function PUT(
   }
   if (url) {
     try {
-      const parsed = new URL(url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        return NextResponse.json({ error: 'URL must use http or https protocol' }, { status: 400 });
-      }
-      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
-        return NextResponse.json({ error: 'HTTPS is required in production' }, { status: 400 });
-      }
-    } catch {
-      return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+      await assertSafeWebhookUrl(url, { requireHttps: process.env.NODE_ENV === 'production' });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'Invalid URL format' },
+        { status: 400 },
+      );
     }
   }
 
