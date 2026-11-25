@@ -7,12 +7,9 @@ import { join } from 'path';
 import { createFullBackup } from '@/lib/setup/backup-manager';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { getClientIp } from '@/lib/client-ip';
+import { requirePlatformAdmin } from '@/lib/supabase/require-platform-admin';
 
 export const runtime = 'nodejs';
-
-// Privileged operation — operator-only (platform admin). Directors and
-// institution_admins must not be able to destroy infrastructure.
-const ADMIN_ROLES = ['admin'];
 
 export async function POST(request: Request) {
   // D-5: control plane must be absent in PHI/production build — Gate C probes 404.
@@ -30,32 +27,14 @@ export async function POST(request: Request) {
   if (!allowed) return rateLimitResponse(retryAfter);
 
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Destroying the installation is a platform-operator action. The old check
+  // was `profiles.role === 'admin'`, a tenant label any tenant admin can hold.
+  const auth = await requirePlatformAdmin(supabase);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
-  const { data: { session } } = await supabase.auth.getSession();
-  // Require fresh AAL2 for destructive operations — if user has MFA enrolled, session must be aal2
-  if ((session as { aal?: string } | null)?.aal && (session as { aal?: string })?.aal !== 'aal2') {
-    try {
-      const { data: mfaData } = await supabase.auth.mfa.listFactors();
-      const hasVerifiedMfa = mfaData?.all?.some((f) => f.status === 'verified') ?? false;
-      if (hasVerifiedMfa) {
-        return NextResponse.json({ error: 'Re-authentication with MFA required for this operation' }, { status: 403 });
-      }
-    } catch { /* ignore */ }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles') // tenant-scope-exempt: user-scoped lookup by user_id (1:1), not tenant list — owner=human expiry=2026-12-31
-    .select('id, tenant_id, role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile || !ADMIN_ROLES.includes(profile.role)) {
-    return NextResponse.json({ error: 'Insufficient permissions — operator only' }, { status: 403 });
-  }
+  const user = auth.user;
+  const profile = auth.profile;
 
   const body = await request.json();
   const { scope, confirm } = body;

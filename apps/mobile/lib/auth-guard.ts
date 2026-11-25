@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import type { UserRole } from '@elogbook/shared';
+import { getSession } from './session';
 
 export type AuthGuardState = {
   isAuthenticated: boolean;
@@ -35,6 +36,38 @@ export async function getRoleFromAuth(): Promise<{
   const profileId = (user.app_metadata?.profile_id as string) ?? null;
 
   return { role, fullName, tenantId, profileId };
+}
+
+/**
+ * Authoritative role for authorization decisions (tabs, PHI gates).
+ *
+ * Uses the server capability snapshot first (role/status come from `profiles`
+ * via RLS and are cached for offline), then a direct `profiles` read. It never
+ * trusts `user_metadata.role`, which any authenticated user can rewrite with
+ * `auth.updateUser({ data: { role: 'admin' } })`.
+ */
+export async function getAuthoritativeRole(): Promise<UserRole | null> {
+  const cap = getSession().capability;
+  if (cap && cap.status === 'active' && cap.role) return cap.role as UserRole;
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('role, status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const profile = data as { role?: UserRole; status?: string } | null;
+    if (!profile || profile.status !== 'active' || !profile.role) return null;
+    return profile.role;
+  } catch {
+    return null;
+  }
 }
 
 export function subscribeToAuth(

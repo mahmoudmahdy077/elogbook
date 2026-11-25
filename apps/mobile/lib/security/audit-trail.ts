@@ -23,7 +23,7 @@ import { scopedKey } from '../account-context';
 import { logWarn } from '../logger';
 import { supabase } from '../supabase';
 import { sha256, bytesToHex } from '../crypto/sha256';
-import { getRoleFromAuth } from '../auth-guard';
+import { getAuthoritativeRole } from '../auth-guard';
 import type { UserRole } from '@elogbook/shared';
 
 // ---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ export async function canAccessPHI(): Promise<{
   role: UserRole | null;
 }> {
   try {
-    const { role } = await getRoleFromAuth();
+    const role = await getAuthoritativeRole();
     return {
       allowed: role !== null && PHI_ROLES.includes(role),
       role,

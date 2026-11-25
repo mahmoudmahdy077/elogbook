@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { countCasesByStatus } from '../../lib/query';
-import { getRoleFromAuth } from '../../lib/auth-guard';
+import { getAuthoritativeRole } from '../../lib/auth-guard';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 
 import { syncService } from '../../lib/sync';
@@ -139,7 +139,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     // Detect role for conditional rendering
     (async () => {
-      const { role } = await getRoleFromAuth();
+      const role = await getAuthoritativeRole();
       setUserRole(role);
       setRoleLoaded(true);
     })();
