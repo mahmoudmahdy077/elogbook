@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { decidePlanChange } from '@/lib/plan-change-policy';
 
 const ADMIN_ROLES = ['institution_admin', 'admin'];
 
@@ -96,7 +97,12 @@ export async function PUT(
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
-  const body = await request.json();
+  let body: { plan_id?: string; reason?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
   const { plan_id, reason } = body;
 
   if (!plan_id) {
@@ -120,6 +126,21 @@ export async function PUT(
     .select('id, plan_id, status')
     .eq('tenant_id', profile.tenant_id)
     .maybeSingle();
+
+  // A paid plan may only be applied by the checkout webhook (or a platform
+  // operator). The old code accepted any plan_id and forced status active.
+  const decision = decidePlanChange({
+    callerRole: profile.role,
+    currentPlanId: currentSub?.plan_id ?? null,
+    targetPlanId: plan.id,
+    targetPriceMonthly: (plan as { price_monthly?: number | string | null }).price_monthly ?? 0,
+  });
+  if (!decision.allowed) {
+    return NextResponse.json(
+      { error: decision.error, code: 'payment_required' },
+      { status: decision.status },
+    );
+  }
 
   // Determine change type
   let changeType: 'upgrade' | 'downgrade' | 'custom' = 'custom';

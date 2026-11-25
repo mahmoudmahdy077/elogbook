@@ -68,6 +68,9 @@ vi.mock('../../supabase', () => ({
 // auth-guard mock — default returns a resident
 vi.mock('../../auth-guard', () => ({
   getRoleFromAuth: (...args: unknown[]) => mockGetRoleFromAuth(...args),
+  // canAccessPHI now resolves the role server-side; the mock keeps the same
+  // fixtures so the PHI-gate matrix still exercises the real decision code.
+  getAuthoritativeRole: async () => (await mockGetRoleFromAuth()).role,
 }));
 
 // sha256 — use real implementation for hash verification
