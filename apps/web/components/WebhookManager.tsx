@@ -28,11 +28,11 @@ interface Webhook {
 }
 
 interface WebhookManagerProps {
-  tenantId: string;
+  tenantSlug: string;
   initialWebhooks: Webhook[];
 }
 
-export default function WebhookManager({ tenantId, initialWebhooks }: WebhookManagerProps) {
+export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookManagerProps) {
   const router = useRouter();
   const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
   const [error, setError] = useState('');
@@ -147,7 +147,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
         payload.id = editingId;
       }
 
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -174,7 +174,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
   async function refreshWebhooks() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`);
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`);
       if (res.ok) {
         const data = await res.json();
         setWebhooks(data.webhooks ?? []);
@@ -186,7 +186,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
   async function handleToggleActive(wh: Webhook) {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: wh.id, is_active: !wh.is_active }),
@@ -210,7 +210,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
     if (!confirm(`Delete webhook "${wh.description || wh.url}"? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/webhooks?id=${wh.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks?id=${wh.id}`, {
         method: 'DELETE',
       });
 
@@ -232,7 +232,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
     try {
       // Send test via the API, which will proxy to testWebhookEndpoint
-      const res = await fetch(`/api/${tenantId}/admin/webhooks/test`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/webhooks/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhook_id: wh.id }),
@@ -294,7 +294,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
       {/* ── Add/Edit Form ── */}
       {showForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+        <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">{editingId ? 'Edit Webhook' : 'New Webhook'}</h3>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -303,10 +303,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             )}
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="webhook-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Webhook URL <span className="text-fg-danger">*</span>
               </label>
               <input
+                id="webhook-url"
                 type="url"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
@@ -357,10 +358,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="secret-key" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Secret Key <span className="text-fg-danger">*</span>
               </label>
               <input
+                id="secret-key"
                 type="password"
                 value={formSecret}
                 onChange={(e) => setFormSecret(e.target.value)}
@@ -379,10 +381,11 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="webhook-description" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Description (optional)
               </label>
               <input
+                id="webhook-description"
                 type="text"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
@@ -434,7 +437,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
 
       {/* ── Webhook List ── */}
       {webhooks.length === 0 && !showForm ? (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-8 text-center">
+        <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
           <div className="text-4xl mb-3 opacity-30">🔗</div>
           <p className="text-sm text-text-muted/70">No webhooks configured yet.</p>
           <p className="text-xs text-text-muted/50 mt-1">
@@ -446,7 +449,7 @@ export default function WebhookManager({ tenantId, initialWebhooks }: WebhookMan
           {webhooks.map((wh) => (
             <div
               key={wh.id}
-              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 "
+              className="bg-surface-solid rounded-2xl border border-border p-5 "
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">

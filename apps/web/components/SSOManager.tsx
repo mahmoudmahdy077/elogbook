@@ -18,7 +18,6 @@ interface SsoConfig {
 }
 
 interface SSOManagerProps {
-  tenantId: string;
   tenantSlug: string;
   initialConfigs: SsoConfig[];
 }
@@ -32,7 +31,7 @@ const ALLOWED_ROLES = [
 
 type RoleId = (typeof ALLOWED_ROLES)[number]['id'];
 
-export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialConfigs }: SSOManagerProps) {
+export default function SSOManager({ tenantSlug, initialConfigs }: SSOManagerProps) {
   const router = useRouter();
   const [configs, setConfigs] = useState<SsoConfig[]>(initialConfigs);
   const [error, setError] = useState('');
@@ -178,7 +177,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
         payload.id = editingId;
       }
 
-      const res = await fetch(`/api/${tenantId}/admin/sso`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -205,7 +204,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
   async function refreshConfigs() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso`);
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`);
       if (res.ok) {
         const data = await res.json();
         setConfigs(data.configs ?? []);
@@ -217,7 +216,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
   async function handleToggleActive(cfg: SsoConfig) {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: cfg.id, is_active: !cfg.is_active }),
@@ -241,7 +240,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
     if (!confirm(`Delete this ${cfg.protocol.toUpperCase()} configuration? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso?id=${cfg.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso?id=${cfg.id}`, {
         method: 'DELETE',
       });
 
@@ -296,7 +295,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
       {/* ── Add/Edit Form ── */}
       {showForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+        <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">{editingId ? 'Edit SSO Configuration' : 'New SSO Configuration'}</h3>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -337,10 +336,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
             {formProtocol === 'saml' && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="metadata-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Metadata URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
+                    id="metadata-url"
                     type="url"
                     value={formMetadataUrl}
                     onChange={(e) => setFormMetadataUrl(e.target.value)}
@@ -354,10 +354,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="idp-entity-id" className="text-sm font-medium text-text-secondary block mb-1.5">
                     IdP Entity ID
                   </label>
                   <input
+                    id="idp-entity-id"
                     type="text"
                     value={formIdpEntityId}
                     onChange={(e) => setFormIdpEntityId(e.target.value)}
@@ -370,10 +371,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="idp-certificate" className="text-sm font-medium text-text-secondary block mb-1.5">
                     IdP Certificate
                   </label>
                   <textarea
+                    id="idp-certificate"
                     value={formIdpCertificate}
                     onChange={(e) => setFormIdpCertificate(e.target.value)}
                     placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
@@ -391,10 +393,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
             {formProtocol === 'oidc' && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="discovery-url" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Discovery URL <span className="text-fg-danger">*</span>
                   </label>
                   <input
+                    id="discovery-url"
                     type="url"
                     value={formDiscoveryUrl}
                     onChange={(e) => setFormDiscoveryUrl(e.target.value)}
@@ -408,10 +411,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="client-id" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Client ID
                   </label>
                   <input
+                    id="client-id"
                     type="text"
                     value={formClientId}
                     onChange={(e) => setFormClientId(e.target.value)}
@@ -421,10 +425,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1.5">
+                  <label htmlFor="client-secret" className="text-sm font-medium text-text-secondary block mb-1.5">
                     Client Secret
                   </label>
                   <input
+                    id="client-secret"
                     type="password"
                     value={formClientSecret}
                     onChange={(e) => setFormClientSecret(e.target.value)}
@@ -440,10 +445,11 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
             {/* Default role */}
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="default-role" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Default Role
               </label>
               <select
+                id="default-role"
                 value={formDefaultRole}
                 onChange={(e) => setFormDefaultRole(e.target.value as RoleId)}
                 className="w-full rounded-xl bg-neutral-dark border border-border p-3 text-sm outline-none focus:border-primary transition-colors"
@@ -500,25 +506,27 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
           {/* ACS URL display */}
           {acsUrl && (
             <div className="mt-6 pt-5 border-t border-border">
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
-                Assertion Consumer Service (ACS) URL
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 block bg-neutral-dark rounded-xl border border-border p-3 text-xs font-mono text-text-secondary break-all">
-                  {acsUrl}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(acsUrl);
-                    setSuccess('ACS URL copied to clipboard.');
-                  }}
-                  className="shrink-0 rounded-full border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-neutral-dark transition-colors"
-                  title="Copy ACS URL"
-                >
-                  Copy
-                </button>
-              </div>
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary block mb-1.5">
+                  Assertion Consumer Service (ACS) URL
+                </dt>
+                <dd className="flex items-center gap-2">
+                  <code className="flex-1 block bg-neutral-dark rounded-xl border border-border p-3 text-xs font-mono text-text-secondary break-all">
+                    {acsUrl}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(acsUrl);
+                      setSuccess('ACS URL copied to clipboard.');
+                    }}
+                    className="shrink-0 rounded-full border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-neutral-dark transition-colors"
+                    title="Copy ACS URL"
+                  >
+                    Copy
+                  </button>
+                </dd>
+              </dl>
               <p className="text-xs text-text-muted/50 mt-1">
                 Provide this URL to your identity provider as the SAML/OIDC callback endpoint.
               </p>
@@ -534,7 +542,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
       {/* ── SSO Config List ── */}
       {configs.length === 0 && !showForm ? (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-8 text-center">
+        <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
           <div className="text-4xl mb-3 opacity-30">🔐</div>
           <p className="text-sm text-text-muted/70">No SSO configurations yet.</p>
           <p className="text-xs text-text-muted/50 mt-1">
@@ -546,7 +554,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
           {configs.map((cfg) => (
             <div
               key={cfg.id}
-              className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-5 "
+              className="bg-surface-solid rounded-2xl border border-border p-5 "
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">

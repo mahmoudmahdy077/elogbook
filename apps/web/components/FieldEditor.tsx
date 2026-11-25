@@ -76,8 +76,9 @@ export default function FieldEditor({
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Label</label>
+              <label htmlFor="label" className="block text-xs mb-1 text-text-muted">Label</label>
               <input
+                id="label"
                 type="text"
                 value={field.label}
                 onChange={(e) => {
@@ -89,8 +90,9 @@ export default function FieldEditor({
               />
             </div>
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Key</label>
+              <label htmlFor="key" className="block text-xs mb-1 text-text-muted">Key</label>
               <input
+                id="key"
                 type="text"
                 value={field.key}
                 onChange={(e) => update({ key: e.target.value })}
@@ -102,8 +104,9 @@ export default function FieldEditor({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Type</label>
+              <label htmlFor="type" className="block text-xs mb-1 text-text-muted">Type</label>
               <select
+                id="type"
                 value={field.type}
                 onChange={(e) => update({ type: e.target.value as TemplateField['type'] })}
                 className="w-full px-3 py-1.5 rounded-lg bg-neutral-dark border border-border text-sm"
@@ -127,8 +130,9 @@ export default function FieldEditor({
           </div>
 
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Description (help text)</label>
+            <label htmlFor="description-help-text" className="block text-xs mb-1 text-text-muted">Description (help text)</label>
             <input
+              id="description-help-text"
               type="text"
               value={field.description ?? ''}
               onChange={(e) => update({ description: e.target.value || undefined })}
@@ -139,8 +143,9 @@ export default function FieldEditor({
 
           {field.type === 'select' && (
             <div>
-              <label className="block text-xs mb-1 text-text-muted">Options (one per line)</label>
+              <label htmlFor="options-one-per-line" className="block text-xs mb-1 text-text-muted">Options (one per line)</label>
               <textarea
+                id="options-one-per-line"
                 value={(field.options ?? []).join('\n')}
                 onChange={(e) => update({ options: e.target.value.split('\n').filter(Boolean) })}
                 className="w-full px-3 py-1.5 rounded-lg bg-neutral-dark border border-border text-sm"
@@ -153,8 +158,9 @@ export default function FieldEditor({
           {(field.type === 'text' || field.type === 'textarea') && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Min Length</label>
+                <label htmlFor="min-length" className="block text-xs mb-1 text-text-muted">Min Length</label>
                 <input
+                  id="min-length"
                   type="number"
                   value={field.validation?.minLength ?? ''}
                   onChange={(e) => update({
@@ -165,8 +171,9 @@ export default function FieldEditor({
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Max Length</label>
+                <label htmlFor="max-length" className="block text-xs mb-1 text-text-muted">Max Length</label>
                 <input
+                  id="max-length"
                   type="number"
                   value={field.validation?.maxLength ?? ''}
                   onChange={(e) => update({
@@ -182,8 +189,9 @@ export default function FieldEditor({
           {field.type === 'number' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Min Value</label>
+                <label htmlFor="min-value" className="block text-xs mb-1 text-text-muted">Min Value</label>
                 <input
+                  id="min-value"
                   type="number"
                   value={field.validation?.min ?? ''}
                   onChange={(e) => update({
@@ -193,8 +201,9 @@ export default function FieldEditor({
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Max Value</label>
+                <label htmlFor="max-value" className="block text-xs mb-1 text-text-muted">Max Value</label>
                 <input
+                  id="max-value"
                   type="number"
                   value={field.validation?.max ?? ''}
                   onChange={(e) => update({
@@ -209,8 +218,9 @@ export default function FieldEditor({
           {field.type === 'text' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Pattern (regex)</label>
+                <label htmlFor="pattern-regex" className="block text-xs mb-1 text-text-muted">Pattern (regex)</label>
                 <input
+                  id="pattern-regex"
                   type="text"
                   value={field.validation?.pattern ?? ''}
                   onChange={(e) => update({
@@ -221,8 +231,9 @@ export default function FieldEditor({
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1 text-text-muted">Pattern Error Message</label>
+                <label htmlFor="pattern-error-message" className="block text-xs mb-1 text-text-muted">Pattern Error Message</label>
                 <input
+                  id="pattern-error-message"
                   type="text"
                   value={field.validation?.patternMessage ?? ''}
                   onChange={(e) => update({

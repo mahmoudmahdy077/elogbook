@@ -17,7 +17,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
                   ? 'bg-success-700 text-white'
                   : i === currentStep
                     ? 'bg-primary text-white'
-                    : 'bg-black/5 text-text-muted border border-black/10'
+                    : 'bg-default-100 text-text-muted border border-border'
               }`}
               role="status"
               aria-label={`${label}${i < currentStep ? ' (completed)' : i === currentStep ? ' (current)' : ''}`}
@@ -51,7 +51,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
           {i < steps.length - 1 && (
             <div
               className={`w-8 sm:w-16 h-0.5 mx-1 mt-[-1rem] transition-all duration-300 ${
-                i < currentStep ? 'bg-approved' : 'bg-black/10'
+                i < currentStep ? 'bg-approved' : 'bg-default-200'
               }`}
             />
           )}

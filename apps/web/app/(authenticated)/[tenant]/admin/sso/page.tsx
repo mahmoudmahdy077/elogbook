@@ -55,7 +55,6 @@ export default async function AdminSsoPage({
         </Link>
       </div>
       <SSOManager
-        tenantId={profile.tenant_id}
         tenantSlug={tenantSlug}
         initialConfigs={configs ?? []}
       />

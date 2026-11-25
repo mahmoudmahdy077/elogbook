@@ -175,10 +175,11 @@ export default function CBDForm({
               ))}
 
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
+                <label htmlFor="notes" className="block text-sm font-medium text-text-secondary mb-1">
                   Notes (Optional)
                 </label>
                 <textarea
+                  id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}

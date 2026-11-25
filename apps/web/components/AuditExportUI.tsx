@@ -29,7 +29,7 @@ export default function AuditExportUI({ tenantSlug, dateFrom, dateTo }: AuditExp
 
       const res = await fetch(`/api/${tenantSlug}/audit/export?${params.toString()}`, {
         method: 'GET',
-        headers: { 'Accept': format === 'csv' ? 'text/csv' : 'application/pdf' },
+        headers: { 'Accept': 'text/csv' },
       });
 
       if (!res.ok) {
@@ -51,23 +51,10 @@ export default function AuditExportUI({ tenantSlug, dateFrom, dateTo }: AuditExp
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } else if (contentType.includes('text/html')) {
-        // Download HTML (PDF fallback)
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit-export-${new Date().toISOString().slice(0, 10)}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
       } else {
-        // PDF or binary — open in new tab
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        // Unexpected content type — fail loudly instead of opening a
+        // mislabeled file (the endpoint contract is CSV-only).
+        throw new Error(`Unexpected export format: ${contentType || 'unknown'}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');

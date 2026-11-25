@@ -211,8 +211,9 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
               <h3 className="text-base font-semibold">Create Accreditation Framework</h3>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Name</label>
+                <label htmlFor="framework-name" className="text-sm font-medium text-text-secondary block mb-1">Name</label>
                 <input
+                  id="framework-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -223,8 +224,9 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Version</label>
+                <label htmlFor="version" className="text-sm font-medium text-text-secondary block mb-1">Version</label>
                 <input
+                  id="version"
                   type="text"
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
@@ -234,8 +236,9 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Framework Type</label>
+                <label htmlFor="framework-type" className="text-sm font-medium text-text-secondary block mb-1">Framework Type</label>
                 <select
+                  id="framework-type"
                   value={frameworkType}
                   onChange={(e) => setFrameworkType(e.target.value as FrameworkType)}
                   className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -247,8 +250,9 @@ export default function CompetencyManager({ tenantId }: CompetencyManagerProps) 
                 </select>
               </div>
 
-              <label className="text-sm font-medium text-text-secondary block mb-1">Milestones (JSON)</label>
+              <label htmlFor="milestones-json" className="text-sm font-medium text-text-secondary block mb-1">Milestones (JSON)</label>
               <textarea
+                id="milestones-json"
                 value={milestonesJson}
                 onChange={(e) => setMilestonesJson(e.target.value)}
                 required

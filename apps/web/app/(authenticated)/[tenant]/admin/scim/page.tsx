@@ -61,7 +61,6 @@ export default async function AdminScimPage({
         </Link>
       </div>
       <SCIManager
-        tenantId={profile.tenant_id}
         tenantSlug={tenantSlug}
         initialTokens={tokens ?? []}
         initialScimUrl={scimUrl}

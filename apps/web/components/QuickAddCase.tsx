@@ -240,10 +240,11 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
 
               {/* Template selector */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-text-primary">
+                <label htmlFor="template" className="block text-sm font-medium text-text-primary">
                   Template<span className="text-fg-danger ml-0.5">*</span>
                 </label>
                 <select
+                  id="template"
                   value={selectedTemplateId}
                   onChange={(e) => { setSelectedTemplateId(e.target.value); setFieldValues({}); }}
                   aria-label="Select template"
@@ -267,7 +268,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                   id="quickadd-deidentify"
                   checked={isDeidentified}
                   onChange={(e) => setIsDeidentified(e.target.checked)}
-                  className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                  className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                 />
                 <label htmlFor="quickadd-deidentify" className="text-sm text-text-secondary">
                   De-identify patient
@@ -277,10 +278,11 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
               {/* MRN (only when not de-identified) */}
               {!isDeidentified && (
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-text-primary">
+                  <label htmlFor="patient-mrn" className="block text-sm font-medium text-text-primary">
                     Patient MRN<span className="text-fg-danger ml-0.5">*</span>
                   </label>
                   <input
+                    id="patient-mrn"
                     type="text"
                     value={patientMrn}
                     onChange={(e) => setPatientMrn(e.target.value)}
@@ -294,8 +296,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
               {/* DOB (only when not de-identified) */}
               {!isDeidentified && (
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-text-primary">Patient DOB</label>
+                  <label htmlFor="patient-dob" className="block text-sm font-medium text-text-primary">Patient DOB</label>
                   <input
+                    id="patient-dob"
                     type="date"
                     value={patientDob}
                     onChange={(e) => setPatientDob(e.target.value)}
@@ -307,10 +310,11 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
 
               {/* Case Date */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-text-primary">
+                <label htmlFor="case-date" className="block text-sm font-medium text-text-primary">
                   Case Date<span className="text-fg-danger ml-0.5">*</span>
                 </label>
                 <input
+                  id="case-date"
                   type="date"
                   value={caseDate}
                   onChange={(e) => setCaseDate(e.target.value)}
@@ -334,8 +338,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                         case 'textarea':
                           return (
                             <div key={key} className="space-y-1.5">
-                              <label className="block text-sm font-medium text-text-primary">{label}</label>
+                              <label htmlFor={`quickadd-field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                               <textarea
+                                id={`quickadd-field-${key}`}
                                 value={(fieldValues[key] as string) || ''}
                                 onChange={(e) => handleFieldChange(key, e.target.value)}
                                 aria-label={label}
@@ -346,8 +351,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                         case 'select':
                           return (
                             <div key={key} className="space-y-1.5">
-                              <label className="block text-sm font-medium text-text-primary">{label}</label>
+                              <label htmlFor={`quickadd-field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                               <select
+                                id={`quickadd-field-${key}`}
                                 value={(fieldValues[key] as string) || ''}
                                 onChange={(e) => handleFieldChange(key, e.target.value)}
                                 aria-label={`Select ${label}`}
@@ -363,8 +369,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                         case 'number':
                           return (
                             <div key={key} className="space-y-1.5">
-                              <label className="block text-sm font-medium text-text-primary">{label}</label>
+                              <label htmlFor={`quickadd-field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                               <input
+                                id={`quickadd-field-${key}`}
                                 type="number"
                                 value={(fieldValues[key] as string) || ''}
                                 onChange={(e) => handleFieldChange(key, e.target.value)}
@@ -376,8 +383,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                         case 'date':
                           return (
                             <div key={key} className="space-y-1.5">
-                              <label className="block text-sm font-medium text-text-primary">{label}</label>
+                              <label htmlFor={`quickadd-field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                               <input
+                                id={`quickadd-field-${key}`}
                                 type="date"
                                 value={(fieldValues[key] as string) || ''}
                                 onChange={(e) => handleFieldChange(key, e.target.value)}
@@ -394,7 +402,7 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                                 id={`quickadd-field-${key}`}
                                 checked={!!fieldValues[key]}
                                 onChange={(e) => handleFieldChange(key, e.target.checked)}
-                                className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                                className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                                 aria-label={label}
                               />
                               <label htmlFor={`quickadd-field-${key}`} className="text-sm text-text-secondary">
@@ -405,8 +413,9 @@ export default function QuickAddCase({ isOpen, onClose, onSaved, tenantSlug: _te
                         default:
                           return (
                             <div key={key} className="space-y-1.5">
-                              <label className="block text-sm font-medium text-text-primary">{label}</label>
+                              <label htmlFor={`quickadd-field-${key}`} className="block text-sm font-medium text-text-primary">{label}</label>
                               <input
+                                id={`quickadd-field-${key}`}
                                 type="text"
                                 value={(fieldValues[key] as string) || ''}
                                 onChange={(e) => handleFieldChange(key, e.target.value)}

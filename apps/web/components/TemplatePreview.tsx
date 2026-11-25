@@ -77,6 +77,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
         return (
           <input
             type="text"
+            id={field.key}
             value={String(value ?? '')}
             onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
             className={baseInputClass}
@@ -86,6 +87,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
       case 'textarea':
         return (
           <textarea
+            id={field.key}
             value={String(value ?? '')}
             onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
             className={baseInputClass}
@@ -96,6 +98,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
       case 'select':
         return (
           <select
+            id={field.key}
             value={String(value ?? '')}
             onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
             className={baseInputClass}
@@ -110,6 +113,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
         return (
           <input
             type="number"
+            id={field.key}
             value={value !== undefined ? String(value) : ''}
             onChange={(e) => setValues({ ...values, [field.key]: e.target.value ? Number(e.target.value) : '' })}
             className={baseInputClass}
@@ -121,6 +125,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
         return (
           <input
             type="date"
+            id={field.key}
             value={String(value ?? '')}
             onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
             className={baseInputClass}
@@ -155,7 +160,7 @@ export default function TemplatePreview({ fields, templateName, onClose }: Templ
           {fields.map(field => (
             <div key={field.key}>
               {field.type !== 'checkbox' && (
-                <label className="block text-xs mb-1 text-text-muted">
+                <label htmlFor={field.key} className="block text-xs mb-1 text-text-muted">
                   {field.label}
                   {field.required && <span className="text-fg-danger ml-1">*</span>}
                 </label>

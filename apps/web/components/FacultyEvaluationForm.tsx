@@ -44,8 +44,9 @@ export default function FacultyEvaluationForm({ residentId, tenantId, evaluatorI
     <div className="panel p-6 space-y-4">
       {error && <ErrorDisplay message={error} />}
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-2">Clinical Skills (1-5)</label>
+        <label htmlFor="clinical-skills" className="block text-sm font-medium text-text-secondary mb-2">Clinical Skills (1-5)</label>
         <select
+          id="clinical-skills"
           value={String(clinicalSkills)}
           onChange={(e) => setClinicalSkills(Number(e.target.value))}
           className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -57,8 +58,9 @@ export default function FacultyEvaluationForm({ residentId, tenantId, evaluatorI
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-2">Professionalism (1-5)</label>
+        <label htmlFor="professionalism" className="block text-sm font-medium text-text-secondary mb-2">Professionalism (1-5)</label>
         <select
+          id="professionalism"
           value={String(professionalism)}
           onChange={(e) => setProfessionalism(Number(e.target.value))}
           className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -70,8 +72,9 @@ export default function FacultyEvaluationForm({ residentId, tenantId, evaluatorI
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-text-secondary mb-2">Procedures (1-5)</label>
+        <label htmlFor="procedures" className="block text-sm font-medium text-text-secondary mb-2">Procedures (1-5)</label>
         <select
+          id="procedures"
           value={String(procedures)}
           onChange={(e) => setProcedures(Number(e.target.value))}
           className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -83,8 +86,9 @@ export default function FacultyEvaluationForm({ residentId, tenantId, evaluatorI
         </select>
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Comments</label>
+        <label htmlFor="comments" className="text-sm font-medium text-text-secondary block mb-1">Comments</label>
         <textarea
+          id="comments"
           value={comments}
           onChange={(e) => setComments(e.target.value)}
           placeholder="Optional feedback"

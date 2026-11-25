@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { normalizeSupabaseKey, normalizeSupabaseUrl } from '@elogbook/env/supabase-url';
 
 /**
  * P1.5: Defense-in-depth CSRF check for state-changing requests
@@ -23,7 +24,17 @@ function csrfGuard(request: NextRequest): NextResponse | null {
 
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
-  const requestOrigin = origin ?? (referer ? new URL(referer).origin : null);
+  // A malformed Referer must be rejected, not thrown: `new URL()` raises on
+  // garbage and would turn one bad header into a 500 on the request.
+  let refererOrigin: string | null = null;
+  if (referer) {
+    try {
+      refererOrigin = new URL(referer).origin;
+    } catch {
+      refererOrigin = null;
+    }
+  }
+  const requestOrigin = origin ?? refererOrigin;
 
   if (!requestOrigin) {
     return NextResponse.json(
@@ -53,17 +64,28 @@ function csrfGuard(request: NextRequest): NextResponse | null {
   return null;
 }
 
-function getEnvVars(): { url: string; key: string } | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    // Don't crash — just return null so the proxy can pass through
-    // without trying to refresh the session. This allows the app to
-    // at least serve the home page and /login even before env vars
-    // are configured in Vercel.
-    return null;
+type SupabaseEnv =
+  | { ok: true; url: string; key: string }
+  | { ok: false; kind: 'missing' | 'invalid'; reason: string };
+
+/**
+ * One log line per edge isolate is enough to diagnose a bad deployment
+ * value; logging it per request would flood the runtime logs.
+ */
+let warnedUnusableEnv = false;
+
+function getEnvVars(): SupabaseEnv {
+  const urlResult = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  if (!urlResult.ok) {
+    return { ok: false, kind: urlResult.kind, reason: urlResult.reason };
   }
-  return { url, key };
+
+  const key = normalizeSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  if (!key) {
+    return { ok: false, kind: 'missing', reason: 'NEXT_PUBLIC_SUPABASE_ANON_KEY is not set' };
+  }
+
+  return { ok: true, url: urlResult.url, key };
 }
 
 async function getUserTenantSlug(
@@ -88,7 +110,25 @@ export async function updateSession(request: NextRequest) {
   // If Supabase env vars aren't configured, just pass the request
   // through without session management. The page-level auth checks
   // will redirect to /login as needed.
-  if (!env) {
+  //
+  // If they are configured but unusable (e.g. a quoted paste, or a URL
+  // without https://), createServerClient() throws inside middleware — the
+  // request never reaches a route and every dynamic route answers 500 with
+  // MIDDLEWARE_INVOCATION_FAILED. Degrade instead: skip session handling,
+  // name the cause in one log line and in a response header, and let the
+  // page-level checks decide. The alternative is an opaque full outage.
+  if (!env.ok) {
+    if (env.kind === 'invalid') {
+      if (!warnedUnusableEnv) {
+        warnedUnusableEnv = true;
+        console.error(
+          `[proxy] Supabase env unusable, session handling disabled: ${env.reason}`,
+        );
+      }
+      const degraded = NextResponse.next({ request });
+      degraded.headers.set('x-elogbook-env', 'supabase-url-invalid');
+      return degraded;
+    }
     return NextResponse.next({ request });
   }
 
@@ -193,9 +233,15 @@ export async function updateSession(request: NextRequest) {
 
     if (urlTenantSlug) {
       const info = await getUserTenantSlug(supabase, user.id);
-      if (info && info.slug !== urlTenantSlug) {
+      // Fail closed: a missing profile/tenant used to skip this check
+      // entirely, letting a user walk into any tenant's URL. No identity
+      // mapping means no tenant access.
+      if (!info) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+      if (info.slug !== urlTenantSlug) {
         return NextResponse.redirect(
-          new URL(`/${info.slug}/dashboard`, request.url),
+          new URL(`/${info.slug || 'default'}/dashboard`, request.url),
         );
       }
     }

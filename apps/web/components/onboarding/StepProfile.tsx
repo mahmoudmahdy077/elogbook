@@ -59,7 +59,7 @@ export default function StepProfile({ initialName, onComplete }: StepProfileProp
             value={name}
             onChange={(e) => { setName(e.target.value); setError(''); }}
             placeholder="Dr. Jane Smith"
-            className="w-full px-4 py-2.5 rounded-xl border border-border bg-white dark:bg-neutral-dark text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
+            className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-solid text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
             autoFocus
           />
           {error && (

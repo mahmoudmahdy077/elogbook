@@ -72,8 +72,8 @@ export default function UninstallPage() {
       </div>
 
       <div className="mb-6">
-        <label className="block text-xs mb-1">Type DELETE to confirm</label>
-        <input value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="DELETE" />
+        <label htmlFor="confirm" className="block text-xs mb-1">Type DELETE to confirm</label>
+        <input id="confirm" value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border" placeholder="DELETE" />
       </div>
 
       {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}

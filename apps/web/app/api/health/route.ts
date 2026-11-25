@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
  * Liveness probe — no dependencies, no I/O.
  *
  * Must return 200 whenever the process is running. It is exempt from rate
- * limiting in proxy.ts and is the target of docker-compose's healthcheck
+ * limiting in middleware.ts and is the target of docker-compose's healthcheck
  * (and any orchestrator liveness probe). A transient DB blip must NOT cause
  * the orchestrator to kill the container — that is readiness's job.
  *

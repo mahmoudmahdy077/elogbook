@@ -64,7 +64,7 @@ export default function GapAnalysisRunner({
         <select
           value={residentId}
           onChange={(e) => setResidentId(e.target.value)}
-          className="px-3 py-2 rounded-full bg-white border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 max-w-[260px]"
+          className="px-3 py-2 rounded-full bg-surface-solid border border-border text-sm text-text-secondary focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 max-w-[260px]"
         >
           {residents.length === 0 && <option value="">No residents</option>}
           {residents.map((r) => (
@@ -108,7 +108,7 @@ export default function GapAnalysisRunner({
                       {g.current}/{g.target}
                     </span>
                   </div>
-                  <div className="h-1 rounded-full bg-black/5 overflow-hidden">
+                  <div className="h-1 rounded-full bg-default-100 overflow-hidden">
                     <div
                       className={`h-full rounded-full ${behind ? 'bg-warning' : 'bg-success'}`}
                       style={{ width: `${pct}%` }}

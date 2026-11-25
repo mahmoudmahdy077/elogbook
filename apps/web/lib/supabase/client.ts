@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { normalizeSupabaseKey, normalizeSupabaseUrl } from '@elogbook/env/supabase-url';
 
 let client: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -16,10 +17,10 @@ let client: ReturnType<typeof createBrowserClient> | null = null;
 export function createClient() {
   if (client) return client;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = normalizeSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-  if (!url || !key) {
+  if (!supabaseUrl.ok || !key) {
     // Defer the error to first method invocation so that the
     // build-time prerender (which imports but does not call)
     // doesn't crash.
@@ -33,6 +34,6 @@ export function createClient() {
     }) as ReturnType<typeof createBrowserClient>;
   }
 
-  client = createBrowserClient(url, key);
+  client = createBrowserClient(supabaseUrl.url, key);
   return client;
 }

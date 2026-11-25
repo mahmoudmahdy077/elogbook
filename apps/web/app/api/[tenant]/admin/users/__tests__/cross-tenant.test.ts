@@ -214,8 +214,14 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
           user: { id: ADMIN_USER_ID },
         })),
       }));
+      const resetPasswordForEmail = vi.fn(async () => ({ error: null }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => ({
+          auth: {
+            getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })),
+            resetPasswordForEmail,
+          },
+        })),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -278,8 +284,14 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
           user: { id: ADMIN_USER_ID },
         })),
       }));
+      const resetPasswordForEmail = vi.fn(async () => ({ error: null }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => ({
+          auth: {
+            getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })),
+            resetPasswordForEmail,
+          },
+        })),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -330,8 +342,14 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
           user: { id: ADMIN_USER_ID },
         })),
       }));
+      const resetPasswordForEmail = vi.fn(async () => ({ error: null }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => ({
+          auth: {
+            getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })),
+            resetPasswordForEmail,
+          },
+        })),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),
@@ -363,8 +381,11 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
       });
       expect(res.status).toBe(200);
       expect(mockAuthAdmin.getUserById).toHaveBeenCalledWith(VICTIM_USER_ID);
-      expect(mockAuthAdmin.generateLink).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'recovery', email: 'victim@tenant-b.test' }),
+      // The email must actually be sent — generateLink() only minted a URL
+      // that the old code threw away while reporting success.
+      expect(resetPasswordForEmail).toHaveBeenCalledWith(
+        'victim@tenant-b.test',
+        expect.objectContaining({ redirectTo: expect.stringContaining('/auth/callback?type=recovery') }),
       );
       // Must NOT call updateUserById with temp password
       expect(mockAuthAdmin.updateUserById).not.toHaveBeenCalled();
@@ -388,8 +409,14 @@ describe('cross-tenant isolation — service-role bypass must be tenant-scoped',
           user: { id: ADMIN_USER_ID },
         })),
       }));
+      const resetPasswordForEmail = vi.fn(async () => ({ error: null }));
       vi.doMock('@/lib/supabase/server', () => ({
-        createServerSupabase: vi.fn(async () => ({ auth: { getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })) } })),
+        createServerSupabase: vi.fn(async () => ({
+          auth: {
+            getUser: vi.fn(async () => ({ data: { user: { id: ADMIN_USER_ID } }, error: null })),
+            resetPasswordForEmail,
+          },
+        })),
       }));
       vi.doMock('@/lib/supabase/admin', () => ({
         createServiceRoleClient: vi.fn(() => ({ from: mockAdminFrom, auth: { admin: mockAuthAdmin } })),

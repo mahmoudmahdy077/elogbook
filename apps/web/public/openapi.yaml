@@ -1211,7 +1211,7 @@ paths:
       operationId: exportAuditLogs
       summary: Export audit logs
       description: |
-        Exports audit logs as CSV or PDF with optional date range filter.
+        Exports audit logs as CSV with optional date range filter.
         Respects tenant isolation. Requires director, institution_admin,
         or admin role. Rate limited to 10 requests per minute.
       tags: [Compliance]
@@ -1234,21 +1234,16 @@ paths:
           in: query
           schema:
             type: string
-            enum: [csv, pdf]
+            enum: [csv]
             default: csv
       responses:
         "200":
-          description: Exported file (CSV or PDF)
+          description: Exported CSV file
           content:
             text/csv:
               schema:
                 type: string
                 description: CSV file download
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-                description: PDF file download
         "400":
           description: Invalid format
         "401":
