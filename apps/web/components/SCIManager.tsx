@@ -15,15 +15,13 @@ interface ScimToken {
 }
 
 interface SCIManagerProps {
-  tenantId: string;
   tenantSlug: string;
   initialTokens: ScimToken[];
   initialScimUrl: string;
 }
 
 export default function SCIManager({
-  tenantId,
-  tenantSlug: _tenantSlug,
+  tenantSlug,
   initialTokens,
   initialScimUrl,
 }: SCIManagerProps) {
@@ -73,7 +71,7 @@ export default function SCIManager({
 
   async function refreshTokens() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim`);
+      const res = await fetch(`/api/${tenantSlug}/admin/scim`);
       if (res.ok) {
         const data = await res.json();
         setTokens(data.tokens ?? []);
@@ -89,7 +87,7 @@ export default function SCIManager({
 
     setFormLoading(true);
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/scim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: formDescription.trim() || null }),
@@ -121,7 +119,7 @@ export default function SCIManager({
     }
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim?id=${token.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/scim?id=${token.id}`, {
         method: 'DELETE',
       });
 

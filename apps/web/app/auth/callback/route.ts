@@ -12,6 +12,12 @@ export async function GET(request: Request) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Password-recovery links land here with type=recovery. They must reach
+      // the set-a-new-password form, not a dashboard (there was no such page).
+      if (searchParams.get('type') === 'recovery') {
+        return NextResponse.redirect(`${origin}/reset-password`);
+      }
+
       if (next !== '/') {
         return NextResponse.redirect(`${origin}${next}`);
       }

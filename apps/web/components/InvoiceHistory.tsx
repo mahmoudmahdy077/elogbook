@@ -15,21 +15,23 @@ interface Invoice {
 
 /** Stripe invoice history for the tenant, loaded from the invoices API
  *  (which proxies the list-invoices edge function). */
-export default function InvoiceHistory() {
+export default function InvoiceHistory({ tenantSlug }: { tenantSlug: string }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await fetch('invoices', { cache: 'no-store' });
+      // Relative 'invoices' resolved to /<tenant>/billing/invoices, which has
+      // never existed; the API route is tenant-prefixed.
+      const res = await fetch(`/api/${tenantSlug}/billing/invoices`, { cache: 'no-store' });
       const data = (await res.json()) as { invoices?: Invoice[]; error?: string };
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setInvoices(data.invoices ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices');
     }
-  }, []);
+  }, [tenantSlug]);
 
   useEffect(() => {
     void load();

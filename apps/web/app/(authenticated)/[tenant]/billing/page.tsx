@@ -140,7 +140,7 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
           </div>
         </div>
       )}
-      {subscription && <InvoiceHistory />}
+      {subscription && <InvoiceHistory tenantSlug={tenantSlug} />}
 
 
       <div className="bg-surface-solid rounded-2xl border border-border p-5">

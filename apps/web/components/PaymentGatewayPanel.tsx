@@ -16,7 +16,7 @@ interface GatewayConfig {
 }
 
 interface PaymentGatewayPanelProps {
-  tenantId: string;
+  tenantSlug: string;
   config: GatewayConfig | null;
 }
 
@@ -25,7 +25,7 @@ const PROVIDERS = [
   { key: 'stripe', label: 'Stripe' },
 ];
 
-export default function PaymentGatewayPanel({ tenantId, config }: PaymentGatewayPanelProps) {
+export default function PaymentGatewayPanel({ tenantSlug, config }: PaymentGatewayPanelProps) {
   const router = useRouter();
 
   const [provider, setProvider] = useState(config?.provider ?? 'stripe');
@@ -76,7 +76,7 @@ export default function PaymentGatewayPanel({ tenantId, config }: PaymentGateway
     }
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/payment-gateway`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/payment-gateway`, {
         method: config?.id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

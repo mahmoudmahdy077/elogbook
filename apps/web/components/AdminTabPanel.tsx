@@ -112,6 +112,31 @@ export default function AdminTabPanel({
           >
             Open Program Overview
           </Link>
+
+          <div className="mt-8">
+            <h2 className="text-lg font-heading font-semibold mb-1">Settings &amp; Integrations</h2>
+            <p className="text-sm text-text-muted/60 mb-4">
+              Enterprise controls that live on their own pages.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { href: 'sso', label: 'Single Sign-On', hint: 'SAML / OIDC identity provider' },
+                { href: 'scim', label: 'SCIM Provisioning', hint: 'Sync users from your IdP' },
+                { href: 'webhooks', label: 'Webhooks', hint: 'Event delivery to your systems' },
+                { href: 'white-label', label: 'White Label', hint: 'Logo, colours, portal name' },
+                { href: 'retention', label: 'Data Retention', hint: 'Retention window and purge' },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={`/${tenantSlug}/admin/${item.href}`}
+                  className="block rounded-xl border border-border p-4 hover:bg-backdrop transition-colors"
+                >
+                  <span className="block text-sm font-medium text-text-primary">{item.label}</span>
+                  <span className="block text-xs text-text-muted mt-1">{item.hint}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -154,7 +179,7 @@ export default function AdminTabPanel({
       )}
 
       {activeTab === 'payment' && (
-        <PaymentGatewayPanel tenantId={tenantId} config={paymentConfig} />
+        <PaymentGatewayPanel tenantSlug={tenantSlug} config={paymentConfig} />
       )}
 
       {activeTab === 'accreditation' && (
