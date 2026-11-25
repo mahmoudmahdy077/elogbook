@@ -18,7 +18,6 @@ interface SsoConfig {
 }
 
 interface SSOManagerProps {
-  tenantId: string;
   tenantSlug: string;
   initialConfigs: SsoConfig[];
 }
@@ -32,7 +31,7 @@ const ALLOWED_ROLES = [
 
 type RoleId = (typeof ALLOWED_ROLES)[number]['id'];
 
-export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialConfigs }: SSOManagerProps) {
+export default function SSOManager({ tenantSlug, initialConfigs }: SSOManagerProps) {
   const router = useRouter();
   const [configs, setConfigs] = useState<SsoConfig[]>(initialConfigs);
   const [error, setError] = useState('');
@@ -178,7 +177,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
         payload.id = editingId;
       }
 
-      const res = await fetch(`/api/${tenantId}/admin/sso`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -205,7 +204,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
   async function refreshConfigs() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso`);
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`);
       if (res.ok) {
         const data = await res.json();
         setConfigs(data.configs ?? []);
@@ -217,7 +216,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
 
   async function handleToggleActive(cfg: SsoConfig) {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: cfg.id, is_active: !cfg.is_active }),
@@ -241,7 +240,7 @@ export default function SSOManager({ tenantId, tenantSlug: _tenantSlug, initialC
     if (!confirm(`Delete this ${cfg.protocol.toUpperCase()} configuration? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/sso?id=${cfg.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/sso?id=${cfg.id}`, {
         method: 'DELETE',
       });
 

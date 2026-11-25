@@ -63,6 +63,11 @@ elogbook/                          # pnpm monorepo
 
 ## Demo accounts (local dev only — gated by `app.enable_demo_migrations`)
 
+> These accounts share one password published in this file. They are **not**
+> usable on a real deployment: `20261125000100_ban_demo_accounts_unless_enabled.sql`
+> bans every `@demo.com` sign-in unless `app.enable_demo_migrations = 'true'`.
+> Never reuse this password anywhere else.
+
 | Email | Password | Role |
 |-------|----------|------|
 | `resident@demo.com` | `password123!` | resident |

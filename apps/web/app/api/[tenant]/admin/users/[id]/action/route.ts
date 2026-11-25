@@ -23,7 +23,12 @@ export async function POST(
   const profile = _auth.profile;
   const user = _auth.user;
 
-  const body = await request.json();
+  let body: { action?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
   const { action } = body; // 'deactivate' | 'reactivate' | 'reset-password'
 
   const adminClient = createServiceRoleClient();
@@ -55,6 +60,18 @@ export async function POST(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    // Profile status alone does not stop anything: RLS reads the role from the
+    // JWT, never profiles.status, and the session stays valid. Ban the auth
+    // user so existing refresh tokens stop working (~100 years).
+    const { error: banError } = await adminClient.auth.admin.updateUserById(
+      targetProfile.user_id,
+      { ban_duration: '876000h' },
+    );
+    if (banError) {
+      console.error('[admin/users/action] ban failed:', banError.message);
+      return NextResponse.json({ error: 'User deactivated but sign-in could not be blocked' }, { status: 500 });
+    }
+
     // Audit log
     await adminClient.from('audit_logs').insert({
       tenant_id: profile.tenant_id,
@@ -75,6 +92,15 @@ export async function POST(
       .eq('tenant_id', profile.tenant_id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const { error: unbanError } = await adminClient.auth.admin.updateUserById(
+      targetProfile.user_id,
+      { ban_duration: 'none' },
+    );
+    if (unbanError) {
+      console.error('[admin/users/action] unban failed:', unbanError.message);
+      return NextResponse.json({ error: 'User reactivated but sign-in could not be re-enabled' }, { status: 500 });
+    }
 
     await adminClient.from('audit_logs').insert({
       tenant_id: profile.tenant_id,
@@ -102,15 +128,19 @@ export async function POST(
       return NextResponse.json({ error: 'Target user has no email' }, { status: 400 });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const { error: linkError } = await adminClient.auth.admin.generateLink({
-      type: 'recovery',
-      email: targetEmail,
-      options: { redirectTo: `${siteUrl}/login` },
+    // generateLink() only mints a URL; the old code discarded it and still
+    // told the admin an email had been sent. Ask GoTrue to send it instead.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+    const { error: mailError } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+      redirectTo: `${siteUrl}/auth/callback?type=recovery`,
     });
 
-    if (linkError) {
-      return NextResponse.json({ error: linkError.message }, { status: 500 });
+    if (mailError) {
+      console.error('[admin/users/action] reset mail failed:', mailError.message);
+      return NextResponse.json(
+        { error: 'Could not send the reset email. Check the mail provider configuration.' },
+        { status: 502 },
+      );
     }
 
     await adminClient.from('audit_logs').insert({
