@@ -6,18 +6,7 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
 import AIQualityPanel from '@/components/AIQualityPanel';
 import { PhiFields } from '@/components/PhiFields';
-
-const maskMrn = (val: string | null | undefined) => {
-  if (!val) return '—';
-  if (val.length <= 4) return val;
-  return `***-**-${val.slice(-4)}`;
-};
-
-const maskDob = (val: string | null | undefined) => {
-  if (!val) return '—';
-  if (val.length <= 5) return val;
-  return `****-**-${val.slice(-2)}`;
-};
+import { maskDob, maskMrn } from '@/lib/phi-mask';
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   const { tenant: tenantSlug, id } = await params;
