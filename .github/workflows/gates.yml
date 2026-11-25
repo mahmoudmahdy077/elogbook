@@ -30,6 +30,8 @@ jobs:
         run: node scripts/verify-single-ip.mjs
       - name: Gate H — export compatibility
         run: node scripts/verify-exports.mjs
+      - name: Gate I — no committed service_role credential
+        run: node scripts/verify-no-service-role-secrets.mjs
       - name: Token drift gate (T21 design contract)
         run: node scripts/verify-tokens.mjs
       - name: E2E harness self-check (T02)

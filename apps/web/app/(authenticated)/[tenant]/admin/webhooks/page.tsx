@@ -84,7 +84,7 @@ export default async function AdminWebhooksPage({
           ← Back to Admin
         </Link>
       </div>
-      <WebhookManager tenantId={profile.tenant_id} initialWebhooks={webhooksWithDelivery} />
+      <WebhookManager tenantSlug={tenantSlug} initialWebhooks={webhooksWithDelivery} />
     </div>
   );
 }

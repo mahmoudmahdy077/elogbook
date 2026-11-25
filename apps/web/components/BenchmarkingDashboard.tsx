@@ -73,7 +73,7 @@ function ComparisonBar({
   return (
     <div className="space-y-1.5" aria-hidden="true">
       <div className="flex items-center gap-2">
-        <div className="h-2 flex-1 rounded-full bg-black/5">
+        <div className="h-2 flex-1 rounded-full bg-default-100">
           <div
             className="h-2 rounded-full"
             style={{ width: `${ownPct}%`, backgroundColor: '#007AFF' }}
@@ -84,7 +84,7 @@ function ComparisonBar({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="h-2 flex-1 rounded-full bg-black/5">
+        <div className="h-2 flex-1 rounded-full bg-default-100">
           <div
             className="h-2 rounded-full"
             style={{ width: `${peerPct}%`, backgroundColor: '#8E8E93' }}
@@ -108,7 +108,7 @@ function BenchmarkCard({ row }: { row: BenchmarkRow }) {
           </p>
           <p className="text-xs text-text-muted">{row.procedureType}</p>
         </div>
-        <span className="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold text-text-muted uppercase tracking-wider bg-black/5">
+        <span className="rounded-full px-2.5 py-1 text-[0.65rem] font-semibold text-text-muted uppercase tracking-wider bg-default-100">
           {percentileLabel(row.percentile)}
         </span>
       </div>

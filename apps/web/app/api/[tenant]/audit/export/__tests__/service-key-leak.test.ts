@@ -38,15 +38,17 @@ globalThis.fetch = fetchMock as unknown as typeof fetch;
 describe('audit export route — SEC-003', () => {
   beforeEach(() => { fetchMock.mockClear(); });
 
-  it('sends the user JWT, not the service-role key, to the edge function', async () => {
+  it('makes no external HTTP calls, so no credentials can leak', async () => {
+    // The old route proxied PDF rendering to an edge function, sending the
+    // user's access token over the wire. That proxy is gone: the route is
+    // CSV-only and must never talk to any external service — the strongest
+    // possible form of "sends no service-role key / user JWT anywhere".
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'shhh-platform-secret';
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
     const { GET } = await import('../route');
     const req = new Request('https://x/api/demo/audit/export?format=pdf', { method: 'GET' });
-    await GET(req as unknown as Request, { params: Promise.resolve({ tenant: 'demo' }) } as unknown as Parameters<typeof GET>[1]);
-    const calls = fetchMock.mock.calls as unknown as [RequestInfo, RequestInit][];
-    const authHeader = (calls[0]?.[1]?.headers as Record<string, string>)?.['Authorization'] || '';
-    expect(authHeader).not.toContain('shhh-platform-secret');
-    expect(authHeader).toContain('user-jwt-token');
+    const res = await GET(req as unknown as Request, { params: Promise.resolve({ tenant: 'demo' }) } as unknown as Parameters<typeof GET>[1]);
+    expect(fetchMock.mock.calls.length).toBe(0);
+    expect(res.status).toBe(400);
   });
 });

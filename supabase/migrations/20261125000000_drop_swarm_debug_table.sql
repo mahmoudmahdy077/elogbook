@@ -1,0 +1,22 @@
+-- ============================================================================
+-- 20261125000000_drop_swarm_debug_table.sql
+--
+-- The production project still exposes `public._swarm_debug_results`, an
+-- empty diagnostics table from the 2026-08-25 swarm session. Two earlier
+-- migrations drop it (20260825070000, 20260907000001), but a later manual
+-- session recreated it after those versions were recorded, so the drop never
+-- held on the linked project.
+--
+-- Supabase's security advisor flags it because RLS is disabled and the legacy
+-- grants let `anon` INSERT/UPDATE/DELETE/TRUNCATE it. It holds no rows and no
+-- application code, test or edge function references it.
+--
+-- destructive: yes — DROP TABLE, but the table is empty (0 rows) and has no
+-- readers. Grants disappear with it. Idempotent: safe on a fresh replay (table already absent) and on the linked
+-- project (table present). Revoke first so the privileges disappear even if a
+-- future replay recreates the table under an older migration.
+-- ============================================================================
+
+-- DROP TABLE also removes the table's grants; IF EXISTS keeps a clean replay
+-- (where 20260907000001 already removed it) a no-op.
+DROP TABLE IF EXISTS public._swarm_debug_results;

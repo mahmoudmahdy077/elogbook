@@ -172,8 +172,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Resident</label>
+                <label htmlFor="resident" className="text-sm font-medium text-text-secondary block mb-1">Resident</label>
                 <select
+                  id="resident"
                   value={residentId}
                   onChange={(e) => setResidentId(e.target.value)}
                   required
@@ -188,8 +189,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Title</label>
+                <label htmlFor="title" className="text-sm font-medium text-text-secondary block mb-1">Title</label>
                 <input
+                  id="title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -200,8 +202,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Target Count</label>
+                <label htmlFor="target-count" className="text-sm font-medium text-text-secondary block mb-1">Target Count</label>
                 <input
+                  id="target-count"
                   type="number"
                   value={targetCount}
                   onChange={(e) => setTargetCount(e.target.value)}
@@ -212,8 +215,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+                <label htmlFor="specialty" className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
                 <input
+                  id="specialty"
                   type="text"
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
@@ -223,8 +227,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Deadline</label>
+                <label htmlFor="deadline" className="text-sm font-medium text-text-secondary block mb-1">Deadline</label>
                 <input
+                  id="deadline"
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
@@ -234,8 +239,9 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </div>
 
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Description</label>
+                <label htmlFor="description" className="text-sm font-medium text-text-secondary block mb-1">Description</label>
                 <textarea
+                  id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}

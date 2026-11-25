@@ -362,7 +362,7 @@ export default function CaseImport({
                         </thead>
                         <tbody className="divide-y divide-border">
                           {previewRows.slice(0, 10).map((row, idx) => (
-                            <tr key={idx} className="hover:bg-black/[0.02]">
+                            <tr key={idx} className="hover:bg-default-50">
                               {headers.map((header) => (
                                 <td
                                   key={header}

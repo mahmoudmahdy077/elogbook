@@ -177,7 +177,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
                       <span className="text-text-secondary font-medium truncate pr-2">{specialty}</span>
                       <span className="text-text-muted font-medium">{count}</span>
                     </div>
-                    <div className="h-1 rounded-full bg-black/5 overflow-hidden">
+                    <div className="h-1 rounded-full bg-default-100 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-primary"
                         style={{ width: `${(count / maxSpecialty) * 100}%` }}

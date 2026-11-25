@@ -66,8 +66,9 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium block mb-1">Logo URL</label>
+          <label htmlFor="logo-url" className="text-sm font-medium block mb-1">Logo URL</label>
           <input
+            id="logo-url"
             type="url"
             value={logoUrl}
             onChange={(e) => setLogoUrl(e.target.value)}
@@ -76,14 +77,14 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
           />
           <p className="text-xs text-text-muted mt-1">HTTPS URL to your logo. Upload roadmap: direct storage upload.</p>
           {logoUrl && isValidUrl(logoUrl) && (
-            <div className="mt-2 p-2 border border-border rounded-lg bg-white flex items-center justify-center h-16">
+            <div className="mt-2 p-2 border border-border rounded-lg bg-surface-solid flex items-center justify-center h-16">
               <img src={logoUrl} alt="Logo preview" className="max-h-12 max-w-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
             </div>
           )}
         </div>
 
         <div>
-          <label className="text-sm font-medium block mb-1">Primary Color</label>
+          <label htmlFor="primary-color" className="text-sm font-medium block mb-1">Primary Color</label>
           <div className="flex gap-2">
             <input
               type="color"
@@ -93,6 +94,7 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
               aria-label="Pick primary color"
             />
             <input
+              id="primary-color"
               type="text"
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
@@ -104,8 +106,9 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
         </div>
 
         <div>
-          <label className="text-sm font-medium block mb-1">Institution Display Name</label>
+          <label htmlFor="institution-name" className="text-sm font-medium block mb-1">Institution Display Name</label>
           <input
+            id="institution-name"
             type="text"
             value={institutionName}
             onChange={(e) => setInstitutionName(e.target.value)}
@@ -116,8 +119,9 @@ export default function WhiteLabelForm({ tenantSlug, initialBranding }: Props) {
         </div>
 
         <div>
-          <label className="text-sm font-medium block mb-1">Footer Text</label>
+          <label htmlFor="footer-text" className="text-sm font-medium block mb-1">Footer Text</label>
           <input
+            id="footer-text"
             type="text"
             value={footerText}
             onChange={(e) => setFooterText(e.target.value)}

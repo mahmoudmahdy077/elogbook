@@ -181,9 +181,11 @@ describe('GET /api/ready — readiness (TICKET-003)', () => {
     const { readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
     const candidates = [
+      join(process.cwd(), 'middleware.ts'),
+      join(process.cwd(), 'apps/web/middleware.ts'),
+      join(process.cwd(), '../middleware.ts'),
+      // legacy name; kept so the assertion still finds the source if renamed
       join(process.cwd(), 'proxy.ts'),
-      join(process.cwd(), 'apps/web/proxy.ts'),
-      join(process.cwd(), '../proxy.ts'),
     ];
     let proxySrc = '';
     for (const p of candidates) {

@@ -188,8 +188,9 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
       {mode === 'single' ? (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-text-primary">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-text-primary">Email</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -199,8 +200,9 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-text-primary">Role</label>
+            <label htmlFor="role" className="block text-sm font-medium text-text-primary">Role</label>
             <select
+              id="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-text-primary"
@@ -223,10 +225,11 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
       ) : (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-text-primary">
+            <label htmlFor="email-list" className="block text-sm font-medium text-text-primary">
               Email List (one per line or comma-separated)
             </label>
             <textarea
+              id="email-list"
               value={bulkEmails}
               onChange={(e) => setBulkEmails(e.target.value)}
               placeholder={`resident1@hospital.org\nresident2@hospital.org\nresident3@hospital.org`}
@@ -235,8 +238,9 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-text-primary">Role for all users</label>
+            <label htmlFor="role-all-users" className="block text-sm font-medium text-text-primary">Role for all users</label>
             <select
+              id="role-all-users"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-text-primary"

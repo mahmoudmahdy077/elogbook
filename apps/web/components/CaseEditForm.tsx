@@ -113,10 +113,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
         <div className="pt-4 space-y-4">
           {/* Case Date */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-text-primary">
+            <label htmlFor="case-date" className="block text-sm font-medium text-text-primary">
               Case Date<span className="text-fg-danger ml-0.5">*</span>
             </label>
             <input
+              id="case-date"
               type="date"
               value={caseDate}
               onChange={(e) => setCaseDate(e.target.value)}
@@ -132,7 +133,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
               id="edit-deidentify"
               checked={entry.is_deidentified}
               disabled
-              className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary opacity-50"
+              className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary opacity-50"
             />
             <label htmlFor="edit-deidentify" className="text-sm text-text-secondary">
               De-identify patient data (cannot be changed after creation)
@@ -143,10 +144,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
           {!entry.is_deidentified && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-text-primary">
+                <label htmlFor="patient-mrn" className="block text-sm font-medium text-text-primary">
                   Patient MRN
                 </label>
                 <input
+                  id="patient-mrn"
                   type="text"
                   value={patientMrn}
                   onChange={(e) => setPatientMrn(e.target.value)}
@@ -156,10 +158,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-text-primary">
+                <label htmlFor="patient-dob" className="block text-sm font-medium text-text-primary">
                   Patient DOB
                 </label>
                 <input
+                  id="patient-dob"
                   type="date"
                   value={patientDob}
                   onChange={(e) => setPatientDob(e.target.value)}
@@ -186,10 +189,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                     case 'textarea':
                       return (
                         <div key={key} className="space-y-1.5">
-                          <label className="block text-sm font-medium text-text-primary">
+                          <label htmlFor={`edit-field-${key}`} className="block text-sm font-medium text-text-primary">
                             {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <textarea
+                            id={`edit-field-${key}`}
                             value={value as string}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.value }))}
                             aria-label={label}
@@ -200,10 +204,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                     case 'select':
                       return (
                         <div key={key} className="space-y-1.5">
-                          <label className="block text-sm font-medium text-text-primary">
+                          <label htmlFor={`edit-field-${key}`} className="block text-sm font-medium text-text-primary">
                             {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <select
+                            id={`edit-field-${key}`}
                             value={value as string}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.value }))}
                             aria-label={`Select ${label}`}
@@ -219,10 +224,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                     case 'number':
                       return (
                         <div key={key} className="space-y-1.5">
-                          <label className="block text-sm font-medium text-text-primary">
+                          <label htmlFor={`edit-field-${key}`} className="block text-sm font-medium text-text-primary">
                             {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
+                            id={`edit-field-${key}`}
                             type="number"
                             value={value as string}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.value }))}
@@ -234,10 +240,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                     case 'date':
                       return (
                         <div key={key} className="space-y-1.5">
-                          <label className="block text-sm font-medium text-text-primary">
+                          <label htmlFor={`edit-field-${key}`} className="block text-sm font-medium text-text-primary">
                             {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
+                            id={`edit-field-${key}`}
                             type="date"
                             value={value as string}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.value }))}
@@ -254,7 +261,7 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                             id={`edit-field-${key}`}
                             checked={!!value}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.checked }))}
-                            className="h-4 w-4 rounded border-black/20 text-fg-primary focus:ring-primary accent-primary"
+                            className="h-4 w-4 rounded border-border-active text-fg-primary focus:ring-primary accent-primary"
                             aria-label={label}
                           />
                           <label htmlFor={`edit-field-${key}`} className="text-sm text-text-secondary">
@@ -265,10 +272,11 @@ export default function CaseEditForm({ entry, tenantSlug }: CaseEditFormProps) {
                     default:
                       return (
                         <div key={key} className="space-y-1.5">
-                          <label className="block text-sm font-medium text-text-primary">
+                          <label htmlFor={`edit-field-${key}`} className="block text-sm font-medium text-text-primary">
                             {label}{field.required && <span className="text-fg-danger ml-0.5">*</span>}
                           </label>
                           <input
+                            id={`edit-field-${key}`}
                             type="text"
                             value={value as string}
                             onChange={(e) => setFieldValues(prev => ({ ...prev, [key]: e.target.value }))}

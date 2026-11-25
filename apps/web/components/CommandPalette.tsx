@@ -174,7 +174,7 @@ export default function CommandPalette() {
                 className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors ${
                   index === activeIndex
                     ? 'bg-primary/10 text-fg-primary'
-                    : 'hover:bg-black/5 dark:hover:bg-white/5 text-text-secondary'
+                    : 'hover:bg-default-100 text-text-secondary'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
