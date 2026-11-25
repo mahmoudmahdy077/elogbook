@@ -193,8 +193,9 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Template Name</label>
+                <label htmlFor="template-name" className="text-sm font-medium text-text-secondary block mb-1">Template Name</label>
                 <input
+                  id="template-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -204,8 +205,9 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+                <label htmlFor="template-specialty" className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
                 <input
+                  id="template-specialty"
                   type="text"
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
@@ -215,8 +217,9 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Fields JSON</label>
+                <label htmlFor="fields-json" className="text-sm font-medium text-text-secondary block mb-1">Fields JSON</label>
                 <textarea
+                  id="fields-json"
                   value={fieldsJson}
                   onChange={(e) => setFieldsJson(e.target.value)}
                   required
@@ -225,8 +228,9 @@ export default function TemplateEditor({ tenantId, templates }: TemplateEditorPr
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-secondary block mb-1">Required Fields (comma-separated)</label>
+                <label htmlFor="required-fields" className="text-sm font-medium text-text-secondary block mb-1">Required Fields (comma-separated)</label>
                 <input
+                  id="required-fields"
                   type="text"
                   value={requiredFieldsInput}
                   onChange={(e) => setRequiredFieldsInput(e.target.value)}

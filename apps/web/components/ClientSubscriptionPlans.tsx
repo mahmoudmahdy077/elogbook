@@ -6,10 +6,10 @@ const SubscriptionPlans = dynamic(() => import('@/components/SubscriptionPlans')
   ssr: false,
   loading: () => (
     <div className="animate-pulse space-y-4 p-5">
-      <div className="h-6 bg-black/10 dark:bg-white/10 rounded w-1/4" />
+      <div className="h-6 bg-default-200 rounded w-1/4" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-48 bg-black/10 dark:bg-white/10 rounded-2xl" />
+          <div key={i} className="h-48 bg-default-200 rounded-2xl" />
         ))}
       </div>
     </div>

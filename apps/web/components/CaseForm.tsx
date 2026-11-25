@@ -440,7 +440,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
             {submittedCaseId && (
               <a
                 href={`/${tenantSlug}/cases/${submittedCaseId}`}
-                className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                className="rounded-full bg-default-100 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-default-200 transition-colors"
               >
                 View Case
               </a>
@@ -454,7 +454,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
           </div>
           <p className="text-xs text-text-muted pt-2">
             Press{' '}
-            <kbd className="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/8 border border-border text-xs text-text-secondary font-mono">
+            <kbd className="px-1.5 py-0.5 rounded-md bg-default-100 border border-border text-xs text-text-secondary font-mono">
               Enter
             </kbd>{' '}
             to log another case
@@ -537,7 +537,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
               type="button"
               onClick={handleBack}
               disabled={step === 0}
-              className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-full bg-default-100 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-default-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Back
             </button>
@@ -547,7 +547,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={savingDraft}
-                  className="rounded-full bg-black/5 dark:bg-white/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                  className="rounded-full bg-default-100 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-default-200 transition-colors disabled:opacity-50"
                 >
                   {savingDraft ? 'Saving...' : 'Save Draft'}
                 </button>

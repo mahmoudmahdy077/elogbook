@@ -320,24 +320,24 @@ function EditUserModal({ user, tenantSlug, onClose, onSave }: { user: User; tena
         <h2 className="text-lg font-semibold mb-4">Edit User</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Full Name</label>
-            <input value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+            <label htmlFor="full-name" className="block text-xs mb-1 text-text-muted">Full Name</label>
+            <input id="full-name" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
           </div>
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Specialty</label>
-            <input value={specialty} onChange={e => setSpecialty(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
+            <label htmlFor="specialty" className="block text-xs mb-1 text-text-muted">Specialty</label>
+            <input id="specialty" value={specialty} onChange={e => setSpecialty(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" />
           </div>
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
+            <label htmlFor="role" className="block text-xs mb-1 text-text-muted">Role</label>
+            <select id="role" value={role} onChange={e => setRole(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
               {['resident', 'supervisor', 'director', 'institution_admin', 'admin'].map(r => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs mb-1 text-text-muted">Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
+            <label htmlFor="status" className="block text-xs mb-1 text-text-muted">Status</label>
+            <select id="status" value={status} onChange={e => setStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm">
               {['active', 'pending', 'suspended', 'deactivated'].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}

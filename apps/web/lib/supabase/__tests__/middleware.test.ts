@@ -195,6 +195,33 @@ describe('updateSession - CSRF guard', () => {
     const res = await updateSession(req);
     expect(res.status).toBe(403);
   });
+
+  it('rejects a malformed Referer instead of throwing', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+
+    const req = makeNextRequest('https://app.elogbook.dev/demo/approvals/action', {
+      method: 'POST',
+      headers: { referer: 'not a valid url' },
+    });
+    // Must be a clean 403, not an exception (which Vercel reports as 500).
+    const res = await updateSession(req);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('Origin');
+  });
+
+  it('accepts a matching Referer when Origin is absent', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+
+    const req = makeNextRequest('https://app.elogbook.dev/demo/approvals/action', {
+      method: 'POST',
+      headers: { referer: 'https://app.elogbook.dev/demo/approvals' },
+    });
+    const res = await updateSession(req);
+    expect(res.status).not.toBe(403);
+  });
 });
 
 describe('updateSession - auth & tenant slug matching', () => {

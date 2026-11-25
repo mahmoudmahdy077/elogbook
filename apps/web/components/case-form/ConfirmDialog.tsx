@@ -95,7 +95,7 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
               You are about to submit this case entry. Please verify the information below is correct.
             </p>
 
-            <div className="bg-black/[0.03] rounded-xl p-3 mb-4 text-sm border border-border">
+            <div className="bg-default-50 rounded-xl p-3 mb-4 text-sm border border-border">
               <span className="text-text-secondary">{impact}</span>
             </div>
 
@@ -103,7 +103,7 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-full bg-black/5 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-black/10 transition-colors"
+                className="rounded-full bg-default-100 text-text-secondary px-4 py-2.5 text-sm font-medium hover:bg-default-200 transition-colors"
               >
                 Cancel
               </button>

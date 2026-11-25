@@ -303,7 +303,7 @@ function SupervisorTable({ data }: { data: SupervisorRow[] }) {
             return (
               <tr
                 key={s.supervisorId}
-                className="border-b border-border hover:bg-black/[0.02] transition-colors"
+                className="border-b border-border hover:bg-default-50 transition-colors"
               >
                 <td className="py-2.5 pr-3 font-medium text-text-secondary truncate max-w-[140px]">
                   {s.supervisorName}

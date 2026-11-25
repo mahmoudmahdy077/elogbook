@@ -53,8 +53,9 @@ export default function DutyHoursForm({ residentId, tenantId }: DutyHoursFormPro
     <div className="panel p-6 space-y-4">
       {error && <ErrorDisplay message={error} />}
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Date</label>
+        <label htmlFor="date" className="text-sm font-medium text-text-secondary block mb-1">Date</label>
         <input
+          id="date"
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
@@ -63,8 +64,9 @@ export default function DutyHoursForm({ residentId, tenantId }: DutyHoursFormPro
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Hours Worked</label>
+        <label htmlFor="hours-worked" className="text-sm font-medium text-text-secondary block mb-1">Hours Worked</label>
         <input
+          id="hours-worked"
           type="number"
           step="0.25"
           value={hours}
@@ -75,8 +77,9 @@ export default function DutyHoursForm({ residentId, tenantId }: DutyHoursFormPro
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Shift Type</label>
+        <label htmlFor="shift-type" className="text-sm font-medium text-text-secondary block mb-1">Shift Type</label>
         <select
+          id="shift-type"
           value={shiftType}
           onChange={(e) => setShiftType(e.target.value)}
           className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -88,8 +91,9 @@ export default function DutyHoursForm({ residentId, tenantId }: DutyHoursFormPro
         </select>
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Notes</label>
+        <label htmlFor="notes" className="text-sm font-medium text-text-secondary block mb-1">Notes</label>
         <input
+          id="notes"
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

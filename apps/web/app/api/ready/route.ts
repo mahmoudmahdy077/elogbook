@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Readiness probe — database + rate-limiter health.
  *
- * Exempt from rate limiting (proxy.ts) but reports readiness that includes
+ * Exempt from rate limiting (middleware.ts) but reports readiness that includes
  * the limiter's degraded state so the orchestrator can pull the instance out
  * of rotation rather than serving denials indefinitely.
  *

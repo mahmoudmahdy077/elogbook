@@ -111,7 +111,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
               className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
                 selected === spec
                   ? 'bg-primary/10 text-fg-primary border-2 border-primary/30'
-                  : 'bg-white dark:bg-neutral-dark border-2 border-border text-text-secondary hover:border-primary/30 hover:text-text-primary'
+                  : 'bg-surface-solid border-2 border-border text-text-secondary hover:border-primary/30 hover:text-text-primary'
               }`}
             >
               {spec}
@@ -130,7 +130,7 @@ export default function StepSpecialty({ initialSpecialty, onComplete }: StepSpec
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
               placeholder="e.g., Interventional Cardiology"
-              className="w-full px-4 py-2.5 rounded-xl border border-border bg-white dark:bg-neutral-dark text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-solid text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
               autoFocus
             />
           </div>

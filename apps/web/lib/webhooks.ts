@@ -15,6 +15,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { assertSafeWebhookUrl, UnsafeWebhookUrlError } from '@/lib/webhook-url-guard';
 
 export interface WebhookEventPayload {
   tenant_id: string;
@@ -84,10 +85,16 @@ export async function dispatchWebhookEvent(
     let ok = false;
 
     try {
+      // A stored URL is still attacker-influenced input: reject anything that
+      // points back at the host's own network (SSRF) before dispatching.
+      const target = await assertSafeWebhookUrl(wh.url, {
+        requireHttps: process.env.NODE_ENV === 'production',
+      });
+
       // Compute HMAC-SHA256 signature
       const signature = await computeHmacSha256(wh.secret, body);
 
-      const res = await fetch(wh.url, {
+      const res = await fetch(target.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,6 +104,9 @@ export async function dispatchWebhookEvent(
           'User-Agent': 'E-Logbook-Webhook/1.0',
         },
         body,
+        // Do not follow redirects: a receiver could bounce us to an internal
+        // address after the guard above has run.
+        redirect: 'manual',
         // 5 second timeout per webhook
         signal: AbortSignal.timeout(5000),
       });
@@ -106,6 +116,9 @@ export async function dispatchWebhookEvent(
       ok = res.ok;
     } catch (err) {
       respBody = err instanceof Error ? err.message : String(err);
+      if (err instanceof UnsafeWebhookUrlError) {
+        console.warn('[webhooks] blocked unsafe webhook URL', wh.id, err.message);
+      }
     }
 
     // Record delivery attempt
@@ -164,9 +177,13 @@ export async function testWebhookEndpoint(
   let ok = false;
 
   try {
+    const target = await assertSafeWebhookUrl(url, {
+      requireHttps: process.env.NODE_ENV === 'production',
+    });
+
     const signature = await computeHmacSha256(secret, body);
 
-    const res = await fetch(url, {
+    const res = await fetch(target.toString(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -176,6 +193,7 @@ export async function testWebhookEndpoint(
         'User-Agent': 'E-Logbook-Webhook/1.0',
       },
       body,
+      redirect: 'manual',
       signal: AbortSignal.timeout(5000),
     });
 
