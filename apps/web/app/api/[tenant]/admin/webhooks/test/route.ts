@@ -2,6 +2,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireTenantAdmin } from '@/lib/supabase/require-admin';
 import { testWebhookEndpoint } from '@/lib/webhooks';
+import { redactUrl } from '@/lib/redact-url';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit-redis';
 import { validateOrigin, defaultTrustedOrigins } from '@/lib/csrf';
@@ -58,13 +59,16 @@ export async function POST(
 
   const result = await testWebhookEndpoint(wh.url, wh.secret, profile.tenant_id);
 
+  // Audit the attempt, but never the credential: webhook URLs commonly carry
+  // the secret in the path (Slack/Discord/Teams), and audit_logs is readable
+  // by every tenant admin and supervisor.
   await adminClient.from('audit_logs').insert({
     tenant_id: profile.tenant_id,
     user_id: _preUser.id,
     action: 'webhook_test',
     resource_type: 'tenant_webhooks',
     resource_id: webhook_id,
-    changes: { url: wh.url },
+    changes: { host: redactUrl(wh.url) },
   });
 
   return NextResponse.json(result);
