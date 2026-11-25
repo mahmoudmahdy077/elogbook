@@ -1,8 +1,29 @@
 import { z } from 'zod';
+import { normalizeSupabaseKey, normalizeSupabaseUrl } from './supabase-url';
+
+/**
+ * Connection settings are normalised before validation: a dashboard paste
+ * with surrounding quotes or without `https://` is the difference between a
+ * working deploy and an opaque `MIDDLEWARE_INVOCATION_FAILED` on every route
+ * (see ./supabase-url.ts).
+ */
+const supabaseUrlSchema = z.string().transform((value, ctx) => {
+  const result = normalizeSupabaseUrl(value);
+  if (!result.ok) {
+    ctx.addIssue({ code: 'custom', message: result.reason });
+    return z.NEVER;
+  }
+  return result.url;
+});
+
+const supabaseKeySchema = z
+  .string()
+  .transform((value) => normalizeSupabaseKey(value))
+  .refine((value) => value.length > 0, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
 
 const webPublicSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrlSchema,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseKeySchema,
   NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
 });
 
