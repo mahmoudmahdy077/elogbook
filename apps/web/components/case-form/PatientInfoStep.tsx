@@ -22,7 +22,7 @@ function Toggle({ checked, onChange, label: _label }: { checked: boolean; onChan
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-        checked ? 'bg-primary' : 'bg-black/15'
+        checked ? 'bg-primary' : 'bg-default-300'
       }`}
     >
       <span
@@ -97,7 +97,7 @@ export default function PatientInfoStep({
         </HelpPopover>
       </div>
 
-      <div className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.03] border border-border">
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-default-50 border border-border">
         <Toggle
           checked={isDeidentified}
           onChange={onIsDeidentifiedChange}

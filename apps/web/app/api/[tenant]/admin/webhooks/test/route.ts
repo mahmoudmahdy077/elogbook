@@ -10,6 +10,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const csrfError = validateOrigin(request, defaultTrustedOrigins(request));
   if (csrfError) return csrfError;
 
@@ -54,6 +57,15 @@ export async function POST(
   }
 
   const result = await testWebhookEndpoint(wh.url, wh.secret, profile.tenant_id);
+
+  await adminClient.from('audit_logs').insert({
+    tenant_id: profile.tenant_id,
+    user_id: _preUser.id,
+    action: 'webhook_test',
+    resource_type: 'tenant_webhooks',
+    resource_id: webhook_id,
+    changes: { url: wh.url },
+  });
 
   return NextResponse.json(result);
 }

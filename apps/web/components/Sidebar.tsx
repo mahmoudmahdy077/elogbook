@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
+import NotificationBell from '@/components/NotificationBell';
 
 type NavLink = {
   href: string;
@@ -18,11 +19,16 @@ export default function Sidebar({
   tenantSlug,
   pendingCount,
   user,
+  userId,
+  tenantId,
 }: {
   visibleLinks: NavLink[];
   tenantSlug: string;
   pendingCount?: number;
   user?: { name: string; role: string; tenantName: string };
+  /** Auth user id — enables the notification bell when present. */
+  userId?: string;
+  tenantId?: string;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(() => {
@@ -218,6 +224,9 @@ export default function Sidebar({
 
           {collapsed ? (
             <>
+              {userId && tenantId && (
+                <NotificationBell userId={userId} tenantId={tenantId} />
+              )}
               <ThemeToggle />
               <button
                 onClick={() => setCollapsed(false)}
@@ -244,6 +253,9 @@ export default function Sidebar({
           ) : (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1">
+                {userId && tenantId && (
+                  <NotificationBell userId={userId} tenantId={tenantId} />
+                )}
                 <ThemeToggle />
                 <form action="/auth/signout" method="post" className="flex-1">
                 <button

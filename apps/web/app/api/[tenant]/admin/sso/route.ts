@@ -127,36 +127,46 @@ export async function POST(
 
   const adminClient = createServiceRoleClient();
 
-  const { data: insertedConfig, error: insertError } = await adminClient
-    .from('tenant_sso_configs')
-    .insert({
-      tenant_id: profile.tenant_id,
-      protocol,
-      metadata_url: metadata_url ?? null,
-      discovery_url: discovery_url ?? null,
-      idp_entity_id: idp_entity_id ?? null,
-      idp_certificate: idp_certificate ?? null,
-      client_id: client_id ?? null,
-      client_secret_encrypted: client_secret ?? null,
-      default_role: default_role ?? 'resident',
-      is_active: is_active ?? true,
-    })
-    .select('id, protocol, metadata_url, discovery_url, idp_entity_id, client_id, default_role, is_active, created_at');
+  // SEC2-002: store via RPC so the client secret is pgp_sym_encrypt'ed
+  // in-database (migration 20261120000000) instead of written plaintext into
+  // client_secret_encrypted by the service-role client.
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('store_sso_config', {
+    p_protocol: protocol,
+    p_metadata_url: metadata_url ?? null,
+    p_discovery_url: discovery_url ?? null,
+    p_idp_entity_id: idp_entity_id ?? null,
+    p_idp_certificate: idp_certificate ?? null,
+    p_client_id: client_id ?? null,
+    p_client_secret: client_secret ?? null,
+    p_default_role: default_role ?? 'resident',
+    p_is_active: is_active ?? true,
+  });
 
-  if (insertError) {
-    if (insertError.code === '23505') {
+  if (rpcError) {
+    if (rpcError.code === '23505') {
       return NextResponse.json({
         error: `A ${protocol} configuration already exists for this institution. Edit it instead.`,
       }, { status: 409 });
     }
-    console.error('sso create error:', insertError.message);
+    console.error('sso create error:', rpcError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  const insertedRow = (insertedConfig as unknown as { id: string }[] | null)?.[0];
-  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'tenant_sso_configs', resource_id: insertedRow?.id ?? '', changes: {} });
+  const stored = rpcResult as { error?: string; id?: string } | null;
+  if (stored?.error || !stored?.id) {
+    return NextResponse.json({ error: stored?.error ?? 'Failed to create SSO configuration' }, { status: 400 });
+  }
 
-  return NextResponse.json({ config: insertError ? null : body }, { status: 201 });
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_create', resource_type: 'tenant_sso_configs', resource_id: stored.id, changes: {} });
+
+  return NextResponse.json({
+    config: {
+      id: stored.id,
+      protocol,
+      default_role: default_role ?? 'resident',
+      is_active: is_active ?? true,
+    },
+  }, { status: 201 });
 }
 
 // ---------------------------------------------------------------------------
@@ -220,7 +230,7 @@ export async function PUT(
   const adminClient = createServiceRoleClient();
   const { data: existing } = await adminClient
     .from('tenant_sso_configs')
-    .select('id, protocol')
+    .select('id, protocol, metadata_url, discovery_url, idp_entity_id, idp_certificate, client_id, default_role, is_active')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .single();
@@ -240,30 +250,53 @@ export async function PUT(
     }, { status: 400 });
   }
 
-  const updatePayload: Record<string, unknown> = {};
-  if (protocol !== undefined) updatePayload.protocol = protocol;
-  if (metadata_url !== undefined) updatePayload.metadata_url = metadata_url;
-  if (discovery_url !== undefined) updatePayload.discovery_url = discovery_url;
-  if (idp_entity_id !== undefined) updatePayload.idp_entity_id = idp_entity_id;
-  if (idp_certificate !== undefined) updatePayload.idp_certificate = idp_certificate;
-  if (client_id !== undefined) updatePayload.client_id = client_id;
-  if (client_secret !== undefined) updatePayload.client_secret_encrypted = client_secret;
-  if (default_role !== undefined) updatePayload.default_role = default_role;
-  if (is_active !== undefined) updatePayload.is_active = is_active;
+  // SEC2-002: updates go through the RPC so a rotated client secret is
+  // pgp_sym_encrypt'ed in-database. The RPC overwrites every non-secret
+  // column it receives, so pass the current row merged with the requested
+  // partial update (explicit nulls still clear a field, matching the old
+  // direct-update behavior). The stored secret is left untouched unless a
+  // new client_secret was provided.
+  type ExistingSso = {
+    protocol: string;
+    metadata_url: string | null;
+    discovery_url: string | null;
+    idp_entity_id: string | null;
+    idp_certificate: string | null;
+    client_id: string | null;
+    default_role: string;
+    is_active: boolean;
+  };
+  const merged = { ...(existing as ExistingSso) };
+  if (protocol !== undefined) merged.protocol = protocol;
+  if (metadata_url !== undefined) merged.metadata_url = metadata_url;
+  if (discovery_url !== undefined) merged.discovery_url = discovery_url;
+  if (idp_entity_id !== undefined) merged.idp_entity_id = idp_entity_id;
+  if (idp_certificate !== undefined) merged.idp_certificate = idp_certificate;
+  if (client_id !== undefined) merged.client_id = client_id;
+  if (default_role !== undefined) merged.default_role = default_role;
+  if (is_active !== undefined) merged.is_active = is_active;
 
-  if (Object.keys(updatePayload).length === 0) {
-    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('store_sso_config', {
+    p_protocol: merged.protocol,
+    p_metadata_url: merged.metadata_url,
+    p_discovery_url: merged.discovery_url,
+    p_idp_entity_id: merged.idp_entity_id,
+    p_idp_certificate: merged.idp_certificate,
+    p_client_id: merged.client_id,
+    p_client_secret: client_secret ?? null,
+    p_default_role: merged.default_role,
+    p_is_active: merged.is_active,
+    p_config_id: id,
+  });
+
+  if (rpcError) {
+    console.error('sso update error:', rpcError.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  const { error: updateError } = await adminClient
-    .from('tenant_sso_configs')
-    .update(updatePayload)
-    .eq('id', id)
-    .eq('tenant_id', profile.tenant_id);
-
-  if (updateError) {
-    console.error('sso update error:', updateError.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  const stored = rpcResult as { error?: string } | null;
+  if (stored?.error) {
+    return NextResponse.json({ error: stored.error }, { status: 400 });
   }
 
   await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: user.id, action: 'sso_config_update', resource_type: 'tenant_sso_configs', resource_id: id!, changes: {} });
@@ -321,6 +354,8 @@ export async function DELETE(
     console.error('sso delete error:', deleteError.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  await adminClient.from('audit_logs').insert({ tenant_id: profile.tenant_id, user_id: _auth.user.id, action: 'sso_config_delete', resource_type: 'tenant_sso_configs', resource_id: id, changes: {} });
 
   return NextResponse.json({ success: true });
 }

@@ -59,9 +59,10 @@ export default function ProfileEditForm({
     <div className="space-y-4">
       {error && <ErrorDisplay message={error} />}
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Full Name</label>
+        <label htmlFor="full-name" className="text-sm font-medium text-text-secondary block mb-1">Full Name</label>
         <input
           type="text"
+          id="full-name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           required
@@ -69,8 +70,9 @@ export default function ProfileEditForm({
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
+        <label htmlFor="specialty" className="text-sm font-medium text-text-secondary block mb-1">Specialty</label>
         <select
+          id="specialty"
           value={specialty}
           onChange={(e) => setSpecialty(e.target.value)}
           className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"

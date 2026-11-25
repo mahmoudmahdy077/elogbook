@@ -27,7 +27,13 @@ check('ready uses rateLimiterHealth', ready.includes('rateLimiterHealth'));
 check('ready returns 503 when degraded', ready.includes('503'));
 
 // 3. proxy exempts health/ready
-const proxy=readFileSync(join(ROOT,'apps/web/proxy.ts'),'utf8');
+// Next 16 compiles `proxy.ts` for the Node.js runtime, which Vercel then
+// invokes as Edge → MIDDLEWARE_INVOCATION_FAILED on every request (the
+// 2026-11-13 outage). `middleware.ts` is the file convention that builds for
+// Edge, so the file must not come back.
+check('web middleware uses the Edge file convention (middleware.ts, not proxy.ts)',
+  existsSync(join(ROOT,'apps/web/middleware.ts')) && !existsSync(join(ROOT,'apps/web/proxy.ts')));
+const proxy=readFileSync(join(ROOT,'apps/web/middleware.ts'),'utf8');
 check('proxy exempts /api/health and /api/ready', proxy.includes('/api/health') && proxy.includes('/api/ready'));
 
 // 4. RATE_LIMIT_MODE unset in prod must exit non-zero (instrumentation)

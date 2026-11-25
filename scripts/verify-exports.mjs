@@ -31,9 +31,26 @@ function getExports(modPath){
 function resolveImport(fromFile, importPath){
  // @/ -> apps/web/
  if(importPath.startsWith('@/')) return join(ROOT,'apps/web',importPath.slice(2))+'.ts';
- if(importPath.startsWith('@elogbook/env')) return join(ROOT,'packages/env/src/index.ts');
- if(importPath.startsWith('@elogbook/shared')) return join(ROOT,'packages/shared/src/index.ts');
- if(importPath.startsWith('@elogbook/')) return null; // other packages
+ // @elogbook/<pkg>[/<subpath>] -> the file that package.json maps it to.
+ // Hard-coding `src/index.ts` made any legitimate subpath export
+ // (`@elogbook/env/supabase-url`) look like a missing symbol.
+ const m = importPath.match(/^@elogbook\/([^/]+)(?:\/(.+))?$/);
+ if(!m) return null;
+ const pkgDir = join(ROOT,'packages',m[1]);
+ const subpath = m[2];
+ try{
+  const pkg = JSON.parse(readFileSync(join(pkgDir,'package.json'),'utf8'));
+  if(typeof pkg.exports === 'string') return join(pkgDir,pkg.exports);
+  if(pkg.exports && typeof pkg.exports === 'object'){
+   const key = subpath ? './'+subpath : '.';
+   let target = pkg.exports[key];
+   if(target && typeof target === 'object') target = target.import || target.default || target.types;
+   if(typeof target === 'string') return join(pkgDir,target);
+  }
+ }catch { /* fall through to the legacy default */ }
+ if(subpath) return null;
+ if(m[1]==='env') return join(pkgDir,'src/index.ts');
+ if(m[1]==='shared') return join(pkgDir,'src/index.ts');
  return null;
 }
 let failures=[];

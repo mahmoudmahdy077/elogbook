@@ -94,7 +94,11 @@ jobs:
           version: 2.109.1
         env:
           SUPABASE_CLI_GITHUB_TOKEN: ${{ github.token }}
-      - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      # --use-api bundles server-side: the default path pulls
+      # public.ecr.aws/supabase/edge-runtime through Docker, which fails the
+      # whole matrix with "error from registry: Data limit exceeded" when the
+      # runner's anonymous pull quota is gone (CD run 44665986563).
+      - run: supabase functions deploy ${{ matrix.function }} --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --use-api
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 

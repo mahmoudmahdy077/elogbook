@@ -178,5 +178,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  await adminClient.from('audit_logs').insert({ tenant_id: auth.profile.tenant_id, user_id: auth.profile.id, action: 'scim_token_revoke', resource_type: 'scim_tokens', resource_id: id, changes: {} });
+
   return NextResponse.json({ success: true });
 }

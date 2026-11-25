@@ -39,6 +39,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
+  const contentLength = parseInt(request.headers.get('content-length') ?? '0', 10);
+  if (contentLength > 64 * 1024) return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+
   const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
   const auth = await requireTenantAdmin(supabase, tenantSlug, TENANT_ROLES);

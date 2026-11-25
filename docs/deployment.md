@@ -148,17 +148,20 @@ Production deployments are **automatically triggered** on pushes to the `main` b
 ### Automatic Deployment (CI/CD)
 
 ```yaml
-# .github/workflows/deploy-web.yml
+# .github/workflows/cd.yml
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '*.md', '.hermes/**', ...]
   workflow_dispatch:  # manual trigger available
 ```
 
-**Pipeline stages:**
-1. **Type-check** — runs `pnpm -r typecheck`
-2. **Test** — runs `pnpm test`
-3. **Deploy** — builds and deploys to Vercel with `--prod`
+**Pipeline stages (cd.yml `web` job):**
+1. **Install** — `pnpm install --frozen-lockfile`
+2. **Build** — runs `pnpm build:web`
+3. **Deploy** — deploys to Vercel with `--prod`
+
+Type-check and tests run in `ci.yml` on every push/PR, before the CD pipeline can deploy.
 
 The production environment URL is: **https://elogbook.app** (configured in Vercel)
 
@@ -166,7 +169,7 @@ The production environment URL is: **https://elogbook.app** (configured in Verce
 
 ```bash
 # Option 1: Via GitHub UI
-#   Actions → Deploy Web → Run workflow → Branch: main
+#   Actions → CD → Run workflow → Branch: main
 
 # Option 2: Via Vercel CLI
 pnpm add -g vercel
@@ -269,17 +272,17 @@ supabase db push
 
 | Secret | Used By | Description |
 |--------|---------|-------------|
-| `VERCEL_TOKEN` | deploy-web, deploy-preview | Vercel API auth |
-| `VERCEL_ORG_ID` | deploy-web, deploy-preview | Vercel org |
-| `VERCEL_PROJECT_ID` | deploy-web, deploy-preview | Vercel project |
-| `NEXT_PUBLIC_SUPABASE_URL` | deploy-web | Production Supabase URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | deploy-web | Production Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | deploy-web | Production service role key |
+| `VERCEL_TOKEN` | cd, deploy-preview | Vercel API auth |
+| `VERCEL_ORG_ID` | cd, deploy-preview | Vercel org |
+| `VERCEL_PROJECT_ID` | cd, deploy-preview | Vercel project |
+| `NEXT_PUBLIC_SUPABASE_URL` | cd | Production Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | cd | Production Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | cd | Production service role key |
 | `PREVIEW_SUPABASE_URL` | deploy-preview | Staging Supabase URL |
 | `PREVIEW_SUPABASE_ANON_KEY` | deploy-preview | Staging Supabase anon key |
-| `SENTRY_AUTH_TOKEN` | deploy-web | Sentry source map upload |
-| `SENTRY_ORG` | deploy-web | Sentry org slug |
-| `SENTRY_PROJECT` | deploy-web | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | cd | Sentry source map upload |
+| `SENTRY_ORG` | cd | Sentry org slug |
+| `SENTRY_PROJECT` | cd | Sentry project slug |
 
 ### Vercel Environment Variables
 
@@ -341,13 +344,13 @@ vercel whoami --token=$VERCEL_TOKEN
 │  main branch           PR branch                       │
 │     │                      │                            │
 │     ▼                      ▼                            │
-│  deploy-web.yml      deploy-preview.yml                 │
+│  cd.yml (web job)    deploy-preview.yml                │
 │     │                      │                            │
 │     ▼                      ▼                            │
-│  typecheck + test     typecheck + test                  │
-│     │                      │                            │
-│     ▼                      ▼                            │
-│  Vercel (--prod)      Vercel (preview)                  │
+│  build:web +          typecheck + test                  │
+│  Vercel --prod             │                            │
+│  (ci.yml gates              ▼                            │
+│   typecheck+test)     Vercel (preview)                  │
 │     │                      │                            │
 │     ▼                      ▼                            │
 │  Production URL       Preview URL + PR comment          │

@@ -120,8 +120,9 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         )}
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">AI Provider</label>
+          <label htmlFor="ai-provider" className="text-sm font-medium text-text-secondary block mb-1">AI Provider</label>
           <select
+            id="ai-provider"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
             className="rounded-xl bg-neutral-dark border border-border p-3 w-full text-sm"
@@ -134,8 +135,9 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         </div>
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">Model</label>
+          <label htmlFor="ai-model" className="text-sm font-medium text-text-secondary block mb-1">Model</label>
           <input
+            id="ai-model"
             type="text"
             value={model}
             onChange={(e) => setModel(e.target.value)}
@@ -146,8 +148,9 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
         </div>
 
         <div>
-          <label className="text-sm font-medium text-text-secondary block mb-1">API Key</label>
+          <label htmlFor="api-key" className="text-sm font-medium text-text-secondary block mb-1">API Key</label>
           <input
+            id="api-key"
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
@@ -158,8 +161,9 @@ export default function AIConfigPanel({ tenantId, config }: AIConfigPanelProps) 
 
         {provider === 'custom' && (
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1">Endpoint URL</label>
+            <label htmlFor="endpoint-url" className="text-sm font-medium text-text-secondary block mb-1">Endpoint URL</label>
             <input
+              id="endpoint-url"
               type="text"
               value={endpointUrl}
               onChange={(e) => setEndpointUrl(e.target.value)}

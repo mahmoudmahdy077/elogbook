@@ -15,21 +15,23 @@ interface Invoice {
 
 /** Stripe invoice history for the tenant, loaded from the invoices API
  *  (which proxies the list-invoices edge function). */
-export default function InvoiceHistory() {
+export default function InvoiceHistory({ tenantSlug }: { tenantSlug: string }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await fetch('invoices', { cache: 'no-store' });
+      // Relative 'invoices' resolved to /<tenant>/billing/invoices, which has
+      // never existed; the API route is tenant-prefixed.
+      const res = await fetch(`/api/${tenantSlug}/billing/invoices`, { cache: 'no-store' });
       const data = (await res.json()) as { invoices?: Invoice[]; error?: string };
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setInvoices(data.invoices ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices');
     }
-  }, []);
+  }, [tenantSlug]);
 
   useEffect(() => {
     void load();
@@ -37,7 +39,7 @@ export default function InvoiceHistory() {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-2">Invoice History</h2>
         <p className="text-sm text-fg-danger">{error}</p>
         <button
@@ -53,7 +55,7 @@ export default function InvoiceHistory() {
 
   if (invoices === null) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+      <div className="bg-surface-solid rounded-2xl border border-border p-5">
         <h2 className="text-lg font-semibold mb-3">Invoice History</h2>
         <p className="text-sm text-text-muted">Loading…</p>
       </div>
@@ -61,7 +63,7 @@ export default function InvoiceHistory() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-black/5 dark:border-white/10 p-5">
+    <div className="bg-surface-solid rounded-2xl border border-border p-5">
       <h2 className="text-lg font-semibold mb-3">Invoice History</h2>
       {invoices.length === 0 ? (
         <p className="text-sm text-text-muted">No invoices yet.</p>

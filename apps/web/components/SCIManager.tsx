@@ -15,15 +15,13 @@ interface ScimToken {
 }
 
 interface SCIManagerProps {
-  tenantId: string;
   tenantSlug: string;
   initialTokens: ScimToken[];
   initialScimUrl: string;
 }
 
 export default function SCIManager({
-  tenantId,
-  tenantSlug: _tenantSlug,
+  tenantSlug,
   initialTokens,
   initialScimUrl,
 }: SCIManagerProps) {
@@ -73,7 +71,7 @@ export default function SCIManager({
 
   async function refreshTokens() {
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim`);
+      const res = await fetch(`/api/${tenantSlug}/admin/scim`);
       if (res.ok) {
         const data = await res.json();
         setTokens(data.tokens ?? []);
@@ -89,7 +87,7 @@ export default function SCIManager({
 
     setFormLoading(true);
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/scim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: formDescription.trim() || null }),
@@ -121,7 +119,7 @@ export default function SCIManager({
     }
 
     try {
-      const res = await fetch(`/api/${tenantId}/admin/scim?id=${token.id}`, {
+      const res = await fetch(`/api/${tenantSlug}/admin/scim?id=${token.id}`, {
         method: 'DELETE',
       });
 
@@ -248,7 +246,7 @@ export default function SCIManager({
       )}
 
       {/* ── Provisioning Instructions ── */}
-      <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+      <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
         <h3 className="text-base font-semibold mb-4">Provisioning Instructions</h3>
         <div className="space-y-4">
           <div>
@@ -287,7 +285,7 @@ export default function SCIManager({
 
       {/* ── Generate Form ── */}
       {showGenerateForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+        <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">Generate New SCIM Token</h3>
 
           <form onSubmit={handleGenerate} className="space-y-5">
@@ -296,11 +294,12 @@ export default function SCIManager({
             )}
 
             <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              <label htmlFor="token-description" className="text-sm font-medium text-text-secondary block mb-1.5">
                 Description (optional)
               </label>
               <input
                 type="text"
+                id="token-description"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder="e.g. Okta production, Entra ID dev"
@@ -335,7 +334,7 @@ export default function SCIManager({
 
       {/* ── Active Tokens ── */}
       {activeTokens.length > 0 && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+        <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">
             Active Tokens <span className="text-text-muted font-normal text-sm">({activeTokens.length})</span>
           </h3>
@@ -385,7 +384,7 @@ export default function SCIManager({
 
       {/* ── Revoked Tokens ── */}
       {revokedTokens.length > 0 && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-6 ">
+        <div className="bg-surface-solid rounded-2xl border border-border p-6 ">
           <h3 className="text-base font-semibold mb-4">
             Revoked Tokens <span className="text-text-muted font-normal text-sm">({revokedTokens.length})</span>
           </h3>
@@ -416,7 +415,7 @@ export default function SCIManager({
 
       {/* ── Empty state ── */}
       {tokens.length === 0 && !showGenerateForm && (
-        <div className="bg-white dark:bg-neutral-dark rounded-2xl border border-border p-8 text-center">
+        <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
           <div className="text-3xl mb-3">🔑</div>
           <h3 className="text-base font-semibold mb-1">No SCIM tokens yet</h3>
           <p className="text-sm text-text-muted max-w-md mx-auto">
