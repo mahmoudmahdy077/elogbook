@@ -1,6 +1,11 @@
 const BASE = 'https://nuyedxkzaimlzaetbpaw.supabase.co';
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is required (never commit a service_role key).');
+  process.exit(1);
+}
+
 const SERVICE =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51eWVkeGt6YWltbHphZXRicGF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQ3OTI1OSwiZXhwIjoyMDk2MDU1MjU5fQ.wfTneCBjYGfSvmo-GGTSEBv3JwkbSl8QByWR__WVpJg';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const now = new Date().toISOString();
 (async () => {
   for (const id of ['df2496a4-207a-4991-ac03-55676c9e4219', 'c5230a8b-ea0c-464e-87da-e53eec66d7bf']) {
