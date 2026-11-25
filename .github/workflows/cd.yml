@@ -53,6 +53,26 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod --yes'
 
+      # A green Vercel deploy only proves the build finished. The site answered
+      # 500 MIDDLEWARE_INVOCATION_FAILED for 13 days while CD stayed green, so
+      # the pipeline now asks the deployed process to serve a request.
+      - name: Verify the deployment serves requests
+        run: |
+          url="https://elogbook-web.vercel.app"
+          for i in $(seq 1 12); do
+            health=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url/api/health")
+            login=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url/login")
+            setup=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$url/api/setup/deploy-supabase")
+            if [ "$health" = "200" ] && [ "$login" = "200" ] && [ "$setup" = "404" ]; then
+              echo "live: health=$health login=$login setup=$setup"
+              exit 0
+            fi
+            echo "attempt $i/12: health=$health login=$login setup=$setup (waiting for alias)"
+            sleep 10
+          done
+          echo "::error::Deployed site is not serving: health=$health login=$login setup=$setup. Check the Vercel runtime logs; a boot-contract exit or a middleware failure reads as 500 here."
+          exit 1
+
   # ----------------------------------------------------------------------
   # Push database migrations
   # ----------------------------------------------------------------------
