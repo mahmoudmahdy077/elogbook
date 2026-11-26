@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(4);
+SELECT plan(6);
 
 INSERT INTO tenants (id, name, slug, tenant_type, mrn_hash_salt)
 VALUES ('00000000-0000-0000-0000-000000000041', 'Audit Tenant', 'audit-tenant', 'institution', encode(gen_random_bytes(32), 'hex'))
@@ -54,5 +54,19 @@ SET LOCAL ROLE postgres;
 SELECT lives_ok(
   $$INSERT INTO public.institutions (id, name, slug, tier) VALUES (gen_random_uuid(), 'Audit Institution', 'audit-institution', 'free')$$,
   'institutions insert succeeds after dropping the broken audit trigger'
+);
+
+-- audit_logs.resource_id must stay optional: invite sends and audit exports
+-- have no single target row, and NOT NULL silently dropped both rows (23502).
+SELECT is(
+  (SELECT is_nullable FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'resource_id'),
+  'YES',
+  'audit_logs.resource_id is nullable for tenant-level events'
+);
+SELECT lives_ok(
+  $$INSERT INTO public.audit_logs (tenant_id, action, resource_type, resource_id)
+    VALUES ('00000000-0000-0000-0000-000000000041', 'audit_export', 'audit', NULL)$$,
+  'an audit row with no target resource can be written'
 );
 ROLLBACK;

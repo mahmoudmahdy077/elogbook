@@ -81,7 +81,7 @@ export async function GET(
   // data should leave a trace).
   // Use service_role client to bypass RLS (which blocks authenticated INSERTs).
   const adminClient = createServiceRoleClient();
-  await adminClient.from('audit_logs').insert({
+  const { error: auditError } = await adminClient.from('audit_logs').insert({
     tenant_id: auth.profile.tenant_id,
     action: 'audit_export',
     resource_type: 'audit',
@@ -93,6 +93,11 @@ export async function GET(
       filters: { action_type, resource_type, user_id, date_from, date_to, view },
     },
   });
+  // Before 20261126000600 resource_id was NOT NULL, so this insert failed with
+  // 23502 and the export went unrecorded. Surface a failure instead of losing it.
+  if (auditError) {
+    console.error('[audit] audit_export audit write failed:', auditError.message);
+  }
 
   const body = format === 'json' ? JSON.stringify(rows, null, 2) : toCsv(rows);
   const contentType = format === 'json' ? 'application/json' : 'text/csv';

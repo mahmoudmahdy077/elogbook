@@ -79,7 +79,7 @@ export async function POST(
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-  const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: { full_name, specialty, role: inviteRole },
     redirectTo: `${siteUrl}/auth/callback?next=/onboarding`,
   });
@@ -94,14 +94,20 @@ export async function POST(
     );
   }
 
-  await adminClient.from('audit_logs').insert({
+  // audit_logs.resource_id is NOT NULL before 20261126000600; passing null
+  // made this insert fail with 23502 while the error was ignored, so the
+  // invitation left no audit row. Prefer the invited account's id.
+  const { error: auditError } = await adminClient.from('audit_logs').insert({
     tenant_id: profile.tenant_id,
     user_id: user.id,
     action: 'invite_user',
     resource_type: 'profiles',
-    resource_id: null,
+    resource_id: invited?.user?.id ?? user.id,
     changes: { email, full_name, role: inviteRole },
   });
+  if (auditError) {
+    console.error('[audit] invite_user audit write failed:', auditError.message);
+  }
 
   return NextResponse.json({ success: true, message: `Invitation sent to ${email}` });
 }
