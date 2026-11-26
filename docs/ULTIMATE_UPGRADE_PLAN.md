@@ -13,7 +13,10 @@
 > HTML. Fixed honestly (plan option b): endpoint is CSV-only now (dead PDF/HTML branch and
 > helpers removed, 400 on any other format), UI cleaned to CSV-only download, openapi.yaml
 > updated, tests assert `format=pdf` → 400 and zero external fetches (SEC-003 stronger form).
-> Next undone task: **Task 40**.
+> Task 41 (CD-002): web deploy job now `needs: [db]` so the Next.js release only goes
+> out after migrations apply. Note: Tasks 42–43 also touch cd.yml — the 9-function matrix
+> (Task 42) already exists in the file, and `--include-all` on `db push` (Task 43) is still present.
+> Next undone task: **Task 42**.
 
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
@@ -847,7 +850,7 @@ await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.r
 **Files:**
 - Modify: `.github/workflows/cd.yml`
 
-- [ ] **Step 1:** Add `needs: [db]` to the `web` job in `cd.yml`.
+- [x] **Step 1:** Add `needs: [db]` to the `web` job in `cd.yml`.
 - [ ] **Step 2:** Commit: `git add .github/workflows/cd.yml && git commit -m "fix(cd): web job depends on db job (CD-002)"`
 
 ---
