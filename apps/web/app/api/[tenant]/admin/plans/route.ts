@@ -84,7 +84,7 @@ export async function POST(
   }
 
   const body = await request.json();
-  const { name, slug, price_monthly, features, tenant_type, max_residents, custom_features } = body;
+  const { name, slug, price_monthly, features, tenant_type, max_residents, custom_features, stripe_price_id } = body;
 
   if (!name || !slug || price_monthly === undefined || !tenant_type) {
     return NextResponse.json({ error: 'name, slug, price_monthly, and tenant_type are required' }, { status: 400 });
@@ -111,6 +111,8 @@ export async function POST(
       features: features || {},
       tenant_type,
       max_residents: max_residents || null,
+      // Checkout reads this column; without it Stripe checkout cannot start.
+      stripe_price_id: typeof stripe_price_id === 'string' && stripe_price_id.trim() ? stripe_price_id.trim() : null,
       is_custom: true,
       created_by: user.id,
     })
@@ -170,7 +172,7 @@ export async function PUT(
   }
 
   const body = await request.json();
-  const { id, name, slug, price_monthly, features, tenant_type, max_residents, custom_features } = body;
+  const { id, name, slug, price_monthly, features, tenant_type, max_residents, custom_features, stripe_price_id } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'Plan id is required' }, { status: 400 });
@@ -195,6 +197,10 @@ export async function PUT(
   if (features !== undefined) updates.features = features;
   if (tenant_type !== undefined) updates.tenant_type = tenant_type;
   if (max_residents !== undefined) updates.max_residents = max_residents;
+  if (stripe_price_id !== undefined) {
+    updates.stripe_price_id =
+      typeof stripe_price_id === 'string' && stripe_price_id.trim() ? stripe_price_id.trim() : null;
+  }
 
   const { error } = await supabase
     .from('subscription_plans')
