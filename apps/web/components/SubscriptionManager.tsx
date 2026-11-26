@@ -10,6 +10,7 @@ interface Plan {
   features: Record<string, unknown>;
   tenant_type: string;
   max_residents: number | null;
+  stripe_price_id?: string | null;
   is_custom: boolean;
   custom_features: { feature_key: string; feature_value: unknown }[];
 }
@@ -209,6 +210,7 @@ function PlanEditorModal({ plan, tenantSlug, onClose, onSave }: { plan: Plan | n
   const [price, setPrice] = useState(plan?.price_monthly?.toString() ?? '0');
   const [tenantType, setTenantType] = useState(plan?.tenant_type ?? 'individual');
   const [maxResidents, setMaxResidents] = useState(plan?.max_residents?.toString() ?? '');
+  const [stripePriceId, setStripePriceId] = useState(plan?.stripe_price_id ?? '');
   const [features, setFeatures] = useState(JSON.stringify(plan?.features ?? {}, null, 2));
   const [saving, setSaving] = useState(false);
 
@@ -221,6 +223,7 @@ function PlanEditorModal({ plan, tenantSlug, onClose, onSave }: { plan: Plan | n
         price_monthly: parseFloat(price) || 0,
         tenant_type: tenantType,
         max_residents: maxResidents ? parseInt(maxResidents) : null,
+        stripe_price_id: stripePriceId.trim() || null,
         features: JSON.parse(features),
       };
       if (plan) body.id = plan.id;
@@ -275,6 +278,17 @@ function PlanEditorModal({ plan, tenantSlug, onClose, onSave }: { plan: Plan | n
               <label htmlFor="max-residents" className="block text-xs mb-1 text-text-muted">Max Residents</label>
               <input id="max-residents" type="number" value={maxResidents} onChange={e => setMaxResidents(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm" placeholder="Unlimited" />
             </div>
+          </div>
+          <div>
+            <label htmlFor="stripe-price" className="block text-xs mb-1 text-text-muted">Stripe price ID</label>
+            <input
+              id="stripe-price"
+              value={stripePriceId}
+              onChange={(e) => setStripePriceId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-dark border border-border text-sm font-mono"
+              placeholder="price_..."
+            />
+            <p className="mt-1 text-[11px] text-text-muted">Required for Stripe checkout. Copy it from the Stripe dashboard (Product → Price).</p>
           </div>
           <div>
             <label htmlFor="features-json" className="block text-xs mb-1 text-text-muted">Features (JSON)</label>

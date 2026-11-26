@@ -140,6 +140,14 @@ serve(async (req) => {
     );
   }
 
+  // The checkout return URLs must point at the tenant's billing page.
+  const { data: tenantRow } = await serviceSupabase
+    .from('tenants')
+    .select('slug')
+    .eq('id', tenantId)
+    .maybeSingle();
+  const returnSlug = (tenantRow as { slug?: string } | null)?.slug ?? '';
+
   if (gateway === 'stripe') {
     const priceId = (plan as any).stripe_price_id;
     if (!priceId) {
@@ -163,8 +171,9 @@ serve(async (req) => {
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${allowedOrigin}/billing?success=true`,
-        cancel_url: `${allowedOrigin}/billing?canceled=true`,
+        // Billing lives under the tenant slug; `/billing` alone is a 404.
+        success_url: `${allowedOrigin}/${returnSlug}/billing?success=true`,
+        cancel_url: `${allowedOrigin}/${returnSlug}/billing?canceled=true`,
         metadata: { tenant_id: tenantId, plan_id },
       });
 
