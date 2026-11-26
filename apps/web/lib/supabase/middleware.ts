@@ -249,7 +249,20 @@ export async function updateSession(request: NextRequest) {
 
   const isAdminRoute =
     segments[1] === 'admin' || (segments[0] === 'api' && segments[2] === 'admin');
-  if (isAdminRoute) {
+
+  // PHI-bearing endpoints reachable by director+ without the admin prefix. A
+  // director signed in at AAL1 could export or reveal patient data directly;
+  // treat them like admin routes for the second-factor check.
+  const isSensitivePhiRoute =
+    segments[0] === 'api' &&
+    (pathname.endsWith('/audit/export') ||
+      pathname.endsWith('/compliance/export') ||
+      pathname.endsWith('/reports/webads') ||
+      pathname.endsWith('/export-pdf') ||
+      pathname.endsWith('/phi-reveal') ||
+      pathname.endsWith('/approvals/action'));
+
+  if (isAdminRoute || isSensitivePhiRoute) {
     const { data: { session } } = await supabase.auth.getSession();
     if ((session as { aal?: string } | null)?.aal && (session as { aal?: string } | null)?.aal !== 'aal2') {
       try {
@@ -257,6 +270,14 @@ export async function updateSession(request: NextRequest) {
         const hasVerifiedMfa =
           mfaData?.all?.some((f) => f.status === 'verified') ?? false;
         if (hasVerifiedMfa) {
+          if (pathname.startsWith('/api/')) {
+            // A redirect would hand the client an HTML page; API callers need
+            // a machine-readable refusal.
+            return NextResponse.json(
+              { error: 'MFA verification required', code: 'mfa_required' },
+              { status: 403 },
+            );
+          }
           const verifyUrl = new URL('/mfa/verify', request.url);
           verifyUrl.searchParams.set('next', pathname + request.nextUrl.search);
           return NextResponse.redirect(verifyUrl);

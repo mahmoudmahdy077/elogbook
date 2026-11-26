@@ -135,7 +135,7 @@ export default function SubscriptionPlans({
               </div>
               <ul className="space-y-2.5 flex-1 text-sm">
                 {features.map((f) => (
-                  <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-text-secondary' : 'text-text-muted/70 line-through'}`}>
+                  <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-text-secondary' : 'text-text-muted line-through'}`}>
                     <span className={`mt-0.5 shrink-0 ${f.included ? 'text-fg-primary' : 'text-text-muted'}`}>
                       {f.included ? '✓' : '✗'}
                     </span>

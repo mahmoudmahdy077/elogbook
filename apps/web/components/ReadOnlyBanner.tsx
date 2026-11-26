@@ -24,7 +24,7 @@ export default function ReadOnlyBanner({ tenantSlug }: { tenantSlug: string }) {
         </p>
         <Link
           href={`/${tenantSlug}/billing`}
-          className="text-sm font-medium text-fg-pending underline hover:text-fg-pending focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pending-glow rounded"
+          className="text-sm font-medium text-fg-pending underline hover:text-fg-pending focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pending/30 rounded"
         >
           Renew now to restore full access
         </Link>

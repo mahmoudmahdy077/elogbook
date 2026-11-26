@@ -22,6 +22,7 @@ export interface AuthResult {
   tenant: {
     id: string;
     slug: string;
+    name: string;
     tenant_type: string;
     custom_branding: Record<string, unknown> | null;
   };
@@ -55,7 +56,7 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
   const [tenantResult, subscriptionResult, aalResult] = await Promise.all([
     supabase
       .from('tenants')
-      .select('id, slug, tenant_type, custom_branding')
+      .select('id, slug, name, tenant_type, custom_branding')
       .eq('id', profile.tenant_id)
       .single(),
     supabase
@@ -88,6 +89,7 @@ export const getAuthContext = cache(async (): Promise<AuthResult> => {
     tenant: {
       id: tenant.id,
       slug: tenant.slug,
+      name: (tenant as { name?: string }).name ?? tenant.slug,
       tenant_type: tenant.tenant_type,
       custom_branding: (tenant as { custom_branding?: Record<string, unknown> | null }).custom_branding ?? null,
     },

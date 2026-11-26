@@ -215,6 +215,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
           pendingApprovals,
           totalResidents,
           tenantType: tenant.tenant_type as 'individual' | 'institution',
+          tenantName: tenant.name,
           residentViolations: residentViolations.data ?? [],
           directorViolations: directorViolations.data ?? [],
           planSlug,

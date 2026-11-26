@@ -164,7 +164,7 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
       )}
 
       {showModal && (
-        <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowModal(false); }}>
           <div className="panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h3 className="text-lg font-semibold mb-4">{modalTitle}</h3>
 
@@ -270,7 +270,7 @@ export default function GoalForm({ tenantId, directorId, residents, initialGoal 
               </button>
             </div>
           </div>
-        </button>
+        </div>
       )}
     </>
   );

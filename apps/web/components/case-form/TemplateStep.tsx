@@ -67,7 +67,7 @@ export default function TemplateStep({
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
         placeholder="Search templates..."
-        className="w-full px-3 py-2 text-sm border border-border rounded-xl bg-surface-solid text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        className="w-full px-3 py-2 text-sm border border-border rounded-xl bg-surface-solid text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {templates.map((t) => {

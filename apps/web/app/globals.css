@@ -19,9 +19,11 @@
   --color-surface: rgba(255, 255, 255, 0.72);
   --color-surface-solid: #FFFFFF;
   --color-surface-raised: rgba(255, 255, 255, 0.88);
-  --color-primary: #007AFF;
-  --color-primary-hover: #0066D6;
-  --color-primary-glow: rgba(0, 122, 255, 0.08);
+  /* #0066D6 keeps white label text at 5.42:1 (AA). The previous #007AFF was
+     4.02:1 — every primary button failed 1.4.3. */
+  --color-primary: #0066D6;
+  --color-primary-hover: #0057B8;
+  --color-primary-glow: rgba(0, 102, 214, 0.10);
   --color-secondary: #5856D6;
   --color-secondary-hover: #6E6CF0;
   --color-secondary-glow: rgba(88, 86, 214, 0.08);
@@ -131,30 +133,35 @@ h1, h2, h3 {
   text-wrap: balance;
 }
 
-/* Panel — white card with subtle border, no shadow */
-.panel {
-  background: var(--color-surface-solid);
-  border: 1px solid var(--color-border);
-  border-radius: 0.875rem;
-  padding: 1.25rem;
-}
+/* Panel — white card with subtle border, no shadow.
+   These live in the components layer so utilities (`p-8`, `rounded-none`,
+   `border-t`) can override the defaults. Unlayered rules beat every Tailwind
+   utility, which silently broke per-instance padding and the mobile tab bar. */
+@layer components {
+  .panel {
+    background: var(--color-surface-solid);
+    border: 1px solid var(--color-border);
+    border-radius: 0.875rem;
+    padding: 1.25rem;
+  }
 
-/* Glass panel — frosted glass (Apple-style) */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: 0.875rem;
-  padding: 1.25rem;
-}
+  /* Glass panel — frosted glass (Apple-style) */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: 0.875rem;
+    padding: 1.25rem;
+  }
 
-.glass-panel-sheet {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: 16px 16px 0 0;
+  .glass-panel-sheet {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: 16px 16px 0 0;
+  }
 }
 
 /* Status Badges — flat pills, no glow */
@@ -252,8 +259,8 @@ h1, h2, h3 {
   /* Semantic scales — dark-adapted (Apple Health iOS dark palette).
      Hue anchors stay identical to light; fills flip to low-alpha-on-dark,
      text steps lighten for WCAG AA on #1C1C1E surfaces. */
-  --color-primary: #0A84FF;
-  --color-primary-hover: #339DFF;
+  --color-primary: #0066D6;
+  --color-primary-hover: #0057B8;
   --color-secondary: #5E5CE6;
   --color-secondary-hover: #7D7AFF;
   --color-text-on-primary: #FFFFFF;

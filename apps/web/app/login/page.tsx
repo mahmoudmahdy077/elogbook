@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { loginAction } from './actions';
 import { APP_NAME } from '@elogbook/shared';
-import { FormField, FormDivider } from '@elogbook/shared/components/web';
+import { FormField } from '@elogbook/shared/components/web';
 import { safeRelativePath } from '@/lib/safe-redirect';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
@@ -205,7 +205,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
+    <div id="main-content" className="min-h-dvh bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8 landscape:overflow-y-auto landscape:items-start landscape:pt-8">
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-[2rem] sm:text-[2.25rem] font-semibold text-text-primary tracking-[-0.03em] font-sans leading-tight">{APP_NAME}</h1>
@@ -232,10 +232,10 @@ export default function LoginPage() {
             <SuccessState email={email} />
           ) : (
             <div className="space-y-5 sm:space-y-6">
-              {/* SSO login removed pending complete SAML/OIDC implementation (P1.4) */}
-
-              <FormDivider label="or continue with email" />
-
+              {/* No alternative sign-in method is offered yet (SSO lives at
+                  /login/sso and is linked from the admin panel), so the form
+                  starts at the top instead of under a dangling "or continue
+                  with email" divider. */}
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 <FormField
                   id="email"

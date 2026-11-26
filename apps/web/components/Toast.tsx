@@ -33,7 +33,7 @@ const iconMap: Record<ToastType, string> = {
 const bgMap: Record<ToastType, string> = {
   success: 'bg-approved/15 border-approved/30 text-fg-approved',
   error: 'bg-rejected/15 border-rejected/30 text-fg-rejected',
-  info: 'bg-primary-glow/15 border-primary/30 text-teal-200',
+  info: 'bg-primary/10 border-primary/30 text-fg-primary',
 };
 
 function ToastContainer({ toasts }: { toasts: ToastItem[] }) {
@@ -41,11 +41,12 @@ function ToastContainer({ toasts }: { toasts: ToastItem[] }) {
   useEffect(() => { setMount(true); }, []);
   if (!mount) return null;
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col-reverse gap-2 pointer-events-none" aria-live="polite">
+    <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-4 z-[100] flex flex-col-reverse gap-2 pointer-events-none md:bottom-4" aria-live="polite">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div
             key={t.id}
+            role={t.type === 'error' ? 'alert' : 'status'}
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
@@ -75,7 +76,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
       timersRef.current.delete(id);
-    }, 4000);
+    }, type === 'error' ? 8000 : 4000);
     timersRef.current.set(id, timer);
   }, []);
 

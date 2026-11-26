@@ -68,7 +68,7 @@ export function HashLab() {
   }, []);
 
   return (
-    <div className="rounded-14 border border-border bg-surface-solid p-4" data-testid="hash-lab">
+    <div className="rounded-lg border border-border bg-surface-solid p-4" data-testid="hash-lab">
       <label htmlFor="hashlab-mrn" className="text-xs font-medium text-text-muted">
         Hospital MRN — hashed locally
       </label>
@@ -79,7 +79,7 @@ export function HashLab() {
         spellCheck={false}
         placeholder="e.g. 00-84-62"
         onChange={onChange}
-        className="mt-2 w-full rounded-8 border border-border bg-backdrop px-3 py-2 font-mono text-sm text-text-primary placeholder:text-default-400 focus:border-primary-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="mt-2 w-full rounded-sm border border-border bg-backdrop px-3 py-2 font-mono text-sm text-text-primary placeholder:text-default-400 focus:border-primary-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-describedby="hashlab-out-label"
       />
       <p id="hashlab-out-label" className="sr-only">SHA-256 digest output</p>
@@ -96,7 +96,7 @@ export function HashLab() {
       <a
         href="/signup?role=resident"
         data-testid="hashlab-cta"
-        className="mt-3 inline-flex min-h-[44px] items-center rounded-8 bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="mt-3 inline-flex min-h-[44px] items-center rounded-sm bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         style={{ opacity: ready && digest ? 1 : 0.4, pointerEvents: digest ? undefined : 'none' }}
       >
         Start logging free
@@ -146,7 +146,7 @@ export function CustodyDemo() {
     <div data-testid="custody-demo">
       <ul className="mx-auto max-w-[520px] space-y-3">
         {DEMO_CASES.map((c) => (
-          <li key={c.id} className="flex items-center justify-between gap-4 rounded-14 border border-border bg-surface px-4 py-3 transition-colors duration-200 hover:border-border-active">
+          <li key={c.id} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface px-4 py-3 transition-colors duration-200 hover:border-border-active">
             <div>
               <p className="text-sm font-medium text-text-primary">{c.title}</p>
               <p className="font-mono text-xs uppercase tracking-wide text-text-muted">{c.meta}</p>
@@ -156,9 +156,9 @@ export function CustodyDemo() {
               onClick={() => approve(c.id)}
               disabled={!!approved[c.id]}
               data-testid={`approve-${c.id}`}
-              className={`min-h-[44px] min-w-[96px] rounded-8 border px-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              className={`min-h-[44px] min-w-[96px] rounded-sm border px-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 approved[c.id]
-                  ? 'border-approved/40 bg-success-50 text-fg-success-700'
+                  ? 'border-approved/40 bg-success-50 text-fg-success'
                   : 'border-border-active bg-surface-solid text-text-secondary hover:border-primary-glow'
               }`}
               style={approved[c.id] ? { opacity: 1 } : { opacity: 1 }}
@@ -173,7 +173,7 @@ export function CustodyDemo() {
       <div
         data-testid="demo-artifact"
         aria-live="polite"
-        className="mx-auto mt-4 max-w-[520px] overflow-hidden rounded-14 border border-border bg-surface-solid transition-all duration-[420ms]"
+        className="mx-auto mt-4 max-w-[520px] overflow-hidden rounded-lg border border-border bg-surface-solid transition-all duration-[420ms]"
         style={{
           maxHeight: artifact ? '160px' : '0px',
           opacity: artifact ? 1 : 0,
@@ -383,7 +383,7 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
         ref={triggerRef}
         type="button"
         onClick={() => setVisible(true)}
-        className="sr-only focus:not-sr-only focus:absolute focus:bottom-4 focus:right-4 focus:z-50 focus:min-h-[44px] focus:rounded-8 focus:border focus:border-border focus:bg-surface-solid focus:px-3 focus:text-sm focus:text-fg-primary"
+        className="sr-only focus:not-sr-only focus:absolute focus:bottom-4 focus:right-4 focus:z-50 focus:min-h-[44px] focus:rounded-sm focus:border focus:border-border focus:bg-surface-solid focus:px-3 focus:text-sm focus:text-fg-primary"
       >
         Your session logbook entry
       </button>
@@ -398,7 +398,7 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
         className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md p-4 sm:bottom-6 sm:p-0"
       >
         <div
-          className="rounded-14 border border-border bg-surface-solid p-5 backdrop-blur"
+          className="rounded-lg border border-border bg-surface-solid p-5 backdrop-blur"
           style={
             visible
               ? { transform: 'translateY(0)', opacity: 1, transition: `transform 420ms ${DRAWER}, opacity 180ms var(--ease-out)` }
@@ -419,11 +419,11 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
               <fieldset className="flex gap-2" role="radiogroup" aria-label="I am a">
                 <label className="cursor-pointer">
                   <input type="radio" name="role" value="resident" defaultChecked className="peer sr-only" />
-                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Resident</span>
+                  <span className="inline-flex min-h-[36px] items-center rounded-sm border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Resident</span>
                 </label>
                 <label className="cursor-pointer">
                   <input type="radio" name="role" value="director" className="peer sr-only" />
-                  <span className="inline-flex min-h-[36px] items-center rounded-8 border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Director</span>
+                  <span className="inline-flex min-h-[36px] items-center rounded-sm border border-border px-3 text-sm text-text-secondary peer-checked:border-primary peer-checked:text-fg-primary">Director</span>
                 </label>
               </fieldset>
               <label className="block text-sm">
@@ -434,17 +434,17 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
                   type="email"
                   required
                   autoComplete="email"
-                  className="w-full rounded-8 border border-border bg-backdrop px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="w-full rounded-sm border border-border bg-backdrop px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </label>
               <p className="text-xs text-text-muted">Send my entry and one sample export. No marketing. Unsubscribe anytime.</p>
               {errMsg && (
-                <p role="alert" className="text-xs text-fg-danger-600" data-testid="sle-error">
+                <p role="alert" className="text-xs text-fg-danger" data-testid="sle-error">
                   {errMsg}
                 </p>
               )}
               <div className="flex items-center justify-between gap-3">
-                <button type="submit" disabled={sent === 'sending'} className="min-h-[44px] flex-1 rounded-8 bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60">
+                <button type="submit" disabled={sent === 'sending'} className="min-h-[44px] flex-1 rounded-sm bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60">
                   {sent === 'sending' ? 'Sending…' : 'Send my entry'}
                 </button>
                 <button type="button" onClick={close} className="min-h-[44px] px-3 text-sm text-text-muted underline-offset-2 hover:underline">
@@ -454,9 +454,9 @@ export function SessionLogbookEntry({ sampleExportPath }: { sampleExportPath?: s
             </form>
           ) : (
             <div className="mt-4" data-testid="sle-success">
-              <p className="text-sm font-medium text-fg-success-700">Saved. Your sample export is unlocked below.</p>
+              <p className="text-sm font-medium text-fg-success">Saved. Your sample export is unlocked below.</p>
               {sampleExportPath && (
-                <a href={sampleExportPath} download className="mt-2 inline-block min-h-[44px] rounded-8 border border-border px-4 text-sm leading-[42px] text-text-secondary hover:border-border-active">
+                <a href={sampleExportPath} download className="mt-2 inline-block min-h-[44px] rounded-sm border border-border px-4 text-sm leading-[42px] text-text-secondary hover:border-border-active">
                   Download sample export
                 </a>
               )}

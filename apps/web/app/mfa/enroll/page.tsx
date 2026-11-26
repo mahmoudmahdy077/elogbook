@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { safeRelativePath } from '@/lib/safe-redirect';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
@@ -79,7 +80,7 @@ function MfaEnrollInner() {
       setLoading(false);
       return;
     }
-    router.push(next);
+    router.push(safeRelativePath(next));
   };
 
   return (
@@ -93,7 +94,7 @@ function MfaEnrollInner() {
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-4">
               <div className="bg-surface-solid p-4 rounded-lg">
-                <QRCodeSVG value={qr.uri} size={200} />
+                <QRCodeSVG value={qr.uri} size={200} role="img" aria-label="Authenticator app setup QR code" />
               </div>
               <p className="text-xs text-text-muted">Scan with your authenticator app</p>
               <details className="text-xs text-text-muted w-full">
@@ -105,6 +106,8 @@ function MfaEnrollInner() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]{6}"
+              aria-label="6-digit authentication code"
+              autoComplete="one-time-code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
@@ -114,13 +117,20 @@ function MfaEnrollInner() {
             <button
               onClick={handleVerify}
               disabled={code.length < 6 || loading}
-              className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-40"
+              className="w-full py-2.5 rounded-lg bg-primary text-text-on-primary text-sm font-medium hover:bg-primary-hover disabled:opacity-40"
             >
               {loading ? 'Verifying…' : 'Verify'}
             </button>
           </div>
+        ) : error ? (
+          <div className="space-y-3">
+            <ErrorDisplay message={error} />
+            <a href="/settings" className="block text-center text-sm text-fg-primary underline">
+              Back to settings
+            </a>
+          </div>
         ) : (
-          <p className="text-sm text-text-muted">Generating QR…</p>
+          <p className="text-sm text-text-muted" role="status">Generating QR…</p>
         )}
       </div>
     </div>

@@ -14,19 +14,20 @@ interface PatientInfoStepProps {
 }
 
 /* Apple-style toggle switch */
-function Toggle({ checked, onChange, label: _label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         checked ? 'bg-primary' : 'bg-default-300'
       }`}
     >
       <span
-        className={`inline-block h-5 w-5 rounded-full bg-surface-solid shadow-sm transition-transform duration-200 ${
+        className={`inline-block h-5 w-5 rounded-full bg-surface-solid transition-transform duration-200 ${
           checked ? 'translate-x-6' : 'translate-x-1'
         }`}
       />

@@ -8,7 +8,7 @@ export default function QuickAddFAB({ onClick }: QuickAddFABProps) {
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-white transition-opacity flex items-center justify-center z-50"
+      className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-text-on-primary transition-opacity md:bottom-6 md:right-6 md:z-50"
       aria-label="Quick add case"
     >
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -202,10 +202,10 @@ function ReflectionForm({
   }
 
   return (
-    <button
-      type="button"
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       <div
         className="panel p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
@@ -316,7 +316,7 @@ function ReflectionForm({
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 

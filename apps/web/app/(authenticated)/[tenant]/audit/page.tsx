@@ -156,13 +156,13 @@ export default async function AuditPage({
       <div className="flex gap-2 mb-4">
         <Link
           href={`/${tenantSlug}/audit${filterQuery}`}
-          className={'px-3 py-1.5 rounded-md text-sm ' + (view !== 'suspicious' ? 'bg-primary/15 text-fg-primary' : 'border border-border text-text-muted/60')}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view !== 'suspicious' ? 'bg-primary/15 text-fg-primary' : 'border border-border text-text-muted')}
         >
           All events
         </Link>
         <Link
           href={`/${tenantSlug}/audit?view=suspicious${filterSuffix.replace(/^&/, '&')}`}
-          className={'px-3 py-1.5 rounded-md text-sm ' + (view === 'suspicious' ? 'bg-primary/15 text-fg-primary' : 'border border-border text-text-muted/60')}
+          className={'px-3 py-1.5 rounded-md text-sm ' + (view === 'suspicious' ? 'bg-primary/15 text-fg-primary' : 'border border-border text-text-muted')}
         >
           Suspicious activity
         </Link>

@@ -1,5 +1,6 @@
 import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import ClientSubscriptionPlans from '@/components/ClientSubscriptionPlans';
 import ManageSubscriptionButton from '@/components/ManageSubscriptionButton';
@@ -36,7 +37,8 @@ export default async function BillingPage({ params }: { params: Promise<{ tenant
       .eq('tenant_id', auth.profile.tenant_id)
       .eq('status', 'active')
       .maybeSingle(),
-    supabase
+    // SELECT is revoked from `authenticated` on this table (secret storage).
+    createServiceRoleClient()
       .from('payment_gateway_config')
       .select('provider, publishable_key')
       .eq('tenant_id', auth.profile.tenant_id)

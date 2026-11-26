@@ -14,32 +14,18 @@ export interface StatusBadgeProps {
   style?: CSSProperties;
 }
 
-const statusConfig: Record<StatusVariant, { bg: string; text: string; border: string }> = {
-  draft: {
-    bg: 'rgba(142, 142, 147, 0.12)',
-    text: clinicalTokens.colors.status.text.draft, // #48484A — 4.55-8.08:1 on this bg (raw #6D6D73 was 3.98 worst-case)
-    border: 'rgba(142, 142, 147, 0.18)',
-  },
-  pending: {
-    bg: 'rgba(163, 75, 0, 0.10)',
-    text: clinicalTokens.colors.status.text.warning,
-    border: clinicalTokens.colors.status.border.warning,
-  },
-  approved: {
-    bg: 'rgba(29, 122, 54, 0.10)',
-    text: clinicalTokens.colors.status.text.success,
-    border: clinicalTokens.colors.status.border.success,
-  },
-  rejected: {
-    bg: 'rgba(215, 0, 21, 0.10)',
-    text: clinicalTokens.colors.status.text.danger,
-    border: clinicalTokens.colors.status.border.danger,
-  },
-  deidentified: {
-    bg: 'rgba(88, 86, 214, 0.12)',
-    text: clinicalTokens.colors.deidentified.DEFAULT, // #4442C9 — ≥5.48:1 on this bg (raw #5856D6 was 4.31 worst-case)
-    border: 'rgba(88, 86, 214, 0.20)',
-  },
+/**
+ * Status colours come from CSS custom properties, not fixed hex, so the badge
+ * follows the light/dark theme. The previous inline hex values (#48484A,
+ * #186B2E, …) could not be overridden by `.dark` and rendered at ~1.4:1 on the
+ * dark surface.
+ */
+const statusConfig: Record<StatusVariant, { fg: string; tint: number }> = {
+  draft: { fg: 'var(--color-text-secondary)', tint: 12 },
+  pending: { fg: 'var(--color-fg-warning)', tint: 10 },
+  approved: { fg: 'var(--color-fg-success)', tint: 10 },
+  rejected: { fg: 'var(--color-fg-danger)', tint: 10 },
+  deidentified: { fg: 'var(--color-fg-primary)', tint: 12 },
 };
 
 const sizeStyles: Record<BadgeSize, string> = {
@@ -50,6 +36,8 @@ const sizeStyles: Record<BadgeSize, string> = {
 export function StatusBadge({ status, size = 'md', children, className = '', style }: StatusBadgeProps) {
   const config = statusConfig[status];
   const label = children || status.charAt(0).toUpperCase() + status.slice(1);
+  const background = `color-mix(in srgb, ${config.fg} ${config.tint}%, transparent)`;
+  const border = `1px solid color-mix(in srgb, ${config.fg} 22%, transparent)`;
 
   return (
     <span
@@ -59,9 +47,9 @@ export function StatusBadge({ status, size = 'md', children, className = '', sty
         ${className}
       `}
       style={{
-        backgroundColor: config.bg,
-        color: config.text,
-        border: `1px solid ${config.border}`,
+        backgroundColor: background,
+        color: config.fg,
+        border,
         borderRadius: clinicalTokens.radius.full,
         ...style,
       }}
@@ -71,7 +59,7 @@ export function StatusBadge({ status, size = 'md', children, className = '', sty
           width: size === 'sm' ? 5 : 6,
           height: size === 'sm' ? 5 : 6,
           borderRadius: '50%',
-          backgroundColor: config.text,
+          backgroundColor: config.fg,
           flexShrink: 0,
         }}
       />

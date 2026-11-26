@@ -4,32 +4,95 @@ import * as Sentry from '@sentry/nextjs';
 import type { NextPage } from 'next';
 
 type Props = {
-  err?: Error;
-  reset?: () => void;
+  // Next.js passes `error` and `reset` to a global-error boundary. The old
+  // signature destructured `err`, which Next never sends, so the error was
+  // never captured and the reference block never rendered.
+  error: Error & { digest?: string };
+  reset: () => void;
 };
 
-const GlobalError: NextPage<Props> = ({ err, reset }) => {
-  if (err) Sentry.captureException(err);
+/**
+ * Last-resort boundary. It cannot rely on the app stylesheet, so the design
+ * tokens are inlined here. Keep them in sync with app/globals.css: light
+ * backdrop, white surface, border-defined elevation, Apple blue primary.
+ */
+const tokens = {
+  backdrop: '#F2F2F7',
+  surface: '#FFFFFF',
+  border: 'rgba(60, 60, 67, 0.10)',
+  text: '#000000',
+  textSecondary: '#3C3C43',
+  textMuted: '#6D6D73',
+  primary: '#007AFF',
+  danger: '#C20012',
+  dangerTint: 'rgba(194, 0, 18, 0.08)',
+};
+
+const GlobalError: NextPage<Props> = ({ error, reset }) => {
+  Sentry.captureException(error);
   return (
     <html lang="en">
-      <body style={{ margin: 0, backgroundColor: '#060814', color: '#F1F5F9', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <body
+        style={{
+          margin: 0,
+          backgroundColor: tokens.backdrop,
+          color: tokens.text,
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+        }}
+      >
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-          <div style={{ maxWidth: '28rem', width: '100%', backgroundColor: '#0F172A', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.15)', padding: '2rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: '#F1F5F9', fontFamily: 'Outfit, system-ui, sans-serif' }}>Something went wrong</h1>
-            <p style={{ fontSize: '0.875rem', color: '#94A3B8', marginBottom: '1.5rem' }}>
-              An unexpected error occurred. The error has been reported. Please try refreshing the page.
+          <div
+            style={{
+              maxWidth: '28rem',
+              width: '100%',
+              backgroundColor: tokens.surface,
+              borderRadius: '14px',
+              border: `1px solid ${tokens.border}`,
+              padding: '2rem',
+            }}
+          >
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', marginBottom: '0.75rem', color: tokens.text }}>
+              Something went wrong
+            </h1>
+            <p style={{ fontSize: '0.875rem', color: tokens.textSecondary, marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              An unexpected error occurred and has been reported. Try again, or reload the page if it keeps happening.
             </p>
-            {err && (
-              <p style={{ fontSize: '0.75rem', color: '#FCA5A5', backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.5rem' }} role="alert">
-                An unexpected error occurred. Our team has been notified.
+            {error && (
+              <p
+                role="alert"
+                style={{
+                  fontSize: '0.8125rem',
+                  color: tokens.danger,
+                  backgroundColor: tokens.dangerTint,
+                  border: '1px solid rgba(194, 0, 18, 0.18)',
+                  borderRadius: '10px',
+                  padding: '0.75rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                Error reference: {error.digest ?? 'not available'}. Quote this when you contact support.
               </p>
             )}
             <button
               onClick={() => reset?.()}
-              style={{ width: '100%', padding: '0.625rem', borderRadius: '8px', backgroundColor: '#0D9488', color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, border: 'none', cursor: 'pointer' }}
+              style={{
+                width: '100%',
+                minHeight: '44px',
+                padding: '0.625rem',
+                borderRadius: '10px',
+                backgroundColor: tokens.primary,
+                color: '#FFFFFF',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
               Try again
             </button>
+            <p style={{ fontSize: '0.75rem', color: tokens.textMuted, marginTop: '1rem', textAlign: 'center' }}>
+              If this continues, contact your program administrator.
+            </p>
           </div>
         </div>
       </body>

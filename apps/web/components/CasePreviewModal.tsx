@@ -271,7 +271,7 @@ export default function CasePreviewModal({ isOpen, entryId, tenantSlug, onClose 
                       placeholder="Add feedback (recommended for reject)..."
                       rows={2}
                       aria-label="Comment"
-                      className="w-full px-3 py-2 text-sm text-text-primary placeholder-text-muted bg-backdrop rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                      className="w-full px-3 py-2 text-sm text-text-primary placeholder:text-text-muted bg-backdrop rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
                     />
                     {actionError && <ErrorDisplay message={actionError} />}
                     {confirmReject && (

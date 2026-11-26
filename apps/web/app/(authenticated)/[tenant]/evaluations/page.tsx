@@ -157,7 +157,7 @@ export default async function EvaluationsPage({
 
           {isDirectorPlus && (
             <Link
-              href={`/${tenantSlug}/evaluations?new=true`}
+              href={`/${tenantSlug}/evaluate`}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <svg
@@ -199,7 +199,7 @@ export default async function EvaluationsPage({
             isDirectorPlus
               ? {
                   label: 'Start an Evaluation',
-                  href: `/${tenantSlug}/evaluations?new=true`,
+                  href: `/${tenantSlug}/evaluate`,
                 }
               : undefined
           }

@@ -15,7 +15,9 @@ export async function loginAction(email: string, password: string) {
     });
 
     if (error) {
-      return { error: error.message };
+      // Never echo GoTrue's text: "Email not confirmed" vs "Invalid login
+      // credentials" tells an attacker whether an account exists.
+      return { error: 'Invalid email or password.' };
     }
 
     const { data: profile } = await supabase
@@ -30,7 +32,6 @@ export async function loginAction(email: string, password: string) {
     return { redirectUrl: `/${slug}/dashboard` };
   } catch (err) {
     console.error('[loginAction] Error:', err);
-    const detail = err instanceof Error ? err.message : String(err);
-    return { error: detail };
+    return { error: 'Sign-in is temporarily unavailable. Try again.' };
   }
 }

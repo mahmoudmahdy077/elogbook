@@ -87,6 +87,7 @@ export default async function RotationsPage({
       rotations={calendarRotations}
       residents={residents}
       tenantSlug={tenantSlug}
+      tenantId={tenantId}
       canEdit={role === 'director' || role === 'institution_admin' || role === 'admin'}
       selectedResidentId={residentFilter ?? null}
     />
