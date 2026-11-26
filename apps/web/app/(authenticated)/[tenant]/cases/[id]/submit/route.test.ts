@@ -270,9 +270,7 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     expect(body.auto_approved).toBe(true);
   });
 
-  it('returns 409 when a concurrent writer moved the case first', async () => {
-    // Read sees a draft, but the conditional update matches nothing
-    // (simulating a concurrent submit that already claimed the row).
+  it('returns 409 when the case is no longer a draft', async () => {
     setTableData('case_entries', [
       { id: 'c-123', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
     ]);
@@ -286,38 +284,24 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
       data: { user: { id: 'u-1' } },
       error: null,
     });
-    const originalFrom = mockSupabase.from;
-    mockSupabase.from = vi.fn((table: string) => {
-      const builder = originalFrom(table);
-      if (table === 'case_entries') {
-        // Force the lost race: the conditional claim matches zero rows.
-        builder.update = (() => ({
-          eq: () => ({
-            eq: () => ({
-              select: () => Promise.resolve({ data: [], error: null }),
-            }),
-          }),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        })) as any;
-      }
-      return builder;
+    // The RPC owns the conditional transition; a lost race surfaces as an error.
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'case is not a draft (status=approved)' },
     });
-    try {
-      const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-123/submit', {
-        origin: 'https://app.elogbook.dev',
-      });
-      const params = Promise.resolve({ tenant: 'demo', id: 'c-123' });
 
-      const res = await POST(req, { params });
-      expect(res.status).toBe(409);
-      const body = await res.json();
-      expect(body.error).toMatch(/concurrent/i);
-    } finally {
-      mockSupabase.from = originalFrom;
-    }
+    const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-123/submit', {
+      origin: 'https://app.elogbook.dev',
+    });
+    const params = Promise.resolve({ tenant: 'demo', id: 'c-123' });
+
+    const res = await POST(req, { params });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toMatch(/not a draft/i);
   });
 
-  it('rolls back to draft when approval creation fails', async () => {
+  it('still succeeds when the approval_requests insert fails', async () => {
     setTableData('case_entries', [
       { id: 'c-126', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
     ]);
@@ -360,9 +344,11 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     const params = Promise.resolve({ tenant: 'demo', id: 'c-126' });
 
     const res = await POST(req, { params });
-    expect(res.status).toBe(500);
+    // The approvals queue reads status='pending', so a failed request row does
+    // not lose the case; the route logs it and reports success.
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toContain('returned to draft');
+    expect(body.success).toBe(true);
     expect(insertFailed).toBe(true);
   });
 });

@@ -90,24 +90,20 @@ async function handleSubmit(
     return NextResponse.json({ error: 'Subscription lapsed — case submission disabled' }, { status: 403 });
   }
 
-  // T23: conditional update — the status predicate travels WITH the write
-  // so two concurrent submits cannot both pass. Zero matched rows means a
-  // concurrent writer moved the case first: fail clearly (409) instead of
-  // creating approvals for a non-draft.
-  const { data: claimed, error: updateError } = await supabase
-    .from('case_entries')
-    .update({ status: 'pending' })
-    .eq('id', id)
-    .eq('status', 'draft')
-    .select('id');
+  // The draft -> submitted transition lives in a SECURITY DEFINER RPC so a
+  // client cannot set status='approved' directly and skip the ownership and
+  // subscription checks (or the case.submitted webhook below).
+  const { data: submitResult, error: updateError } = await supabase.rpc('submit_case', {
+    p_entry_id: id,
+  });
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-  if (!claimed || (Array.isArray(claimed) && claimed.length === 0)) {
-    return NextResponse.json(
-      { error: 'Case is no longer a draft — it may have been updated concurrently. Reload and retry.' },
-      { status: 409 },
-    );
+  if (updateError) {
+    const message = updateError.message ?? 'Could not submit the case.';
+    const status = /not a draft|not found/i.test(message) ? 409 : /lapsed/i.test(message) ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
+
+  const result = (submitResult ?? {}) as { status?: string; auto_approved?: boolean };
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -115,7 +111,7 @@ async function handleSubmit(
     .eq('id', entry.tenant_id)
     .single();
 
-  if (tenant?.tenant_type === 'individual') {
+  if (tenant?.tenant_type === 'individual' || result.auto_approved) {
     return NextResponse.json({ success: true, auto_approved: true });
   }
 
@@ -137,13 +133,10 @@ async function handleSubmit(
     );
 
     if (approvalError) {
-      await supabase
-        .from('case_entries')
-        .update({ status: 'draft' })
-        .eq('id', id);
-      return NextResponse.json({
-        error: 'Failed to create approval requests. Case has been returned to draft.',
-      }, { status: 500, headers: { 'Content-Type': 'application/json' } });
+      // The approvals queue reads status='pending' (since #26), so the case is
+      // still reviewable. Do not try to revert: pending -> draft is not a
+      // legal transition and the old revert always failed.
+      console.error('[cases/submit] approval_requests insert failed:', approvalError.message);
     }
   }
 
