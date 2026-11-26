@@ -39,8 +39,11 @@ function builder(table: string, state: { op?: string; col?: string; val?: unknow
     if (state.updateVals) {
       for (const r of rows) Object.assign(r, state.updateVals);
     }
-    if (state.single) return { data: rows[0] ?? null, error: null };
-    if (state.maybeSingle) return { data: rows[0] ?? null, error: null };
+    // Clear the shared filter list on every terminal read. Leaving it behind
+    // made the next query inherit this one's predicates (a `.single()` profile
+    // lookup then filtered the supervisors query by user_id).
+    if (state.single) { const r = rows[0] ?? null; filters.length = 0; return { data: r, error: null }; }
+    if (state.maybeSingle) { const r = rows[0] ?? null; filters.length = 0; return { data: r, error: null }; }
     if (state.limit !== undefined) rows = rows.slice(0, state.limit);
     const result = { data: rows, error: null };
     filters.length = 0;

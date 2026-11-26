@@ -19,6 +19,11 @@ const APP_DESCRIPTION = 'Electronic logbook for medical residents — log proced
 const APP_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://elogbook.app';
 
 export const metadata: Metadata = {
+  // Absolute URLs for Open Graph/Twitter images. Without it Next warns twice
+  // per build and falls back to localhost.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://elogbook-web.vercel.app',
+  ),
   title: {
     default: `${APP_NAME} Enterprise`,
     template: `%s | ${APP_NAME} Enterprise`,
