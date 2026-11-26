@@ -195,10 +195,7 @@ CREATE POLICY faculty_evals_insert ON public.faculty_evaluations
   FOR INSERT TO authenticated
   WITH CHECK (
     tenant_id = get_tenant_id()
-    AND (
-      evaluator_id = (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-      OR get_user_role() IN ('supervisor', 'director', 'institution_admin', 'admin')
-    )
+    AND get_user_role() IN ('supervisor', 'director', 'institution_admin', 'admin')
   );
 
 DROP POLICY IF EXISTS faculty_evals_update ON public.faculty_evaluations;

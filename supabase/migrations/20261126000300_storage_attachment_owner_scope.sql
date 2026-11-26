@@ -211,11 +211,23 @@ AS $function$
 $function$;
 
 -- ---------------------------------------------------------------------------
--- 4. decrypt_with_version: views are definer-owned, so authenticated does not
---    need direct EXECUTE.
+-- 4. tenant_webhooks: the secret_* views are security_barrier views that run
+--    decrypt_with_version as the caller, so EXECUTE cannot be revoked without
+--    breaking the intended admin read. Close the practical path instead: only
+--    institution_admin/admin may read the row that holds secret_enc.
+--    (The webhook API already requires institution_admin.)
 -- ---------------------------------------------------------------------------
-REVOKE EXECUTE ON FUNCTION public.decrypt_with_version(bytea, integer) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.decrypt_with_version(bytea, integer) FROM anon;
+DROP POLICY IF EXISTS tenant_webhooks_admin ON public.tenant_webhooks;
+CREATE POLICY tenant_webhooks_admin ON public.tenant_webhooks
+  FOR ALL TO authenticated
+  USING (
+    get_user_role() = 'admin'
+    OR (tenant_id = get_tenant_id() AND get_user_role() = 'institution_admin')
+  )
+  WITH CHECK (
+    get_user_role() = 'admin'
+    OR (tenant_id = get_tenant_id() AND get_user_role() = 'institution_admin')
+  );
 
 -- ---------------------------------------------------------------------------
 -- 5. anon has no business touching the secret-config tables or views.
