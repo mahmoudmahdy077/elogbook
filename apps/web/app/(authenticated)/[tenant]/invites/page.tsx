@@ -63,7 +63,7 @@ export default async function InvitesPage({ params }: { params: Promise<{ tenant
       </div>
 
       {/* Invite Section */}
-      <InviteMentor tenantSlug={tenantSlug} tenantId={auth.tenant.id} />
+      <InviteMentor tenantSlug={tenantSlug} />
 
       {/* Pending Invites */}
       {invites && invites.length > 0 && (

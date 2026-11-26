@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import TenantCreateForm from './TenantCreateForm';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -35,8 +36,10 @@ export default async function PlatformHomePage() {
     <div>
       <h1 className="text-2xl font-bold mb-2">Tenants</h1>
       <p className="text-sm text-text-muted mb-6">
-        {tenants.length} tenant(s). Read-only overview.
+        {tenants.length} tenant(s).
       </p>
+
+      <TenantCreateForm />
       {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full min-w-[640px] text-sm">
