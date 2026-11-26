@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   const { allowed, retryAfter } = await checkRateLimit(`contact:${ip}`, 5);
   if (!allowed) return rateLimitResponse(retryAfter);
 
-  let body: { name?: string; email?: string; message?: string };
+  let body: { name?: string; email?: string; message?: string; institution?: string };
   try {
     body = await request.json();
   } catch {
@@ -28,7 +28,11 @@ export async function POST(request: NextRequest) {
 
   const name = (body.name ?? '').trim().slice(0, 200);
   const email = (body.email ?? '').trim().slice(0, 320);
-  const message = (body.message ?? '').trim().slice(0, 5000);
+  const institution = (body.institution ?? '').trim().slice(0, 200);
+  const messageBody = (body.message ?? '').trim().slice(0, 5000);
+  // The table has no institution column; keep it with the message so sales
+  // still sees which hospital wrote in.
+  const message = institution ? `Institution: ${institution}\n\n${messageBody}` : messageBody;
 
   if (!name || !email || !message) {
     return NextResponse.json({ error: 'name, email and message are required' }, { status: 400 });

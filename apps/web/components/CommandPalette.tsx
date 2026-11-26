@@ -108,6 +108,27 @@ export default function CommandPalette() {
         className="glass-panel w-full max-w-md overflow-hidden outline-none"
         style={{ padding: 0 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        onKeyDown={(e) => {
+          // Keep Tab inside the palette; it is a modal surface.
+          if (e.key !== 'Tab') return;
+          const root = e.currentTarget;
+          const focusables = root.querySelectorAll<HTMLElement>(
+            'input, button, [href], [tabindex]:not([tabindex="-1"])',
+          );
+          if (focusables.length === 0) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
@@ -134,6 +155,13 @@ export default function CommandPalette() {
             autoComplete="off"
             spellCheck={false}
             aria-label="Search commands"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-list"
+            aria-autocomplete="list"
+            aria-activedescendant={
+              filteredItems.length > 0 ? `command-option-${activeIndex}` : undefined
+            }
           />
           <kbd
             className="hidden sm:inline-flex items-center justify-center h-5 px-1.5 rounded text-[0.55rem] font-semibold shrink-0"
@@ -153,6 +181,7 @@ export default function CommandPalette() {
           className="overflow-y-auto"
           style={{ maxHeight: 'min(50vh, 320px)' }}
           role="listbox"
+          id="command-list"
           aria-label="Commands"
         >
           {filteredItems.length === 0 ? (
@@ -167,6 +196,7 @@ export default function CommandPalette() {
             filteredItems.map((item, index) => (
               <button
                 key={item.id}
+                id={`command-option-${index}`}
                 role="option"
                 aria-selected={index === activeIndex}
                 onClick={() => handleSelect(index)}

@@ -293,9 +293,10 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
       template_id: selectedTemplateId,
       case_date: caseDate || new Date().toISOString().split('T')[0],
       field_values: fieldValues,
-      // SEC-002: honor the role-gated initialStatus — DB trigger enforces the
-      // same rule server-side (residents land 'pending', supervisors+ 'approved').
-      status: initialStatus,
+      // Save Draft always writes a draft. It used to reuse initialStatus, so
+      // "Save draft" submitted a resident case for approval (or pre-approved
+      // a supervisor's case) and the draft was never editable.
+      status: 'draft',
       accreditation_mappings: accreditationMappings,
       is_deidentified: isDeidentified,
     };
@@ -324,7 +325,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     if (error) {
       const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
       const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
-      setErrors([offline ? 'You appear to be offline — draft queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      setErrors([offline ? 'You appear to be offline. Nothing was saved — reconnect and try again.' : error.message]);
       setSavingDraft(false);
       return;
     }
@@ -370,7 +371,7 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
     if (error) {
       const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
       const offline = isOffline || /network|fetch|Failed to fetch|Load failed|offline/i.test(error.message);
-      setErrors([offline ? 'You appear to be offline — case queued locally and will sync when you reconnect. Check your connection and try again.' : error.message]);
+      setErrors([offline ? 'You appear to be offline. Nothing was saved — reconnect and try again.' : error.message]);
       setLoading(false);
       return;
     }
@@ -394,8 +395,15 @@ export default function CaseForm({ tenantId, tenantSlug, initialStatus, duplicat
         return;
       }
       const target = e.target as HTMLElement;
+      // Only the text fields own Enter. Intercepting it globally stopped
+      // Enter from activating Back / Save draft / links / selects (2.1.1).
       const isTextArea = target.tagName === 'TEXTAREA';
-      if (e.key === 'Enter' && !e.shiftKey && !isTextArea) {
+      const isButton = target.closest('button, a, [role="button"]') !== null;
+      const isTextInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable;
+      if (e.key === 'Enter' && !e.shiftKey && !isTextArea && !isButton && isTextInput) {
         e.preventDefault();
         if (step < STEPS.length - 1 && canProceed(step)) { setErrors([]); setStep(prev => prev + 1); }
         else if (step === STEPS.length - 1) setConfirmSubmit(true);

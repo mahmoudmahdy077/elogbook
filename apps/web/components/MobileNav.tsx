@@ -69,7 +69,7 @@ export default function MobileNav({
   }
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 panel rounded-none border-t z-40">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface-solid pb-[max(8px,env(safe-area-inset-bottom))]">
       <nav className="flex justify-around py-2 px-1">
         {primaryLinks.map((link) => {
           const fullHref = `/${tenantSlug}${link.href}`;
@@ -79,8 +79,9 @@ export default function MobileNav({
             <Link
               key={link.href}
               href={fullHref}
+              aria-current={isActive ? 'page' : undefined}
               className={
-                'relative flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-glow ' +
+                'relative flex flex-col items-center gap-0.5 px-1 py-1 text-xs transition-colors rounded-md min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-solid ' +
                 (isActive
                   ? 'text-fg-primary font-medium'
                   : 'text-text-muted')

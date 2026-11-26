@@ -315,7 +315,7 @@ export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookM
                 className="w-full rounded-xl bg-neutral-dark border border-border p-3 text-sm outline-none focus:border-primary transition-colors"
                 required
               />
-              <p className="text-xs text-text-muted/50 mt-1">HTTPS is required in production.</p>
+              <p className="text-xs text-text-muted mt-1">HTTPS is required in production.</p>
             </div>
 
             <div>
@@ -375,7 +375,7 @@ export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookM
                 required={!editingId}
                 minLength={8}
               />
-              <p className="text-xs text-text-muted/50 mt-1">
+              <p className="text-xs text-text-muted mt-1">
                 Used to sign payloads via HMAC-SHA256. Store this safely — it won&apos;t be shown again.
               </p>
             </div>
@@ -439,8 +439,8 @@ export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookM
       {webhooks.length === 0 && !showForm ? (
         <div className="bg-surface-solid rounded-2xl border border-border p-8 text-center">
           <div className="text-4xl mb-3 opacity-30">🔗</div>
-          <p className="text-sm text-text-muted/70">No webhooks configured yet.</p>
-          <p className="text-xs text-text-muted/50 mt-1">
+          <p className="text-sm text-text-muted">No webhooks configured yet.</p>
+          <p className="text-xs text-text-muted mt-1">
             Add a webhook to receive case event notifications.
           </p>
         </div>
@@ -463,7 +463,7 @@ export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookM
                       {wh.description || wh.url}
                     </span>
                   </div>
-                  <p className="text-xs text-text-muted/60 truncate font-mono">{wh.url}</p>
+                  <p className="text-xs text-text-muted truncate font-mono">{wh.url}</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {wh.events.map((evt) => (
                       <span
@@ -474,7 +474,7 @@ export default function WebhookManager({ tenantSlug, initialWebhooks }: WebhookM
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-text-muted/50">
+                  <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
                     <span>Created {formatDate(wh.created_at)}</span>
                     {wh.last_sent && (
                       <span>

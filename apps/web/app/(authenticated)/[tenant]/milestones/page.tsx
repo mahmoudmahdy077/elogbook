@@ -25,6 +25,8 @@ export default async function MilestonesPage({
   const role = auth.profile.role;
   const isDirectorPlus = ALLOWED_ROLES.includes(role);
   const isResident = role === 'resident';
+  // Only supervisors and above may record an assessment; residents read theirs.
+  const canAssess = ['supervisor', 'director', 'institution_admin', 'admin'].includes(role);
 
   // ---- Resident assessments (real per-resident rows in `milestones`) ----
   const targetId = isResident ? auth.profile.id : residentFilter || auth.profile.id;
@@ -213,7 +215,8 @@ export default async function MilestonesPage({
           currentLevels={currentLevels}
           residentId={targetId}
           tenantId={tenantId}
-          isEditable
+          assessorId={canAssess ? auth.profile.id : undefined}
+          isEditable={canAssess}
         />
       )}
     </div>

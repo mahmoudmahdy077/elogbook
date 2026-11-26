@@ -89,20 +89,20 @@ export default function AdminTabPanel({
       {activeTab === 'overview' && (
         <div className="panel p-5">
           <h2 className="text-lg font-heading font-semibold mb-2">Program Analytics</h2>
-          <p className="text-sm text-text-muted/60 mb-4">
+          <p className="text-sm text-text-muted mb-4">
             View institution-wide completion rates, pending verifications, and specialty distribution.
           </p>
           <div className="flex gap-6 mb-4">
             <div>
-              <p className="text-xs text-text-muted/50">Total Cases</p>
+              <p className="text-xs text-text-muted">Total Cases</p>
               <p className="text-2xl font-bold font-heading">{totalCases}</p>
             </div>
             <div>
-              <p className="text-xs text-amber-400/60">Pending Verification</p>
-              <p className="text-2xl font-bold font-heading text-amber-400">{pendingCases}</p>
+              <p className="text-xs text-text-muted">Pending Verification</p>
+              <p className="text-2xl font-bold font-heading text-fg-warning">{pendingCases}</p>
             </div>
             <div>
-              <p className="text-xs text-text-muted/50">Residents</p>
+              <p className="text-xs text-text-muted">Residents</p>
               <p className="text-2xl font-bold font-heading">{((users ?? []) as unknown[]).length}</p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function AdminTabPanel({
 
           <div className="mt-8">
             <h2 className="text-lg font-heading font-semibold mb-1">Settings &amp; Integrations</h2>
-            <p className="text-sm text-text-muted/60 mb-4">
+            <p className="text-sm text-text-muted mb-4">
               Enterprise controls that live on their own pages.
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

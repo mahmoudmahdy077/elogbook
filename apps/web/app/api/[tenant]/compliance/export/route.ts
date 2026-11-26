@@ -273,7 +273,9 @@ function toCsv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return 'No data';
   const headers = Object.keys(rows[0]!);
   const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v);
+    let s = v === null || v === undefined ? '' : String(v);
+    // Formula injection guard, before quoting (see lib/csv.ts).
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     if (s.includes(',') || s.includes('"') || s.includes('\n')) {
       return '"' + s.replace(/"/g, '""') + '"';
     }

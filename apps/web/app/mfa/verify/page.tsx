@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { safeRelativePath } from '@/lib/safe-redirect';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -78,7 +79,7 @@ function MfaVerifyInner() {
       setLoading(false);
       return;
     }
-    router.push(next);
+    router.push(safeRelativePath(next));
   };
 
   return (
@@ -94,6 +95,8 @@ function MfaVerifyInner() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]{6}"
+              aria-label="6-digit authentication code"
+              autoComplete="one-time-code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
@@ -104,7 +107,7 @@ function MfaVerifyInner() {
             <button
               onClick={handleVerify}
               disabled={code.length < 6 || loading}
-              className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-40"
+              className="w-full py-2.5 rounded-lg bg-primary text-text-on-primary text-sm font-medium hover:bg-primary-hover disabled:opacity-40"
             >
               {loading ? 'Verifying…' : 'Verify'}
             </button>

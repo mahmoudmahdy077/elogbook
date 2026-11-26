@@ -94,7 +94,7 @@ export default function PageEditor({
           onChange={(e) => setDraft(e.target.value)}
           rows={18}
           spellCheck={false}
-          className="w-full font-mono text-xs rounded-14 border border-border bg-surface-solid p-4 text-text-primary"
+          className="w-full font-mono text-xs rounded-lg border border-border bg-surface-solid p-4 text-text-primary"
           aria-label="Draft content as JSON"
         />
         <div className="mt-3 flex gap-2">
@@ -117,7 +117,7 @@ export default function PageEditor({
         <h2 className="text-lg font-semibold text-text-primary mb-2">Revisions</h2>
         <ul className="space-y-2">
           {revisions.map((r) => (
-            <li key={r.id} className="flex items-center justify-between rounded-14 border border-border bg-surface p-3">
+            <li key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-surface p-3">
               <div>
                 <p className="font-mono text-xs text-text-primary">
                   {r.id.slice(0, 8)} {r.id === publishedId && <span className="text-fg-success">(published)</span>}

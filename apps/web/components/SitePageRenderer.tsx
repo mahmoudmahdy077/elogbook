@@ -92,7 +92,7 @@ function Block({ block }: { block: ContentBlock }) {
       const src = typeof block.src === 'string' ? block.src : '';
       const alt = typeof block.alt === 'string' ? block.alt : '';
       if (!isSafeHref(src) || src.startsWith('mailto:')) return null;
-      return <img src={src} alt={alt} className="my-6 rounded-14 max-w-full" data-block="image" loading="lazy" />;
+      return <img src={src} alt={alt} className="my-6 rounded-lg max-w-full" data-block="image" loading="lazy" />;
     }
     case 'benefits':
     case 'workflow':
@@ -105,7 +105,7 @@ function Block({ block }: { block: ContentBlock }) {
         <section className="py-8" data-block={block.type}>
           <ul className="grid gap-4 md:grid-cols-3">
             {items.map((item, i) => (
-              <li key={i} className="rounded-14 border border-border bg-surface p-5">
+              <li key={i} className="rounded-lg border border-border bg-surface p-5">
                 <h3 className="font-semibold text-text-primary">{item.title}</h3>
                 {item.description && <p className="mt-2 text-sm text-text-secondary">{item.description}</p>}
               </li>

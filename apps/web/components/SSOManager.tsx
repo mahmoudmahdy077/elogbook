@@ -163,7 +163,11 @@ export default function SSOManager({ tenantSlug, initialConfigs }: SSOManagerPro
       if (formProtocol === 'saml') {
         payload.metadata_url = formMetadataUrl.trim() || null;
         payload.idp_entity_id = formIdpEntityId.trim() || null;
-        payload.idp_certificate = formIdpCertificate.trim() || null;
+        // Blank means "keep the stored certificate" — sending null wiped it on
+        // every edit (the same pattern client_secret already used).
+        if (formIdpCertificate.trim()) {
+          payload.idp_certificate = formIdpCertificate.trim();
+        }
       } else {
         payload.discovery_url = formDiscoveryUrl.trim() || null;
         payload.client_id = formClientId.trim() || null;

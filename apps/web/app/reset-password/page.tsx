@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-surface px-4">
+    <main id="main-content" className="min-h-screen flex items-center justify-center bg-surface px-4">
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-sm bg-surface-solid rounded-2xl border border-border p-6 space-y-4"

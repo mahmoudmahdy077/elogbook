@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import RotationForm from '@/components/RotationForm';
 
 interface Rotation {
   id: string;
@@ -15,6 +17,7 @@ interface Rotation {
 }
 
 interface RotationCalendarProps {
+  tenantId: string;
   rotations: Rotation[];
   tenantSlug: string;
   canEdit: boolean;
@@ -55,13 +58,16 @@ function formatDate(year: number, month: number, day: number): string {
 
 export default function RotationCalendar({
   rotations,
-  tenantSlug,
+  tenantSlug: _tenantSlug,
+  tenantId,
   canEdit,
   residents,
   selectedResidentId,
 }: RotationCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedRotation, setSelectedRotation] = useState<Rotation | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
   const [residentFilter, setResidentFilter] = useState<string>(
     selectedResidentId ?? ''
   );
@@ -232,15 +238,16 @@ export default function RotationCalendar({
           )}
 
           {canEdit && (
-            <a
-              href={`/${tenantSlug}/rotations/new`}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-text-on-primary text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
               </svg>
               Add Rotation
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -362,25 +369,26 @@ export default function RotationCalendar({
               </div>
 
               <div className="flex gap-2 pt-2">
-                <a
-                  href={`/${tenantSlug}/rotations/${selectedRotation.id}`}
-                  className="flex-1 text-center rounded-full bg-primary text-white px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+                <button
+                  type="button"
+                  onClick={() => setSelectedRotation(null)}
+                  className="flex-1 rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-text-on-primary hover:opacity-90 transition-opacity"
                 >
-                  View Details
-                </a>
-                {canEdit && (
-                  <a
-                    href={`/${tenantSlug}/rotations/${selectedRotation.id}/edit`}
-                    className="rounded-full border border-border text-sm font-medium px-4 py-2.5 text-text-secondary hover:bg-neutral-dark transition-colors"
-                  >
-                    Edit
-                  </a>
-                )}
+                  Close
+                </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+    <RotationForm
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          router.refresh();
+        }}
+        tenantId={tenantId}
+      />
     </div>
   );
 }

@@ -55,7 +55,7 @@ export default function CaseFilters({ basePath }: { basePath: string }) {
         defaultValue={search}
         onChange={(e) => handleSearch(e.target.value)}
         placeholder="Search by template name..."
-        className="h-9 min-w-[200px] px-3 text-sm border border-border rounded-xl bg-surface-solid text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        className="h-9 min-w-[200px] px-3 text-sm border border-border rounded-xl bg-surface-solid text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
       />
       <div className="flex items-center gap-1.5">
         {STATUS_OPTIONS.map((status) => {

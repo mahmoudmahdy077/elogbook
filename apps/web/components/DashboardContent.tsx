@@ -60,6 +60,7 @@ interface DashboardData {
   pendingApprovals: number;
   totalResidents: number;
   tenantType: 'individual' | 'institution';
+  tenantName?: string;
   residentViolations?: ViolationRow[];
   directorViolations?: ViolationRow[];
   planSlug?: string;
@@ -147,7 +148,7 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 export default function Dashboard({ data }: { data: DashboardData }) {
-  const { profile, tenantSlug, stats, recentCases, goals, residents, pendingApprovals, totalResidents, tenantType, residentViolations = [], directorViolations = [] } = data;
+  const { profile, tenantSlug, stats, recentCases, goals, residents, pendingApprovals, totalResidents, tenantType, tenantName, residentViolations = [], directorViolations = [] } = data;
   const role = profile.role;
   const totalCases = stats.draft + stats.pending + stats.approved + stats.rejected;
   const { isReadOnly } = useSubscriptionStatus();
@@ -166,7 +167,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             Welcome, {profile.full_name.split(' ')[0]}
           </h1>
           <p className="text-[0.9rem] text-text-muted mt-1 font-normal">
-            {profile.specialty || 'Resident'} · {tenantType === 'individual' ? 'Individual Account' : profile.role === 'resident' ? 'Demo Hospital' : `${role === 'director' ? 'Program Director' : role === 'institution_admin' ? 'Institution Admin' : 'Supervisor'} Dashboard`}
+            {profile.specialty || 'Resident'} · {tenantType === 'individual' ? 'Individual Account' : profile.role === 'resident' ? tenantName ?? 'Resident' : `${role === 'director' ? 'Program Director' : role === 'institution_admin' ? 'Institution Admin' : 'Supervisor'} Dashboard`}
           </p>
         </div>
         {role === 'resident' && (

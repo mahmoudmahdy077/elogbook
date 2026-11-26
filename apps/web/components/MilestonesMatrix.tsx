@@ -19,6 +19,7 @@ interface MilestonesMatrixProps {
   residentId?: string;
   tenantId?: string;
   isEditable?: boolean;
+  assessorId?: string;
 }
 
 /**
@@ -36,6 +37,7 @@ export default function MilestonesMatrix({
   residentId,
   tenantId,
   isEditable = false,
+  assessorId,
 }: MilestonesMatrixProps) {
   const supabase = createClient();
   const [selectedMilestone, setSelectedMilestone] =
@@ -58,6 +60,7 @@ export default function MilestonesMatrix({
       sub_competency: selectedMilestone.sub_competency,
       level: selectedLevel,
       assessment_date: new Date().toISOString().slice(0, 10),
+      ...(assessorId ? { assessor_id: assessorId } : {}),
     });
 
     setSaving(false);

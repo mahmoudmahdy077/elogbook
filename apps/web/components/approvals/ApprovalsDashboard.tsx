@@ -362,9 +362,13 @@ export default function ApprovalsDashboard({ tenantId, tenantSlug }: Props) {
                       >
                         View
                       </button>
-                      {approvalRequest && (
+                      {/* CaseForm writes case_entries.status='pending' without an
+                          approval_requests row, so gating on the relation hid
+                          every Approve/Reject button. The action route keys on
+                          entry_id, so a pending entry is enough. */}
+                      {entry.status === 'pending' && (
                         <ApprovalActions
-                          requestId={approvalRequest.id}
+                          requestId={approvalRequest?.id ?? ''}
                           entryId={entry.id}
                           tenant={tenantSlug}
                         />

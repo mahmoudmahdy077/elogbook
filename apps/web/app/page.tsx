@@ -80,7 +80,7 @@ export default async function HomePage() {
             <Link href="/login" className="inline-flex min-h-[44px] items-center px-3 text-sm text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">
               Sign in
             </Link>
-            <Link href="/signup" className="inline-flex min-h-[44px] items-center rounded-8 bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <Link href="/signup" className="inline-flex min-h-[44px] items-center rounded-sm bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               Start free
             </Link>
           </div>
@@ -91,7 +91,7 @@ export default async function HomePage() {
         {/* ACT 1 · ARRIVAL — hero */}
         <section aria-labelledby="hero-h" className="relative mx-auto max-w-[1200px] px-8 pb-24 pt-32 max-md:px-6 max-md:pt-24 max-sm:px-4" data-testid="hero">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-text-muted">Electronic logbook · SCFHS · ACGME · GMC</p>
-          <h1 id="hero-h" className="mt-4 max-w-[14ch] text-heading font-heading font-bold leading-[1.05] tracking-[-0.03em] text-text-primary max-lg:text-5xl text-7xl">
+          <h1 id="hero-h" className="mt-4 max-w-[14ch] font-heading font-bold leading-[1.05] tracking-[-0.03em] text-text-primary max-lg:text-5xl text-7xl">
             Every case. Sealed.
           </h1>
           <p className="mt-6 max-w-[46ch] text-base leading-relaxed text-text-secondary">
@@ -99,10 +99,10 @@ export default async function HomePage() {
             Log offline, de-identify instantly, and put supervisor sign-off behind every entry.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/signup?role=resident" className="inline-flex min-h-[44px] items-center rounded-8 bg-primary px-5 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" data-testid="hero-cta">
+            <Link href="/signup" className="inline-flex min-h-[44px] items-center rounded-sm bg-primary px-5 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" data-testid="hero-cta">
               Start logging free
             </Link>
-            <a href="#demo" className="inline-flex min-h-[44px] items-center rounded-8 border border-border-active px-5 text-sm font-medium text-text-secondary transition-colors hover:border-primary-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <a href="#demo" className="inline-flex min-h-[44px] items-center rounded-sm border border-border-active px-5 text-sm font-medium text-text-secondary transition-colors hover:border-primary-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               See verification work
             </a>
           </div>
@@ -120,15 +120,15 @@ export default async function HomePage() {
             <span aria-hidden className="mb-2 block font-mono text-xs tabular-nums text-text-muted lg:hidden">01</span>
             <h2 id="verbs-h" className="text-3xl font-semibold tracking-tight text-text-primary">Log. Map. Sign.</h2>
             <div className="mt-10 grid gap-6 md:grid-cols-3">
-              <article className="rounded-14 border border-border bg-surface p-6 backdrop-blur">
+              <article className="rounded-lg border border-border bg-surface p-6 backdrop-blur">
                 <h3 className="text-base font-semibold text-text-primary">Log.</h3>
                 <p className="mt-2 text-sm leading-relaxed">Offline capture survives the basement, the elevator, the dead zone. Sync returns; nothing is retyped.</p>
               </article>
-              <article className="rounded-14 border border-border bg-surface p-6 backdrop-blur">
+              <article className="rounded-lg border border-border bg-surface p-6 backdrop-blur">
                 <h3 className="text-base font-semibold text-text-primary">Map.</h3>
                 <p className="mt-2 text-sm leading-relaxed">Cases align to SCFHS, ACGME, and GMC requirements as you work — coverage visible before anyone asks.</p>
               </article>
-              <article className="rounded-14 border border-border bg-surface p-6 backdrop-blur">
+              <article className="rounded-lg border border-border bg-surface p-6 backdrop-blur">
                 <h3 className="text-base font-semibold text-text-primary">Sign.</h3>
                 <p className="mt-2 text-sm leading-relaxed">Supervisors approve with one tap. Rejections come back with reasons, not silence.</p>
               </article>
@@ -175,24 +175,24 @@ export default async function HomePage() {
             <span aria-hidden className="mb-2 block font-mono text-xs tabular-nums text-text-muted lg:hidden">04</span>
             <h2 id="choose-h" className="text-3xl font-semibold tracking-tight text-text-primary">Start where you stand.</h2>
             <div className="mt-10 grid gap-6 md:grid-cols-2">
-              <article className="rounded-14 border border-border bg-surface p-6 text-left backdrop-blur">
+              <article className="rounded-lg border border-border bg-surface p-6 text-left backdrop-blur">
                 <h3 className="text-base font-semibold text-text-primary">I&apos;m a resident</h3>
                 <p className="mt-2 text-sm">Offline capture that syncs when signal returns, de-identified before it leaves your hands.</p>
-                <Link href="/signup?role=resident" className="mt-4 inline-flex min-h-[44px] items-center rounded-8 bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover">
+                <Link href="/signup" className="mt-4 inline-flex min-h-[44px] items-center rounded-sm bg-primary px-4 text-sm font-medium text-text-on-primary transition-transform active:scale-[0.97] hover:bg-primary-hover">
                   Create account
                 </Link>
               </article>
-              <article className="rounded-14 border border-border bg-surface p-6 text-left backdrop-blur">
+              <article className="rounded-lg border border-border bg-surface p-6 text-left backdrop-blur">
                 <h3 className="text-base font-semibold text-text-primary">I direct a program</h3>
                 <p className="mt-2 text-sm">Immutable trails, milestone coverage, and exports your accreditation reviewers accept without follow-up.</p>
-                <Link href="/signup?role=director" className="mt-4 inline-flex min-h-[44px] items-center rounded-8 border border-border-active px-4 text-sm font-medium text-text-secondary hover:border-primary-glow">
+                <Link href="/contact" className="mt-4 inline-flex min-h-[44px] items-center rounded-sm border border-border-active px-4 text-sm font-medium text-text-secondary hover:border-primary-glow">
                   See controls
                 </Link>
               </article>
             </div>
 
             {/* Pricing strip — live rows or graceful fallback */}
-            <div className="mt-12 rounded-14 border border-border bg-surface-solid p-5" data-testid="pricing-strip">
+            <div className="mt-12 rounded-lg border border-border bg-surface-solid p-5" data-testid="pricing-strip">
               <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm">
                 {plans.map((p) => (
                   <li key={p.name}>

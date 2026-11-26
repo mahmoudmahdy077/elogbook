@@ -275,7 +275,7 @@ export default function SCIManager({
             <code className="block bg-neutral-dark rounded-lg px-3 py-2 text-sm font-mono border border-border">
               Authorization: Bearer {'{your_scim_token}'}
             </code>
-            <p className="text-xs text-text-muted/50 mt-1">
+            <p className="text-xs text-text-muted mt-1">
               The SCIM endpoint accepts <strong>only</strong> bearer tokens generated below. Tokens are
               stored as SHA-256 hashes; the plaintext is shown exactly once at creation.
             </p>
@@ -305,7 +305,7 @@ export default function SCIManager({
                 placeholder="e.g. Okta production, Entra ID dev"
                 className="w-full rounded-xl bg-neutral-dark border border-border p-3 text-sm outline-none focus:border-primary transition-colors"
               />
-              <p className="text-xs text-text-muted/50 mt-1">
+              <p className="text-xs text-text-muted mt-1">
                 A friendly label to help identify what this token is used for.
               </p>
             </div>
@@ -356,7 +356,7 @@ export default function SCIManager({
                     {token.last_used_at ? (
                       <span>Last used {formatDate(token.last_used_at)}</span>
                     ) : (
-                      <span className="text-text-muted/40">Never used</span>
+                      <span className="text-text-muted">Never used</span>
                     )}
                   </div>
                 </div>

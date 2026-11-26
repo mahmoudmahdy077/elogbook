@@ -23,7 +23,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8">
+    <div id="main-content" className="min-h-screen bg-backdrop flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-sm sm:max-w-md">
         <SignupForm planSlug={plan ?? null} />
       </div>

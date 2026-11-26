@@ -133,6 +133,25 @@ export async function PUT(
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
+  // Status alone stops nothing: RLS reads the role from the JWT and the session
+  // stays valid. Mirror the /action route and ban/unban the auth user so a
+  // deactivated account cannot keep refreshing its session.
+  if (status === 'deactivated') {
+    const { error: banError } = await adminClient.auth.admin.updateUserById(
+      (targetProfile as { user_id: string }).user_id,
+      { ban_duration: '876000h' },
+    );
+    if (banError) {
+      console.error('[admin/users/[id]] ban failed:', banError.message);
+      return NextResponse.json({ error: 'User deactivated but sign-in could not be blocked' }, { status: 500 });
+    }
+  } else if (status === 'active') {
+    await adminClient.auth.admin.updateUserById(
+      (targetProfile as { user_id: string }).user_id,
+      { ban_duration: 'none' },
+    );
+  }
+
   // Update auth user role if changed
   if (role && role !== targetProfile.role) {
     await adminClient.auth.admin.updateUserById(targetProfile.user_id, {

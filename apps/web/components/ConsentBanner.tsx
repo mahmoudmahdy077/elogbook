@@ -11,7 +11,7 @@ export default function ConsentBanner() {
     <div
       role="region"
       aria-label="Analytics consent"
-      className="fixed bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:max-w-md panel p-4 z-50"
+      className="fixed inset-x-4 bottom-[calc(72px+env(safe-area-inset-bottom))] z-50 panel p-4 md:inset-x-auto md:bottom-4 md:right-4 md:max-w-md"
     >
       <h2 className="text-sm font-medium mb-1">Help us improve E-Logbook</h2>
       <p className="text-xs text-text-muted mb-3">

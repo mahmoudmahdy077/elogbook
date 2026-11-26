@@ -84,6 +84,7 @@ export default function SubscriptionManager({ tenantSlug }: SubscriptionManagerP
   const handleCancel = useCallback(async () => {
     if (!confirm('Cancel subscription? This can be reverted by selecting a new plan.')) return;
     const reason = prompt('Reason for cancellation (optional):');
+    if (reason === null) return; // prompt dismissed — do not cancel
     setChanging(true);
     try {
       const res = await fetch(`/api/${tenantSlug}/admin/subscription/cancel`, {

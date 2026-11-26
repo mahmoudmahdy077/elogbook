@@ -35,11 +35,11 @@ export default async function PlatformHomePage() {
     <div>
       <h1 className="text-2xl font-bold mb-2">Tenants</h1>
       <p className="text-sm text-text-muted mb-6">
-        {tenants.length} tenant(s). Read-only overview; lifecycle management arrives with tenant settings.
+        {tenants.length} tenant(s). Read-only overview.
       </p>
       {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}
-      <div className="rounded-14 border border-border bg-surface overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
               <tr className="border-b border-divider text-left text-text-muted">
                 <th className="px-4 py-3 font-medium">Name</th>

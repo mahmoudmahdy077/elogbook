@@ -16,15 +16,15 @@ export interface ImpactDialogProps {
 }
 
 const SEVERITY_STYLES: Record<string, { button: string; accent: string }> = {
-  info: { button: 'primary', accent: 'border-teal-500/30' },
-  warning: { button: 'secondary', accent: 'border-amber-500/30' },
-  danger: { button: 'danger', accent: 'border-red-500/30' },
+  info: { button: 'primary', accent: 'border-primary/30' },
+  warning: { button: 'secondary', accent: 'border-pending/30' },
+  danger: { button: 'danger', accent: 'border-rejected/30' },
 };
 
 const SEVERITY_HEADER: Record<string, string> = {
-  info: 'text-teal-400',
-  warning: 'text-amber-400',
-  danger: 'text-red-400',
+  info: 'text-fg-primary',
+  warning: 'text-fg-warning',
+  danger: 'text-fg-danger',
 };
 
 const BUTTON_STYLES: Record<string, string> = {
@@ -99,7 +99,7 @@ export default function ImpactDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="impact-dialog-title"
-            className={`panel p-6 max-w-md w-full border ${styles.accent}`}
+            className={`panel p-6 max-h-[85dvh] w-full max-w-md overflow-y-auto border ${styles.accent}`}
           >
             <h3 id="impact-dialog-title" className={`text-lg font-semibold font-heading mb-3 ${headerColor}`}>
               {title}

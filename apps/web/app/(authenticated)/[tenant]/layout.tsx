@@ -110,7 +110,7 @@ export default async function TenantLayout({
         tenantId={auth.profile.tenant_id}
       />
       <SubscriptionStatusProvider status={subscriptionStatus} periodEnd={auth.subscription?.current_period_end}>
-        <main id="main-content" className="flex-1 overflow-auto pb-16 md:pb-6">
+        <main id="main-content" className="flex-1 overflow-auto pb-24 md:pb-6">
           <ReadOnlyBanner tenantSlug={tenantSlug} />
           {/* U2.4 + U2.5: responsive padding (p-3 on phones, p-6 on larger) + content max-width for readability. */}
           <div className="p-3 sm:p-6">

@@ -17,6 +17,13 @@ describe('escapeCsvCell', () => {
     expect(escapeCsvCell('@x')).toBe("'@x");
     expect(escapeCsvCell('-2+3')).toBe("'-2+3");
   });
+  it('neutralizes formulas that also contain a comma', () => {
+    // Regression: the guard used to run on the already-quoted cell, so a value
+    // starting with `=` and containing a comma slipped through as "=...".
+    expect(escapeCsvCell('=HYPERLINK("https://evil","x"),x')).toBe(
+      '"\'=HYPERLINK(""https://evil"",""x""),x"',
+    );
+  });
   it('leaves plain values untouched', () => {
     expect(escapeCsvCell('hello')).toBe('hello');
     expect(escapeCsvCell(42)).toBe('42');

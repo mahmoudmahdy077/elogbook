@@ -1,4 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import AdminTabPanel from '@/components/AdminTabPanel';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -6,6 +7,10 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 export default async function AdminPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: tenantSlug } = await params;
   const supabase = await createServerSupabase();
+  // ai_config / payment_gateway_config deliberately have SELECT revoked from
+  // `authenticated` (00053_encrypt_secrets). Reading them with the user client
+  // raised `permission denied` and the whole Admin page rendered an error.
+  const adminDb = createServiceRoleClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) redirect('/login');
@@ -43,12 +48,12 @@ export default async function AdminPage({ params }: { params: Promise<{ tenant: 
         .select('*')
         .eq('tenant_id', profile.tenant_id)
         .order('created_at', { ascending: false }),
-      supabase
+      adminDb
         .from('ai_config')
         .select('id, tenant_id, provider, model, endpoint_url, is_active, api_key_enc')
         .eq('tenant_id', profile.tenant_id)
         .maybeSingle(),
-      supabase
+      adminDb
         .from('payment_gateway_config')
         .select('id, tenant_id, provider, publishable_key, endpoint_url, is_active, secret_key_enc, webhook_secret_enc')
         .eq('tenant_id', profile.tenant_id)
