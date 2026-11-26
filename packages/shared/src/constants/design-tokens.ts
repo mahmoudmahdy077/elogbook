@@ -5,7 +5,9 @@ export const clinicalTokens = {
        everywhere (white, #F2F2F7, tint bg) while keeping the hue. */
     deidentified: { DEFAULT: '#4442C9' },
     backdrop: { dark: '#F2F2F7', light: '#FFFFFF' },
-    primary: { DEFAULT: '#007AFF', hover: '#0066D6', glow: 'rgba(0, 122, 255, 0.08)' },
+    // #0066D6 keeps white label text at 5.42:1 (AA). The raw #007AFF is 4.02:1
+    // on white and failed 1.4.3 on every primary button.
+    primary: { DEFAULT: '#0066D6', hover: '#0057B8', glow: 'rgba(0, 102, 214, 0.10)' },
     secondary: { DEFAULT: '#5856D6', hover: '#6E6CF0', glow: 'rgba(88, 86, 214, 0.08)' },
     neutral: { light: '#E5E5EA', dark: '#F2F2F7', darker: '#FFFFFF' },
     success: { DEFAULT: '#34C759', bg: 'rgba(52, 199, 89, 0.10)', glow: 'rgba(52, 199, 89, 0.08)' },
