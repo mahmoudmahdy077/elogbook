@@ -1,6 +1,7 @@
 import { getAuthContext } from '@/lib/supabase/auth';
 import { createServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
+import CaseActionButton from '@/components/CaseActionButton';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
@@ -123,13 +124,21 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           </div>
 
           {entry.status === 'draft' && isResident && (
-            <div className="pt-4 flex items-center gap-3">
+            <div className="pt-4 flex flex-wrap items-center gap-3">
               <Link
                 href={`/${tenantSlug}/cases/${id}/edit`}
-                className="rounded-full bg-primary text-text-on-primary px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
+                className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-neutral-dark"
               >
                 Edit Case
               </Link>
+              {/* Without this, a saved draft could never enter the approval
+                  queue: the only draft→pending transition is this route. */}
+              <CaseActionButton
+                url={`/${tenantSlug}/cases/${id}/submit`}
+                label="Submit for approval"
+                pendingLabel="Submitting…"
+                confirmMessage="Submit this draft for supervisor approval? It becomes read-only afterwards."
+              />
             </div>
           )}
           {entry.status === 'approved' && isResident && (
@@ -138,14 +147,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
                 This case has been logged and is part of your permanent record.
               </div>
               {(!approvals || approvals.length === 0) && (
-                <form action={`/${tenantSlug}/cases/${id}/request-verification`} method="POST">
-                  <button
-                    type="submit"
-                    className="rounded-full border border-primary text-fg-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors"
-                  >
-                    Request Verification
-                  </button>
-                </form>
+                <CaseActionButton
+                  url={`/${tenantSlug}/cases/${id}/request-verification`}
+                  label="Request verification"
+                  pendingLabel="Sending…"
+                  variant="secondary"
+                />
               )}
             </div>
           )}

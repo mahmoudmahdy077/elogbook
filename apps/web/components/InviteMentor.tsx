@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 
 interface InviteMentorProps {
   tenantSlug: string;
-  tenantId: string;
 }
 
-export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps) {
+export default function InviteMentor({ tenantSlug }: InviteMentorProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('resident');
   const [loading, setLoading] = useState(false);
@@ -19,7 +17,6 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
   const [errors, setErrors] = useState<string[]>([]);
   const [successCount, setSuccessCount] = useState(0);
   const { show: showToast } = useToast();
-  const supabase = createClient();
 
   const handleSingleInvite = async () => {
     setErrors([]);
@@ -30,26 +27,21 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
 
     setLoading(true);
     try {
-      const { data: invite, error: inviteError } = await supabase
-        .from('tenant_invites')
-        .insert({
-          tenant_id: tenantId,
-          email,
-          invited_by: (await supabase.auth.getUser()).data.user?.id,
-          role,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (inviteError) {
-        setErrors([inviteError.message]);
+      // The API sends the invitation email and writes the tenant_invites row
+      // that handle_new_user reads. A direct insert never mailed anyone and
+      // the generated ?invite= link was ignored by signup.
+      const res = await fetch(`/api/${tenantSlug}/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role, full_name: email.split('@')[0] }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) {
+        setErrors([payload.error ?? 'Could not send the invitation.']);
         return;
       }
-
-      const link = `${window.location.origin}/signup?invite=${invite.id}`;
-      setInviteLink(link);
-      showToast('Invite created successfully', 'success');
+      setInviteLink('');
+      showToast(payload.message ?? 'Invitation sent', 'success');
     } catch (err) {
       setErrors([err instanceof Error ? err.message : 'Failed to create invite']);
     } finally {
@@ -77,17 +69,12 @@ export default function InviteMentor({ tenantSlug, tenantId }: InviteMentorProps
 
     for (const emailAddr of emails) {
       try {
-        const { error } = await supabase
-          .from('tenant_invites')
-          .insert({
-            tenant_id: tenantId,
-            email: emailAddr,
-            invited_by: (await supabase.auth.getUser()).data.user?.id,
-            role,
-            status: 'pending',
-          });
-
-        if (!error) success++;
+        const res = await fetch(`/api/${tenantSlug}/admin/invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailAddr, role, full_name: emailAddr.split('@')[0] }),
+        });
+        if (res.ok) success++;
         else failed++;
       } catch {
         failed++;

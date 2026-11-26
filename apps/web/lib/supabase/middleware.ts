@@ -178,12 +178,14 @@ export async function updateSession(request: NextRequest) {
   const isSignupRoute = pathname === '/signup' || pathname.startsWith('/signup/');
   const isContactRoute = pathname === '/contact' || pathname.startsWith('/contact/');
   const isApiDocsRoute = pathname === '/api-docs' || pathname.startsWith('/api-docs/');
+  // Legal pages must be readable before signup (and by reviewers).
+  const isLegalRoute = pathname === '/privacy' || pathname === '/terms';
   const isPublicApiRoute =
     pathname === '/api/health' || pathname === '/api/ready' || pathname === '/api/contact' || pathname === '/api/sso/check' ||
     pathname.startsWith('/api/auth');
   const isPublicRoute =
     isHomePage || isLoginPage || isAuthRoute || isOnboardingRoute || isMfaRoute ||
-    isPricingRoute || isSignupRoute || isContactRoute || isApiDocsRoute || isPublicApiRoute;
+    isPricingRoute || isSignupRoute || isContactRoute || isApiDocsRoute || isLegalRoute || isPublicApiRoute;
 
   // Only call getUser() for non-public routes (saves a network
   // round-trip on every static page load).

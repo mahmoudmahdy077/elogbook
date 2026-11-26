@@ -55,8 +55,13 @@ export default function NotificationBell({
 
   // Realtime subscription
   useEffect(() => {
+    // A fixed topic is reused by the singleton client, so React StrictMode's
+    // double-mount (or any remount) handed back an already-subscribed channel
+    // and `.on()` threw: "cannot add postgres_changes callbacks ... after
+    // subscribe()". That crashed the dashboard through the error boundary.
+    const channelName = `notifications:${userId}:${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('notifications')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
