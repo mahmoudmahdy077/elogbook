@@ -86,7 +86,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = headersList.get('x-nonce') ?? '';
   const locale = await getLocale();
   // M6: direction follows the locale (Arabic RTL is a shared requirement).
-  const dir = locale.toLowerCase().startsWith('ar') ? 'rtl' : 'ltr';
+  // The UI strings are still English-only (messages/*.json are not consumed
+  // yet), so flipping to RTL mirrored the whole layout around English text.
+  // Direction follows the locale only once translations are enabled.
+  const i18nEnabled = process.env.NEXT_PUBLIC_I18N_ENABLED === 'true';
+  const dir = i18nEnabled && locale.toLowerCase().startsWith('ar') ? 'rtl' : 'ltr';
 
   const jsonLd = {
     '@context': 'https://schema.org',

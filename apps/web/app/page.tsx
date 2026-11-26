@@ -222,6 +222,8 @@ export default async function HomePage() {
           <nav aria-label="Footer" className="flex gap-5">
             <Link href="/pricing" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Pricing</Link>
             <Link href="/contact" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Contact</Link>
+            <Link href="/privacy" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Privacy</Link>
+            <Link href="/terms" className="inline-flex min-h-[44px] items-center text-text-secondary underline-offset-2 hover:underline">Terms</Link>
           </nav>
         </div>
       </footer>

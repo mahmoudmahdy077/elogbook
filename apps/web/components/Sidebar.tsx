@@ -77,7 +77,7 @@ export default function Sidebar({
   return (
     <>
       <aside
-        className={`glass-panel flex-shrink-0 p-4 flex flex-col transition-all duration-200 max-md:hidden ${
+        className={`glass-panel sticky top-0 flex h-screen flex-shrink-0 flex-col overflow-y-auto p-4 transition-all duration-200 max-md:hidden ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -266,7 +266,7 @@ export default function Sidebar({
                 </button>
               </form>
               </div>
-              <LocaleSwitcher />
+              {process.env.NEXT_PUBLIC_I18N_ENABLED === 'true' ? <LocaleSwitcher /> : null}
             </div>
           )}
         </div>

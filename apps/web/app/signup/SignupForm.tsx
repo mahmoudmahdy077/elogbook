@@ -133,7 +133,13 @@ export default function SignupForm({ planSlug }: SignupFormProps) {
         <input type="hidden" name="plan" value={planSlug ?? ''} />
       </div>
 
-      <p className="text-center text-sm text-text-muted mt-6 sm:mt-8">
+      <p className="text-center text-xs text-text-muted mt-4">
+        By creating an account you agree to the{' '}
+        <Link href="/terms" className="text-fg-primary underline">Terms</Link> and{' '}
+        <Link href="/privacy" className="text-fg-primary underline">Privacy</Link> notice.
+      </p>
+
+      <p className="text-center text-sm text-text-muted mt-4 sm:mt-6">
         Already have an account?{' '}
         <Link href="/login" className="inline-flex min-h-[44px] items-center font-medium text-fg-primary hover:opacity-80 transition-opacity">
           Sign in

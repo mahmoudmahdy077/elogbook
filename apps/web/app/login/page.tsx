@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { loginAction } from './actions';
 import { APP_NAME } from '@elogbook/shared';
@@ -296,7 +297,9 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-text-muted mt-6 sm:mt-8">
-          By signing in, you agree to your institution&apos;s data handling policy.
+          By signing in, you agree to the{' '}
+          <Link href="/terms" className="text-fg-primary underline">Terms</Link> and{' '}
+          <Link href="/privacy" className="text-fg-primary underline">Privacy</Link> notice.
         </p>
       </div>
     </div>
