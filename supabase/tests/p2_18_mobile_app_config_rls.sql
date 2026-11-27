@@ -56,12 +56,14 @@ SELECT throws_ok(
   'resident cannot create the mobile config'
 );
 
+UPDATE public.mobile_app_config SET maintenance_mode = true
+ WHERE tenant_id = '00000000-0000-0000-0000-000000000181';
+
 SELECT is(
-  (WITH changed AS (
-     UPDATE public.mobile_app_config SET maintenance_mode = true RETURNING 1
-   ) SELECT count(*) FROM changed),
-  0::bigint,
-  'resident cannot update the mobile config'
+  (SELECT maintenance_mode FROM public.mobile_app_config
+    WHERE tenant_id = '00000000-0000-0000-0000-000000000181'),
+  false,
+  'resident update changed nothing'
 );
 
 -- ── tenant director: write allowed ──────────────────────────────────────────
