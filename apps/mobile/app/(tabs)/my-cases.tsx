@@ -198,7 +198,7 @@ export default function MyCasesScreen() {
   }
 
   return (
-    <ScreenWrapper title="My Cases" scroll={false}>
+    <ScreenWrapper title="My Cases" featureKey="my_cases" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>

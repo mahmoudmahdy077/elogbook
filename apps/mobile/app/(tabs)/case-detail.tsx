@@ -13,6 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { bestKnownCapability } from '../../lib/session';
 import { submitApproval } from '../../lib/operations';
+import { submitSavedCase } from '../../lib/mobile-api';
 
 import { useHaptics } from '../../lib/haptics';
 import Animated from 'react-native-reanimated';
@@ -47,6 +48,7 @@ export default function CaseDetailScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [submittingDraft, setSubmittingDraft] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
 
@@ -193,6 +195,30 @@ export default function CaseDetailScreen() {
     handleApprovalAction('reject', trimmed);
   }, [rejectComment, handleApprovalAction]);
 
+  const handleSubmitDraft = useCallback(async () => {
+    if (!caseId || submittingDraft) return;
+    if (isOffline) {
+      Alert.alert('Connection required', 'Submitting a draft needs a connection.');
+      return;
+    }
+    setSubmittingDraft(true);
+    const result = await submitSavedCase(caseId);
+    setSubmittingDraft(false);
+    if (!result.ok) {
+      haptics.submitError();
+      Alert.alert('Could not submit', result.error);
+      return;
+    }
+    haptics.submitSuccess();
+    await loadCase();
+    Alert.alert(
+      'Submitted',
+      result.autoApproved
+        ? 'Your case was approved automatically.'
+        : 'Your case is now waiting for supervisor approval.',
+    );
+  }, [caseId, submittingDraft, isOffline, haptics, loadCase]);
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}>
@@ -217,11 +243,11 @@ export default function CaseDetailScreen() {
     );
   }
 
-  const canApprove = role === 'supervisor' || role === 'director' || role === 'admin';
+  const canApprove = role === 'supervisor' || role === 'director' || role === 'institution_admin' || role === 'admin';
   const canEdit = caseDetail.status === 'draft' || caseDetail.status === 'rejected';
 
   return (
-    <ScreenWrapper title="Case Detail">
+    <ScreenWrapper title="Case Detail" featureKey="my_cases">
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — actions require a connection</Text>
@@ -305,6 +331,22 @@ export default function CaseDetailScreen() {
             <Text className="text-red-400 text-xs uppercase tracking-wider mb-1" style={{ fontFamily: clinicalTokens.fonts.body }}>Rejection Comment</Text>
             <Text className="text-gray-900 text-sm" style={{ fontFamily: clinicalTokens.fonts.body }}>{caseDetail.rejection_comment}</Text>
           </GlassPanel>
+        </Animated.View>
+      )}
+
+      {caseDetail.status === 'draft' && (
+        <Animated.View entering={Entering.staggeredSlideUp(0)}>
+          <TouchableOpacity
+            className="rounded-xl py-4 items-center mb-3 border border-emerald-500/40 bg-emerald-500/15"
+            onPress={handleSubmitDraft}
+            disabled={submittingDraft || isOffline}
+            accessibilityLabel="Submit this draft for approval"
+            accessibilityRole="button"
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.heading }} className="text-[#186B2E]">
+              {submittingDraft ? 'Submitting…' : 'Submit Case'}
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
       )}
 

@@ -542,7 +542,7 @@ export default function EvaluationsScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper title="Evaluations" scroll={false}>
+      <ScreenWrapper title="Evaluations" featureKey="evaluations" scroll={false}>
         <Animated.View entering={FadeIn} className="flex-1 items-center justify-center">
           <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
         </Animated.View>
@@ -551,7 +551,7 @@ export default function EvaluationsScreen() {
   }
 
   return (
-    <ScreenWrapper title="Evaluations" scroll={false}>
+    <ScreenWrapper title="Evaluations" featureKey="evaluations" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={

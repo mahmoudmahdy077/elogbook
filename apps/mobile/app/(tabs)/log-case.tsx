@@ -21,6 +21,7 @@ import { saveDraft, loadDraft, clearDraft, clearLegacyPlaintextDraft } from '../
 
 import { useHaptics } from '../../lib/haptics';
 import { buildCasePayload } from '../../lib/case-payload';
+import { submitSavedCase } from '../../lib/mobile-api';
 import { submitCase } from '../../lib/case-submit';
 import { bestKnownCapability } from '../../lib/session';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
@@ -458,9 +459,22 @@ export default function LogCaseScreen() {
             if (error) throw new Error(error.message);
           },
         },
-        { action: 'update', targetId: editCaseId, payload: { ...caseData, status: 'pending' } },
+        { action: 'update', targetId: editCaseId, payload: caseData },
       );
       if (outcome.kind === 'submitted') {
+        // Institution cases are saved as drafts; submit them through the web
+        // API so supervisor approvals, the webhook and the push all fire.
+        if (tenant?.tenant_type !== 'individual') {
+          const submitted = await submitSavedCase(editCaseId);
+          if (!submitted.ok) {
+            setSubmitting(false);
+            isSubmitting.current = false;
+            setValidationError(
+              `Case saved as a draft, but submission failed (${submitted.error}). Open My Cases to submit it.`,
+            );
+            return;
+          }
+        }
         haptics.submitSuccess();
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
@@ -500,6 +514,27 @@ export default function LogCaseScreen() {
       { action: 'insert', payload: caseData },
     );
     if (outcome.kind === 'submitted') {
+      // The row was inserted as a draft for institution tenants. Submit it
+      // through the web path so it reaches the supervisor queue, webhook and
+      // push — previously the app inserted status='pending' and skipped all.
+      if (tenant?.tenant_type !== 'individual') {
+        if (!outcome.serverId) {
+          setSubmitting(false);
+          isSubmitting.current = false;
+          setValidationError('Case saved as a draft, but its id was not returned. Open My Cases to submit it.');
+          return;
+        }
+        const submitted = await submitSavedCase(outcome.serverId);
+        if (!submitted.ok) {
+          await clearDraft();
+          setSubmitting(false);
+          isSubmitting.current = false;
+          setValidationError(
+            `Case saved as a draft, but submission failed (${submitted.error}). Open My Cases to submit it.`,
+          );
+          return;
+        }
+      }
       await clearDraft();
       haptics.submitSuccess();
       setConfirmationSuccess(true);
@@ -670,7 +705,7 @@ export default function LogCaseScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper title="Log Case" scroll={false}>
+      <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
             <View key={i} className="bg-white rounded-xl p-4 border border-[#007AFF]/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
@@ -686,7 +721,7 @@ export default function LogCaseScreen() {
 
   if (!selectedTemplate) {
     return (
-      <ScreenWrapper title="Log Case" scroll={false}>
+      <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
         {renderSyncBanner()}
         <FlatList
           data={templates}
@@ -716,7 +751,7 @@ export default function LogCaseScreen() {
   }
 
   return (
-    <ScreenWrapper title="Log Case" scroll={false}>
+    <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

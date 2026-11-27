@@ -78,8 +78,14 @@ export async function submitCase(
     if (!requestedMode) {
       return { kind: 'rejected', reason: 'Session needs refresh before this can be saved. Retry when online.' };
     }
+    // An offline insert must still reach the supervisor queue. The screen
+    // saves institution cases as drafts first (then submits online), so a
+    // queued draft would stay invisible; queue it as pending instead. The
+    // individual-tenant auto-approve trigger still applies on insert.
     const queuedPayload =
-      input.action === 'insert' ? { ...input.payload } : { ...input.payload, id: input.targetId };
+      input.action === 'insert'
+        ? { ...input.payload, status: 'pending' }
+        : { ...input.payload, id: input.targetId };
     await enqueueDurable('case_entries', input.action, queuedPayload, { opId });
     logInfo('case-submit.queued-locally');
     return { kind: 'queued-locally', opId };
@@ -100,7 +106,9 @@ export async function submitCase(
     const cls = classifyQueueError(msg);
     if (cls === 'transient') {
       const queuedPayload =
-        input.action === 'insert' ? { ...input.payload } : { ...input.payload, id: input.targetId };
+        input.action === 'insert'
+          ? { ...input.payload, status: 'pending' }
+          : { ...input.payload, id: input.targetId };
       try {
         await enqueueDurable('case_entries', input.action, queuedPayload, { opId });
       } catch (queueErr) {

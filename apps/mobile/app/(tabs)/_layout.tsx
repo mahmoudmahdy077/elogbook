@@ -7,7 +7,8 @@ import { useTheme } from '../../lib/theme';
 import { SideMenuProvider } from '../../lib/side-menu-context';
 import SideMenu from '../../components/SideMenu';
 import { ScreenErrorBoundary } from '../../components/ScreenErrorBoundary';
-import { clinicalTokens } from '@elogbook/shared';
+import { useRemoteConfig } from '../../lib/remote-config-context';
+import { clinicalTokens, isMobileFeatureEnabled } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
 function TabIcon({ name, color, size }: { name: keyof typeof Ionicons.glyphMap; color: string; size: number }) {
@@ -15,18 +16,18 @@ function TabIcon({ name, color, size }: { name: keyof typeof Ionicons.glyphMap; 
 }
 
 // Elevated center button for "New Case"
-function CenterButton({ focused: _focused }: { focused: boolean }) {
+function CenterButton({ focused: _focused, color }: { focused: boolean; color: string }) {
   return (
     <View
       style={{
         width: 52,
         height: 52,
         borderRadius: 26,
-        backgroundColor: clinicalTokens.colors.primary.DEFAULT,
+        backgroundColor: color,
         marginTop: -14,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: clinicalTokens.colors.primary.DEFAULT,
+        shadowColor: color,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.35,
         shadowRadius: 10,
@@ -43,6 +44,9 @@ export default function TabLayout() {
   const { isAuthenticated } = useAuthGuard();
   // N7.2: tab chrome follows the resolved theme (no fixed light assumption).
   const { mode } = useTheme();
+  const { config, primaryColor } = useRemoteConfig();
+  const logCaseEnabled = isMobileFeatureEnabled(config, 'log_case');
+  const brandColor = primaryColor ?? clinicalTokens.colors.primary.DEFAULT;
   const [role, setRole] = useState<UserRole | null>(null);
   const [userName, setUserName] = useState('');
 
@@ -73,7 +77,7 @@ export default function TabLayout() {
               paddingBottom: 6,
               paddingTop: 6,
             },
-            tabBarActiveTintColor: clinicalTokens.colors.primary.DEFAULT,
+            tabBarActiveTintColor: brandColor,
             tabBarInactiveTintColor: clinicalTokens.colors.text.muted,
             tabBarLabelStyle: {
               fontFamily: clinicalTokens.fonts.body,
@@ -99,14 +103,15 @@ export default function TabLayout() {
             name="log-case"
             listeners={({ navigation: _navigation }: { navigation: unknown }) => ({
               tabPress: (e: { preventDefault: () => void }) => {
-                if (role && role !== 'resident') {
+                if (!logCaseEnabled || (role && role !== 'resident')) {
                   e.preventDefault();
                 }
               },
             })}
             options={{
               title: 'New Case',
-              tabBarIcon: ({ focused }) => <CenterButton focused={focused} />,
+              href: logCaseEnabled ? undefined : null,
+              tabBarIcon: ({ focused }) => <CenterButton focused={focused} color={brandColor} />,
               tabBarLabel: () => null,
             }}
           />

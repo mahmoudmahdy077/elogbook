@@ -15,6 +15,7 @@ import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ResidentOverview from '../../components/ResidentOverview';
+import { AnnouncementBanner } from '../../components/AnnouncementBanner';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -192,6 +193,7 @@ export default function DashboardScreen() {
   if (userRole === 'resident' && roleLoaded) {
     return (
       <ScreenWrapper title="Overview" refreshing={refreshing} onRefresh={onRefresh}>
+        <AnnouncementBanner />
         <ResidentOverview />
       </ScreenWrapper>
     );
@@ -199,6 +201,7 @@ export default function DashboardScreen() {
 
   return (
     <ScreenWrapper title="Dashboard" refreshing={refreshing} onRefresh={onRefresh}>
+      <AnnouncementBanner />
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>

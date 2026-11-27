@@ -160,7 +160,7 @@ export default function AIInsightsScreen() {
   }
 
   return (
-    <ScreenWrapper title="AI Insights" scroll={false}>
+    <ScreenWrapper title="AI Insights" featureKey="ai_insights" scroll={false}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

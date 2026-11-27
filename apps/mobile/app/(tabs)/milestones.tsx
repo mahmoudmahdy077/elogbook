@@ -346,7 +346,7 @@ export default function MilestonesScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper title="Milestones" scroll={false}>
+      <ScreenWrapper title="Milestones" featureKey="milestones" scroll={false}>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
         </View>
@@ -355,7 +355,7 @@ export default function MilestonesScreen() {
   }
 
   return (
-    <ScreenWrapper title="Milestones" scroll={false}>
+    <ScreenWrapper title="Milestones" featureKey="milestones" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={

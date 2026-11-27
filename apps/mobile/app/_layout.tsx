@@ -38,6 +38,8 @@ import { clearTelemetryIdentity } from '../lib/production/telemetry';
 import { logInfo, logWarn } from '../lib/logger';
 import { guardDeepLink } from '../lib/route-guard';
 import { ThemeProvider, useTheme } from '../lib/theme';
+import { RemoteConfigProvider } from '../lib/remote-config-context';
+import { AppControlGate } from '../components/AppControlGate';
 import { statusBarStyleFor } from '../lib/design-tokens';
 
 // Font assets
@@ -277,29 +279,33 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <SafeAreaProvider>
-          <ThemedStatusBar />
-          <ScreenshotAwareLayout>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'fade',
-              animationDuration: 200,
-            }}
-          >
-            <Stack.Screen name="login" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-          </ScreenshotAwareLayout>
+        <RemoteConfigProvider>
+          <SafeAreaProvider>
+            <ThemedStatusBar />
+            <ScreenshotAwareLayout>
+              <AppControlGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: 'fade',
+                    animationDuration: 200,
+                  }}
+                >
+                  <Stack.Screen name="login" />
+                  <Stack.Screen name="(tabs)" />
+                </Stack>
+              </AppControlGate>
+            </ScreenshotAwareLayout>
 
-          {!authLoading && (
-            <BiometricGate
-              visible={showBiometricGate}
-              onAuthenticated={handleBiometricAuthed}
-              onFallbackToPasscode={handleBiometricFallback}
-            />
-          )}
-        </SafeAreaProvider>
+            {!authLoading && (
+              <BiometricGate
+                visible={showBiometricGate}
+                onAuthenticated={handleBiometricAuthed}
+                onFallbackToPasscode={handleBiometricFallback}
+              />
+            )}
+          </SafeAreaProvider>
+        </RemoteConfigProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -261,7 +261,7 @@ export default function AnalyticsScreen() {
   const approvalRate = totalCases > 0 ? Math.round((approvedCases / totalCases) * 100) : 0;
 
   return (
-    <ScreenWrapper title="My Analytics" refreshing={refreshing} onRefresh={onRefresh}>
+    <ScreenWrapper title="My Analytics" featureKey="analytics" refreshing={refreshing} onRefresh={onRefresh}>
       {/* Greeting + approval rate */}
       <View className="mb-6">
         <Text

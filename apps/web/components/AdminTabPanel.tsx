@@ -124,6 +124,7 @@ export default function AdminTabPanel({
                 { href: 'scim', label: 'SCIM Provisioning', hint: 'Sync users from your IdP' },
                 { href: 'webhooks', label: 'Webhooks', hint: 'Event delivery to your systems' },
                 { href: 'white-label', label: 'White Label', hint: 'Logo, colours, portal name' },
+                { href: 'mobile', label: 'Mobile App', hint: 'Modules, maintenance, versions, push' },
                 { href: 'retention', label: 'Data Retention', hint: 'Retention window and purge' },
               ].map((item) => (
                 <Link

@@ -12,6 +12,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSideMenu } from '../lib/side-menu-context';
 import { getFilteredMenuItems } from '../lib/role-menu-config';
+import { isMobileFeatureEnabled } from '@elogbook/shared';
+import { useRemoteConfig } from '../lib/remote-config-context';
 import { clinicalTokens } from '@elogbook/shared';
 import type { UserRole } from '@elogbook/shared';
 
@@ -24,6 +26,7 @@ interface SideMenuProps {
 
 export default function SideMenu({ role, userName }: SideMenuProps) {
   const { isOpen, close } = useSideMenu();
+  const { config } = useRemoteConfig();
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
@@ -42,7 +45,7 @@ export default function SideMenu({ role, userName }: SideMenuProps) {
     ]).start();
   }, [isOpen, slideAnim, overlayOpacity]);
 
-  const items = getFilteredMenuItems(role);
+  const items = getFilteredMenuItems(role, (key) => isMobileFeatureEnabled(config, key));
 
   const handleNavigate = (route: string) => {
     close();

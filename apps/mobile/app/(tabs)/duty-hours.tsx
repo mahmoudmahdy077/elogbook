@@ -65,7 +65,7 @@ export default function DutyHoursScreen() {
   };
 
   return (
-    <ScreenWrapper title="Duty Hours" scroll={false}>
+    <ScreenWrapper title="Duty Hours" featureKey="duty_hours" scroll={false}>
       <Animated.View entering={FadeIn.delay(100).springify()}>
         <Text className="text-[#000000] text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
       </Animated.View>
