@@ -16,7 +16,17 @@
 > Task 41 (CD-002): web deploy job now `needs: [db]` so the Next.js release only goes
 > out after migrations apply. Note: Tasks 42–43 also touch cd.yml — the 9-function matrix
 > (Task 42) already exists in the file, and `--include-all` on `db push` (Task 43) is still present.
-> Next undone task: **Task 42**.
+> Next undone task: **Task 43**.
+
+> **Status (2026-11-27, Task 42):** Verified against `supabase/functions/manifest.json` + disk: the
+> cd.yml deploy matrix already deploys exactly the 9 spec'd functions (`ai-insights, ai-quality,
+> ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session,
+> list-invoices, webads-export`) and none of the 3 skip-listed ones (`sso-callback`, `scim`,
+> `dispatch-webhook`). All 9 exist as function directories. Verified programmatically (Python set
+> diff), not by eyeball. Drift note for later: `create-portal-session` is deployed by the matrix
+> but missing from `manifest.json` (manifest lists 11, disk lists 11, sets differ by this one) —
+> the plan mandates deploying it, so this task is still per-spec; consider adding it to the
+> manifest (jwt_mode: service_role, STRIPE_SECRET_KEY, owner: billing) during a later cleanup run.
 
 > **For agentic workers:** This plan was synthesized from a 7-agent deep audit swarm. Each task is self-contained (2–10 min), written so a small free LLM can vibecode it in one shot. Run the verification command exactly as written. Commit after each task. Tasks are ordered by revenue impact (blockers first).
 
@@ -862,9 +872,9 @@ await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.r
 **Files:**
 - Modify: `.github/workflows/cd.yml`
 
-- [ ] **Step 1:** Read `supabase/functions/manifest.json` to get the list of all 11 functions.
-- [ ] **Step 2:** Expand the matrix in `cd.yml` to include: `ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export`. Skip `sso-callback` (disabled), `scim` (hidden), `dispatch-webhook` (disabled) for v1.
-- [ ] **Step 3:** Commit: `git add .github/workflows/cd.yml && git commit -m "fix(cd): deploy all 11 edge functions (CD-003)"`
+- [x] **Step 1:** Read `supabase/functions/manifest.json` to get the list of all 11 functions.
+- [x] **Step 2:** Expand the matrix in `cd.yml` to include: `ai-insights, ai-quality, ai-gap-analysis, generate-pdf, create-checkout, payment-webhook, create-portal-session, list-invoices, webads-export`. Skip `sso-callback` (disabled), `scim` (hidden), `dispatch-webhook` (disabled) for v1.
+- [x] **Step 3:** Commit: `git add .github/workflows/cd.yml && git commit -m "fix(cd): deploy all 11 edge functions (CD-003)"`
 
 ---
 
