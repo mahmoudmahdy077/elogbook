@@ -344,7 +344,11 @@ async function broadcast(
 
   const recipients = (tokens ?? [])
     .map((t: { token?: string }) => t.token)
-    .filter((t): t is string => typeof t === 'string' && t.startsWith('ExponentPushToken'));
+    .filter(
+      (t): t is string =>
+        typeof t === 'string' &&
+        (t.startsWith('ExponentPushToken') || t.startsWith('ExpoPushToken')),
+    );
 
   if (recipients.length === 0) {
     return NextResponse.json({ success: true, devices: 0, sent: 0, failed: 0 });
