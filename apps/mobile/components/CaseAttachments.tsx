@@ -73,25 +73,11 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
     void load();
   }, [tenantId, load]);
 
-  const pickAndUpload = async () => {
+  const uploadAsset = async (asset: ImagePicker.ImagePickerAsset) => {
     if (!tenantSlug) {
       Alert.alert('Not ready', 'Could not resolve your tenant. Pull to refresh and retry.');
       return;
     }
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow photo access to attach a picture to this case.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      allowsMultipleSelection: false,
-    });
-    if (result.canceled || !result.assets?.length) return;
-
-    const asset = result.assets[0];
     const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
     const mime = asset.mimeType ?? 'image/jpeg';
 
@@ -117,6 +103,30 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
     } finally {
       setUploading(false);
     }
+  };
+
+  const pickFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow photo access to attach a picture to this case.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsMultipleSelection: false,
+    });
+    if (!result.canceled && result.assets?.length) await uploadAsset(result.assets[0]);
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow camera access to photograph a document for this case.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets?.length) await uploadAsset(result.assets[0]);
   };
 
   const open = async (a: CaseAttachment) => {
@@ -177,31 +187,48 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
         >
           Attachments
         </Text>
-        <TouchableOpacity
-          onPress={pickAndUpload}
-          disabled={uploading}
-          accessibilityLabel="Add an attachment"
-          accessibilityRole="button"
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 16,
-            backgroundColor: clinicalTokens.colors.primary.DEFAULT,
-            opacity: uploading ? 0.6 : 1,
-          }}
-        >
-          {uploading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-          )}
-          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
-            {uploading ? 'Uploading…' : 'Add photo'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            onPress={takePhoto}
+            disabled={uploading}
+            accessibilityLabel="Take a photo for this case"
+            accessibilityRole="button"
+            style={{
+              padding: 8,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: clinicalTokens.colors.primary.DEFAULT,
+              opacity: uploading ? 0.6 : 1,
+            }}
+          >
+            <Ionicons name="camera-outline" size={18} color={clinicalTokens.colors.primary.DEFAULT} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={pickFromLibrary}
+            disabled={uploading}
+            accessibilityLabel="Choose a photo for this case"
+            accessibilityRole="button"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 16,
+              backgroundColor: clinicalTokens.colors.primary.DEFAULT,
+              opacity: uploading ? 0.6 : 1,
+            }}
+          >
+            {uploading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+            )}
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
+              {uploading ? 'Uploading…' : 'Add photo'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
