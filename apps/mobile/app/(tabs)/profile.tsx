@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking, Switch } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase';
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import { useRemoteConfig } from '../../lib/remote-config-context';
 import { mobileApiBase } from '../../lib/mobile-api';
+import * as Notifications from 'expo-notifications';
+import { requestNotificationPermission, registerPushToken } from '../../lib/push';
 import { useTheme } from '../../lib/theme';
 import type { ThemeMode } from '../../lib/design-tokens';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
@@ -78,6 +80,65 @@ function AboutSection() {
         </View>
       </GlassPanel>
     </Animated.View>
+  );
+}
+
+/** Push permission status + one-tap fix (also re-registers the device token). */
+function NotificationSection() {
+  const [granted, setGranted] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync()
+      .then((settings) => setGranted(settings.granted))
+      .catch(() => setGranted(false));
+  }, []);
+
+  const toggle = async (next: boolean) => {
+    if (busy) return;
+    if (!next) {
+      // The OS only revokes in Settings; send the user there.
+      void Linking.openSettings();
+      return;
+    }
+    setBusy(true);
+    const allowed = await requestNotificationPermission();
+    if (allowed) {
+      const result = await registerPushToken();
+      setGranted(result.ok);
+    } else {
+      setGranted(false);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <GlassPanel style={{ marginBottom: 12 }}>
+      <View className="flex-row items-center justify-between">
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>
+            Notifications
+          </Text>
+          <Text style={{ marginTop: 2, fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.text.muted }}>
+            {granted === null
+              ? 'Checking…'
+              : granted
+                ? 'Push is on for case approvals and announcements.'
+                : 'Push is off. Turn it on to hear about approvals.'}
+          </Text>
+        </View>
+        {busy ? (
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} />
+        ) : (
+          <Switch
+            value={granted === true}
+            onValueChange={(next) => void toggle(next)}
+            accessibilityLabel="Push notifications"
+            trackColor={{ true: clinicalTokens.colors.primary.DEFAULT }}
+          />
+        )}
+      </View>
+    </GlassPanel>
   );
 }
 
@@ -411,6 +472,7 @@ export default function ProfileScreen() {
 
       {/* Appearance (N7.2: persisted theme setting, system fallback) */}
       <AppearanceSection />
+      <NotificationSection />
       <TouchableOpacity
         onPress={() => router.push('/consent')}
         accessibilityRole="button"

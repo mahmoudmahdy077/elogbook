@@ -139,6 +139,8 @@ function NewEvaluationSheet({
   );
   const [setting, setSetting] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [overallScore, setOverallScore] = useState('');
+  const [actionPlan, setActionPlan] = useState('');
   const [saving, setSaving] = useState(false);
 
   const showResidentPicker =
@@ -178,6 +180,12 @@ function NewEvaluationSheet({
     const residentId =
       selectedResident ?? evaluatorId;
 
+    const score = overallScore ? Number(overallScore) : null;
+    if (score !== null && (!Number.isFinite(score) || score < 1 || score > 5)) {
+      Alert.alert('Invalid score', 'Overall score must be between 1 and 5.');
+      return;
+    }
+
     setSaving(true);
     // N2: typed adapter (capability gate + fixed UI copy; raw errors logged).
     const capability = await bestKnownCapability(supabase as never);
@@ -192,6 +200,9 @@ function NewEvaluationSheet({
           encounter_date: encounterDate || null,
           setting: setting || null,
           ratings: {},
+          overall_score: score,
+          feedback: feedback.trim() || null,
+          action_plan: actionPlan.trim() || null,
           status: 'pending',
         });
         if (error) {
@@ -213,6 +224,8 @@ function NewEvaluationSheet({
       setSelectedResident(null);
       setSetting('');
       setFeedback('');
+      setOverallScore('');
+      setActionPlan('');
       setEncounterDate(toLocalDateISO());
     } else if (outcome.kind === 'denied') {
       Alert.alert('Not permitted', outcome.reason);
@@ -221,7 +234,19 @@ function NewEvaluationSheet({
     } else {
       Alert.alert('Error', outcome.copy);
     }
-  }, [selectedType, evaluatorId, selectedResident, tenantId, encounterDate, setting, onSaved, onClose]);
+  }, [
+    selectedType,
+    evaluatorId,
+    selectedResident,
+    tenantId,
+    encounterDate,
+    setting,
+    feedback,
+    overallScore,
+    actionPlan,
+    onSaved,
+    onClose,
+  ]);
 
   const handleClose = useCallback(() => {
     setStep('picker');
@@ -229,6 +254,8 @@ function NewEvaluationSheet({
     setSelectedResident(null);
     setSetting('');
     setFeedback('');
+    setOverallScore('');
+    setActionPlan('');
     setEncounterDate(toLocalDateISO());
     onClose();
   }, [onClose]);
@@ -395,7 +422,7 @@ function NewEvaluationSheet({
                   Feedback (optional)
                 </Text>
                 <TextInput
-                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-4 border border-gray-700"
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-3 border border-gray-700"
                   value={feedback}
                   onChangeText={setFeedback}
                   placeholder="Brief feedback notes..."
@@ -403,6 +430,39 @@ function NewEvaluationSheet({
                   multiline
                   numberOfLines={3}
                   accessibilityLabel="Feedback"
+                />
+
+                <Text
+                  className="text-gray-400 text-xs mb-1"
+                  style={{ fontFamily: clinicalTokens.fonts.body }}
+                >
+                  Overall score (1–5)
+                </Text>
+                <TextInput
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-3 border border-gray-700"
+                  value={overallScore}
+                  onChangeText={(v) => setOverallScore(v.replace(/[^0-9.]/g, '').slice(0, 4))}
+                  placeholder="e.g. 4.5"
+                  placeholderTextColor="#666"
+                  keyboardType="numeric"
+                  accessibilityLabel="Overall score"
+                />
+
+                <Text
+                  className="text-gray-400 text-xs mb-1"
+                  style={{ fontFamily: clinicalTokens.fonts.body }}
+                >
+                  Action plan (optional)
+                </Text>
+                <TextInput
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-4 border border-gray-700"
+                  value={actionPlan}
+                  onChangeText={setActionPlan}
+                  placeholder="Next steps agreed with the resident..."
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={2}
+                  accessibilityLabel="Action plan"
                 />
               </ScrollView>
 
