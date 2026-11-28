@@ -5,7 +5,7 @@
  * Fails when a mobile screen/component performs a raw Supabase write
  * (insert/update/upsert/delete, or a non-read RPC) on a sensitive table
  * without routing through an approved adapter (lib/case-submit.ts,
- * lib/operations.ts). Read-only RPCs (hash_patient_mrn) and non-sensitive
+ * lib/operations.ts, lib/attachments-store.ts). Read-only RPCs (hash_patient_mrn) and non-sensitive
  * tables (template_favorites) are allowed. Review exceptions explicitly by
  * extending ADAPTER_IMPORTS with a ledger reference — never by weakening
  * the table list.
@@ -25,7 +25,7 @@ const SENSITIVE_TABLES = new Set([
   'case_attachments', 'profiles', 'audit_logs', 'notifications', 'push_tokens',
   'case_templates', 'tenants',
 ]);
-const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/operations'];
+const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/operations', 'lib/attachments-store'];
 const READ_RPCS = new Set(['hash_patient_mrn']);
 
 function walk(dir, out = []) {

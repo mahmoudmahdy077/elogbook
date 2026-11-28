@@ -1,10 +1,10 @@
 /**
  * Case attachments on mobile — parity with the web case detail.
  *
- * Uses the same `case-attachments` storage bucket and `case_attachments`
- * table as the web: path = `{tenantSlug}/{caseId}/{id}-{safeName}`, row
- * owner = uploading profile. Storage and table RLS decide access; this
- * component only hides actions the caller cannot take.
+ * Reads and writes go through `lib/attachments-store` (the approved adapter
+ * for `case_attachments`), which owns the storage path and validation rules.
+ * Storage and table RLS decide access; this component only hides actions the
+ * caller cannot take.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -17,34 +17,23 @@ import {
   Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { randomUUID } from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import { clinicalTokens, isMobileFeatureEnabled, type UserRole } from '@elogbook/shared';
-import { useRemoteConfig } from '../lib/remote-config-context';
 import { supabase } from '../lib/supabase';
-import { validateAttachment } from '../lib/attachments';
-import { logWarn } from '../lib/logger';
-
-interface Attachment {
-  id: string;
-  entry_id: string;
-  file_path: string;
-  file_type: string;
-  file_name: string | null;
-  file_size: number | null;
-  uploaded_by: string | null;
-  uploaded_at: string | null;
-}
+import { useRemoteConfig } from '../lib/remote-config-context';
+import {
+  caseAttachmentUrl,
+  deleteCaseAttachment,
+  listCaseAttachments,
+  uploadCaseAttachment,
+  type CaseAttachment,
+} from '../lib/attachments-store';
 
 interface Props {
   caseId: string;
   tenantId: string;
   profileId: string;
   role: UserRole | null;
-}
-
-function safeName(name: string): string {
-  return name.replace(/[^\w.-]+/g, '_').slice(0, 120) || 'attachment';
 }
 
 function formatSize(bytes: number | null): string {
@@ -56,24 +45,19 @@ function formatSize(bytes: number | null): string {
 
 export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
   const { config } = useRemoteConfig();
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachments, setAttachments] = useState<CaseAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
 
-  const canManage = (a: Attachment) =>
+  const canManage = (a: CaseAttachment) =>
     a.uploaded_by === profileId ||
     ['supervisor', 'director', 'institution_admin', 'admin'].includes(role ?? '');
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('case_attachments')
-      .select('id, entry_id, file_path, file_type, file_name, file_size, uploaded_by, uploaded_at')
-      .eq('entry_id', caseId)
-      .order('uploaded_at', { ascending: false });
-
-    if (!error) setAttachments((data ?? []) as Attachment[]);
+    const { data } = await listCaseAttachments(caseId);
+    setAttachments(data);
     setLoading(false);
   }, [caseId]);
 
@@ -108,78 +92,48 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
     if (result.canceled || !result.assets?.length) return;
 
     const asset = result.assets[0];
-    const name = safeName(asset.fileName ?? `photo-${Date.now()}.jpg`);
+    const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
     const mime = asset.mimeType ?? 'image/jpeg';
-    const size = asset.fileSize ?? 0;
-
-    const check = validateAttachment({ mime, sizeBytes: size, name });
-    if (!check.ok) {
-      Alert.alert('File not allowed', check.reason ?? 'Choose a JPEG, PNG, HEIC or PDF under 10 MB.');
-      return;
-    }
-    if (size === 0) {
-      Alert.alert('File not allowed', 'The selected file has no readable size.');
-      return;
-    }
 
     setUploading(true);
     try {
-      const response = await fetch(asset.uri);
-      const body = await response.arrayBuffer();
-      const id = randomUUID();
-      const path = `${tenantSlug}/${caseId}/${id}-${name}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('case-attachments')
-        .upload(path, body, { contentType: mime, upsert: false });
-      if (uploadError) {
-        Alert.alert('Upload failed', uploadError.message);
-        return;
-      }
-
-      const { error: insertError } = await supabase.from('case_attachments').insert({
-        id,
-        entry_id: caseId,
-        tenant_id: tenantId,
-        file_path: path,
-        file_type: mime,
-        file_name: name,
-        file_size: size,
-        uploaded_by: profileId,
+      const uploaded = await uploadCaseAttachment({
+        caseId,
+        tenantId,
+        tenantSlug,
+        profileId,
+        file: {
+          uri: asset.uri,
+          name,
+          mime,
+          sizeBytes: asset.fileSize ?? 1,
+        },
       });
-      if (insertError) {
-        // Roll back the orphaned object so storage does not accumulate it.
-        await supabase.storage.from('case-attachments').remove([path]);
-        Alert.alert('Upload failed', insertError.message);
+      if (!uploaded.ok) {
+        Alert.alert('Upload failed', uploaded.error);
         return;
       }
-
-      await load();
-    } catch {
-      logWarn('attachments.upload-failed');
-      Alert.alert('Upload failed', 'Could not read or send the selected file.');
+      setAttachments((prev) => [uploaded.attachment, ...prev]);
     } finally {
       setUploading(false);
     }
   };
 
-  const open = async (a: Attachment) => {
+  const open = async (a: CaseAttachment) => {
     setBusyId(a.id);
     try {
-      const { data, error } = await supabase.storage
-        .from('case-attachments')
-        .createSignedUrl(a.file_path, 60);
-      if (error || !data?.signedUrl) {
-        Alert.alert('Could not open', error?.message ?? 'No link was returned.');
+      const { url, error } = await caseAttachmentUrl(a);
+      if (!url) {
+        Alert.alert('Could not open', error ?? 'No link was returned.');
         return;
       }
-      await Linking.openURL(data.signedUrl);
+      await Linking.openURL(url);
     } finally {
       setBusyId(null);
     }
   };
 
-  const remove = (a: Attachment) => {
+  const remove = (a: CaseAttachment) => {
     Alert.alert('Delete attachment?', a.file_name ?? 'This file', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -187,11 +141,10 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
         style: 'destructive',
         onPress: async () => {
           setBusyId(a.id);
-          await supabase.storage.from('case-attachments').remove([a.file_path]);
-          const { error } = await supabase.from('case_attachments').delete().eq('id', a.id);
+          const res = await deleteCaseAttachment(a);
           setBusyId(null);
-          if (error) {
-            Alert.alert('Delete failed', error.message);
+          if (!res.ok) {
+            Alert.alert('Delete failed', res.error ?? 'Unknown error');
             return;
           }
           setAttachments((prev) => prev.filter((x) => x.id !== a.id));
@@ -246,7 +199,7 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
             <Ionicons name="add" size={16} color="#FFFFFF" />
           )}
           <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
-            {uploading ? 'Uploading…' : 'Add file'}
+            {uploading ? 'Uploading…' : 'Add photo'}
           </Text>
         </TouchableOpacity>
       </View>
