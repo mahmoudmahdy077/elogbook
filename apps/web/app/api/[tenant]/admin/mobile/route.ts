@@ -314,30 +314,37 @@ async function broadcast(
 
   const admin = createServiceRoleClient();
 
-  let userIds: string[] | null = null;
-  if (audience !== 'all') {
-    const { data: profiles, error: profileError } = await admin
-      .from('profiles')
-      .select('user_id')
-      .eq('tenant_id', tenantId)
-      .eq('role', audience)
-      .limit(MAX_TOKENS);
-    if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 500 });
-    }
-    userIds = (profiles ?? []).map((p: { user_id: string }) => p.user_id).filter(Boolean);
-    if (userIds.length === 0) {
-      return NextResponse.json({ success: true, devices: 0, sent: 0, failed: 0 });
-    }
+  // Resolve eligible accounts first: a deactivated profile must not receive
+  // pushes even if its device token is still marked active. Legacy rows with
+  // a NULL status are treated as active, matching the role/capability code.
+  const { data: profiles, error: profileError } = await admin
+    .from('profiles')
+    .select('user_id, role, status')
+    .eq('tenant_id', tenantId)
+    .limit(MAX_TOKENS);
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
-  let tokenQuery = admin
+  const userIds = (profiles ?? [])
+    .filter((p: { user_id?: string; role?: string; status?: string | null }) => {
+      if (!p.user_id) return false;
+      if (p.status != null && p.status !== 'active') return false;
+      return audience === 'all' || p.role === audience;
+    })
+    .map((p: { user_id: string }) => p.user_id);
+
+  if (userIds.length === 0) {
+    return NextResponse.json({ success: true, devices: 0, sent: 0, failed: 0 });
+  }
+
+  const tokenQuery = admin
     .from('push_tokens')
     .select('token')
     .eq('tenant_id', tenantId)
     .eq('active', true)
+    .in('user_id', userIds)
     .limit(MAX_TOKENS);
-  if (userIds) tokenQuery = tokenQuery.in('user_id', userIds);
 
   const { data: tokens, error } = await tokenQuery;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

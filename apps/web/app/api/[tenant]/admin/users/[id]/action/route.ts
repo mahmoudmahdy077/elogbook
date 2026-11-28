@@ -72,6 +72,19 @@ export async function POST(
       return NextResponse.json({ error: 'User deactivated but sign-in could not be blocked' }, { status: 500 });
     }
 
+    // Stop mobile push as well: the device token is independent of the
+    // session ban, so a deactivated user would otherwise keep receiving case
+    // and announcement notifications. Re-registration on next sign-in sets
+    // it active again.
+    const { error: tokenError } = await adminClient
+      .from('push_tokens')
+      .update({ active: false })
+      .eq('user_id', targetProfile.user_id)
+      .eq('tenant_id', profile.tenant_id);
+    if (tokenError) {
+      console.error('[admin/users/action] push deactivation failed:', tokenError.message);
+    }
+
     // Audit log
     await adminClient.from('audit_logs').insert({
       tenant_id: profile.tenant_id,
