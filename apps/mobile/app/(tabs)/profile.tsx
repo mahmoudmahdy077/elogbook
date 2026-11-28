@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 
 import { getRoleFromAuth } from '../../lib/auth-guard';
+import { useRemoteConfig } from '../../lib/remote-config-context';
 import { useTheme } from '../../lib/theme';
 import type { ThemeMode } from '../../lib/design-tokens';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
@@ -30,6 +31,34 @@ function titleCase(str: string): string {
     .split(/[_\\s]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/** Support-facing build and tenant identity (web-controlled). */
+function AboutSection() {
+  const { institutionName, appVersion, tenantId } = useRemoteConfig();
+  return (
+    <Animated.View entering={FadeInDown.delay(250).springify()}>
+      <GlassPanel style={{ marginBottom: 12 }}>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>About</Text>
+        <View className="flex-row justify-between py-1.5">
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Organisation</Text>
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.primary }}>
+            {institutionName ?? 'E-Logbook'}
+          </Text>
+        </View>
+        <View className="flex-row justify-between py-1.5">
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>App version</Text>
+          <Text style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.primary }}>{appVersion}</Text>
+        </View>
+        {__DEV__ && tenantId ? (
+          <View className="flex-row justify-between py-1.5">
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Tenant</Text>
+            <Text style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.muted, fontSize: 11 }}>{tenantId}</Text>
+          </View>
+        ) : null}
+      </GlassPanel>
+    </Animated.View>
+  );
 }
 
 /** N7.2 appearance setting (persisted override, system fallback). */
@@ -345,6 +374,7 @@ export default function ProfileScreen() {
 
       {/* Appearance (N7.2: persisted theme setting, system fallback) */}
       <AppearanceSection />
+      <AboutSection />
 
       {/* Sign Out */}
       <Animated.View entering={FadeInDown.delay(250).springify()}>

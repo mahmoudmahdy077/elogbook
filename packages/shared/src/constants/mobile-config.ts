@@ -18,6 +18,7 @@ export const MOBILE_FEATURE_KEYS = [
   'milestones',
   'reflections',
   'analytics',
+  'attachments',
 ] as const;
 
 export type MobileFeatureKey = (typeof MOBILE_FEATURE_KEYS)[number];
@@ -39,6 +40,7 @@ export const MOBILE_FEATURES: ReadonlyArray<MobileFeatureDefinition> = [
   { key: 'milestones', label: 'Milestones', description: 'Competency milestone progress' },
   { key: 'reflections', label: 'Reflections', description: 'Written reflective entries' },
   { key: 'analytics', label: 'Analytics', description: 'Case and progress charts' },
+  { key: 'attachments', label: 'Attachments', description: 'Case photo uploads' },
 ];
 
 export type MobileAnnouncementSeverity = 'info' | 'warning' | 'critical';

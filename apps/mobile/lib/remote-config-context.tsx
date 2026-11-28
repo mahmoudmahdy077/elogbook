@@ -28,6 +28,8 @@ import {
 } from './remote-config';
 import { supabase } from './supabase';
 import { logWarn } from './logger';
+import { setRouteFeatureResolver } from './route-guard';
+import { isMobileFeatureEnabled } from '@elogbook/shared';
 
 export type RemoteConfigStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -105,6 +107,12 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Guard deep links with the same module toggles as the menu and tabs.
+  useEffect(() => {
+    setRouteFeatureResolver((key) => isMobileFeatureEnabled(snapshot.config, key));
+    return () => setRouteFeatureResolver(null);
+  }, [snapshot.config]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {

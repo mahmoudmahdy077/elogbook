@@ -59,6 +59,18 @@ export async function submitSavedCase(entryId: string): Promise<SubmitSavedResul
     logWarn('mobile-api.submit-fallback');
     const { error } = await supabase.rpc('submit_case', { p_entry_id: entryId });
     if (error) {
+      // A lost response can leave the server already submitted. Re-read the
+      // state instead of reporting a scary failure on a successful submit.
+      if (/not a draft/i.test(error.message)) {
+        const { data } = await supabase
+          .from('case_entries')
+          .select('status')
+          .eq('id', entryId)
+          .maybeSingle();
+        if (data && data.status !== 'draft') {
+          return { ok: true, autoApproved: data.status === 'approved', usedFallback: true };
+        }
+      }
       return { ok: false, error: error.message };
     }
     return { ok: true, autoApproved: false, usedFallback: true };

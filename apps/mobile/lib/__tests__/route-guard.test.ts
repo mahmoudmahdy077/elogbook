@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { guardDeepLink, guardRoute, guardPathname, ROUTE_GUARDS } from '../route-guard';
+import { guardDeepLink, guardRoute, guardPathname, ROUTE_GUARDS, setRouteFeatureResolver } from '../route-guard';
 import type { CapabilitySnapshot } from '../capability';
 
 function cap(over: Partial<CapabilitySnapshot> = {}): CapabilitySnapshot {
@@ -41,6 +41,21 @@ describe('route guards (N1 centralization)', () => {
     const stale = cap({ fetchedAt: Date.now() - 30 * 60_000 });
     expect(guardDeepLink('elogbook://log-case', stale).allowed).toBe(false);
     expect(guardDeepLink('elogbook://dashboard', stale).allowed).toBe(true);
+  });
+
+  it('refuses a route whose module the web admin disabled', () => {
+    setRouteFeatureResolver((key) => key !== 'approvals');
+    try {
+      const supervisor = cap({ role: 'supervisor' });
+      expect(guardRoute('approvals', supervisor)).toEqual({
+        ok: false,
+        reason: 'module disabled by your organisation',
+      });
+      expect(guardDeepLink('elogbook://approvals', supervisor).allowed).toBe(false);
+      expect(guardDeepLink('elogbook://dashboard', supervisor).allowed).toBe(true);
+    } finally {
+      setRouteFeatureResolver(null);
+    }
   });
 
   it('authorizes parsed notification pathnames through the same map', () => {

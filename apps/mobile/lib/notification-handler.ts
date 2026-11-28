@@ -36,6 +36,7 @@ interface NotificationPayload {
     | 'approval.requested'
     | 'approval.pending'
     | 'new.rejection'
+    | 'announcement'
     | 'deep.link';
   caseId?: string;
   url?: string;
@@ -63,6 +64,11 @@ function payloadToDeepLink(
     case 'approval.pending':
     case 'approval.requested':
       return route(Routes.APPROVALS);
+
+    case 'announcement':
+      // A web broadcast opens the dashboard where the announcement banner
+      // (or the maintenance/update gate) is shown.
+      return route(Routes.HOME);
 
     case 'deep.link':
       if (payload.url) {

@@ -229,7 +229,15 @@ export function queueStatusCopy(counts: { queued: number; quarantined: number },
   return t('sync.sent', locale);
 }
 
-export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushResult> {
+export async function flushDurableQueue(
+  supabase: SupabaseLike,
+  options?: {
+    /** After a successful insert, hand the server id to the caller. Used to
+     * submit a queued draft through the web path (approvals + webhook + push)
+     * instead of leaving it invisible in the supervisor queue. */
+    afterInsert?: (id: string, status: string | null) => Promise<void>;
+  },
+): Promise<FlushResult> {
   return serialized(async () => {
     const ctx = getAccountContext();
     const items = await readRaw();
@@ -298,6 +306,17 @@ export async function flushDurableQueue(supabase: SupabaseLike): Promise<FlushRe
         const body = rpcRes.data;
         if (body && body.success) {
           result.synced += 1;
+          if (item.action === 'insert' && options?.afterInsert) {
+            try {
+              await options.afterInsert(
+                typeof body.id === 'string' ? body.id : '',
+                typeof data.status === 'string' ? data.status : null,
+              );
+            } catch {
+              // Submission is best-effort: the row stays a draft and the
+              // resident can submit it from My Cases.
+            }
+          }
           continue;
         }
         const msg = (body && body.error) || 'empty operation result';

@@ -21,6 +21,7 @@ import { Entering } from '../../lib/animations';
 import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from '@elogbook/shared/components/native';
 import { clinicalTokens } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { CaseAttachments } from '../../components/CaseAttachments';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
 interface CaseDetail {
@@ -47,6 +48,8 @@ export default function CaseDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [viewerProfileId, setViewerProfileId] = useState<string | null>(null);
+  const [viewerTenantId, setViewerTenantId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [submittingDraft, setSubmittingDraft] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -77,6 +80,8 @@ export default function CaseDetailScreen() {
     }
 
     setRole(profile.role as UserRole);
+    setViewerProfileId(profile.id as string);
+    setViewerTenantId(profile.tenant_id as string);
 
     if (!isOffline) {
       const { data: entry } = await supabase
@@ -323,6 +328,15 @@ export default function CaseDetailScreen() {
           ))}
         </GlassPanel>
         </Animated.View>
+      )}
+
+      {viewerProfileId && viewerTenantId && (
+        <CaseAttachments
+          caseId={caseDetail.id}
+          tenantId={viewerTenantId}
+          profileId={viewerProfileId}
+          role={role}
+        />
       )}
 
       {caseDetail.status === 'rejected' && caseDetail.rejection_comment && (

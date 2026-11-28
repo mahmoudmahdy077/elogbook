@@ -12,10 +12,12 @@ foreground; no app-store release is required.
 | Maintenance mode | `maintenance_mode`, `maintenance_message` | Full-screen block with the tenant's message and a sign-out escape. |
 | Forced update | `min_app_version`, `force_update`, `update_url` | Blocks builds older than the minimum and opens the store link. |
 | Announcement | `announcement` (title, body, severity, expiry) | Dismissible dashboard banner; an expiry hides it automatically. |
-| Push broadcast | `push_tokens` | Sends through Expo Push to all/role-filtered registered devices. |
+| Push broadcast | `push_tokens` | Sends through Expo Push to all/role-filtered registered devices; tapping it opens the dashboard. |
 | Branding colour | `tenants.custom_branding.primary_color` | Used for tab accents and the New Case button. |
 
-Module keys are shared in `packages/shared/src/constants/mobile-config.ts`
+Attachments use the same bucket/table as the web and are controlled by the
+`attachments` module key. Module keys are shared in
+`packages/shared/src/constants/mobile-config.ts`
 (`MOBILE_FEATURE_KEYS`). Add a key there before exposing a new toggle.
 
 ## Read / write path
@@ -42,8 +44,10 @@ The app's submit path now matches the web:
 3. If the web host is unreachable but Supabase is not, the app falls back to
    the `submit_case` RPC so the case is still submitted (webhook and push are
    skipped for that one request).
-4. If both are offline, the case is queued as `pending` (not a draft) so it
-   reaches the supervisor inbox when the queue flushes.
+4. If both are offline, the case is queued as a draft; when the queue flushes
+   the app calls the same submit endpoint (falling back to the RPC), so
+   approvals, webhook and push still happen after reconnect. A draft whose
+   submit fails is recoverable from My Cases.
 
 Supervisor inboxes on both clients read pending `case_entries`, so a case
 submitted from either client is visible on both.

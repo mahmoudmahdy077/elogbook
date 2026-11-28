@@ -16,6 +16,7 @@ import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ResidentOverview from '../../components/ResidentOverview';
 import { AnnouncementBanner } from '../../components/AnnouncementBanner';
+import { UpdateAvailableBanner } from '../../components/UpdateAvailableBanner';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -194,6 +195,7 @@ export default function DashboardScreen() {
     return (
       <ScreenWrapper title="Overview" refreshing={refreshing} onRefresh={onRefresh}>
         <AnnouncementBanner />
+        <UpdateAvailableBanner />
         <ResidentOverview />
       </ScreenWrapper>
     );
@@ -202,6 +204,7 @@ export default function DashboardScreen() {
   return (
     <ScreenWrapper title="Dashboard" refreshing={refreshing} onRefresh={onRefresh}>
       <AnnouncementBanner />
+      <UpdateAvailableBanner />
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>
