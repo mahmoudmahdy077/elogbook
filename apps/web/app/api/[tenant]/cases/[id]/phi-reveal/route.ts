@@ -50,11 +50,11 @@ export async function POST(
   // checks; residents additionally see only their own entries).
   const { data: entry } = await supabase
     .from('case_entries')
-    .select('id, tenant_id, resident_id, is_deidentified, patient_mrn, patient_dob')
+    .select('id, tenant_id, resident_id, is_deidentified, patient_mrn, patient_dob, deleted_at')
     .eq('id', id)
     .single();
 
-  if (!entry) {
+  if (!entry || (entry as { deleted_at?: string | null }).deleted_at) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 

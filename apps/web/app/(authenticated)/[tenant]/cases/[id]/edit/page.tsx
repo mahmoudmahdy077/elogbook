@@ -19,6 +19,7 @@ export default async function CaseEditPage({ params }: { params: Promise<{ tenan
       case_templates(name, specialty, fields)
     `)
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (entryError) {

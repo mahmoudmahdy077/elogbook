@@ -5,6 +5,7 @@ import CaseActionButton from '@/components/CaseActionButton';
 import { notFound, redirect } from 'next/navigation';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import CaseAttachments from '@/components/CaseAttachments';
+import CaseCommentsButton from '@/components/CaseCommentsButton';
 import AIQualityPanel from '@/components/AIQualityPanel';
 import { PhiFields } from '@/components/PhiFields';
 import { maskDob, maskMrn } from '@/lib/phi-mask';
@@ -26,6 +27,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
       tenants(tenant_type)
     `)
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (entryError) {
@@ -213,6 +215,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ ten
           viewerRole={auth.profile.role}
         />
       )}
+
+      <CaseCommentsButton
+        caseEntryId={entry.id}
+        tenantId={entry.tenant_id}
+        currentUserId={auth.profile.id}
+      />
 
       <CaseAttachments
         caseId={id}

@@ -93,11 +93,11 @@ export async function POST(
   // ---- Ensure the entry belongs to the same tenant ----
   const { data: entry } = await supabase
     .from('case_entries')
-    .select('id, tenant_id, resident_id, status')
+    .select('id, tenant_id, resident_id, status, deleted_at')
     .eq('id', entry_id)
     .single();
 
-  if (!entry) {
+  if (!entry || (entry as { deleted_at?: string | null }).deleted_at) {
     return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
   }
 

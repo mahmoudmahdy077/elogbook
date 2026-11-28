@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('case_entries')
     .select('case_templates!inner(specialty), status')
-    .eq('tenant_id', profile.tenant_id);
+    .eq('tenant_id', profile.tenant_id)
+    .is('deleted_at', null);
 
   if (date_from) query = query.gte('created_at', date_from);
   if (date_to) query = query.lte('created_at', date_to);

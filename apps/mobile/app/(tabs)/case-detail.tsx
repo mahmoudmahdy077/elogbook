@@ -22,6 +22,7 @@ import { NativeGlassPanel as GlassPanel, NativeStatusBadge as StatusBadge } from
 import { clinicalTokens } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { CaseAttachments } from '../../components/CaseAttachments';
+import { CaseComments } from '../../components/CaseComments';
 import type { CaseStatus, UserRole } from '@elogbook/shared';
 
 interface CaseDetail {
@@ -329,6 +330,15 @@ export default function CaseDetailScreen() {
           ))}
         </GlassPanel>
         </Animated.View>
+      )}
+
+      {viewerProfileId && viewerTenantId && (
+        <CaseComments
+          caseId={caseDetail.id}
+          tenantId={viewerTenantId}
+          profileId={viewerProfileId}
+          role={role}
+        />
       )}
 
       {viewerProfileId && viewerTenantId && (

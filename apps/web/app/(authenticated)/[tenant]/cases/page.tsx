@@ -57,7 +57,8 @@ export default async function CasesPage({
   let casesQuery = supabase
     .from('case_entries')
     .select('id, case_date, patient_mrn, status, resident_id, case_templates!inner(name, specialty)', { count: 'exact' })
-    .eq('tenant_id', auth.profile.tenant_id);
+    .eq('tenant_id', auth.profile.tenant_id)
+    .is('deleted_at', null);
   if (isResident) casesQuery = casesQuery.eq('resident_id', auth.profile.id);
   if (searchFilter) casesQuery = casesQuery.ilike('case_templates.name', `%${searchFilter}%`);
   if (statusList.length > 0) casesQuery = casesQuery.in('status', statusList);

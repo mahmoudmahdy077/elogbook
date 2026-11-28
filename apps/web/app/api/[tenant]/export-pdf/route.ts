@@ -42,6 +42,7 @@ export async function GET(
     .eq('tenant_id', profile.tenant_id)
     .eq('resident_id', profile.id)
     .eq('status', 'approved')
+    .is('deleted_at', null)
     .order('case_date', { ascending: false })
     .limit(100);
 
