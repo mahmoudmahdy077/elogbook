@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 
 import { getRoleFromAuth } from '../../lib/auth-guard';
@@ -393,6 +394,28 @@ export default function ProfileScreen() {
 
       {/* Appearance (N7.2: persisted theme setting, system fallback) */}
       <AppearanceSection />
+      <TouchableOpacity
+        onPress={() => router.push('/consent')}
+        accessibilityRole="button"
+        accessibilityLabel="Open consent preferences"
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: 'rgba(0,122,255,0.15)',
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 15, color: clinicalTokens.colors.text.primary }}>
+          Consent preferences
+        </Text>
+        <Ionicons name="chevron-forward" size={18} color={clinicalTokens.colors.text.muted} />
+      </TouchableOpacity>
       <AboutSection />
 
       {/* Sign Out */}
