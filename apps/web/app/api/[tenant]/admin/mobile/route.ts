@@ -43,6 +43,7 @@ interface SavePayload {
   force_update?: unknown;
   update_url?: unknown;
   announcement?: unknown;
+  daily_case_goal?: unknown;
 }
 
 function stringOrNull(value: unknown, max: number): string | null {
@@ -242,6 +243,18 @@ export async function POST(
     return NextResponse.json({ error: announcement.error ?? 'Invalid announcement' }, { status: 400 });
   }
 
+  let dailyGoal: number | null = null;
+  if (input.daily_case_goal !== null && input.daily_case_goal !== undefined && input.daily_case_goal !== '') {
+    const parsed = Number(input.daily_case_goal);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+      return NextResponse.json(
+        { error: 'daily_case_goal must be a whole number between 1 and 100' },
+        { status: 400 },
+      );
+    }
+    dailyGoal = parsed;
+  }
+
   const forceUpdate = input.force_update === true;
   if (forceUpdate && !minVersion.value) {
     return NextResponse.json(
@@ -274,6 +287,24 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // The dashboard goal lives in tenants.settings (the app already reads it);
+  // expose it here so an admin never needs SQL for an app-visible value.
+  const { data: tenantRow } = await admin
+    .from('tenants')
+    .select('settings')
+    .eq('id', auth.profile.tenant_id)
+    .single();
+  const settings = { ...((tenantRow?.settings as Record<string, unknown> | null) ?? {}) };
+  if (dailyGoal === null) delete settings.daily_case_goal;
+  else settings.daily_case_goal = dailyGoal;
+  const { error: settingsError } = await admin
+    .from('tenants')
+    .update({ settings })
+    .eq('id', auth.profile.tenant_id);
+  if (settingsError) {
+    return NextResponse.json({ error: settingsError.message }, { status: 500 });
+  }
+
   const { error: auditError } = await admin.from('audit_logs').insert({
     tenant_id: auth.profile.tenant_id,
     user_id: auth.user.id,
@@ -286,6 +317,7 @@ export async function POST(
       min_app_version: record.min_app_version,
       force_update: record.force_update,
       announcement_id: announcement.value?.id ?? null,
+      daily_case_goal: dailyGoal,
     },
   });
   if (auditError) {

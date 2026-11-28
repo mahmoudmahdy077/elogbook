@@ -23,16 +23,19 @@ export default async function MobileAppPage({
   // a service-role read keeps the page working even if a legacy RLS policy
   // on the new table drifts on an upgraded database.
   const admin = createServiceRoleClient();
-  const [{ data: row }, { count: devices }] = await Promise.all([
+  const [{ data: row }, { count: devices }, { data: tenantRow }] = await Promise.all([
     admin.from('mobile_app_config').select('*').eq('tenant_id', auth.tenant.id).maybeSingle(),
     admin
       .from('push_tokens')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', auth.tenant.id)
       .eq('active', true),
+    admin.from('tenants').select('settings').eq('id', auth.tenant.id).single(),
   ]);
 
   const config = parseMobileRemoteConfig(row);
+  const rawGoal = (tenantRow?.settings as Record<string, unknown> | null)?.daily_case_goal;
+  const dailyGoal = typeof rawGoal === 'number' && Number.isInteger(rawGoal) ? rawGoal : null;
 
   return (
     <div>
@@ -56,6 +59,7 @@ export default async function MobileAppPage({
         tenantSlug={tenantSlug}
         initialConfig={config}
         initialDevices={devices ?? 0}
+        initialDailyGoal={dailyGoal}
       />
     </div>
   );

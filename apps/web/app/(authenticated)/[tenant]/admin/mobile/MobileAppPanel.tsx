@@ -11,6 +11,7 @@ interface Props {
   tenantSlug: string;
   initialConfig: MobileRemoteConfig;
   initialDevices: number;
+  initialDailyGoal: number | null;
 }
 
 const ROLES = [
@@ -28,7 +29,12 @@ function isoDatePart(iso: string | null): string {
   return date.toISOString().slice(0, 10);
 }
 
-export default function MobileAppPanel({ tenantSlug, initialConfig, initialDevices }: Props) {
+export default function MobileAppPanel({
+  tenantSlug,
+  initialConfig,
+  initialDevices,
+  initialDailyGoal,
+}: Props) {
   const [features, setFeatures] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const feature of MOBILE_FEATURES) {
@@ -44,6 +50,9 @@ export default function MobileAppPanel({ tenantSlug, initialConfig, initialDevic
   const [latestVersion, setLatestVersion] = useState(initialConfig.latest_app_version ?? '');
   const [forceUpdate, setForceUpdate] = useState(initialConfig.force_update);
   const [updateUrl, setUpdateUrl] = useState(initialConfig.update_url ?? '');
+  const [dailyGoal, setDailyGoal] = useState(
+    initialDailyGoal === null ? '' : String(initialDailyGoal),
+  );
 
   const [announcementTitle, setAnnouncementTitle] = useState(
     initialConfig.announcement?.title ?? '',
@@ -101,6 +110,7 @@ export default function MobileAppPanel({ tenantSlug, initialConfig, initialDevic
             latest_app_version: latestVersion.trim() || null,
             force_update: forceUpdate,
             update_url: updateUrl.trim() || null,
+            daily_case_goal: dailyGoal.trim() === '' ? null : Number(dailyGoal),
             announcement,
           },
         }),
@@ -286,6 +296,27 @@ export default function MobileAppPanel({ tenantSlug, initialConfig, initialDevic
           className="w-full px-3 py-2 text-sm text-text-primary placeholder:text-text-muted bg-backdrop rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
         <p className="text-xs text-text-muted mt-1">Must start with https://.</p>
+      </section>
+
+      <section className="panel p-5">
+        <h2 className="text-lg font-heading font-semibold mb-1">Dashboard goal</h2>
+        <p className="text-sm text-text-muted mb-4">
+          The daily case target shown on the resident dashboard widget. Leave empty to use the
+          platform default (10).
+        </p>
+        <label className="block text-sm font-medium text-text-primary mb-1" htmlFor="daily-goal">
+          Cases per day
+        </label>
+        <input
+          id="daily-goal"
+          type="number"
+          min={1}
+          max={100}
+          value={dailyGoal}
+          onChange={(e) => setDailyGoal(e.target.value)}
+          placeholder="10"
+          className="w-full max-w-xs px-3 py-2 text-sm text-text-primary placeholder:text-text-muted bg-backdrop rounded-xl border border-border focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        />
       </section>
 
       <section className="panel p-5">

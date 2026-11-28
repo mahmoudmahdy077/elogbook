@@ -13,6 +13,7 @@ foreground; no app-store release is required.
 | Forced update | `min_app_version`, `force_update`, `update_url` | Blocks builds older than the minimum and opens the store link. |
 | Announcement | `announcement` (title, body, severity, expiry) | Dismissible dashboard banner; an expiry hides it automatically. |
 | Push broadcast | `push_tokens` | Sends through Expo Push to all/role-filtered registered devices; tapping it opens the dashboard. |
+| Daily case goal | `tenants.settings.daily_case_goal` | Target on the resident dashboard widget. |
 | Branding colour | `tenants.custom_branding.primary_color` | Used for tab accents and the New Case button. |
 
 Attachments use the same bucket/table as the web and are controlled by the

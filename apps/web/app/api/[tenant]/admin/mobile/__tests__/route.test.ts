@@ -67,6 +67,16 @@ vi.mock('@/lib/supabase/admin', () => ({
         };
       }
       if (table === 'audit_logs') return { insert: auditInsert };
+      if (table === 'tenants') {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: { settings: {} }, error: null }),
+            }),
+          }),
+          update: () => ({ eq: async () => ({ error: null }) }),
+        };
+      }
       return { select: () => tokenQuery };
     },
   }),
@@ -119,6 +129,15 @@ describe('POST /api/[tenant]/admin/mobile', () => {
   it('rejects a non-https update link', async () => {
     const res = await POST(
       request({ action: 'save', config: { update_url: 'http://example.com/app' } }),
+      { params },
+    );
+    expect(res.status).toBe(400);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an out-of-range daily case goal', async () => {
+    const res = await POST(
+      request({ action: 'save', config: { daily_case_goal: 500 } }),
       { params },
     );
     expect(res.status).toBe(400);
