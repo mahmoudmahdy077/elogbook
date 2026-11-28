@@ -92,7 +92,11 @@ jobs:
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase db push --linked --include-all
+      # --include-all removed (CD-004): it re-applies every migration in the
+      # directory even ones already recorded in supabase_migrations, which can
+      # re-run destructively against live tables. Only unapplied migrations go
+      # out now.
+      - run: supabase db push --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
