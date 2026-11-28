@@ -145,6 +145,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('template_id')
         .eq('resident_id', profile.id)
+        .is('deleted_at', null)
         // R2 bound: favorite sorting needs history depth, not full history.
         .limit(1000);
       if (personalData) {
@@ -185,6 +186,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('id,template_id,is_deidentified,patient_mrn,patient_dob,patient_age_years,case_date,field_values')
         .eq('id', editCaseId)
+        .is('deleted_at', null)
         .single();
       if (data) {
         setIsDeidentified(Boolean(data.is_deidentified));
@@ -213,6 +215,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('template_id, is_deidentified, patient_mrn, patient_dob, patient_age_years, case_date, field_values')
         .eq('id', duplicateCaseId)
+        .is('deleted_at', null)
         .single();
       if (error || !data) {
         Alert.alert('Source case not found', 'Could not load the case you want to duplicate.');
@@ -254,6 +257,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('id, template_id, is_deidentified, patient_age_years, field_values')
         .eq('resident_id', profile.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

@@ -112,6 +112,7 @@ export default function MyCasesScreen() {
       .from('case_entries')
       .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, case_templates(name, specialty)')
       .eq('resident_id', profile.id)
+      .is('deleted_at', null)
       .order('case_date', { ascending: false })
       .limit(100);
 

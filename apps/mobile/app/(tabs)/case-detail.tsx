@@ -90,6 +90,7 @@ export default function CaseDetailScreen() {
           'id, case_date, status, is_deidentified, patient_mrn, patient_dob, patient_age_years, patient_hash, field_values, created_at, updated_at, template_id, resident_id, case_templates(name, specialty), profiles(full_name), approval_requests(comment, status)'
         )
         .eq('id', caseId)
+        .is('deleted_at', null)
         .single();
 
       if (entry) {

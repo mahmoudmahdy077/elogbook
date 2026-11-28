@@ -13,6 +13,7 @@ import {
 interface Call {
   select?: string;
   eq: Array<[string, unknown]>;
+  is?: Array<[string, null]>;
   order?: [string, boolean];
   range?: [number, number];
 }
@@ -29,6 +30,10 @@ function fakeClient(rows: unknown[], log: Call[]) {
       };
       chain.eq = (col: string, val: unknown) => {
         call.eq.push([col, val]);
+        return chain;
+      };
+      chain.is = (col: string, val: null) => {
+        (call.is ??= []).push([col, val]);
         return chain;
       };
       chain.order = (col: string, opts: { ascending: boolean }) => {
@@ -90,6 +95,7 @@ describe('bounded queries (N2)', () => {
 
   it('counts statuses exactly with bounded head queries (no row transfer)', async () => {
     const seen: Array<{ status: string }> = [];
+    let deletedFilter = false;
     const client = {
       from: (_t: string) => ({
         select: (_c: string, _o: unknown) => ({
@@ -98,7 +104,13 @@ describe('bounded queries (N2)', () => {
               eq: (col: string, val: unknown) => {
                 seen.push({ status: String(val) });
                 const counts: Record<string, number> = { draft: 2, pending: 3, approved: 5 };
-                return Promise.resolve({ count: counts[String(val)] ?? 0, error: null });
+                const resolved = Promise.resolve({ count: counts[String(val)] ?? 0, error: null });
+                return Object.assign(resolved, {
+                  is: () => {
+                    deletedFilter = true;
+                    return resolved;
+                  },
+                });
               },
             }),
           }),
@@ -108,6 +120,7 @@ describe('bounded queries (N2)', () => {
     const res = await countCasesByStatus(client as never, { tenantId: 't1', residentId: 'r1' });
     expect(res).toEqual({ draft: 2, pending: 3, approved: 5, total: 10 });
     expect(seen.map((s) => s.status).sort()).toEqual(['approved', 'draft', 'pending']);
+    expect(deletedFilter).toBe(true);
   });
 
   it('fetches tenant lists with explicit projections and bounds', async () => {

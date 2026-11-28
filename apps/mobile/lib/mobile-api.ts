@@ -66,6 +66,7 @@ export async function submitSavedCase(entryId: string): Promise<SubmitSavedResul
           .from('case_entries')
           .select('status')
           .eq('id', entryId)
+          .is('deleted_at', null)
           .maybeSingle();
         if (data && data.status !== 'draft') {
           return { ok: true, autoApproved: data.status === 'approved', usedFallback: true };
