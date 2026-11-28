@@ -214,6 +214,31 @@ describe('POST /api/[tenant]/cases/[id]/submit', () => {
     expect(body.success).toBe(true);
   });
 
+  it('rejects submission when the profile is deactivated', async () => {
+    setTableData('case_entries', [
+      { id: 'c-127', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },
+    ]);
+    setTableData('profiles', [
+      { id: 'p-1', user_id: 'u-1', role: 'resident', tenant_id: 't-1', status: 'deactivated' },
+    ]);
+    setTableData('tenants', [{ id: 't-1', tenant_type: 'institution', status: 'active' }]);
+    setTableData('subscriptions', [{ tenant_id: 't-1', status: 'active' }]);
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u-1' } },
+      error: null,
+    });
+
+    const req = makePostRequest('https://app.elogbook.dev/demo/cases/c-127/submit', {
+      origin: 'https://app.elogbook.dev',
+    });
+    const params = Promise.resolve({ tenant: 'demo', id: 'c-127' });
+
+    const res = await POST(req, { params });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('not active');
+  });
+
   it('rejects submission when subscription is past_due', async () => {
     setTableData('case_entries', [
       { id: 'c-124', tenant_id: 't-1', resident_id: 'p-1', status: 'draft' },

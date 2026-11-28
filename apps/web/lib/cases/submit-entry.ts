@@ -39,11 +39,17 @@ export async function submitDraftEntry(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, full_name')
+    .select('id, role, full_name, status')
     .eq('user_id', user.id)
     .single();
 
   if (!profile) return { status: 403, body: { error: 'Profile not found' } };
+
+  // A still-valid access token outlives a deactivation for up to an hour.
+  // Check the account state on every submit, not just at sign-in.
+  if (profile.status != null && profile.status !== 'active') {
+    return { status: 403, body: { error: 'Account is not active' } };
+  }
 
   const isOwner = entry.resident_id === profile.id;
   const isPrivileged = ['supervisor', 'director', 'institution_admin', 'admin'].includes(
@@ -51,6 +57,22 @@ export async function submitDraftEntry(
   );
   if (!isOwner && !isPrivileged) {
     return { status: 403, body: { error: 'You can only submit your own draft cases' } };
+  }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('tenant_type, status')
+    .eq('id', entry.tenant_id)
+    .single();
+
+  // Check before the RPC: once submit_case runs the draft is already pending,
+  // so a late refusal would report failure on a real state change.
+  if (
+    tenant &&
+    (tenant as { status?: string | null }).status != null &&
+    (tenant as { status?: string | null }).status !== 'active'
+  ) {
+    return { status: 403, body: { error: 'Tenant is not active' } };
   }
 
   const { data: subscription } = await supabase
@@ -81,12 +103,6 @@ export async function submitDraftEntry(
   }
 
   const result = (submitResult ?? {}) as { status?: string; auto_approved?: boolean };
-
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('tenant_type')
-    .eq('id', entry.tenant_id)
-    .single();
 
   if (tenant?.tenant_type === 'individual' || result.auto_approved) {
     return { status: 200, body: { success: true, auto_approved: true } };
