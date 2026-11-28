@@ -12,6 +12,7 @@ interface Props {
   initialConfig: MobileRemoteConfig;
   initialDevices: number;
   initialDailyGoal: number | null;
+  lastUpdated: string | null;
 }
 
 const ROLES = [
@@ -34,6 +35,7 @@ export default function MobileAppPanel({
   initialConfig,
   initialDevices,
   initialDailyGoal,
+  lastUpdated,
 }: Props) {
   const [features, setFeatures] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -182,7 +184,10 @@ export default function MobileAppPanel({
       <section className="panel p-5">
         <div className="flex items-center justify-between gap-3 mb-1">
           <h2 className="text-lg font-heading font-semibold">Modules</h2>
-          <span className="text-xs text-text-muted">{devices} registered device(s)</span>
+          <span className="text-xs text-text-muted">
+            {devices} registered device(s)
+            {lastUpdated ? ` · last saved ${new Date(lastUpdated).toLocaleString()}` : ''}
+          </span>
         </div>
         <p className="text-sm text-text-muted mb-4">
           Turning a module off removes it from the app menu and blocks its tab. The data stays

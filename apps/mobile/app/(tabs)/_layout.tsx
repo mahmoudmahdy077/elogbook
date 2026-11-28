@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthGuard, getRoleFromAuth, getAuthoritativeRole } from '../../lib/auth-guard';
+import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../lib/theme';
 import { SideMenuProvider } from '../../lib/side-menu-context';
 import SideMenu from '../../components/SideMenu';
@@ -52,7 +53,7 @@ export default function TabLayout() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    (async () => {
+    const loadIdentity = async () => {
       // Role for tab gating comes from the server, not user_metadata.
       const [authoritativeRole, { fullName }] = await Promise.all([
         getAuthoritativeRole(),
@@ -60,7 +61,14 @@ export default function TabLayout() {
       ]);
       if (authoritativeRole) setRole(authoritativeRole);
       if (fullName) setUserName(fullName);
-    })();
+    };
+    void loadIdentity();
+    // Profile edits call updateUser({ data: { full_name } }); refresh the menu
+    // label when that lands instead of showing the old name until restart.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'USER_UPDATED') void loadIdentity();
+    });
+    return () => subscription?.unsubscribe?.();
   }, [isAuthenticated]);
 
   return (

@@ -57,5 +57,10 @@ export async function updateOwnProfile(input: {
   if (input.completeOnboarding) patch.onboarding_completed = true;
 
   const { error } = await supabase.from('profiles').update(patch).eq('id', profile.id);
-  return error ? { ok: false, error: error.message } : { ok: true, error: null };
+  if (error) return { ok: false, error: error.message };
+
+  // Display metadata only (never role/tenant). This keeps the side menu and
+  // greeting correct without waiting for a new sign-in.
+  await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => undefined);
+  return { ok: true, error: null };
 }

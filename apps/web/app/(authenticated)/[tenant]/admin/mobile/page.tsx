@@ -60,6 +60,7 @@ export default async function MobileAppPage({
         initialConfig={config}
         initialDevices={devices ?? 0}
         initialDailyGoal={dailyGoal}
+        lastUpdated={typeof row?.updated_at === 'string' ? row.updated_at : null}
       />
     </div>
   );
