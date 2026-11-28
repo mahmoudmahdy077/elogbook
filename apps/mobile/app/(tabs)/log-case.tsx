@@ -26,7 +26,7 @@ import { submitCase } from '../../lib/case-submit';
 import { bestKnownCapability } from '../../lib/session';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, toLocalDateISO } from '@elogbook/shared';
 import { DateField } from '../../components/DateField';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
@@ -225,7 +225,7 @@ export default function LogCaseScreen() {
       setPatientMrn('');
       setPatientDob('');
       setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-      setCaseDate(new Date().toISOString().slice(0, 10));
+      setCaseDate(toLocalDateISO());
       const tmplId = String(data.template_id ?? '');
       setSelectedTemplateId(tmplId);
       const fv = typeof data.field_values === 'string'
@@ -270,7 +270,7 @@ export default function LogCaseScreen() {
       setPatientMrn('');
       setPatientDob('');
       setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-      setCaseDate(new Date().toISOString().slice(0, 10));
+      setCaseDate(toLocalDateISO());
       const tmplId = String(data.template_id ?? '');
       setSelectedTemplateId(tmplId);
       const fv = typeof data.field_values === 'string'

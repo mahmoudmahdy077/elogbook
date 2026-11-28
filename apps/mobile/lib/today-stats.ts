@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { toLocalDateISO } from '@elogbook/shared';
 import { logError } from './logger';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -31,7 +32,7 @@ export async function fetchTodayStats(): Promise<TodayStats> {
 
   if (!profile) return emptyStats;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateISO();
   const netState = await NetInfo.fetch();
 
   if (netState.isConnected) {

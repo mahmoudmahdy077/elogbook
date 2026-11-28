@@ -15,7 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { logError } from '../../lib/logger';
 import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
 import { submitEvaluation } from '../../lib/operations';
-import { clinicalTokens, EVALUATION_FORM_TYPES } from '@elogbook/shared';
+import { clinicalTokens, EVALUATION_FORM_TYPES, toLocalDateISO } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
@@ -135,7 +135,7 @@ function NewEvaluationSheet({
   const [residents, setResidents] = useState<ResidentData[]>([]);
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
   const [encounterDate, setEncounterDate] = useState(
-    new Date().toISOString().slice(0, 10),
+    toLocalDateISO(),
   );
   const [setting, setSetting] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -213,7 +213,7 @@ function NewEvaluationSheet({
       setSelectedResident(null);
       setSetting('');
       setFeedback('');
-      setEncounterDate(new Date().toISOString().slice(0, 10));
+      setEncounterDate(toLocalDateISO());
     } else if (outcome.kind === 'denied') {
       Alert.alert('Not permitted', outcome.reason);
     } else if (outcome.kind === 'transient') {
@@ -229,7 +229,7 @@ function NewEvaluationSheet({
     setSelectedResident(null);
     setSetting('');
     setFeedback('');
-    setEncounterDate(new Date().toISOString().slice(0, 10));
+    setEncounterDate(toLocalDateISO());
     onClose();
   }, [onClose]);
 

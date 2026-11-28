@@ -1,3 +1,4 @@
+import { toLocalDateISO } from '@elogbook/shared';
 /**
  * Offline-first data-access layer.
  *
@@ -148,7 +149,7 @@ export async function createCaseEntry(
       row.patientDob = dob;
       row.patientAgeYears = data.patientAgeYears ?? null;
       row.patientHash = data.patientHash ?? null;
-      row.caseDate = data.caseDate ?? new Date().toISOString().slice(0, 10);
+      row.caseDate = data.caseDate ?? toLocalDateISO();
       // field_values stored as AEAD hex envelope (JSON string), parsed on read
       row.fieldValues = fv ? (JSON.parse(`{"__sealed":"${fv}"}`) as Record<string, unknown>) : {};
       row.accreditationMappings = data.accreditationMappings ?? [];

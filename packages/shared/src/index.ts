@@ -13,3 +13,4 @@ export * from './constants/mobile-config';
 // See ./components/index.ts.
 export * from './components';
 export * from './lib/template-sort';
+export * from './lib/date';

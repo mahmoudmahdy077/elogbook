@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
 import { submitDutyHours } from '../../lib/operations';
 import { buildDutyPeriodPayload } from '../../lib/duty-payload';
-import { clinicalTokens, DUTY_SHIFT_TYPES } from '@elogbook/shared';
+import { clinicalTokens, DUTY_SHIFT_TYPES, localWeekStartISO } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
 // DB-valid shift types from the shared package (migration 00069 parity).
@@ -21,6 +21,7 @@ export default function DutyHoursScreen() {
   const [saving, setSaving] = useState(false);
   const [weeklyHours, setWeeklyHours] = useState<number | null>(null);
   const [weeklyViolation, setWeeklyViolation] = useState(false);
+  const [recent, setRecent] = useState<Array<{ id: string; shift_date: string; hours_worked: number; shift_type: string }>>([]);
 
   const loadWeek = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -32,12 +33,8 @@ export default function DutyHoursScreen() {
       .maybeSingle();
     if (!profile) return;
 
-    // Monday-start week, matching date_trunc('week') in the violation view.
-    const now = new Date();
-    const offset = (now.getDay() + 6) % 7;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - offset);
-    const weekStart = monday.toISOString().slice(0, 10);
+    // Monday-start local week, matching date_trunc('week') in the view.
+    const weekStart = localWeekStartISO();
 
     const { data: periods } = await supabase
       .from('duty_periods')
@@ -53,6 +50,15 @@ export default function DutyHoursScreen() {
       0,
     );
     setWeeklyHours(total);
+
+    const { data: recentRows } = await supabase
+      .from('duty_periods')
+      .select('id, shift_date, hours_worked, shift_type')
+      .eq('resident_id', profile.id)
+      .eq('tenant_id', profile.tenant_id)
+      .order('shift_date', { ascending: false })
+      .limit(10);
+    setRecent((recentRows ?? []) as typeof recent);
 
     const { data: violation } = await supabase
       .from('duty_weekly_violations')
@@ -114,7 +120,7 @@ export default function DutyHoursScreen() {
   };
 
   return (
-    <ScreenWrapper title="Duty Hours" featureKey="duty_hours" scroll={false}>
+    <ScreenWrapper title="Duty Hours" featureKey="duty_hours">
       <Animated.View entering={FadeIn.delay(100).springify()}>
         <Text className="text-[#000000] text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
       </Animated.View>
@@ -216,6 +222,45 @@ export default function DutyHoursScreen() {
           <Text className="text-white font-bold" style={{ fontFamily: clinicalTokens.fonts.heading }}>Save</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      {recent.length > 0 && (
+        <Animated.View entering={FadeInDown.delay(400).springify()} style={{ marginTop: 24 }}>
+          <Text
+            style={{
+              fontFamily: clinicalTokens.fonts.heading,
+              fontWeight: '600',
+              fontSize: 17,
+              color: clinicalTokens.colors.text.primary,
+              marginBottom: 8,
+            }}
+          >
+            Recent entries
+          </Text>
+          {recent.map((entry) => (
+            <View
+              key={entry.id}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: 'rgba(0,122,255,0.12)',
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                marginBottom: 6,
+              }}
+            >
+              <Text style={{ fontFamily: clinicalTokens.fonts.mono, fontSize: 13, color: clinicalTokens.colors.text.primary }}>
+                {entry.shift_date}
+              </Text>
+              <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.text.secondary }}>
+                {Number(entry.hours_worked)}h · {entry.shift_type}
+              </Text>
+            </View>
+          ))}
+        </Animated.View>
+      )}
     </ScreenWrapper>
   );
 }
