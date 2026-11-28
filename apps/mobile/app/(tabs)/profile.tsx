@@ -126,6 +126,18 @@ function NotificationSection() {
                 ? 'Push is on for case approvals and announcements.'
                 : 'Push is off. Turn it on to hear about approvals.'}
           </Text>
+          {granted === false && (
+            <TouchableOpacity
+              onPress={() => void Linking.openSettings()}
+              accessibilityRole="button"
+              accessibilityLabel="Open notification settings"
+              style={{ marginTop: 4 }}
+            >
+              <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.primary.DEFAULT }}>
+                Open device settings
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         {busy ? (
           <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} />

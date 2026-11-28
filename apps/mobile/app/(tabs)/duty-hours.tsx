@@ -156,7 +156,7 @@ export default function DutyHoursScreen() {
 
       <Animated.View entering={FadeInDown.delay(150).springify()}>
         <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-gray-200 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
-          <Text className="text-white" style={{ fontFamily: clinicalTokens.fonts.body }}>{date.toLocaleDateString()}</Text>
+          <Text className="text-[#000000]" style={{ fontFamily: clinicalTokens.fonts.body }}>{date.toLocaleDateString()}</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -202,7 +202,7 @@ export default function DutyHoursScreen() {
 
       <Animated.View entering={FadeInDown.delay(300).springify()}>
         <TextInput
-          className="bg-white text-white rounded-xl px-4 py-3 mb-4 border border-[#007AFF]/15"
+          className="bg-white text-[#000000] rounded-xl px-4 py-3 mb-4 border border-[#007AFF]/15"
           placeholder="Notes (optional)"
           placeholderTextColor="#666"
           value={notes}
