@@ -16,7 +16,10 @@
 > Task 41 (CD-002): web deploy job now `needs: [db]` so the Next.js release only goes
 > out after migrations apply. Note: Tasks 42–43 also touch cd.yml — the 9-function matrix
 > (Task 42) already exists in the file, and `--include-all` on `db push` (Task 43) is still present.
-> Next undone task: **Task 43**.
+> Task 43 (CD-004): `--include-all` removed from the CD `db push`. Note: the plan text below is
+> stale — the workflow uses `supabase db push --linked` with SUPABASE_ACCESS_TOKEN, not `--db-url`;
+> the fix honored the plan's goal (only unapplied migrations ship, destructive re-runs impossible).
+> Next undone task: **Task 44**.
 
 > **Status (2026-11-27, Task 42):** Verified against `supabase/functions/manifest.json` + disk: the
 > cd.yml deploy matrix already deploys exactly the 9 spec'd functions (`ai-insights, ai-quality,
@@ -885,8 +888,11 @@ await adminClient.from('notifications').insert({ tenant_id, user_id: caseEntry.r
 **Files:**
 - Modify: `.github/workflows/cd.yml`
 
-- [ ] **Step 1:** Change `supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all` to `supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}`.
-- [ ] **Step 2:** Commit: `git add .github/workflows/cd.yml && git commit -m "fix(cd): remove --include-all from db push (CD-004)"`
+- [x] **Step 1:** Change `supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }} --include-all` to `supabase db push --db-url ${{ secrets.SUPABASE_DB_URL }}`.
+- [x] **Step 2:** Commit: `git add .github/workflows/cd.yml && git commit -m "fix(cd): remove --include-all from db push (CD-004)"`
+
+> Done (2026-11-28, commit b0979f7): actual line was `supabase db push --linked --include-all`
+> (plan's `--db-url` text was stale); removed `--include-all`, kept `--linked`.
 
 ---
 
