@@ -12,17 +12,19 @@ SELECT is(
   'authenticated users can read the global mobile config'
 );
 
-SELECT throws_ok(
-  $$UPDATE public.platform_mobile_config SET maintenance_mode = true WHERE id = TRUE$$,
-  '42501',
-  NULL,
+-- Default privileges grant the statement; RLS (no write policy) filters every
+-- row, so the value/count must stay unchanged rather than raising.
+UPDATE public.platform_mobile_config SET maintenance_mode = true WHERE id = TRUE;
+SELECT is(
+  (SELECT maintenance_mode FROM public.platform_mobile_config WHERE id = TRUE),
+  false,
   'authenticated users cannot change the global config'
 );
 
-SELECT throws_ok(
-  $$DELETE FROM public.platform_mobile_config WHERE id = TRUE$$,
-  '42501',
-  NULL,
+DELETE FROM public.platform_mobile_config WHERE id = TRUE;
+SELECT is(
+  (SELECT count(*) FROM public.platform_mobile_config),
+  1::bigint,
   'authenticated users cannot delete the global config'
 );
 
