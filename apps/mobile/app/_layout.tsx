@@ -40,6 +40,8 @@ import { guardDeepLink } from '../lib/route-guard';
 import { ThemeProvider, useTheme } from '../lib/theme';
 import { RemoteConfigProvider } from '../lib/remote-config-context';
 import { AppControlGate } from '../components/AppControlGate';
+import { MfaGate } from '../components/MfaGate';
+import { roleRequiresMfa } from '../lib/mfa';
 import { statusBarStyleFor } from '../lib/design-tokens';
 
 // Font assets
@@ -131,6 +133,7 @@ export default function RootLayout() {
   // Boot resolves capability + full account context before protected
   // routes render. sessionReady gates the tab stack (never metadata).
   const [sessionReady, setSessionReady] = useState(false);
+  const [mfaPassed, setMfaPassed] = useState(false);
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
@@ -153,6 +156,13 @@ export default function RootLayout() {
     };
   }, [authLoading, isAuthenticated]);
 
+  // A privileged role needs an AAL2 session, exactly like the web shell.
+  // Reset on sign-out or when the boot barrier drops so another account
+  // cannot inherit a previous user's verification.
+  useEffect(() => {
+    if (!sessionReady) setMfaPassed(false);
+  }, [sessionReady]);
+
   // M1.3: sign-out disposal with real hooks (stop sync, wipe draft,
   // quarantine queue under old scope, clear telemetry + push identity).
   useEffect(() => {
@@ -170,6 +180,7 @@ export default function RootLayout() {
         // best-effort
       }
       setSessionReady(false);
+      setMfaPassed(false);
       router.replace('/login');
     });
     return () => subscription?.unsubscribe?.();
@@ -284,16 +295,25 @@ export default function RootLayout() {
             <ThemedStatusBar />
             <ScreenshotAwareLayout>
               <AppControlGate>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    animation: 'fade',
-                    animationDuration: 200,
-                  }}
-                >
-                  <Stack.Screen name="login" />
-                  <Stack.Screen name="(tabs)" />
-                </Stack>
+                {roleRequiresMfa(getSession().capability?.role) && !mfaPassed ? (
+                  <MfaGate
+                    onVerified={() => {
+                      setMfaPassed(true);
+                      requireFreshCapability(supabase as never).catch(() => undefined);
+                    }}
+                  />
+                ) : (
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      animation: 'fade',
+                      animationDuration: 200,
+                    }}
+                  >
+                    <Stack.Screen name="login" />
+                    <Stack.Screen name="(tabs)" />
+                  </Stack>
+                )}
               </AppControlGate>
             </ScreenshotAwareLayout>
 

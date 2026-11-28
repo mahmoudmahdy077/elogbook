@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 
 import { getRoleFromAuth } from '../../lib/auth-guard';
 import { useRemoteConfig } from '../../lib/remote-config-context';
+import { mobileApiBase } from '../../lib/mobile-api';
 import { useTheme } from '../../lib/theme';
 import type { ThemeMode } from '../../lib/design-tokens';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
@@ -56,6 +57,24 @@ function AboutSection() {
             <Text style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.muted, fontSize: 11 }}>{tenantId}</Text>
           </View>
         ) : null}
+        <View className="flex-row gap-5 mt-3">
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/privacy`)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy policy"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>Privacy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/terms`)}
+            accessibilityRole="link"
+            accessibilityLabel="Terms of service"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>Terms</Text>
+          </TouchableOpacity>
+        </View>
       </GlassPanel>
     </Animated.View>
   );
