@@ -17,6 +17,7 @@ import {
   Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import NetInfo from '@react-native-community/netinfo';
 import { Ionicons } from '@expo/vector-icons';
 import { clinicalTokens, isMobileFeatureEnabled, type UserRole } from '@elogbook/shared';
 import { supabase } from '../lib/supabase';
@@ -50,6 +51,7 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   const canManage = (a: CaseAttachment) =>
     a.uploaded_by === profileId ||
@@ -60,6 +62,13 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
     setAttachments(data);
     setLoading(false);
   }, [caseId]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(state.isConnected !== true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -106,6 +115,10 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
   };
 
   const pickFromLibrary = async () => {
+    if (isOffline) {
+      Alert.alert('Connection required', 'Attachments upload immediately; case photos are not queued offline.');
+      return;
+    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Permission needed', 'Allow photo access to attach a picture to this case.');
@@ -120,6 +133,10 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
   };
 
   const takePhoto = async () => {
+    if (isOffline) {
+      Alert.alert('Connection required', 'Attachments upload immediately; case photos are not queued offline.');
+      return;
+    }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Permission needed', 'Allow camera access to photograph a document for this case.');
@@ -190,7 +207,7 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <TouchableOpacity
             onPress={takePhoto}
-            disabled={uploading}
+            disabled={uploading || isOffline}
             accessibilityLabel="Take a photo for this case"
             accessibilityRole="button"
             style={{
@@ -205,7 +222,7 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={pickFromLibrary}
-            disabled={uploading}
+            disabled={uploading || isOffline}
             accessibilityLabel="Choose a photo for this case"
             accessibilityRole="button"
             style={{
@@ -230,6 +247,19 @@ export function CaseAttachments({ caseId, tenantId, profileId, role }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {isOffline && (
+        <Text
+          style={{
+            marginTop: 8,
+            fontFamily: clinicalTokens.fonts.body,
+            fontSize: 12,
+            color: clinicalTokens.colors.text.muted,
+          }}
+        >
+          Photos need a connection; this screen will not queue patient images offline.
+        </Text>
+      )}
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 12 }} color={clinicalTokens.colors.primary.DEFAULT} />

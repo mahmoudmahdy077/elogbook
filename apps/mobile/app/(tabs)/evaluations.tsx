@@ -10,6 +10,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { logError } from '../../lib/logger';
 import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
@@ -631,18 +632,12 @@ export default function EvaluationsScreen() {
                 <EvaluationCard
                   key={ev.id}
                   evaluation={ev}
-                  onPress={() => {
-                    // Show full score + metadata inline (no detail screen exists yet)
-                    Alert.alert(
-                      ev.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                      [
-                        `Status: ${ev.status}`,
-                        `Overall score: ${ev.overall_score ?? '—'}`,
-                        ev.encounter_date ? `Encounter: ${new Date(ev.encounter_date).toLocaleDateString()}` : null,
-                        ev.setting ? `Setting: ${ev.setting}` : null,
-                      ].filter(Boolean).join('\n')
-                    );
-                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/evaluation-detail',
+                      params: { evaluationId: ev.id },
+                    })
+                  }
                 />
               </Animated.View>
             ))}

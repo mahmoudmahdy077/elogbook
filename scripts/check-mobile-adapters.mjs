@@ -25,7 +25,7 @@ const SENSITIVE_TABLES = new Set([
   'case_attachments', 'profiles', 'audit_logs', 'notifications', 'push_tokens',
   'case_templates', 'tenants',
 ]);
-const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/operations', 'lib/attachments-store', 'lib/consent-store'];
+const ADAPTER_IMPORTS = ['lib/case-submit', 'lib/operations', 'lib/attachments-store', 'lib/consent-store', 'lib/profile-store'];
 const READ_RPCS = new Set(['hash_patient_mrn']);
 
 function walk(dir, out = []) {

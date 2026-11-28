@@ -184,6 +184,60 @@ export function mobileUpdateRequired(
   return compareAppVersions(currentVersion, config.min_app_version) < 0;
 }
 
+export interface PlatformMobileConfig {
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  min_app_version: string | null;
+  force_update: boolean;
+  update_url: string | null;
+  announcement: MobileAnnouncement | null;
+}
+
+export function parsePlatformMobileConfig(row: unknown): PlatformMobileConfig | null {
+  const record = asRecord(row);
+  if (!record) return null;
+  const parsed = parseMobileRemoteConfig(record);
+  return {
+    maintenance_mode: parsed.maintenance_mode,
+    maintenance_message: parsed.maintenance_message,
+    min_app_version: parsed.min_app_version,
+    force_update: parsed.force_update,
+    update_url: parsed.update_url,
+    announcement: parsed.announcement,
+  };
+}
+
+/** Highest of two optional versions (invalid values are ignored). */
+function maxVersion(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return compareAppVersions(a, b) >= 0 ? a : b;
+}
+
+/**
+ * Platform controls are a floor: maintenance applies estate-wide, the higher
+ * minimum version wins, and a tenant announcement overrides the global one.
+ */
+export function mergeMobileRemoteConfigs(
+  platform: PlatformMobileConfig | null,
+  tenant: MobileRemoteConfig,
+): MobileRemoteConfig {
+  if (!platform) return tenant;
+
+  const maintenance = platform.maintenance_mode || tenant.maintenance_mode;
+  return {
+    ...tenant,
+    maintenance_mode: maintenance,
+    maintenance_message: platform.maintenance_mode
+      ? platform.maintenance_message ?? tenant.maintenance_message
+      : tenant.maintenance_message ?? platform.maintenance_message,
+    min_app_version: maxVersion(platform.min_app_version, tenant.min_app_version),
+    force_update: platform.force_update || tenant.force_update,
+    update_url: tenant.update_url ?? platform.update_url,
+    announcement: tenant.announcement ?? platform.announcement,
+  };
+}
+
 export interface AnnouncementState {
   id: string;
   title: string;

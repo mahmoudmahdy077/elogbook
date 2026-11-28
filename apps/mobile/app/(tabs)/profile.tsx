@@ -311,6 +311,23 @@ export default function ProfileScreen() {
             {profile.specialty}
           </Text>
         )}
+        <TouchableOpacity
+          onPress={() => router.push('/profile-edit')}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
+          style={{
+            marginTop: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: clinicalTokens.colors.primary.DEFAULT,
+          }}
+        >
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>
+            Edit profile
+          </Text>
+        </TouchableOpacity>
       </View>
       </Animated.View>
 

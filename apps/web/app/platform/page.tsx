@@ -1,5 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import TenantCreateForm from './TenantCreateForm';
+import PlatformMobilePanel from './PlatformMobilePanel';
+import { parsePlatformMobileConfig, type PlatformMobileConfig } from '@elogbook/shared';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,6 +21,7 @@ export default async function PlatformHomePage() {
     created_at: string;
   }[] = [];
   let error: string | null = null;
+  let mobileConfig: PlatformMobileConfig | null = null;
   try {
     const adminClient = createServiceRoleClient();
     const { data, error: queryError } = await adminClient
@@ -28,6 +31,13 @@ export default async function PlatformHomePage() {
       .limit(100);
     if (queryError) error = 'Could not load tenants.';
     else tenants = data ?? [];
+
+    const { data: mobileRow } = await adminClient
+      .from('platform_mobile_config')
+      .select('*')
+      .eq('id', true)
+      .maybeSingle();
+    mobileConfig = parsePlatformMobileConfig(mobileRow);
   } catch {
     error = 'Could not load tenants.';
   }
@@ -38,6 +48,8 @@ export default async function PlatformHomePage() {
       <p className="text-sm text-text-muted mb-6">
         {tenants.length} tenant(s).
       </p>
+
+      <PlatformMobilePanel initialConfig={mobileConfig} />
 
       <TenantCreateForm />
       {error && <p className="text-fg-danger text-sm mb-4">{error}</p>}

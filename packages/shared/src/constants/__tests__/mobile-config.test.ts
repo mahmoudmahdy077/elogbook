@@ -6,6 +6,8 @@ import {
   isMobileFeatureEnabled,
   mobileUpdateRequired,
   parseMobileRemoteConfig,
+  mergeMobileRemoteConfigs,
+  parsePlatformMobileConfig,
 } from '../mobile-config';
 
 describe('mobile remote config contract', () => {
@@ -66,6 +68,34 @@ describe('mobile remote config contract', () => {
     expect(
       activeAnnouncement(config, Date.parse('2025-12-31T00:00:00Z'), ['a1']),
     ).toBeNull();
+  });
+
+  it('merges platform controls as a floor over tenant controls', () => {
+    const platform = parsePlatformMobileConfig({
+      maintenance_mode: true,
+      maintenance_message: 'Estate-wide outage',
+      min_app_version: '2.0.0',
+      force_update: true,
+      announcement: { id: 'p1', title: 'Global', body: 'Notice', severity: 'info' },
+    });
+    const tenant = parseMobileRemoteConfig({
+      maintenance_mode: false,
+      min_app_version: '1.5.0',
+      force_update: false,
+      announcement: { id: 't1', title: 'Tenant', body: 'Local', severity: 'warning' },
+    });
+    const merged = mergeMobileRemoteConfigs(platform, tenant);
+    expect(merged.maintenance_mode).toBe(true);
+    expect(merged.maintenance_message).toBe('Estate-wide outage');
+    expect(merged.min_app_version).toBe('2.0.0');
+    expect(merged.force_update).toBe(true);
+    // A tenant announcement takes precedence over the global one.
+    expect(merged.announcement?.id).toBe('t1');
+  });
+
+  it('leaves the tenant config unchanged without platform controls', () => {
+    const tenant = parseMobileRemoteConfig({ min_app_version: '1.1.0' });
+    expect(mergeMobileRemoteConfigs(null, tenant)).toEqual(tenant);
   });
 
   it('normalises an unknown severity to info', () => {

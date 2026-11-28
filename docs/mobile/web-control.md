@@ -17,15 +17,21 @@ foreground; no app-store release is required.
 | Branding colour | `tenants.custom_branding.primary_color` | Used for tab accents and the New Case button. |
 
 Attachments use the same bucket/table as the web and are controlled by the
-`attachments` module key. Module keys are shared in
+`attachments` module key. Uploads are online-only by design: patient images
+are never queued in plaintext on the device, so the app disables the picker
+and says why while offline. Module keys are shared in
 `packages/shared/src/constants/mobile-config.ts`
 (`MOBILE_FEATURE_KEYS`). Add a key there before exposing a new toggle.
 
 ## Read / write path
 
-- The app reads `mobile_app_config` directly through RLS (`tenant_id =
-  get_tenant_id()`), caches the last snapshot per tenant, and re-reads it on
-  boot, sign-in and every foreground. Offline starts use the cached values.
+- A platform operator can also set a global floor at `/platform` (global
+  maintenance, minimum/forced version, global announcement). The app merges
+  it over the tenant row: maintenance is OR, the higher minimum version wins,
+  and a tenant announcement takes precedence.
+- The app reads `mobile_app_config` (and the singleton
+  `platform_mobile_config`) through RLS, caches the last snapshot per tenant,
+  and re-reads it on boot, sign-in and every foreground. Offline starts use the cached values.
 - The web route `POST /api/[tenant]/admin/mobile` validates and upserts the
   row with the service role, then writes an `audit_logs` row
   (`mobile_app_config_update`, `mobile_push_broadcast`).

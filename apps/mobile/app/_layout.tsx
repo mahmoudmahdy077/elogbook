@@ -312,6 +312,8 @@ export default function RootLayout() {
                   >
                     <Stack.Screen name="login" />
                     <Stack.Screen name="consent" />
+                    <Stack.Screen name="profile-edit" />
+                    <Stack.Screen name="evaluation-detail" />
                     <Stack.Screen name="(tabs)" />
                   </Stack>
                 )}

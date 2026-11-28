@@ -9,7 +9,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  mergeMobileRemoteConfigs,
   parseMobileRemoteConfig,
+  parsePlatformMobileConfig,
   type MobileRemoteConfig,
 } from '@elogbook/shared';
 import { supabase } from './supabase';
@@ -104,6 +106,14 @@ export async function fetchRemoteConfig(
     return { ...EMPTY_REMOTE_CONFIG, tenantId, fetchedAt };
   }
 
+  const { data: platformRow } = await supabase
+    .from('platform_mobile_config')
+    .select(
+      'maintenance_mode, maintenance_message, min_app_version, force_update, update_url, announcement',
+    )
+    .eq('id', true)
+    .maybeSingle();
+
   const { data: tenant } = await supabase
     .from('tenants')
     .select('name, custom_branding')
@@ -118,7 +128,10 @@ export async function fetchRemoteConfig(
 
   const snapshot: RemoteConfigSnapshot = {
     tenantId,
-    config: parseMobileRemoteConfig(row),
+    config: mergeMobileRemoteConfigs(
+      parsePlatformMobileConfig(platformRow),
+      parseMobileRemoteConfig(row),
+    ),
     institutionName:
       typeof tenant?.name === 'string' && tenant.name ? tenant.name : null,
     primaryColor,
