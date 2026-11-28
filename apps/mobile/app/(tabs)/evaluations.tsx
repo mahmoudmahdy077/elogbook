@@ -10,11 +10,12 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { logError } from '../../lib/logger';
 import { bestKnownCapability, noteAuthFailure } from '../../lib/session';
 import { submitEvaluation } from '../../lib/operations';
-import { clinicalTokens, EVALUATION_FORM_TYPES } from '@elogbook/shared';
+import { clinicalTokens, EVALUATION_FORM_TYPES, toLocalDateISO } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 
@@ -134,10 +135,12 @@ function NewEvaluationSheet({
   const [residents, setResidents] = useState<ResidentData[]>([]);
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
   const [encounterDate, setEncounterDate] = useState(
-    new Date().toISOString().slice(0, 10),
+    toLocalDateISO(),
   );
   const [setting, setSetting] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [overallScore, setOverallScore] = useState('');
+  const [actionPlan, setActionPlan] = useState('');
   const [saving, setSaving] = useState(false);
 
   const showResidentPicker =
@@ -177,6 +180,12 @@ function NewEvaluationSheet({
     const residentId =
       selectedResident ?? evaluatorId;
 
+    const score = overallScore ? Number(overallScore) : null;
+    if (score !== null && (!Number.isFinite(score) || score < 1 || score > 5)) {
+      Alert.alert('Invalid score', 'Overall score must be between 1 and 5.');
+      return;
+    }
+
     setSaving(true);
     // N2: typed adapter (capability gate + fixed UI copy; raw errors logged).
     const capability = await bestKnownCapability(supabase as never);
@@ -191,6 +200,9 @@ function NewEvaluationSheet({
           encounter_date: encounterDate || null,
           setting: setting || null,
           ratings: {},
+          overall_score: score,
+          feedback: feedback.trim() || null,
+          action_plan: actionPlan.trim() || null,
           status: 'pending',
         });
         if (error) {
@@ -212,7 +224,9 @@ function NewEvaluationSheet({
       setSelectedResident(null);
       setSetting('');
       setFeedback('');
-      setEncounterDate(new Date().toISOString().slice(0, 10));
+      setOverallScore('');
+      setActionPlan('');
+      setEncounterDate(toLocalDateISO());
     } else if (outcome.kind === 'denied') {
       Alert.alert('Not permitted', outcome.reason);
     } else if (outcome.kind === 'transient') {
@@ -220,7 +234,19 @@ function NewEvaluationSheet({
     } else {
       Alert.alert('Error', outcome.copy);
     }
-  }, [selectedType, evaluatorId, selectedResident, tenantId, encounterDate, setting, onSaved, onClose]);
+  }, [
+    selectedType,
+    evaluatorId,
+    selectedResident,
+    tenantId,
+    encounterDate,
+    setting,
+    feedback,
+    overallScore,
+    actionPlan,
+    onSaved,
+    onClose,
+  ]);
 
   const handleClose = useCallback(() => {
     setStep('picker');
@@ -228,7 +254,9 @@ function NewEvaluationSheet({
     setSelectedResident(null);
     setSetting('');
     setFeedback('');
-    setEncounterDate(new Date().toISOString().slice(0, 10));
+    setOverallScore('');
+    setActionPlan('');
+    setEncounterDate(toLocalDateISO());
     onClose();
   }, [onClose]);
 
@@ -394,7 +422,7 @@ function NewEvaluationSheet({
                   Feedback (optional)
                 </Text>
                 <TextInput
-                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-4 border border-gray-700"
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-3 border border-gray-700"
                   value={feedback}
                   onChangeText={setFeedback}
                   placeholder="Brief feedback notes..."
@@ -402,6 +430,39 @@ function NewEvaluationSheet({
                   multiline
                   numberOfLines={3}
                   accessibilityLabel="Feedback"
+                />
+
+                <Text
+                  className="text-gray-400 text-xs mb-1"
+                  style={{ fontFamily: clinicalTokens.fonts.body }}
+                >
+                  Overall score (1–5)
+                </Text>
+                <TextInput
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-3 border border-gray-700"
+                  value={overallScore}
+                  onChangeText={(v) => setOverallScore(v.replace(/[^0-9.]/g, '').slice(0, 4))}
+                  placeholder="e.g. 4.5"
+                  placeholderTextColor="#666"
+                  keyboardType="numeric"
+                  accessibilityLabel="Overall score"
+                />
+
+                <Text
+                  className="text-gray-400 text-xs mb-1"
+                  style={{ fontFamily: clinicalTokens.fonts.body }}
+                >
+                  Action plan (optional)
+                </Text>
+                <TextInput
+                  className="bg-white/10 text-white rounded-xl px-4 py-3 mb-4 border border-gray-700"
+                  value={actionPlan}
+                  onChangeText={setActionPlan}
+                  placeholder="Next steps agreed with the resident..."
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={2}
+                  accessibilityLabel="Action plan"
                 />
               </ScrollView>
 
@@ -542,7 +603,7 @@ export default function EvaluationsScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper title="Evaluations" scroll={false}>
+      <ScreenWrapper title="Evaluations" featureKey="evaluations" scroll={false}>
         <Animated.View entering={FadeIn} className="flex-1 items-center justify-center">
           <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} size="large" />
         </Animated.View>
@@ -551,7 +612,7 @@ export default function EvaluationsScreen() {
   }
 
   return (
-    <ScreenWrapper title="Evaluations" scroll={false}>
+    <ScreenWrapper title="Evaluations" featureKey="evaluations" scroll={false}>
       <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
@@ -631,18 +692,12 @@ export default function EvaluationsScreen() {
                 <EvaluationCard
                   key={ev.id}
                   evaluation={ev}
-                  onPress={() => {
-                    // Show full score + metadata inline (no detail screen exists yet)
-                    Alert.alert(
-                      ev.form_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                      [
-                        `Status: ${ev.status}`,
-                        `Overall score: ${ev.overall_score ?? '—'}`,
-                        ev.encounter_date ? `Encounter: ${new Date(ev.encounter_date).toLocaleDateString()}` : null,
-                        ev.setting ? `Setting: ${ev.setting}` : null,
-                      ].filter(Boolean).join('\n')
-                    );
-                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/evaluation-detail',
+                      params: { evaluationId: ev.id },
+                    })
+                  }
                 />
               </Animated.View>
             ))}

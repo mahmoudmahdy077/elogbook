@@ -27,6 +27,7 @@ This document lists every environment variable used across the monorepo. Actual 
 | `EXPO_PUBLIC_SUPABASE_URL` | mobile-public | Yes | all | - | Supabase URL for mobile |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | mobile-public | Yes | all | - | Supabase anon key for mobile |
 | `EXPO_PUBLIC_SENTRY_DSN` | mobile-public | No | production | - | Sentry DSN for mobile |
+| `EXPO_PUBLIC_API_URL` | mobile-public | No | all | `https://elogbook-web.vercel.app` | Web API base for mobile case submit; `app.json → extra.apiUrl` also sets it |
 
 ## Configuration Schema Packages
 

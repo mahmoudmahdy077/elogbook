@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSideMenu } from '../lib/side-menu-context';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, isMobileFeatureEnabled, type MobileFeatureKey } from '@elogbook/shared';
+import { useRemoteConfig } from '../lib/remote-config-context';
 
 interface ScreenWrapperProps {
   title: string;
@@ -12,6 +13,8 @@ interface ScreenWrapperProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   rightAction?: ReactNode;
+  /** Web-controlled module key; a disabled module shows a notice instead. */
+  featureKey?: MobileFeatureKey;
 }
 
 export default function ScreenWrapper({
@@ -21,9 +24,12 @@ export default function ScreenWrapper({
   refreshing = false,
   onRefresh,
   rightAction,
+  featureKey,
 }: ScreenWrapperProps) {
   const insets = useSafeAreaInsets();
   const { toggle } = useSideMenu();
+  const { config } = useRemoteConfig();
+  const moduleDisabled = featureKey ? !isMobileFeatureEnabled(config, featureKey) : false;
 
   const header = (
     <View
@@ -62,6 +68,46 @@ export default function ScreenWrapper({
     </View>
   );
 
+  const content = moduleDisabled ? (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 28,
+        paddingVertical: 40,
+      }}
+    >
+      <Ionicons name="lock-closed-outline" size={32} color={clinicalTokens.colors.text.muted} />
+      <Text
+        style={{
+          marginTop: 12,
+          textAlign: 'center',
+          fontFamily: clinicalTokens.fonts.heading,
+          fontSize: 17,
+          color: clinicalTokens.colors.text.primary,
+        }}
+      >
+        Module turned off
+      </Text>
+      <Text
+        style={{
+          marginTop: 6,
+          textAlign: 'center',
+          fontFamily: clinicalTokens.fonts.body,
+          fontSize: 14,
+          lineHeight: 20,
+          color: clinicalTokens.colors.text.muted,
+        }}
+      >
+        Your organisation disabled this module in the app settings. Contact your administrator if
+        you need it.
+      </Text>
+    </View>
+  ) : (
+    children
+  );
+
   if (!scroll) {
     return (
       <View
@@ -69,7 +115,7 @@ export default function ScreenWrapper({
         style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
       >
         {header}
-        <View className="flex-1 px-5 pb-4">{children}</View>
+        <View className="flex-1 px-5 pb-4">{content}</View>
       </View>
     );
   }
@@ -95,7 +141,7 @@ export default function ScreenWrapper({
         }
         showsVerticalScrollIndicator={false}
       >
-        {children}
+        {content}
       </ScrollView>
     </View>
   );

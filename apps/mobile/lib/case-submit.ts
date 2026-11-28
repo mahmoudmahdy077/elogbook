@@ -78,6 +78,9 @@ export async function submitCase(
     if (!requestedMode) {
       return { kind: 'rejected', reason: 'Session needs refresh before this can be saved. Retry when online.' };
     }
+    // Keep the draft status the screen chose: the queue flush submits it
+    // through the same web path once the network returns, so approvals,
+    // webhook and push still fire (durable-queue afterInsert).
     const queuedPayload =
       input.action === 'insert' ? { ...input.payload } : { ...input.payload, id: input.targetId };
     await enqueueDurable('case_entries', input.action, queuedPayload, { opId });

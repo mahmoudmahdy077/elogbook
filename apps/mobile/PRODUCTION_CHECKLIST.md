@@ -1,6 +1,17 @@
 # E-Logbook Mobile — Production Deployment Readiness Checklist
 # Cycle 10: Security + Performance + Production audit
 
+> **Status note (2026-11-28):** the shipped sync path is the durable,
+> per-account push outbox (`lib/durable-queue.ts`); queued drafts are submitted
+> through the web API when the connection returns. The WatermelonDB
+> bidirectional engine (`lib/sync/engine.ts`) is test-only unless
+> `FULL_SYNC_ENABLED` is set, which no production path does. Treat the
+> "bidirectional sync / local DB reads" items below as the dormant engine,
+> not as evidence for the shipped app.
+>
+> Privileged roles (director, institution_admin, admin) now require an AAL2
+> authenticator session on mobile, matching the web shell (`components/MfaGate.tsx`).
+
 ## 🔐 Security Checklist
 
 ### PHI Protection (HIPAA)

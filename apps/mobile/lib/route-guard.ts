@@ -11,6 +11,7 @@
 import { canPerform, type SensitiveAction } from './authorization';
 import { isCapabilityFresh } from './capability';
 import type { CapabilitySnapshot } from './capability';
+import type { MobileFeatureKey } from '@elogbook/shared';
 
 export type RouteName =
   | 'index' | 'log-case' | 'my-cases' | 'case-detail' | 'approvals'
@@ -54,9 +55,41 @@ export interface GuardResult {
   reason?: string;
 }
 
+/** Route → web-controlled module. Routes absent here are always available. */
+export const ROUTE_MODULES: Partial<Record<RouteName, MobileFeatureKey>> = {
+  'log-case': 'log_case',
+  'my-cases': 'my_cases',
+  'case-detail': 'my_cases',
+  approvals: 'approvals',
+  evaluations: 'evaluations',
+  'duty-hours': 'duty_hours',
+  rotations: 'rotations',
+  milestones: 'milestones',
+  analytics: 'analytics',
+  'ai-insights': 'ai_insights',
+};
+
+// The remote config is loaded asynchronously, so guards read the current
+// resolver instead of threading config through every caller. When unset
+// (tests, pre-boot) every module is treated as enabled.
+let featureResolver: ((key: MobileFeatureKey) => boolean) | null = null;
+
+export function setRouteFeatureResolver(
+  resolver: ((key: MobileFeatureKey) => boolean) | null,
+): void {
+  featureResolver = resolver;
+}
+
+function moduleAllowed(route: RouteName): boolean {
+  const key = ROUTE_MODULES[route];
+  if (!key || !featureResolver) return true;
+  return featureResolver(key);
+}
+
 export function guardRoute(route: RouteName, cap: CapabilitySnapshot | null): GuardResult {
   if (!cap) return { ok: false, reason: 'no session capability' };
   if (cap.status !== 'active') return { ok: false, reason: `account ${cap.status}` };
+  if (!moduleAllowed(route)) return { ok: false, reason: 'module disabled by your organisation' };
   const guard = ROUTE_GUARDS[route];
   if (guard.action === 'read') return { ok: true };
   return canPerform(cap, guard.action);

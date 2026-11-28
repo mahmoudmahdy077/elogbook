@@ -6,7 +6,7 @@ import { migrateLegacyQueueOnce } from './legacy-migration';
 import { RETRY_DELAYS_MS } from './sync-retry';
 import { clearAccountContext, setAccountContext } from './account-context';
 import { noteAuthFailure } from './session';
-import { logInfo, logError } from './logger';
+import { logInfo, logError, logWarn } from './logger';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'synced';
 
@@ -134,7 +134,19 @@ class SyncService {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const { flushDurableQueue, getDurableCounts, classifyQueueError } = await import('./durable-queue');
-      const result = await flushDurableQueue(supabase as never);
+      const result = await flushDurableQueue(supabase as never, {
+        afterInsert: async (id, status) => {
+          // A queued institution case was saved as a draft. Submit it now that
+          // the network is back so supervisors, webhooks and push all see it;
+          // individual tenants auto-approve on insert and answer "not a draft".
+          if (!id || status !== 'draft') return;
+          const { submitSavedCase } = await import('./mobile-api');
+          const outcome = await submitSavedCase(id);
+          if (!outcome.ok && !/not a draft/i.test(outcome.error)) {
+            logWarn('sync.offline-submit-failed');
+          }
+        },
+      });
       // One-time upgrade migration: move legacy global-queue items into the
       // durable outbox, then delete the legacy key (never submit both formats).
       const migrated = await migrateLegacyQueueOnce().catch(() => 0);

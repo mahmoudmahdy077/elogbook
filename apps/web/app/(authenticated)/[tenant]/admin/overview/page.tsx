@@ -67,6 +67,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
       .from('case_entries')
       .select('id, status, resident_id, created_at, profiles!inner(id, full_name, specialty), case_templates!inner(id, specialty)')
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(500),
   ]);

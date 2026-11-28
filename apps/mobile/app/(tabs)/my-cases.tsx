@@ -112,6 +112,7 @@ export default function MyCasesScreen() {
       .from('case_entries')
       .select('id, patient_mrn, patient_hash, patient_dob, case_date, status, is_deidentified, template_id, case_templates(name, specialty)')
       .eq('resident_id', profile.id)
+      .is('deleted_at', null)
       .order('case_date', { ascending: false })
       .limit(100);
 
@@ -198,7 +199,7 @@ export default function MyCasesScreen() {
   }
 
   return (
-    <ScreenWrapper title="My Cases" scroll={false}>
+    <ScreenWrapper title="My Cases" featureKey="my_cases" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>

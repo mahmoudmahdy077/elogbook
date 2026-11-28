@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking, Switch } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 
 import { getRoleFromAuth } from '../../lib/auth-guard';
+import { useRemoteConfig } from '../../lib/remote-config-context';
+import { mobileApiBase } from '../../lib/mobile-api';
+import * as Notifications from 'expo-notifications';
+import { requestNotificationPermission, registerPushToken } from '../../lib/push';
 import { useTheme } from '../../lib/theme';
 import type { ThemeMode } from '../../lib/design-tokens';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
@@ -30,6 +35,123 @@ function titleCase(str: string): string {
     .split(/[_\\s]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/** Support-facing build and tenant identity (web-controlled). */
+function AboutSection() {
+  const { institutionName, appVersion, tenantId } = useRemoteConfig();
+  return (
+    <Animated.View entering={FadeInDown.delay(250).springify()}>
+      <GlassPanel style={{ marginBottom: 12 }}>
+        <Text className="text-gray-500 text-xs uppercase tracking-wider mb-2" style={{ fontFamily: clinicalTokens.fonts.body }}>About</Text>
+        <View className="flex-row justify-between py-1.5">
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Organisation</Text>
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.primary }}>
+            {institutionName ?? 'E-Logbook'}
+          </Text>
+        </View>
+        <View className="flex-row justify-between py-1.5">
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>App version</Text>
+          <Text style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.primary }}>{appVersion}</Text>
+        </View>
+        {__DEV__ && tenantId ? (
+          <View className="flex-row justify-between py-1.5">
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>Tenant</Text>
+            <Text style={{ fontFamily: clinicalTokens.fonts.mono, color: clinicalTokens.colors.text.muted, fontSize: 11 }}>{tenantId}</Text>
+          </View>
+        ) : null}
+        <View className="flex-row gap-5 mt-3">
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/privacy`)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy policy"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>Privacy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/terms`)}
+            accessibilityRole="link"
+            accessibilityLabel="Terms of service"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>Terms</Text>
+          </TouchableOpacity>
+        </View>
+      </GlassPanel>
+    </Animated.View>
+  );
+}
+
+/** Push permission status + one-tap fix (also re-registers the device token). */
+function NotificationSection() {
+  const [granted, setGranted] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync()
+      .then((settings) => setGranted(settings.granted))
+      .catch(() => setGranted(false));
+  }, []);
+
+  const toggle = async (next: boolean) => {
+    if (busy) return;
+    if (!next) {
+      // The OS only revokes in Settings; send the user there.
+      void Linking.openSettings();
+      return;
+    }
+    setBusy(true);
+    const allowed = await requestNotificationPermission();
+    if (allowed) {
+      const result = await registerPushToken();
+      setGranted(result.ok);
+    } else {
+      setGranted(false);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <GlassPanel style={{ marginBottom: 12 }}>
+      <View className="flex-row items-center justify-between">
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', color: clinicalTokens.colors.text.primary }}>
+            Notifications
+          </Text>
+          <Text style={{ marginTop: 2, fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.text.muted }}>
+            {granted === null
+              ? 'Checking…'
+              : granted
+                ? 'Push is on for case approvals and announcements.'
+                : 'Push is off. Turn it on to hear about approvals.'}
+          </Text>
+          {granted === false && (
+            <TouchableOpacity
+              onPress={() => void Linking.openSettings()}
+              accessibilityRole="button"
+              accessibilityLabel="Open notification settings"
+              style={{ marginTop: 4 }}
+            >
+              <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.primary.DEFAULT }}>
+                Open device settings
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {busy ? (
+          <ActivityIndicator color={clinicalTokens.colors.primary.DEFAULT} />
+        ) : (
+          <Switch
+            value={granted === true}
+            onValueChange={(next) => void toggle(next)}
+            accessibilityLabel="Push notifications"
+            trackColor={{ true: clinicalTokens.colors.primary.DEFAULT }}
+          />
+        )}
+      </View>
+    </GlassPanel>
+  );
 }
 
 /** N7.2 appearance setting (persisted override, system fallback). */
@@ -262,6 +384,23 @@ export default function ProfileScreen() {
             {profile.specialty}
           </Text>
         )}
+        <TouchableOpacity
+          onPress={() => router.push('/profile-edit')}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
+          style={{
+            marginTop: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: clinicalTokens.colors.primary.DEFAULT,
+          }}
+        >
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.primary.DEFAULT }}>
+            Edit profile
+          </Text>
+        </TouchableOpacity>
       </View>
       </Animated.View>
 
@@ -345,6 +484,30 @@ export default function ProfileScreen() {
 
       {/* Appearance (N7.2: persisted theme setting, system fallback) */}
       <AppearanceSection />
+      <NotificationSection />
+      <TouchableOpacity
+        onPress={() => router.push('/consent')}
+        accessibilityRole="button"
+        accessibilityLabel="Open consent preferences"
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: 'rgba(0,122,255,0.15)',
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 15, color: clinicalTokens.colors.text.primary }}>
+          Consent preferences
+        </Text>
+        <Ionicons name="chevron-forward" size={18} color={clinicalTokens.colors.text.muted} />
+      </TouchableOpacity>
+      <AboutSection />
 
       {/* Sign Out */}
       <Animated.View entering={FadeInDown.delay(250).springify()}>

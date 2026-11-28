@@ -15,6 +15,8 @@ import { CaseCountWidget } from '../../components/CaseCountWidget';
 import { fetchTodayStats } from '../../lib/today-stats';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ResidentOverview from '../../components/ResidentOverview';
+import { AnnouncementBanner } from '../../components/AnnouncementBanner';
+import { UpdateAvailableBanner } from '../../components/UpdateAvailableBanner';
 import type { TodayStats } from '../../lib/today-stats';
 
 interface Stats {
@@ -52,6 +54,7 @@ export default function DashboardScreen() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number>(DEFAULT_DAILY_CASE_GOAL);
   const [roleLoaded, setRoleLoaded] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   const updateLastSyncLabel = () => {
     const ts = syncService.getLastSyncedAt();
@@ -61,6 +64,15 @@ export default function DashboardScreen() {
   const loadWithProfile = useCallback(async (profileId: string, tenantId: string, user: { id: string; app_metadata?: Record<string, unknown> }, isOnline: boolean | null) => {
 
     if (isOnline) {
+      // Nudge new accounts to finish the profile the web onboarding asks for.
+      const { data: own } = await supabase
+        .from('profiles')
+        .select('full_name, specialty')
+        .eq('id', profileId)
+        .maybeSingle();
+      const name = (own?.full_name as string | null) ?? '';
+      setProfileIncomplete(!name || name.includes('@') || !own?.specialty);
+
       // Daily case goal is tenant config (tenants.settings JSONB), not a hardcoded value.
       const { data: tenantRow } = await supabase
         .from('tenants')
@@ -192,6 +204,31 @@ export default function DashboardScreen() {
   if (userRole === 'resident' && roleLoaded) {
     return (
       <ScreenWrapper title="Overview" refreshing={refreshing} onRefresh={onRefresh}>
+        <AnnouncementBanner />
+        <UpdateAvailableBanner />
+        {profileIncomplete && (
+          <TouchableOpacity
+            onPress={() => router.push('/profile-edit')}
+            accessibilityRole="button"
+            accessibilityLabel="Finish your profile"
+            style={{
+              backgroundColor: 'rgba(255,149,0,0.12)',
+              borderColor: 'rgba(255,149,0,0.4)',
+              borderWidth: 1,
+              borderRadius: 14,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              marginBottom: 14,
+            }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', fontSize: 15, color: clinicalTokens.colors.text.primary }}>
+              Finish your profile
+            </Text>
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, lineHeight: 19, marginTop: 2, color: clinicalTokens.colors.text.secondary }}>
+              Add your full name and specialty so your program reports are correct. Tap to edit.
+            </Text>
+          </TouchableOpacity>
+        )}
         <ResidentOverview />
       </ScreenWrapper>
     );
@@ -199,6 +236,31 @@ export default function DashboardScreen() {
 
   return (
     <ScreenWrapper title="Dashboard" refreshing={refreshing} onRefresh={onRefresh}>
+      <AnnouncementBanner />
+      <UpdateAvailableBanner />
+      {profileIncomplete && (
+        <TouchableOpacity
+          onPress={() => router.push('/profile-edit')}
+          accessibilityRole="button"
+          accessibilityLabel="Finish your profile"
+          style={{
+            backgroundColor: 'rgba(255,149,0,0.12)',
+            borderColor: 'rgba(255,149,0,0.4)',
+            borderWidth: 1,
+            borderRadius: 14,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            marginBottom: 14,
+          }}
+        >
+          <Text style={{ fontFamily: clinicalTokens.fonts.heading, fontWeight: '600', fontSize: 15, color: clinicalTokens.colors.text.primary }}>
+            Finish your profile
+          </Text>
+          <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 13, lineHeight: 19, marginTop: 2, color: clinicalTokens.colors.text.secondary }}>
+            Add your full name and specialty so your program reports are correct. Tap to edit.
+          </Text>
+        </TouchableOpacity>
+      )}
       {isOffline && (
         <View className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.body }}>Offline — showing cached data</Text>

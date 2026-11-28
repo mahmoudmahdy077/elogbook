@@ -13,7 +13,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../lib/supabase';
 import { aiQuerySchema } from '@elogbook/shared';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, toLocalDateISO } from '@elogbook/shared';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import type { UserRole } from '@elogbook/shared';
 import { NativeGlassPanel as GlassPanel } from '@elogbook/shared/components/native';
@@ -53,7 +53,7 @@ export default function AIInsightsScreen() {
     setRole(profile.role as UserRole);
 
     if (profile.role === 'resident' || profile.role === 'director' || profile.role === 'admin') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toLocalDateISO();
       const { count } = await supabase
         .from('ai_query_logs')
         .select('*', { count: 'exact', head: true })
@@ -160,7 +160,7 @@ export default function AIInsightsScreen() {
   }
 
   return (
-    <ScreenWrapper title="AI Insights" scroll={false}>
+    <ScreenWrapper title="AI Insights" featureKey="ai_insights" scroll={false}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

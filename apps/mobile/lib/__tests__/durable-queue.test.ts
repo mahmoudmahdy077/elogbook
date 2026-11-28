@@ -101,6 +101,19 @@ describe('durable queue M3 (local-first outbox)', () => {
     expect(seen[0].p_action).toBe('insert');
   });
 
+  it('hands inserted draft ids to afterInsert (offline submit parity)', async () => {
+    await enqueueDurable('case_entries', 'insert', { status: 'draft', a: 1 });
+    const seen: Array<{ id: string; status: string | null }> = [];
+    const sb = rpcWith(async () => okResult());
+    const res = await flushDurableQueue(sb as never, {
+      afterInsert: async (id, status) => {
+        seen.push({ id, status });
+      },
+    });
+    expect(res.synced).toBe(1);
+    expect(seen).toEqual([{ id: 'srv-1', status: 'draft' }]);
+  });
+
   it('does not flush another account’s queue after switch (scoped isolation)', async () => {
     await enqueueDurable('case_entries', 'insert', { a: 1 });
     setAccountContext({ userId: 'u2', tenantId: 't1', profileId: 'p2' });

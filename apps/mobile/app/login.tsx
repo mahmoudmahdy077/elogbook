@@ -8,11 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { clearBiometricAuthCache } from '../lib/biometric-auth';
 import { clinicalTokens } from '@elogbook/shared';
+import { mobileApiBase } from '../lib/mobile-api';
 
 type AuthMode = 'login' | 'signup';
 
@@ -284,6 +286,24 @@ export default function LoginScreen() {
               }}
               accessibilityLabel="Password"
             />
+            {mode === 'login' && (
+              <TouchableOpacity
+                onPress={() => void Linking.openURL(`${mobileApiBase()}/reset-password`)}
+                accessibilityRole="link"
+                accessibilityLabel="Forgot password"
+                style={{ alignSelf: 'flex-end', marginTop: 6, minHeight: 32, justifyContent: 'center' }}
+              >
+                <Text
+                  style={{
+                    fontFamily: clinicalTokens.fonts.body,
+                    fontSize: 13,
+                    color: clinicalTokens.colors.primary.DEFAULT,
+                  }}
+                >
+                  Forgot password?
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Confirm Password (signup only) */}
@@ -382,6 +402,30 @@ export default function LoginScreen() {
               }}
             >
               {mode === 'login' ? 'Create Account' : 'Sign In'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Legal ────────────────────────────────────────────────── */}
+        <View className="flex-row justify-center items-center mt-8" style={{ gap: 18 }}>
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/privacy`)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy policy"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.text.muted }}>
+              Privacy
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => void Linking.openURL(`${mobileApiBase()}/terms`)}
+            accessibilityRole="link"
+            accessibilityLabel="Terms of service"
+            style={{ minHeight: 32, justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: clinicalTokens.fonts.body, fontSize: 12, color: clinicalTokens.colors.text.muted }}>
+              Terms
             </Text>
           </TouchableOpacity>
         </View>

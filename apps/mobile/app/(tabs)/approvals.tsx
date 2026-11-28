@@ -127,32 +127,41 @@ export default function ApprovalsScreen() {
 
     setRole(profile.role as UserRole);
 
-    if (profile.role !== 'supervisor' && profile.role !== 'director' && profile.role !== 'admin') {
+    if (!['supervisor', 'director', 'institution_admin', 'admin'].includes(profile.role)) {
       setLoading(false);
       return;
     }
 
-    const { data: requests } = await supabase
-      .from('approval_requests')
+    // Read the pending case queue (same source as the web dashboard), not
+    // only approval_requests: cases submitted from the app or by an offline
+    // queue flush may not have a request row yet, and supervisors must still
+    // see them. The request relation is used only for an existing comment.
+    const { data: entries } = await supabase
+      .from('case_entries')
       .select(
-        'id, entry_id, status, comment, requested_at, case_entries(resident_id, case_date, template_id, case_templates(specialty, name)), profiles!supervisor_id(full_name)'
+        'id, case_date, status, resident_id, template_id, created_at, profiles:resident_id(full_name, specialty), case_templates:template_id(specialty, name), approval_requests(id, status, comment, requested_at)'
       )
-      .eq('case_entries.tenant_id', profile.tenant_id)
-      .order('requested_at', { ascending: false })
+      .eq('tenant_id', profile.tenant_id)
+      .eq('status', 'pending')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
       // R2 bound: supervisor inbox pages at 100 (pagination follow-up).
       .limit(100);
 
-    if (requests) {
+    if (entries) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped: ApprovalItem[] = requests.map((r: any) => ({
-        id: r.id,
-        entry_id: r.entry_id,
-        resident_name: r.profiles?.full_name ?? 'Unknown',
-        specialty: r.case_entries?.case_templates?.specialty ?? '',
-        case_date: r.case_entries?.case_date ?? '',
-        status: r.status,
-        comment: r.comment,
-      }));
+      const mapped: ApprovalItem[] = entries.map((e: any) => {
+        const request = Array.isArray(e.approval_requests) ? e.approval_requests[0] : null;
+        return {
+          id: request?.id ?? `entry-${e.id}`,
+          entry_id: e.id,
+          resident_name: e.profiles?.full_name ?? 'Unknown',
+          specialty: e.case_templates?.specialty ?? e.profiles?.specialty ?? '',
+          case_date: e.case_date ?? '',
+          status: e.status ?? 'pending',
+          comment: request?.comment ?? null,
+        };
+      });
       setApprovals(mapped);
     }
 
@@ -197,7 +206,7 @@ export default function ApprovalsScreen() {
 
       if (outcome.kind === 'confirmed') {
         haptics.submitSuccess();
-        setApprovals((prev) => prev.filter((a) => a.id !== approvalId));
+        setApprovals((prev) => prev.filter((a) => a.entry_id !== entryId));
       } else if (outcome.kind === 'denied') {
         haptics.submitError();
         Alert.alert('Not permitted', outcome.reason);
@@ -284,7 +293,7 @@ export default function ApprovalsScreen() {
   }
 
   return (
-    <ScreenWrapper title="Approvals" scroll={false}>
+    <ScreenWrapper title="Approvals" featureKey="approvals" scroll={false}>
       {isOffline && (
         <View className="bg-red-500/10 border-b border-red-500/30 px-4 py-2">
           <Text className="text-red-400 text-sm text-center" style={{ fontFamily: clinicalTokens.fonts.heading }}>

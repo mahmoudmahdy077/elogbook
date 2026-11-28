@@ -197,7 +197,7 @@ export default function ReflectionsScreen() {
   );
 
   return (
-    <ScreenWrapper title="Reflections" scroll={false}>
+    <ScreenWrapper title="Reflections" featureKey="reflections" scroll={false}>
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}

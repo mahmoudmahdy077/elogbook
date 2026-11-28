@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, isMobileFeatureEnabled } from '@elogbook/shared';
+import { useRemoteConfig } from '../../lib/remote-config-context';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -353,6 +354,8 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 // ── Main Screen ──────────────────────────────────────────────────────
 
 export default function RotationsScreen() {
+  const { config } = useRemoteConfig();
+  const moduleEnabled = isMobileFeatureEnabled(config, 'rotations');
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -456,6 +459,38 @@ export default function RotationsScreen() {
     setModalVisible(false);
     setSelectedRotation(null);
   }, []);
+
+  if (!moduleEnabled) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-8"
+        style={{ backgroundColor: clinicalTokens.colors.backdrop.dark }}
+      >
+        <Text
+          style={{
+            fontFamily: clinicalTokens.fonts.heading,
+            fontSize: 18,
+            color: clinicalTokens.colors.text.primary,
+            textAlign: 'center',
+          }}
+        >
+          Module turned off
+        </Text>
+        <Text
+          style={{
+            fontFamily: clinicalTokens.fonts.body,
+            fontSize: 14,
+            lineHeight: 20,
+            color: clinicalTokens.colors.text.muted,
+            textAlign: 'center',
+            marginTop: 8,
+          }}
+        >
+          Your organisation disabled Rotations in the app settings.
+        </Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return (

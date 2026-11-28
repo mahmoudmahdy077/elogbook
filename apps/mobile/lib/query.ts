@@ -45,6 +45,7 @@ export interface PageResult<T> {
 type QueryChain = {
   select: (cols: string) => QueryChain;
   eq: (col: string, val: string) => QueryChain;
+  is: (col: string, val: null) => QueryChain;
   order: (col: string, opts: { ascending: boolean }) => QueryChain;
   range: (from: number, to: number) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
 };
@@ -72,7 +73,8 @@ export async function fetchCasePage<T = Record<string, unknown>>(
     .from('case_entries')
     .select(CASE_LIST_FIELDS)
     .eq('tenant_id', q.tenantId)
-    .eq('resident_id', q.residentId);
+    .eq('resident_id', q.residentId)
+    .is('deleted_at', null);
   if (q.status) chain = chain.eq('status', q.status);
   const { data, error } = await chain.order('case_date', { ascending: false }).range(offset, offset + limit - 1);
   if (error) throw new Error(`[query] case page failed: ${error.message}`);
@@ -120,6 +122,7 @@ export interface StatusCounts {
 
 type HeadCountQuery = Promise<{ count: number | null; error: { message: string } | null }> & {
   eq: (col: string, val: string) => HeadCountQuery;
+  is: (col: string, val: null) => HeadCountQuery;
 };
 
 type CountClient = {
@@ -145,7 +148,8 @@ export async function countCasesByStatus(
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', scope.tenantId)
       .eq('resident_id', scope.residentId)
-      .eq('status', status);
+      .eq('status', status)
+      .is('deleted_at', null);
     if (error) throw new Error(`[query] status count failed: ${error.message}`);
     out[status] = count ?? 0;
     out.total += out[status];

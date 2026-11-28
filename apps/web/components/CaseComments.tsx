@@ -26,12 +26,12 @@ interface CaseCommentsProps {
 
 export default function CaseComments({
   caseEntryId,
-  tenantId: _tenantId,
+  tenantId,
   currentUserId,
   isOpen,
   onClose,
 }: CaseCommentsProps) {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +170,7 @@ export default function CaseComments({
     const { error: insertError } = await supabase
       .from('comments')
       .insert({
+        tenant_id: tenantId,
         entry_id: caseEntryId,
         author_id: currentUserId,
         body: newComment.trim(),
@@ -194,6 +195,7 @@ export default function CaseComments({
     const { error: insertError } = await supabase
       .from('comments')
       .insert({
+        tenant_id: tenantId,
         entry_id: caseEntryId,
         author_id: currentUserId,
         body: replyContent.trim(),

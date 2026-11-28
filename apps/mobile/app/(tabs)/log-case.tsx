@@ -21,11 +21,12 @@ import { saveDraft, loadDraft, clearDraft, clearLegacyPlaintextDraft } from '../
 
 import { useHaptics } from '../../lib/haptics';
 import { buildCasePayload } from '../../lib/case-payload';
+import { submitSavedCase } from '../../lib/mobile-api';
 import { submitCase } from '../../lib/case-submit';
 import { bestKnownCapability } from '../../lib/session';
 import { caseEntrySchema, sortTemplates } from '@elogbook/shared';
 import type { CaseTemplate, TemplateField, TemplateWithMeta } from '@elogbook/shared';
-import { clinicalTokens } from '@elogbook/shared';
+import { clinicalTokens, toLocalDateISO } from '@elogbook/shared';
 import { DateField } from '../../components/DateField';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
@@ -144,6 +145,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('template_id')
         .eq('resident_id', profile.id)
+        .is('deleted_at', null)
         // R2 bound: favorite sorting needs history depth, not full history.
         .limit(1000);
       if (personalData) {
@@ -184,6 +186,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('id,template_id,is_deidentified,patient_mrn,patient_dob,patient_age_years,case_date,field_values')
         .eq('id', editCaseId)
+        .is('deleted_at', null)
         .single();
       if (data) {
         setIsDeidentified(Boolean(data.is_deidentified));
@@ -212,6 +215,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('template_id, is_deidentified, patient_mrn, patient_dob, patient_age_years, case_date, field_values')
         .eq('id', duplicateCaseId)
+        .is('deleted_at', null)
         .single();
       if (error || !data) {
         Alert.alert('Source case not found', 'Could not load the case you want to duplicate.');
@@ -221,7 +225,7 @@ export default function LogCaseScreen() {
       setPatientMrn('');
       setPatientDob('');
       setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-      setCaseDate(new Date().toISOString().slice(0, 10));
+      setCaseDate(toLocalDateISO());
       const tmplId = String(data.template_id ?? '');
       setSelectedTemplateId(tmplId);
       const fv = typeof data.field_values === 'string'
@@ -253,6 +257,7 @@ export default function LogCaseScreen() {
         .from('case_entries')
         .select('id, template_id, is_deidentified, patient_age_years, field_values')
         .eq('resident_id', profile.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -265,7 +270,7 @@ export default function LogCaseScreen() {
       setPatientMrn('');
       setPatientDob('');
       setPatientAge(data.patient_age_years != null ? String(data.patient_age_years) : '');
-      setCaseDate(new Date().toISOString().slice(0, 10));
+      setCaseDate(toLocalDateISO());
       const tmplId = String(data.template_id ?? '');
       setSelectedTemplateId(tmplId);
       const fv = typeof data.field_values === 'string'
@@ -458,9 +463,22 @@ export default function LogCaseScreen() {
             if (error) throw new Error(error.message);
           },
         },
-        { action: 'update', targetId: editCaseId, payload: { ...caseData, status: 'pending' } },
+        { action: 'update', targetId: editCaseId, payload: caseData },
       );
       if (outcome.kind === 'submitted') {
+        // Institution cases are saved as drafts; submit them through the web
+        // API so supervisor approvals, the webhook and the push all fire.
+        if (tenant?.tenant_type !== 'individual') {
+          const submitted = await submitSavedCase(editCaseId);
+          if (!submitted.ok) {
+            setSubmitting(false);
+            isSubmitting.current = false;
+            setValidationError(
+              `Case saved as a draft, but submission failed (${submitted.error}). Open My Cases to submit it.`,
+            );
+            return;
+          }
+        }
         haptics.submitSuccess();
         setConfirmationSuccess(true);
         confirmationTypeRef.current = 'submitted';
@@ -500,6 +518,27 @@ export default function LogCaseScreen() {
       { action: 'insert', payload: caseData },
     );
     if (outcome.kind === 'submitted') {
+      // The row was inserted as a draft for institution tenants. Submit it
+      // through the web path so it reaches the supervisor queue, webhook and
+      // push — previously the app inserted status='pending' and skipped all.
+      if (tenant?.tenant_type !== 'individual') {
+        if (!outcome.serverId) {
+          setSubmitting(false);
+          isSubmitting.current = false;
+          setValidationError('Case saved as a draft, but its id was not returned. Open My Cases to submit it.');
+          return;
+        }
+        const submitted = await submitSavedCase(outcome.serverId);
+        if (!submitted.ok) {
+          await clearDraft();
+          setSubmitting(false);
+          isSubmitting.current = false;
+          setValidationError(
+            `Case saved as a draft, but submission failed (${submitted.error}). Open My Cases to submit it.`,
+          );
+          return;
+        }
+      }
       await clearDraft();
       haptics.submitSuccess();
       setConfirmationSuccess(true);
@@ -670,7 +709,7 @@ export default function LogCaseScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper title="Log Case" scroll={false}>
+      <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
         <View className="flex-row flex-wrap gap-2">
           {[1, 2, 3, 4].map((i) => (
             <View key={i} className="bg-white rounded-xl p-4 border border-[#007AFF]/15 flex-1 mb-2" style={{ maxWidth: '48%', height: 100 }}>
@@ -686,7 +725,7 @@ export default function LogCaseScreen() {
 
   if (!selectedTemplate) {
     return (
-      <ScreenWrapper title="Log Case" scroll={false}>
+      <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
         {renderSyncBanner()}
         <FlatList
           data={templates}
@@ -716,7 +755,7 @@ export default function LogCaseScreen() {
   }
 
   return (
-    <ScreenWrapper title="Log Case" scroll={false}>
+    <ScreenWrapper title="Log Case" featureKey="log_case" scroll={false}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
