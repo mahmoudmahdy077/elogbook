@@ -119,6 +119,27 @@ export async function POST(request: Request) {
   }
 
   const admin = createServiceRoleClient();
+
+  // Keep the dismissal id stable while the text is unchanged, so editing an
+  // unrelated setting does not re-show the banner on every device.
+  if (announcement.value) {
+    const { data: existing } = await admin
+      .from('platform_mobile_config')
+      .select('announcement')
+      .eq('id', true)
+      .maybeSingle();
+    const prev = existing?.announcement as
+      | { id?: string; title?: string; body?: string }
+      | null;
+    if (
+      prev &&
+      typeof prev.id === 'string' &&
+      prev.title === announcement.value.title &&
+      prev.body === announcement.value.body
+    ) {
+      announcement.value.id = prev.id;
+    }
+  }
   const { data: saved, error } = await admin
     .from('platform_mobile_config')
     .update({

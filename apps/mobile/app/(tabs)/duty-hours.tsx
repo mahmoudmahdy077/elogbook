@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -19,6 +19,54 @@ export default function DutyHoursScreen() {
   const [shiftType, setShiftType] = useState<string>('regular');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [weeklyHours, setWeeklyHours] = useState<number | null>(null);
+  const [weeklyViolation, setWeeklyViolation] = useState(false);
+
+  const loadWeek = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, tenant_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!profile) return;
+
+    // Monday-start week, matching date_trunc('week') in the violation view.
+    const now = new Date();
+    const offset = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - offset);
+    const weekStart = monday.toISOString().slice(0, 10);
+
+    const { data: periods } = await supabase
+      .from('duty_periods')
+      .select('hours_worked')
+      .eq('resident_id', profile.id)
+      .eq('tenant_id', profile.tenant_id)
+      .gte('shift_date', weekStart)
+      .limit(200);
+
+    const total = (periods ?? []).reduce(
+      (sum: number, row: { hours_worked: number | string | null }) =>
+        sum + Number(row.hours_worked ?? 0),
+      0,
+    );
+    setWeeklyHours(total);
+
+    const { data: violation } = await supabase
+      .from('duty_weekly_violations')
+      .select('total_hours')
+      .eq('resident_id', profile.id)
+      .eq('tenant_id', profile.tenant_id)
+      .eq('week_start', weekStart)
+      .maybeSingle();
+    setWeeklyViolation(Boolean(violation));
+  }, []);
+
+  useEffect(() => {
+    void loadWeek();
+  }, [loadWeek]);
 
   const handleSave = async () => {
     if (!hours || isNaN(Number(hours))) {
@@ -55,6 +103,7 @@ export default function DutyHoursScreen() {
       Alert.alert('Saved', 'Duty hours recorded.');
       setHours('');
       setNotes('');
+      void loadWeek();
     } else if (outcome.kind === 'denied') {
       Alert.alert('Not permitted', outcome.reason);
     } else if (outcome.kind === 'transient') {
@@ -69,6 +118,35 @@ export default function DutyHoursScreen() {
       <Animated.View entering={FadeIn.delay(100).springify()}>
         <Text className="text-[#000000] text-xl mb-4" style={{ fontFamily: clinicalTokens.fonts.heading }}>Log Duty Hours</Text>
       </Animated.View>
+
+      {weeklyHours !== null && (
+        <Animated.View entering={FadeInDown.delay(120).springify()}>
+          <View
+            style={{
+              backgroundColor: weeklyViolation ? 'rgba(255,59,48,0.12)' : '#FFFFFF',
+              borderColor: weeklyViolation ? 'rgba(255,59,48,0.4)' : 'rgba(0,122,255,0.15)',
+              borderWidth: 1,
+              borderRadius: 14,
+              padding: 14,
+              marginBottom: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontFamily: clinicalTokens.fonts.body, color: clinicalTokens.colors.text.muted }}>
+                This week
+              </Text>
+              <Text style={{ fontFamily: clinicalTokens.fonts.mono, fontSize: 16, color: clinicalTokens.colors.text.primary }}>
+                {weeklyHours.toFixed(1)} h
+              </Text>
+            </View>
+            {weeklyViolation && (
+              <Text style={{ marginTop: 6, fontFamily: clinicalTokens.fonts.body, fontSize: 13, color: clinicalTokens.colors.status.text.danger }}>
+                Above the 80-hour weekly limit. Your program director will see this in the duty-hour report.
+              </Text>
+            )}
+          </View>
+        </Animated.View>
+      )}
 
       <Animated.View entering={FadeInDown.delay(150).springify()}>
         <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-gray-200 rounded-xl px-4 py-3 mb-3" accessibilityLabel="Select date" accessibilityRole="button">
